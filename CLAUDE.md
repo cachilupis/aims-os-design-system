@@ -80,6 +80,40 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **`Input`/`Textarea` have a `label` prop, but the floating label is mobile-only** — on desktop, structure comes from grouping fields under a section label, never a per-field label.
 - **`Select` is a trigger only — it has no options list.** Compose a working dropdown with `@base-ui/react`'s `Popover` (already a dependency), anchored to the trigger — never with hand-computed coordinates.
 
+### Surfaces, tiles and hovers — the four the audit now catches
+
+These are checks 15-18. They are written down here too because a check tells you
+*that* something is wrong; only this says why.
+
+- **A tinted square with an icon in it is `HighlightIcon`**, not a `<div>` with a
+  width, a height, a radius and a background. The component owns three sizes and
+  nine semantic tints, which is what keeps an entity type the same colour in a
+  card, a list row and a slide-out. An icon-only `<button>` is a different thing
+  and stays a `<button>`.
+- **A card title has no fill.** A background strip above a divider is the
+  table-header device: it means "these words are column names". On a card it
+  means nothing and makes one card read as two stacked surfaces. Keep the
+  divider, drop the fill. Real table headers keep theirs.
+- **`var(--accent)` is not a hover.** It is a blue tint (`#2b7fff14`); on a row
+  it reads as *selected*, not as *your pointer is here*. Use
+  **`--el-row-hover`** for list rows and **`--table-row-hover-bg`** for table
+  rows.
+- **A `CardContainer` wrapping a table must not glow.** The card's hover shadow
+  fires from anywhere in the table, which says the whole table is clickable. The
+  rows own the hover; cancel the card's:
+  `hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]`.
+- **`SlideOut` already pads its panel `32px / 24px`.** A preview component that
+  adds another `20-24px` lands its content at 44-48px from the panel edge. Pass
+  **zero horizontal padding** in anything rendered as a `SlideOut` child and let
+  the component own the margin. Each half looks correct alone, which is why this
+  one survived in three previews for months.
+- **A status is a `Tag`; a `Chip` is something you can select.** `Chip` is for
+  selected/unselected: a filter, a scope toggle, a category switch. An entity's
+  state is a `Tag`. Reaching for `Chip` because it looked right is how "Active"
+  ended up as a `success-secondary` chip beside real tags.
+- **An icon-only control needs a `Tooltip`**, always. It has no label; `title`
+  is not a substitute — it is slow, unstyled and invisible to touch.
+
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
 - **NEVER** combine `Header.breadcrumb` and `backButton` — from L2 it is the breadcrumb; the first crumb IS the way back. `backButton` is only for pages with no hierarchy to express (a creation wizard).
@@ -1065,6 +1099,16 @@ Never in `ui/`. File must:
    holds the line at the count it inherits, measured in INSTANCES so a file already on the list
    cannot absorb new ones. An icon-only trigger, a tab, a colour swatch and a status dot under 16px
    are real uses of the raw element and are not counted.
+1c. **The four the People & Access review kept finding** — ✅ automated (2026-09-08), checks 15-18:
+   a tinted 20-48px square with an icon in it is `HighlightIcon`; a `--surface-raised` strip above a
+   divider is the TABLE-HEADER device and does not belong on a card title; `var(--accent)` is a blue
+   tint and must never be a row hover; and a component rendered inside `<SlideOut>` must not add its
+   own horizontal padding. Same ratchet, same instance counting. Checks 15 and 16 read one `style`
+   object at a time rather than a window of lines — a sliding window merges the strip above a list
+   with the icon tile in its first row and reports each as the other. Check 15 skips icon-only
+   `<button>`s (resolved by nearest opening tag, since `[^>]*` breaks on any arrow function in an
+   attribute), and check 16 treats uppercase micro-type or an explicit grid as proof of a real table.
+
 2. Raw HTML elements inside pattern previews — not automated
 3. Experimental component integrity (DS-GAP comment present) — not automated
 4. PM screens registered in `PROTOTYPE_PAGES` — not automated

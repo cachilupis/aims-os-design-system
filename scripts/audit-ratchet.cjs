@@ -143,6 +143,10 @@ const LABELS = {
   badge:        "hand-rolled badges (that is Tag)",
   avatar:       "hand-rolled avatars (that is AvatarCircle)",
   raw_button:   "raw <button> with padding + surface (that is Button)",
+  icon_tile:    "tinted icon tiles drawn inline (that is HighlightIcon)",
+  card_title:   "filled title bars on something that is not a table",
+  accent_hover: "var(--accent) used as a row hover (it is a blue tint)",
+  slideout_pad: "SlideOut children re-padding themselves",
 }
 
 const worse = Object.keys(head).filter((k) => head[k] > (base[k] ?? 0))

@@ -690,6 +690,201 @@ screenFiles.forEach((file) => {
   }
 })
 
+// ── Checks 15-18: the four things the People & Access review kept finding ──
+// Added 2026-09-08 after a review of PeopleAccessMembers.tsx turned up the same
+// four mistakes in six different panels. Checks 12-14 already cover Tag,
+// AvatarCircle and Button; these cover the four that were left, and they exist
+// for the same reason as those three — the rule was written down and lost to an
+// effort gap anyway. All four are WARNINGS held by the ratchet.
+
+// A style object, and the line it starts on. Both checks below have to reason
+// about ONE element: a sliding window of raw lines merges the strip above a
+// list with the icon tile inside its first row, and reports each as the other.
+function styleObjects(code) {
+  const out = []
+  const re = /style=\{\{/g
+  let m
+  while ((m = re.exec(code)) !== null) {
+    const end = code.indexOf("}}", m.index + 8)
+    if (end === -1) continue
+    out.push({
+      body:  code.slice(m.index + 8, end),
+      index: m.index,
+      line:  code.slice(0, m.index).split("\n").length,
+    })
+  }
+  return out
+}
+
+// Check 15 — a tinted square with an icon in it. HighlightIcon is the
+// component: it owns the 3 sizes, the 9 semantic tints and the icon sizing.
+// Matched on equal width/height in the range HighlightIcon models (20-48px)
+// plus a NUMERIC radius and a background. A 50% radius is an avatar and
+// belongs to check 13, so it is excluded here rather than double-counted.
+const ICON_TILE_RE = /width:\s*(\d+),\s*height:\s*\1,[\s\S]*?borderRadius:\s*(\d+)/
+
+screenFiles.forEach((file) => {
+  const code = stripComments(fs.readFileSync(file, "utf8")).map((l) => l.code).join("\n")
+  const hits = []
+  styleObjects(code).forEach(({ body, index, line }) => {
+    const m = body.match(ICON_TILE_RE)
+    if (!m) return
+    const size = Number(m[1])
+    if (size < 20 || size > 48) return
+    if (!/background:/.test(body)) return
+    // A transparent tile is not a tinted one.
+    if (/background:\s*["']transparent["']/.test(body)) return
+    // An icon-only <button> is a real use of the element — check 14 says so
+    // explicitly — and it is a trigger, not a HighlightIcon. Same square, same
+    // radius, different thing: the kebab menu button tripped this.
+    // Resolved by the nearest opening tag, because scanning for "<button" up to
+    // the style prop breaks on any attribute containing an arrow function.
+    const before = code.slice(Math.max(0, index - 400), index)
+    const tags = before.match(/<([a-zA-Z][\w.]*)/g)
+    if (tags && tags[tags.length - 1] === "<button") return
+    // The icon itself sits just after the style object, so look a little past it.
+    const after = code.slice(index + body.length, index + body.length + 200)
+    if (!/<Icons\.|\.icon\b|icon\}|iconName/.test(after)) return
+    hits.push(line)
+  })
+  if (hits.length > 0) {
+    warnings.push({
+      type: "hand-rolled-icon-tile",
+      file: rel(file),
+      line: hits[0],
+      count: hits.length,
+      lines: hits,
+      message:
+        `${hits.length} tinted icon tile${hits.length === 1 ? "" : "s"} drawn inline ` +
+        `(line${hits.length === 1 ? "" : "s"} ${hits.slice(0, 6).join(", ")}${hits.length > 6 ? ", …" : ""}) — ` +
+        `that is HighlightIcon. It owns the three sizes and the nine semantic ` +
+        `tints, so an entity type keeps the same colour everywhere it appears`,
+    })
+  }
+})
+
+// Check 16 — a filled title bar on something that is not a table.
+// A strip with its own background above a divider is the TABLE-HEADER device:
+// it means "these words are column names". Inside a card it means nothing, and
+// it makes one card look like two stacked surfaces.
+//
+// A real table header is recognised by its typography, not by its markup: it is
+// uppercase micro-type, or it declares its own grid columns. Card titles are
+// sentence-case and bold. Matching on <table>/gridTemplateColumns alone missed
+// three legitimate flex-based headers in this repo.
+screenFiles.forEach((file) => {
+  const code = stripComments(fs.readFileSync(file, "utf8")).map((l) => l.code).join("\n")
+  const hits = []
+  styleObjects(code).forEach(({ body, line }) => {
+    if (!/background:\s*["']var\(--surface-raised\)["']/.test(body)) return
+    if (!/borderBottom:/.test(body)) return
+    if (/gridTemplateColumns|textTransform:\s*["']uppercase["']|letterSpacing/.test(body)) return
+    hits.push(line)
+  })
+  if (hits.length > 0) {
+    warnings.push({
+      type: "filled-card-title",
+      file: rel(file),
+      line: hits[0],
+      count: hits.length,
+      lines: hits,
+      message:
+        `${hits.length} filled title bar${hits.length === 1 ? "" : "s"} with no table under ` +
+        `${hits.length === 1 ? "it" : "them"} (line${hits.length === 1 ? "" : "s"} ${hits.slice(0, 6).join(", ")}${hits.length > 6 ? ", …" : ""}) — ` +
+        `a background strip above a divider is the table-header device and says ` +
+        `"these are column names". A card title is a title: drop the fill, keep the divider`,
+    })
+  }
+})
+
+// Check 17 — var(--accent) used as a row hover.
+// --accent is a BLUE tint (#2b7fff14). On a hover it reads as a selection, not
+// as "your pointer is here", and it is the reason five member tables looked
+// like they had a row selected at all times. The neutral row-hover tokens are
+// --el-row-hover for list rows and --table-row-hover-bg for table rows.
+screenFiles.forEach((file) => {
+  const lines = stripComments(fs.readFileSync(file, "utf8"))
+  const hits = []
+  lines.forEach(({ code }, idx) => {
+    if (!/var\(--accent\)/.test(code)) return
+    const window = lines.slice(Math.max(0, idx - 2), idx + 3).map((l) => l.code).join(" ")
+    if (!/onMouseEnter|:hover|hover:/.test(window)) return
+    hits.push(idx + 1)
+  })
+  if (hits.length > 0) {
+    warnings.push({
+      type: "accent-row-hover",
+      file: rel(file),
+      line: hits[0],
+      count: hits.length,
+      lines: hits,
+      message:
+        `${hits.length} hover${hits.length === 1 ? "" : "s"} painted with var(--accent) ` +
+        `(line${hits.length === 1 ? "" : "s"} ${hits.slice(0, 6).join(", ")}${hits.length > 6 ? ", …" : ""}) — ` +
+        `--accent is a blue tint and reads as a selected row. Use ` +
+        `--el-row-hover for list rows, --table-row-hover-bg for table rows`,
+    })
+  }
+})
+
+// Check 18 — a SlideOut child that re-pads itself.
+// SlideOut's own panel is padded 32px/24px. A preview component that adds
+// another 20-24px of horizontal padding lands its content at 44-48px from the
+// panel edge — which is what three previews in People & Access did, in every
+// section, for months. Nobody sees it because each half looks correct alone.
+//
+// Resolved by name: find the components rendered as <SlideOut> children, then
+// look at their own definition in the same file.
+// The HORIZONTAL value is the second one in the shorthand, so that is what has
+// to be >= 16px. Matching the first value instead flags "32px 0" — a perfectly
+// correct vertical-only padding — which is how this check first reported four
+// false positives.
+const SIDE_PAD_RE = /padding:\s*["'`]\s*[\d.]+(?:px)?\s+(1[6-9]|[2-9]\d)px/
+
+screenFiles.forEach((file) => {
+  const text = fs.readFileSync(file, "utf8")
+  if (!/<SlideOut\b/.test(text)) return
+  const lines = stripComments(text)
+  const code = lines.map((l) => l.code).join("\n")
+
+  // Component names rendered between <SlideOut …> and </SlideOut>
+  const childNames = new Set()
+  const blocks = code.match(/<SlideOut\b[\s\S]*?<\/SlideOut>/g) || []
+  blocks.forEach((b) => {
+    for (const m of b.matchAll(/<([A-Z][A-Za-z0-9_]*)\b/g)) {
+      if (m[1] !== "SlideOut") childNames.add(m[1])
+    }
+  })
+  if (childNames.size === 0) return
+
+  const hits = []
+  childNames.forEach((name) => {
+    const start = code.search(new RegExp(`function\\s+${name}\\s*\\(`))
+    if (start === -1) return
+    const nextFn = code.slice(start + 1).search(/\nfunction\s+[A-Z]/)
+    const body = nextFn === -1 ? code.slice(start) : code.slice(start, start + 1 + nextFn)
+    const lineOf = (offset) => code.slice(0, start + offset).split("\n").length
+    for (const m of body.matchAll(new RegExp(SIDE_PAD_RE, "g"))) {
+      hits.push(lineOf(m.index))
+    }
+  })
+  const runs = [...new Set(hits)].sort((a, b) => a - b)
+  if (runs.length > 0) {
+    warnings.push({
+      type: "slideout-double-padding",
+      file: rel(file),
+      line: runs[0],
+      count: runs.length,
+      lines: runs,
+      message:
+        `${runs.length} horizontal padding${runs.length === 1 ? "" : "s"} inside a SlideOut child ` +
+        `(line${runs.length === 1 ? "" : "s"} ${runs.slice(0, 6).join(", ")}${runs.length > 6 ? ", …" : ""}) — ` +
+        `SlideOut already pads its panel 32px/24px, so this doubles it. Pass 0 ` +
+        `horizontal padding and let the component own the margin`,
+    })
+  }
+})
+
 function printSection(title, items, formatter) {
   if (items.length === 0) return
   console.log(`\n${title} (${items.length})`)
@@ -749,6 +944,10 @@ const widgetVocabWarnings = warnings.filter((w) => w.type === "widget-vocab")
 const badgeWarnings  = warnings.filter((w) => w.type === "hand-rolled-badge")
 const avatarWarnings = warnings.filter((w) => w.type === "hand-rolled-avatar")
 const rawBtnWarnings = warnings.filter((w) => w.type === "raw-button")
+const iconTileWarnings  = warnings.filter((w) => w.type === "hand-rolled-icon-tile")
+const cardTitleWarnings = warnings.filter((w) => w.type === "filled-card-title")
+const accentHoverWarnings = warnings.filter((w) => w.type === "accent-row-hover")
+const slideOutPadWarnings = warnings.filter((w) => w.type === "slideout-double-padding")
 
 // Accepted findings still print — with a marker — so a waiver stays visible
 // instead of quietly disappearing from the report.
@@ -770,6 +969,10 @@ printSection("⚠️  WARNING — a second widget vocabulary (the catalog is WID
 printSection("⚠️  WARNING — pill-shaped badges drawn inline (that is Tag)", badgeWarnings, fmt)
 printSection("⚠️  WARNING — circular avatars drawn inline (that is AvatarCircle)", avatarWarnings, fmt)
 printSection("⚠️  WARNING — raw <button> with its own padding and surface (that is Button)", rawBtnWarnings, fmt)
+printSection("⚠️  WARNING — tinted icon tiles drawn inline (that is HighlightIcon)", iconTileWarnings, fmt)
+printSection("⚠️  WARNING — filled title bar on something that is not a table", cardTitleWarnings, fmt)
+printSection("⚠️  WARNING — var(--accent) used as a row hover (it is a blue tint)", accentHoverWarnings, fmt)
+printSection("⚠️  WARNING — a SlideOut child re-padding itself", slideOutPadWarnings, fmt)
 
 // The ratchet reads these. Accepted findings are subtracted here and nowhere
 // else: they stay in the report above, and in the DS Health page, but they no
@@ -784,6 +987,10 @@ const openWidgetVocab = open(widgetVocabWarnings)
 const openBadge  = open(badgeWarnings)
 const openAvatar = open(avatarWarnings)
 const openRawBtn = open(rawBtnWarnings)
+const openIconTile   = open(iconTileWarnings)
+const openCardTitle  = open(cardTitleWarnings)
+const openAccentHover = open(accentHoverWarnings)
+const openSlideOutPad = open(slideOutPadWarnings)
 
 // These three report once per file with a `count`, so the ratchet must compare
 // INSTANCES. Counting findings would mean a file already on the list could
@@ -822,12 +1029,12 @@ const acceptedCount =
 // to the line below and the matching LABELS entries in audit-ratchet.cjs.
 if (process.argv.includes("--counts")) {
   console.log(
-    `AUDIT_COUNTS errors=${errors.length} orphan=${openOrphan.length} shadow=${openShadow.length} main_overuse=${openMainOveruse.length} card_reimpl=${openCardReimpl.length} badge=${instances(openBadge)} avatar=${instances(openAvatar)} raw_button=${instances(openRawBtn)}`
+    `AUDIT_COUNTS errors=${errors.length} orphan=${openOrphan.length} shadow=${openShadow.length} main_overuse=${openMainOveruse.length} card_reimpl=${openCardReimpl.length} badge=${instances(openBadge)} avatar=${instances(openAvatar)} raw_button=${instances(openRawBtn)} icon_tile=${instances(openIconTile)} card_title=${instances(openCardTitle)} accent_hover=${instances(openAccentHover)} slideout_pad=${instances(openSlideOutPad)}`
   )
 }
 
 console.log(
-  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s), ${openDuplicate.length} duplicate-component warning(s), ${openWidgetVocab.length} widget-vocab warning(s), ${openBadge.length} hand-rolled-badge, ${openAvatar.length} hand-rolled-avatar, ${openRawBtn.length} raw-button` +
+  `\nSummary: ${errors.length + navConflicts.length} error(s), ${openOrphan.length} orphan warning(s), ${spacingWarnings.length} spacing warning(s), ${openShadow.length} shadow-component warning(s), ${openMainOveruse.length} main-overuse warning(s), ${openCardReimpl.length} possible-card-reimpl warning(s), ${openDuplicate.length} duplicate-component warning(s), ${openWidgetVocab.length} widget-vocab warning(s), ${openBadge.length} hand-rolled-badge, ${openAvatar.length} hand-rolled-avatar, ${openRawBtn.length} raw-button, ${openIconTile.length} icon-tile, ${openCardTitle.length} filled-card-title, ${openAccentHover.length} accent-hover, ${openSlideOutPad.length} slideout-padding` +
     (acceptedCount > 0
       ? `\n         plus ${acceptedCount} accepted and waived in ds-decisions.json — shown above marked [accepted], not counted here.`
       : ".")

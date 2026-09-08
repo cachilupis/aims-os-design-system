@@ -7,7 +7,11 @@ import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
 import { Tag }          from "@/components/ui/tag"
+import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
+import { Tooltip }      from "@/components/ui/tooltip"
+import { AlertBanner }  from "@/components/ui/alert-banner"
 import { Tabs }         from "@/components/ui/tabs"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
@@ -16,7 +20,6 @@ import { Chip }        from "@/components/ui/chip"
 import { Toggle }      from "@/components/ui/toggle"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
-import { SwitchTab, type SwitchTabItem } from "@/components/ui/switch-tab"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -297,23 +300,57 @@ const STUDIO_META: Record<string, { label: string; color: string; icon: React.Re
 
 // ─── Display helpers ──────────────────────────────────────────────────────────
 
-const STATUS_COLOR: Record<MemberStatus, string> = {
-  active:    "var(--badge-success)",
-  invited:   "var(--badge-light-blue)",
-  suspended: "var(--muted-foreground)",
+// Tag carries the colour now. A status is a state, so it gets the semantic
+// range — except Suspended, which is NEUTRAL and not error: a suspended
+// account is a decision someone made, not a failure.
+const STATUS_TAG: Record<MemberStatus, "success" | "informative" | "neutral"> = {
+  active:    "success",
+  invited:   "informative",
+  suspended: "neutral",
 }
 const STATUS_LABEL: Record<MemberStatus, string> = {
   active:    "Active",
   invited:   "Invited",
   suspended: "Suspended",
 }
-const USER_TYPE_COLOR: Record<UserType, string> = {
-  "Owner":  "var(--badge-error)",
-  "Admin":  "var(--badge-alert)",
-  "Member": "var(--muted-foreground)",
+// Graded by reach, not by risk: the more a type can do, the louder the tag.
+const USER_TYPE_TAG: Record<UserType, "error" | "alert" | "neutral"> = {
+  "Owner":  "error",
+  "Admin":  "alert",
+  "Member": "neutral",
 }
-// Keep alias for any legacy references in this file
-const ROLE_COLOR = USER_TYPE_COLOR
+
+// Studios are categories, not states, so they take the non-status variants —
+// success or alert would read as "this studio is healthy", which is not a
+// thing a studio can be.
+const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informative"> = {
+  governance: "limeGreen",
+  datastudio: "purple",
+  agentic:    "lightBlue",
+  admin:      "informative",
+}
+// HighlightIcon carries the same categorical colour as the studio's Tag, so a
+// studio reads the same whether it appears as an icon or as a tag.
+const STUDIO_HI: Record<string, "lime" | "purple" | "light-blue" | "informative"> = {
+  governance: "lime",
+  datastudio: "purple",
+  agentic:    "light-blue",
+  admin:      "informative",
+}
+// A role is a category, not a status — so it takes the non-semantic palette.
+// The semantic range stays reserved for actual state (see STATUS_TAG).
+const ROLE_HI: Record<string, "informative" | "lime" | "neutral" | "yellow" | "purple" | "light-blue"> = {
+  "workspace-admin":    "informative",
+  "developer":          "lime",
+  "viewer":             "neutral",
+  "agent-builder":      "yellow",
+  "data-steward":       "purple",
+  "compliance-auditor": "light-blue",
+}
+// A CardContainer that wraps a TABLE must not glow on hover — the rows own the
+// hover feedback, and an outer shadow on a table reads as the whole table
+// being hoverable. Cancels the variant's hover border-width, colour and shadow.
+const TABLE_CARD = "hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]"
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
 
 function formatRelative(iso: string): string {
@@ -393,7 +430,7 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
           cursor: hasChildren ? "pointer" : "default",
           background: "transparent",
         }}
-        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
         <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -407,13 +444,9 @@ function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
             {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>
-                via {node.role}
-              </span>
+              <Tooltip side="cursor" content={`Inherited from the ${node.role} role, not granted directly`}>
+                <Tag variant="neutral" size="sm">via {node.role}</Tag>
+              </Tooltip>
             )}
             {node.scope && (
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
@@ -465,6 +498,7 @@ function RolePermissionsPanel({ role }: { role: Role }) {
   const [overrides, setOverrides] = useState<PermOverrides>({})
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
+  const [savedSummary, setSavedSummary] = useState<{ total: number; pinned: number; added: number; removed: number } | null>(null)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
@@ -511,8 +545,10 @@ function RolePermissionsPanel({ role }: { role: Role }) {
     setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
   }
   function confirmSave() {
+    // Counts are captured BEFORE the reset — after it there is nothing to count,
+    // and a confirmation that cannot say what changed is not a confirmation.
+    setSavedSummary({ total: changedNodes.length, pinned: 0, added: addedNodes.length, removed: removedNodes.length })
     setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   const allNodes   = nodes.flatMap(n => [n, ...(n.children ?? [])])
@@ -553,12 +589,23 @@ function RolePermissionsPanel({ role }: { role: Role }) {
             <Icons.Lock size={11} /> System role · read only
           </span>
         )}
-        {mode === "edit" && saveStep === null && saved && (
-          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
-            <Icons.CheckCircle size={13} /> Saved
-          </span>
-        )}
       </div>
+
+      {/* Applying permissions is a governed write, so it is confirmed
+          explicitly and the confirmation stays until it is dismissed. */}
+      {saved && savedSummary && (
+        <div style={{ marginBottom: 16 }}>
+          <AlertBanner
+            state="success"
+            title={`${savedSummary.total} permission${savedSummary.total === 1 ? "" : "s"} updated`}
+            description={[
+              savedSummary.added   > 0 ? `${savedSummary.added} granted`   : null,
+              savedSummary.removed > 0 ? `${savedSummary.removed} revoked` : null,
+            ].filter(Boolean).join(" · ") + ". Takes effect on the next action in this role."}
+            onClose={() => { setSaved(false); setSavedSummary(null) }}
+          />
+        </div>
+      )}
 
       {/* Stats row — only in tree view */}
       {saveStep === null && (
@@ -594,7 +641,7 @@ function RolePermissionsPanel({ role }: { role: Role }) {
       {saveStep !== null && (() => {
         const effectiveScope = (n: PermNode) => scopeOverrides[n.id] ?? n.scope ?? "Own"
         function renderDiffSection(
-          items: PermNode[], header: string, accentColor: string, bgMix: string, icon: ReactElement
+          items: PermNode[], header: string, bgMix: string, icon: ReactElement
         ) {
           if (items.length === 0) return null
           const itemIds = new Set(items.map(n => n.id))
@@ -607,8 +654,12 @@ function RolePermissionsPanel({ role }: { role: Role }) {
           }
           return (
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
-                {header} · {items.length}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                {icon}
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-title)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+                  {header}
+                </span>
+                <Tag variant="neutral" size="sm">{items.length}</Tag>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {groups.map(({ parent, parentInItems, children }) => (
@@ -643,8 +694,8 @@ function RolePermissionsPanel({ role }: { role: Role }) {
             <div style={{ marginBottom: 20 }}><Stepper steps={saveSteps} /></div>
             {saveStep === 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
-                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {renderDiffSection(addedNodes, "New access", "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
                 {changedNodes.length === 0 && (
                   <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>No changes to review.</div>
                 )}
@@ -810,36 +861,28 @@ const AUDIT_LOG: AuditEvent[] = [
   },
 ]
 
-const ACTION_COLOR: Record<AuditAction, string> = {
-  Login:      "var(--badge-info)",
-  Update:     "var(--primary)",
-  Create:     "var(--badge-success)",
-  Delete:     "var(--badge-error, #ef4444)", // audit-ignore: hex is CSS var fallback
-  Permission: "var(--badge-alert)",
-  Group:      "var(--muted-foreground)",
-  Export:     "var(--muted-foreground)",
+const ACTION_TAG: Record<AuditAction, "informative" | "lightBlue" | "limeGreen" | "yellow" | "purple" | "neutral"> = {
+  Login:      "informative",
+  Update:     "lightBlue",
+  Create:     "limeGreen",
+  Delete:     "yellow",
+  Permission: "purple",
+  Group:      "neutral",
+  Export:     "neutral",
 }
 
 const ACTION_FILTERS: Array<AuditAction | "All"> = ["All", "Login", "Update", "Create", "Permission", "Group"]
 const RESULT_FILTERS: Array<AuditResult | "All"> = ["All", "Success", "Failed"]
 
-function AuditUserAvatar({ name, size = 26 }: { name: string; size?: number }) {
+function AuditUserAvatar({ name }: { name: string }) {
+  // AvatarCircle hashes the name to a token colour, so a person keeps the same
+  // avatar colour here as everywhere else in the product.
   const initials = name === "System" ? "SY" : name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
-  const hue = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: `hsl(${hue}, 55%, 42%)`, /* audit-ignore */
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.38, fontWeight: 700, color: "#fff", /* audit-ignore */
-      letterSpacing: 0.3,
-    }}>{initials}</div>
-  )
+  return <AvatarCircle name={name} initials={initials} sizeKey="md" />
 }
 
 function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
   const [expanded, setExpanded] = useState(false)
-  const actionColor = ACTION_COLOR[ev.action]
 
   return (
     <div style={{ borderBottom: isLast ? "none" : "1px solid var(--border)" }}>
@@ -847,11 +890,11 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
       <div
         onClick={() => setExpanded(e => !e)}
         style={{
-          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
+          display: "grid", gridTemplateColumns: "20px 150px 160px 104px 130px 1fr 96px 60px",
           padding: "11px 14px", cursor: "pointer", gap: 10, alignItems: "center",
-          background: expanded ? "var(--accent)" : "transparent",
+          background: expanded ? "var(--table-row-hover-bg)" : "transparent",
         }}
-        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--table-row-hover-bg)" }}
         onMouseLeave={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)" }}>
@@ -867,24 +910,21 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
           <AuditUserAvatar name={ev.user} />
           <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.user}</span>
         </div>
-        {/* Action badge */}
-        <span style={{
-          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-          background: `color-mix(in srgb, ${actionColor} 14%, transparent)`,
-          color: actionColor, border: `1px solid color-mix(in srgb, ${actionColor} 28%, transparent)`,
-          width: "fit-content",
-        }}>{ev.action}</span>
+        {/* Action */}
+        <Tag variant={ACTION_TAG[ev.action] ?? "neutral"} size="sm" className="w-fit">{ev.action}</Tag>
         {/* Resource */}
         <span style={{ fontSize: 11, color: "var(--foreground)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.resource}</span>
         {/* Description */}
         <span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.description}</span>
-        {/* Result */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          {ev.result === "Success"
-            ? <><Icons.Check size={11} color="var(--badge-success)" /><span style={{ fontSize: 11, color: "var(--badge-success)", fontWeight: 600 }}>Success</span></>
-            : <><Icons.X size={11} color="var(--badge-error, #ef4444)" /><span style={{ fontSize: 11, color: "var(--badge-error, #ef4444)", fontWeight: 600 }}>Failed</span></> // audit-ignore: hex is CSS var fallback
-          }
-        </div>
+        {/* Result — the one genuinely semantic column, so it keeps success/error */}
+        <Tag
+          variant={ev.result === "Success" ? "success" : "error"}
+          size="sm"
+          className="w-fit"
+          leadingIcon={ev.result === "Success" ? <Icons.Check size={11} /> : <Icons.X size={11} />}
+        >
+          {ev.result}
+        </Tag>
         {/* Source */}
         <span style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "right" }}>
           {ev.source === "UI" ? <><Icons.Monitor size={11} style={{ display: "inline", marginRight: 3 }} />UI</>
@@ -949,29 +989,52 @@ function ActivityPanel() {
 
   return (
     <div>
-      {/* Toolbar */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events, resources…"
-          style={{ flex: 1, minWidth: 160, padding: "5px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)" }} />
-        <select value={actionFilter} onChange={e => setActionFilter(e.target.value as AuditAction | "All")}
-          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
-          {ACTION_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Action: All" : f}</option>)}
-        </select>
-        <select value={resultFilter} onChange={e => setResultFilter(e.target.value as AuditResult | "All")}
-          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
-          {RESULT_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Result: All" : f}</option>)}
-        </select>
+      {/* Toolbar — Filters owns the search, the two slots and their menus.
+          The two raw <select>s this replaces are exactly what the component
+          exists to stop: a select is three lines and works, which is why
+          screens keep reaching for it. */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Filters
+            showSearch
+            searchPlaceholder="Search events, resources…"
+            searchValue={search}
+            onSearchChange={setSearch}
+            slots={[
+              {
+                placeholder: "Action",
+                value:   actionFilter === "All" ? undefined : actionFilter,
+                options: ACTION_FILTERS as string[],
+                onSelect: v => setActionFilter(v as AuditAction | "All"),
+                onRemove: actionFilter === "All" ? undefined : () => setActionFilter("All"),
+              },
+              {
+                placeholder: "Result",
+                value:   resultFilter === "All" ? undefined : resultFilter,
+                options: RESULT_FILTERS as string[],
+                onSelect: v => setResultFilter(v as AuditResult | "All"),
+                onRemove: resultFilter === "All" ? undefined : () => setResultFilter("All"),
+              },
+            ]}
+            showClearFilters={actionFilter !== "All" || resultFilter !== "All" || search !== ""}
+            onClearFilters={() => { setActionFilter("All"); setResultFilter("All"); setSearch("") }}
+            // An audit log is chronological and has one view. Filters turns
+            // these on by default; leaving them would put three controls in the
+            // bar that do nothing.
+            showAllFilters={false}
+            showSort={false}
+            showViewToggle={false}
+          />
+        </div>
         <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
-        <button style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", background: "none", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 5 }}>
-          <Icons.Download size={12} />Export
-        </button>
+        <Button variant="secondary" size="default"><Icons.Download size={13} />Export</Button>
       </div>
 
       {/* Table */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+      <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
         {/* Header */}
         <div style={{
-          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
+          display: "grid", gridTemplateColumns: "20px 150px 160px 104px 130px 1fr 96px 60px",
           padding: "8px 14px", gap: 10,
           background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
           fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
@@ -988,7 +1051,7 @@ function ActivityPanel() {
             No events match the current filters
           </div>
         )}
-      </div>
+      </CardContainer>
     </div>
   )
 }
@@ -1023,10 +1086,10 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
       {/* MFA status card */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+      <CardContainer className="!p-0 overflow-hidden">
         <div style={{
-          padding: "12px 20px", borderBottom: "1px solid var(--border)",
-          background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "12px 24px", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Icons.ShieldCheck size={15} color={member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)"} />
@@ -1034,20 +1097,13 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
               Multi-Factor Authentication
             </span>
           </div>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 5,
-            padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700,
-            background: member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 15%, transparent)" : "color-mix(in srgb, var(--badge-alert) 15%, transparent)",
-            color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-            border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 35%, transparent)" : "color-mix(in srgb, var(--badge-alert) 35%, transparent)"}`,
-          }}>
-            <div style={{ width: 5, height: 5, borderRadius: "50%", background: "currentColor" }} />
+          <Tag variant={member.mfaEnabled ? "success" : "alert"} size="sm">
             {member.mfaEnabled ? "Enabled" : "Not enabled"}
-          </div>
+          </Tag>
         </div>
 
         {member.mfaEnabled && member.mfaMethod ? (
-          <div style={{ padding: "16px 20px" }}>
+          <div style={{ padding: "16px 24px" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               <InfoRow
                 icon={MFA_METHOD_ICON[member.mfaMethod]}
@@ -1066,36 +1122,21 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
             {!isInvited && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
                 {!confirmReset ? (
-                  <button
-                    onClick={() => setConfirmReset(true)}
-                    style={{ fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface-raised)", color: "var(--foreground)", cursor: "pointer" }}
-                  >
-                    Reset MFA enrollment
-                  </button>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmReset(true)}>Reset MFA enrollment</Button>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 12, color: "var(--badge-error)", fontWeight: 600 }}>
                       Remove their MFA device? They'll re-enroll on next login.
                     </span>
-                    <button
-                      onClick={() => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) }}
-                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
-                    >
-                      Yes, reset
-                    </button>
-                    <button
-                      onClick={() => setConfirmReset(false)}
-                      style={{ fontSize: 12, fontWeight: 600, padding: "6px 12px", borderRadius: 6, border: "1px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer" }}
-                    >
-                      Cancel
-                    </button>
+                    <Button variant="warning" size="sm" onClick={() => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) }}>Yes, reset</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmReset(false)}>Cancel</Button>
                   </div>
                 )}
               </div>
             )}
           </div>
         ) : (
-          <div style={{ padding: "16px 20px" }}>
+          <div style={{ padding: "16px 24px" }}>
             {isInvited ? (
               <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>
                 MFA setup is not available for pending invitations. The member will be prompted to enroll when they accept the invitation.
@@ -1110,40 +1151,27 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
                     Send an enrollment reminder or require MFA for their role.
                   </p>
                 </div>
-                <button
-                  onClick={() => alert(`Enrollment email sent to ${member.email}`)}
-                  style={{ fontSize: 12, fontWeight: 600, padding: "8px 14px", borderRadius: 8, border: "1px solid var(--primary)", color: "var(--primary)", background: "transparent", cursor: "pointer", flexShrink: 0, marginLeft: 16 }}
-                >
-                  Send reminder
-                </button>
+                <Button variant="secondary" size="sm" onClick={() => alert(`Enrollment email sent to ${member.email}`)}>Send reminder</Button>
               </div>
             )}
           </div>
         )}
-      </div>
+      </CardContainer>
 
       {/* Active sessions */}
       {!isInvited && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+        <CardContainer className="!p-0 overflow-hidden">
           <div style={{
-            padding: "12px 20px", borderBottom: "1px solid var(--border)",
-            background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 24px", borderBottom: "1px solid var(--border)",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Icons.Monitor size={15} />
               <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>Active sessions</span>
-              <span style={{
-                fontSize: 11, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-                background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted-foreground)",
-              }}>{sessions.length}</span>
+              <Tag variant="neutral" size="sm">{sessions.length}</Tag>
             </div>
             {sessions.filter(s => !s.current).length > 0 && (
-              <button
-                onClick={revokeAllOthers}
-                style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", border: "none", background: "none", cursor: "pointer" }}
-              >
-                Revoke all other sessions
-              </button>
+              <Button variant="tertiary" size="sm" onClick={revokeAllOthers}>Revoke all other sessions</Button>
             )}
           </div>
 
@@ -1154,29 +1182,24 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
           ) : sessions.map((s, i) => (
             <div
               key={s.id}
-              style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: i < sessions.length - 1 ? "1px solid var(--border)" : "none" }}
+              style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 24px", borderBottom: i < sessions.length - 1 ? "1px solid var(--border)" : "none" }}
             >
-              <div style={{
-                width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                background: "var(--surface-raised)", border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
-              }}>
-                {s.device.toLowerCase().includes("iphone") || s.device.toLowerCase().includes("ipad")
-                  ? <Icons.Smartphone size={16} />
-                  : s.device.toLowerCase().includes("macbook") || s.device.toLowerCase().includes("laptop")
-                    ? <Icons.Laptop size={16} />
-                    : <Icons.Monitor size={16} />}
-              </div>
+              <HighlightIcon
+                size="md"
+                variant="neutral"
+                icon={
+                  s.device.toLowerCase().includes("iphone") || s.device.toLowerCase().includes("ipad")
+                    ? <Icons.Smartphone size={16} />
+                    : s.device.toLowerCase().includes("macbook") || s.device.toLowerCase().includes("laptop")
+                      ? <Icons.Laptop size={16} />
+                      : <Icons.Monitor size={16} />
+                }
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{s.device}</span>
                   {s.current && (
-                    <span style={{
-                      fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-                      background: "color-mix(in srgb, var(--badge-success) 15%, transparent)",
-                      color: "var(--badge-success)", border: "1px solid color-mix(in srgb, var(--badge-success) 30%, transparent)",
-                      textTransform: "uppercase", letterSpacing: "0.04em",
-                    }}>Current</span>
+                    <Tag variant="success" size="sm">Current</Tag>
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
@@ -1184,18 +1207,11 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
                 </div>
               </div>
               {!s.current && (
-                <button
-                  onClick={() => revokeSession(s.id)}
-                  style={{ fontSize: 12, fontWeight: 600, padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border)", color: "var(--muted-foreground)", background: "transparent", cursor: "pointer", flexShrink: 0 }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--badge-error)"; e.currentTarget.style.color = "var(--badge-error)" }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)" }}
-                >
-                  Revoke
-                </button>
+                <Button variant="secondary" size="sm" onClick={() => revokeSession(s.id)}>Revoke</Button>
               )}
             </div>
           ))}
-        </div>
+        </CardContainer>
       )}
     </div>
   )
@@ -1229,25 +1245,35 @@ function MemberDetailPage({
     >
       <BackBreadcrumb onBack={onBack} />
 
+      {/* Removing a member is irreversible and the answer is yes or no — that is
+          a ModalDialog, not a panel the page can scroll past. `warning`, not
+          `error`: the person still exists, they lose access to this workspace. */}
+      <ModalDialog
+        isOpen={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        tone="warning"
+        iconName="UserMinus"
+        title={`Remove ${member.name} from the workspace?`}
+        description={`${member.name} will immediately lose access to every studio, role and group in Avance Financial. Their audit history is kept.`}
+        informativeCard="This cannot be undone. Re-adding them requires a new invitation."
+        ctaPrimary={{ label: "Remove member", destructive: true, onClick: () => { setConfirmRemove(false); onRemove(member.id); onBack() } }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setConfirmRemove(false) }}
+      />
+
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
-        {/* Left: identity card */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {/* Left: identity card — sticky so it stays readable while the
+            right-hand column scrolls. top = header zone + breathing room. */}
+        <CardContainer className="!p-0 overflow-hidden sticky top-[16px] self-start">
           {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
             padding: "28px 24px 20px",
           }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: "50%",
-              background: isActive ? member.avatarColor : "var(--muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 26, fontWeight: 700,
-              color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-              opacity: member.status === "suspended" ? 0.6 : 1,
-            }}>
-              {member.initials}
+            <div style={{ opacity: member.status === "suspended" ? 0.6 : 1 }}>
+              <AvatarCircle name={member.name} initials={member.initials} sizeKey="xxl"
+                avatarStyle={isActive ? "text" : "empty"} />
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
@@ -1298,25 +1324,12 @@ function MemberDetailPage({
                 {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
               </Button>
             )}
-            {!confirmRemove ? (
-              <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => setConfirmRemove(true)}>
-                <Icons.Trash2 size={13} /> Remove from workspace
-              </Button>
-            ) : (
-              <div style={{ padding: "12px", border: "1px solid var(--badge-error)", borderRadius: 8, background: "color-mix(in srgb, var(--badge-error) 6%, transparent)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 4 }}>Remove {member.name}?</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>This cannot be undone.</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Button variant="warning" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => { onRemove(member.id); onBack() }}>Confirm</Button>
-                  <Button variant="secondary" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => setConfirmRemove(false)}>Cancel</Button>
-                </div>
-              </div>
-            )}
+            <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
+              onClick={() => setConfirmRemove(true)}>
+              <Icons.Trash2 size={13} /> Remove from workspace
+            </Button>
           </div>
-        </div>
+        </CardContainer>
 
         {/* Right: tabs */}
         <div>
@@ -1353,19 +1366,11 @@ function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack:
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <button onClick={onBack} style={{
-          display: "flex", alignItems: "center", gap: 4, padding: "5px 10px",
-          fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 7,
-          background: "var(--surface)", color: "var(--muted-foreground)", cursor: "pointer",
-        }}>
+        <Button variant="secondary" size="sm" onClick={onBack}>
           <Icons.ChevronLeft size={13} /> Apps
-        </button>
+        </Button>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-            background: "var(--surface-raised)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-          }}>{meta?.icon}</div>
+          <HighlightIcon size="sm" variant={STUDIO_HI[studioId] ?? "neutral"} icon={meta?.icon} />
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{meta?.label} — Permissions</span>
         </div>
       </div>
@@ -1445,16 +1450,8 @@ function AppsPanel({ member }: { member: Member }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {available.map(([id, meta]) => (
-              <div key={id} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
-                background: "var(--surface)",
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                  background: "var(--surface-raised)", border: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-                }}>{meta.icon}</div>
+              <CardContainer key={id} size="sm" className="flex items-center gap-[12px]">
+                <HighlightIcon size="md" variant={STUDIO_HI[id] ?? "neutral"} icon={meta.icon} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
@@ -1466,7 +1463,7 @@ function AppsPanel({ member }: { member: Member }) {
                 >
                   Grant
                 </Button>
-              </div>
+              </CardContainer>
             ))}
           </div>
         )
@@ -1520,61 +1517,50 @@ function AppsPanel({ member }: { member: Member }) {
           if (!meta) return null
           const via = memberGroups.filter(g => g.studios.includes(s)).map(g => g.name)
           return (
-            <div key={s}
+            <CardContainer
+              key={s}
+              size="sm"
               onClick={() => setSelectedStudio(s)}
-              style={{
-                display: "flex", alignItems: "center", gap: 16,
-                padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
-                background: "var(--surface)", cursor: "pointer", transition: "background 0.1s",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface)" }}
+              className="flex items-center gap-[16px]"
             >
-              <div style={{
-                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                background: "var(--surface-raised)", border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "var(--primary)",
-              }}>{meta.icon}</div>
+              <HighlightIcon size="md" variant={STUDIO_HI[s] ?? "neutral"} icon={meta.icon} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>{meta.label}</div>
                 <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
               </div>
               <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
-                <Chip variant="success-secondary" size="s">Active</Chip>
+                <Tooltip side="cursor" content={`${member.name} has active access to ${meta.label}`}>
+                  <Tag variant="success" size="sm">Active</Tag>
+                </Tooltip>
                 {via.length > 0 && (
-                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     {via.slice(0, 2).map(v => (
-                      <Chip key={v} variant="secondary" size="s">via {v}</Chip>
+                      <Tooltip key={v} side="cursor" content={`Access granted through the ${v} group, not directly`}>
+                        <Tag variant="neutral" size="sm">via {v}</Tag>
+                      </Tooltip>
                     ))}
-                    {via.length > 2 && <Chip variant="secondary" size="s">+{via.length - 2} more</Chip>}
+                    {via.length > 2 && (
+                      <Tooltip side="cursor" content={via.slice(2).join(" · ")}>
+                        <Tag variant="neutral" size="sm">+{via.length - 2} more</Tag>
+                      </Tooltip>
+                    )}
                   </div>
                 )}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 12 }}>
-                <button
-                  onClick={e => { e.stopPropagation(); setRemovingStudio(s) }}
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
-                    background: "var(--surface-raised)", color: "var(--muted-foreground)", cursor: "pointer",
-                    opacity: 0.7,
-                  }}
-                  title="Remove studio access"
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--badge-error)"
-                    ;(e.currentTarget as HTMLElement).style.opacity = "1"
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.color = "var(--muted-foreground)"
-                    ;(e.currentTarget as HTMLElement).style.opacity = "0.7"
-                  }}
-                >
-                  <Icons.Trash2 size={12} />
-                </button>
+                <Tooltip side="cursor" content={`Remove access to ${meta.label}`}>
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    onClick={e => { e.stopPropagation(); setRemovingStudio(s) }}
+                    aria-label={`Remove access to ${meta.label}`}
+                  >
+                    <Icons.Trash2 size={12} />
+                  </Button>
+                </Tooltip>
                 <Icons.ChevronRight size={14} style={{ color: "var(--muted-foreground)" }} />
               </div>
-            </div>
+            </CardContainer>
           )
         })}
         {/* Footer note when all studios are assigned */}
@@ -1608,21 +1594,12 @@ function MemberRolesPanel({ member }: { member: Member }) {
       {assignedRoles.map(role => {
         const perms = ROLE_PERM_COUNTS[role.id] ?? { total: 0 }
         return (
-          <div key={role.id} style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
-            background: "var(--surface)",
-          }}>
-            <div style={{
-              width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
-              background: role.color,
-            }} />
+          <CardContainer key={role.id} size="sm" className="flex items-center gap-[14px]">
+            <HighlightIcon size="md" variant={ROLE_HI[role.id] ?? "neutral"} iconName="Shield" />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</span>
-                {role.system && (
-                  <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>System</span>
-                )}
+                {role.system && <Tag variant="neutral" size="sm">System</Tag>}
               </div>
               <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{role.desc}</div>
             </div>
@@ -1634,7 +1611,7 @@ function MemberRolesPanel({ member }: { member: Member }) {
                 Assigned by Admin · 14 days ago
               </div>
             </div>
-          </div>
+          </CardContainer>
         )
       })}
     </div>
@@ -1659,38 +1636,24 @@ function MemberGroupsPanel({ member }: { member: Member }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {memberGroups.map(group => (
-        <div key={group.id} style={{
-          display: "flex", alignItems: "center", gap: 14,
-          padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
-          background: "var(--surface)",
-        }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-            background: `${group.color}22`, border: `1px solid ${group.color}44`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: group.color, fontWeight: 700, fontSize: 12,
-          }}>
-            {group.name.slice(0, 2).toUpperCase()}
-          </div>
+        <CardContainer key={group.id} size="sm" className="flex items-center gap-[14px]">
+          {/* A group is a group of people — avatar, not an icon (CLAUDE.md visual rule) */}
+          <AvatarCircle name={group.name} initials={group.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{group.name}</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
               {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 180 }}>
+          <div style={{ display: "flex", gap: "8px 4px", flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 180 }}>
             {group.studios.slice(0, 3).map(s => (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: "var(--surface-raised)", color: "var(--muted-foreground)",
-                border: "1px solid var(--border)",
-              }}>{STUDIO_META[s]?.label ?? s}</span>
+              <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{STUDIO_META[s]?.label ?? s}</Tag>
             ))}
             {group.studios.length > 3 && (
-              <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{group.studios.length - 3}</span>
+              <Tag variant="neutral" size="sm">+{group.studios.length - 3}</Tag>
             )}
           </div>
-        </div>
+        </CardContainer>
       ))}
     </div>
   )
@@ -1699,7 +1662,7 @@ function MemberGroupsPanel({ member }: { member: Member }) {
 // ─── Permissions tab (dual-mode: Audit / Edit) ───────────────────────────────
 
 const GRANTED_STATES: PermState[] = ["g-direct", "g-inh"]
-const SCOPE_ITEMS: SwitchTabItem[] = [
+const SCOPE_ITEMS: Array<{ id: string; label: string }> = [
   { id: "Own",    label: "Own" },
   { id: "Team",   label: "Team" },
   { id: "Tenant", label: "Tenant" },
@@ -1767,11 +1730,9 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
             {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>via {node.role}</span>
+              <Tooltip side="cursor" content={`Inherited from the ${node.role} role, not granted directly`}>
+                <Tag variant="neutral" size="sm">via {node.role}</Tag>
+              </Tooltip>
             )}
             {/* Static scope badge — audit mode only; edit mode shows SwitchTab below */}
             {node.scope && mode !== "edit" && (
@@ -1790,30 +1751,46 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
               Inherited via role · toggle to confirm direct access
             </div>
           )}
-          {/* Scope selector — edit mode, all permission nodes */}
-          {mode === "edit" && (
-            <div
-              style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
-              onClick={e => e.stopPropagation()}
-            >
-              <SwitchTab
-                size="s"
-                items={SCOPE_ITEMS}
-                value={scopeOverrides[node.id] ?? node.scope ?? "Own"}
-                onChange={scope => onScopeChange(node.id, scope)}
-                aria-label={`Scope for ${node.label}`}
-              />
-            </div>
-          )}
         </div>
-        <span onClick={e => e.stopPropagation()} style={{ paddingTop: 2 }}>
-          <Toggle
-            checked={isDirect}
-            disabled={node.locked && node.state !== "g-inh"}
-            size="sm"
-            onChange={on => { onToggle(node.id, on) }}
-          />
-        </span>
+
+        {/* Control cluster — scope, then a hairline, then the toggle. The scope
+            chips used to sit under the label, which added ~26px to every row
+            and left the entire right half of the tree empty. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, paddingTop: 1 }}>
+          {mode === "edit" && (
+            <>
+              <div
+                role="group"
+                aria-label={`Scope for ${node.label}`}
+                style={{ display: "flex", gap: 4, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
+                onClick={e => e.stopPropagation()}
+              >
+                {SCOPE_ITEMS.map(item => {
+                  const active = (scopeOverrides[node.id] ?? node.scope ?? "Own") === item.id
+                  return (
+                    <Chip
+                      key={item.id}
+                      size="s"
+                      variant={active ? "primary" : "secondary"}
+                      onClick={() => onScopeChange(node.id, item.id)}
+                    >
+                      {item.label}
+                    </Chip>
+                  )
+                })}
+              </div>
+              <span aria-hidden style={{ width: 1, height: 20, background: "var(--field-border)", flexShrink: 0 }} />
+            </>
+          )}
+          <span onClick={e => e.stopPropagation()}>
+            <Toggle
+              checked={isDirect}
+              disabled={node.locked && node.state !== "g-inh"}
+              size="sm"
+              onChange={on => { onToggle(node.id, on) }}
+            />
+          </span>
+        </div>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
         <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle}
@@ -1833,6 +1810,7 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
   const [overrides, setOverrides] = useState<PermOverrides>({})
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
+  const [savedSummary, setSavedSummary] = useState<{ total: number; pinned: number; added: number; removed: number } | null>(null)
   const [showDiscardModal, setShowDiscardModal] = useState(false)
   const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
@@ -1889,8 +1867,10 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
     setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
   }
   function confirmSave() {
+    // Counts are captured BEFORE the reset — after it there is nothing to count,
+    // and a confirmation that cannot say what changed is not a confirmation.
+    setSavedSummary({ total: changedNodes.length, pinned: pinnedNodes.length, added: addedNodes.length, removed: removedNodes.length })
     setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   // Compute changed permissions for the Review step
@@ -1934,12 +1914,24 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
             Edit permissions
           </Button>
         )}
-        {mode === "edit" && saveStep === null && saved && (
-          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
-            <Icons.CheckCircle size={13} /> Saved
-          </span>
-        )}
       </div>
+
+      {/* Applying permissions is a governed write, so it is confirmed
+          explicitly and the confirmation stays until it is dismissed. */}
+      {saved && savedSummary && (
+        <div style={{ marginBottom: 16 }}>
+          <AlertBanner
+            state="success"
+            title={`${savedSummary.total} permission${savedSummary.total === 1 ? "" : "s"} updated`}
+            description={[
+              savedSummary.added   > 0 ? `${savedSummary.added} granted`   : null,
+              savedSummary.removed > 0 ? `${savedSummary.removed} revoked` : null,
+              savedSummary.pinned  > 0 ? `${savedSummary.pinned} pinned`   : null,
+            ].filter(Boolean).join(" · ") + ". Takes effect on the member's next action."}
+            onClose={() => { setSaved(false); setSavedSummary(null) }}
+          />
+        </div>
+      )}
 
       {/* Lightweight stats row — only in tree view */}
       {saveStep === null && (
@@ -1976,7 +1968,6 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
         function renderDiffSection(
           items: PermNode[],
           header: string,
-          accentColor: string,
           bgMix: string,
           icon: ReactElement
         ) {
@@ -1991,8 +1982,12 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
           }
           return (
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
-                {header} · {items.length}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                {icon}
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--color-text-title)", textTransform: "uppercase", letterSpacing: 0.6 }}>
+                  {header}
+                </span>
+                <Tag variant="neutral" size="sm">{items.length}</Tag>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {groups.map(({ parent, parentInItems, children }) => (
@@ -2034,9 +2029,9 @@ function MemberPermissionsPanel({ member: _member }: { member: Member }) {
             {/* Step 0: Review diff */}
             {saveStep === 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {renderDiffSection(pinnedNodes, "Pinned — stays if role is removed", "var(--primary)", "color-mix(in srgb, var(--primary) 8%, transparent)", <Icons.Pin size={11} color="var(--primary)" />)}
-                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
-                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {renderDiffSection(pinnedNodes, "Pinned — stays if role is removed", "color-mix(in srgb, var(--primary) 8%, transparent)", <Icons.Pin size={11} color="var(--primary)" />)}
+                {renderDiffSection(addedNodes, "New access", "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
                 {changedNodes.length === 0 && (
                   <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
                     No changes to review.
@@ -2277,7 +2272,7 @@ function RemoveAccessModal({
         </div>
 
         {/* Resource card */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
               {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
@@ -2317,19 +2312,9 @@ function RemoveAccessModal({
 
         {/* Actions */}
         <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button onClick={onCancel} style={{
-            padding: "7px 16px", fontSize: 12, fontWeight: 600, borderRadius: 8,
-            border: "1px solid var(--border)", background: "transparent", color: "var(--foreground)", cursor: "pointer",
-          }}>Cancel</button>
+          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
           {!isSystem && (
-            <button onClick={onConfirm} style={{
-              padding: "7px 16px", fontSize: 12, fontWeight: 600, borderRadius: 8,
-              border: "none", cursor: "pointer",
-              background: isViaGroup ? "var(--badge-alert)" : "var(--badge-error)",
-              color: "#fff", // audit-ignore: white text on colored button
-            }}>
-              {isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}
-            </button>
+            <Button variant="warning" size="sm" onClick={onConfirm}>{isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}</Button>
           )}
         </div>
       </div>
@@ -2424,7 +2409,7 @@ function ResourcesPanel({ member }: { member: Member }) {
           </div>
 
           {/* Table */}
-          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+          <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
             <div style={{
               display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
               padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
@@ -2442,7 +2427,7 @@ function ResourcesPanel({ member }: { member: Member }) {
                   padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
                   alignItems: "center",
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--table-row-hover-bg)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2490,7 +2475,7 @@ function ResourcesPanel({ member }: { member: Member }) {
                 </div>
               )
             })}
-          </div>
+          </CardContainer>
         </>
       )}
     </div>
@@ -2566,7 +2551,7 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
 
       {/* Role identity card — DS composition: CardContainer + Tag + Button */}
       <div style={{ marginTop: 16, marginBottom: 24 }}>
-        <div style={{ borderLeft: `4px solid ${role.color}`, borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, overflow: "hidden" }}>
         <CardContainer size="default" variant="default">
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -2592,7 +2577,7 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
                   <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
                 )}
                 {/* System / Custom badge — read-only identity tag */}
-                <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                <Tag variant={role.system ? "neutral" : "purple"} size="sm">
                   {role.system ? "System" : "Custom"}
                 </Tag>
                 {!role.system && !editingName && (
@@ -2687,18 +2672,16 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
       <div style={{ marginTop: 20 }}>
         {/* Members */}
         {activeTab === 0 && (
-          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+          <CardContainer className="!p-0 overflow-hidden">
             <div style={{
-              padding: "12px 20px", borderBottom: "1px solid var(--border)",
-              background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "12px 24px", borderBottom: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
                 <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""}
               </span>
               {!role.system && (
-                <button style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
-                  + Assign members
-                </button>
+                <Button variant="tertiary" size="sm">+ Assign members</Button>
               )}
             </div>
             {members.length === 0 ? (
@@ -2708,27 +2691,22 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
                 <div style={{ fontSize: 13, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
               </div>
             ) : members.map(m => {
-              const statusColor = STATUS_COLOR[m.status]
               return (
                 <div
                   key={m.id}
                   onClick={() => onMemberClick?.(m)}
                   style={{
-                    display: "flex", alignItems: "center", gap: 14, padding: "10px 20px",
+                    display: "flex", alignItems: "center", gap: 14, padding: "10px 24px",
                     borderBottom: "1px solid var(--border)",
                     cursor: onMemberClick ? "pointer" : "default",
                     transition: "background 0.1s",
                   }}
-                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
                 >
                   {/* Avatar */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
-                  }}>{m.initials}</div>
+                  <AvatarCircle name={m.name} initials={m.initials} sizeKey="lg"
+                    avatarStyle={m.status === "active" ? "text" : "empty"} />
 
                   {/* Name + email */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -2742,13 +2720,8 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
                   </div>
 
                   {/* User type badge */}
-                  <div style={{
-                    minWidth: 72, textAlign: "center", flexShrink: 0,
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
-                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
-                  }}>
-                    {m.role}
+                  <div style={{ minWidth: 72, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                    <Tag variant={USER_TYPE_TAG[m.role]} size="sm">{m.role}</Tag>
                   </div>
 
                   {/* Last active */}
@@ -2764,29 +2737,19 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
                   </div>
 
                   {/* MFA badge */}
-                  <div
-                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: m.mfaEnabled
-                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                    }}
-                  >
-                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-                    MFA
-                  </div>
+                  <Tooltip side="cursor" content={m.mfaEnabled ? "MFA enabled" : "MFA not enabled"}>
+                    <Tag
+                      variant={m.mfaEnabled ? "success" : "alert"}
+                      size="sm"
+                      leadingIcon={m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    >
+                      MFA
+                    </Tag>
+                  </Tooltip>
 
                   {/* Status */}
-                  <div style={{
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-                    minWidth: 76, textAlign: "center", flexShrink: 0,
-                  }}>
-                    {STATUS_LABEL[m.status]}
+                  <div style={{ minWidth: 76, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                    <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
                   </div>
 
                   {/* Unassign button — system roles are read-only */}
@@ -2806,7 +2769,7 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
                 </div>
               )
             })}
-          </div>
+          </CardContainer>
         )}
 
         {/* Permissions */}
@@ -2859,7 +2822,7 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
 
       {/* Group identity card — DS composition: CardContainer + Tag + Button */}
       <div style={{ marginTop: 16, marginBottom: 24 }}>
-        <div style={{ borderLeft: `4px solid ${group.color}`, borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, overflow: "hidden" }}>
         <CardContainer size="default" variant="default">
           <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -2953,7 +2916,7 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                 {group.studios.length === 0 ? (
                   <Tag variant="secondary" size="sm">No studios</Tag>
                 ) : group.studios.map(s => (
-                  <Tag key={s} variant="secondary" size="sm">{STUDIO_META[s].label}</Tag>
+                  <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{STUDIO_META[s].label}</Tag>
                 ))}
               </div>
             </div>
@@ -3011,17 +2974,15 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
       <div style={{ marginTop: 20 }}>
         {/* Members */}
         {activeTab === 0 && (
-          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+          <CardContainer className="!p-0 overflow-hidden">
             <div style={{
-              padding: "12px 20px", borderBottom: "1px solid var(--border)",
-              background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "12px 24px", borderBottom: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
                 <b style={{ color: "var(--foreground)" }}>{groupMembers.length}</b> member{groupMembers.length !== 1 ? "s" : ""}
               </span>
-              <button style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
-                + Add member
-              </button>
+              <Button variant="tertiary" size="sm">+ Add member</Button>
             </div>
             {groupMembers.length === 0 ? (
               <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
@@ -3030,27 +2991,22 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                 <div style={{ fontSize: 13, marginTop: 4 }}>Add members to this group to grant them shared access</div>
               </div>
             ) : groupMembers.map(m => {
-              const statusColor = STATUS_COLOR[m.status]
               return (
                 <div
                   key={m.id}
                   onClick={() => onMemberClick?.(m)}
                   style={{
-                    display: "flex", alignItems: "center", gap: 14, padding: "10px 20px",
+                    display: "flex", alignItems: "center", gap: 14, padding: "10px 24px",
                     borderBottom: "1px solid var(--border)",
                     cursor: onMemberClick ? "pointer" : "default",
                     transition: "background 0.1s",
                   }}
-                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
                 >
                   {/* Avatar */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
-                  }}>{m.initials}</div>
+                  <AvatarCircle name={m.name} initials={m.initials} sizeKey="lg"
+                    avatarStyle={m.status === "active" ? "text" : "empty"} />
 
                   {/* Name + email */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3064,13 +3020,8 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                   </div>
 
                   {/* User type badge */}
-                  <div style={{
-                    minWidth: 72, textAlign: "center", flexShrink: 0,
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
-                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
-                  }}>
-                    {m.role}
+                  <div style={{ minWidth: 72, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                    <Tag variant={USER_TYPE_TAG[m.role]} size="sm">{m.role}</Tag>
                   </div>
 
                   {/* Last active */}
@@ -3086,29 +3037,19 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                   </div>
 
                   {/* MFA badge */}
-                  <div
-                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: m.mfaEnabled
-                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                    }}
-                  >
-                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-                    MFA
-                  </div>
+                  <Tooltip side="cursor" content={m.mfaEnabled ? "MFA enabled" : "MFA not enabled"}>
+                    <Tag
+                      variant={m.mfaEnabled ? "success" : "alert"}
+                      size="sm"
+                      leadingIcon={m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    >
+                      MFA
+                    </Tag>
+                  </Tooltip>
 
                   {/* Status */}
-                  <div style={{
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-                    minWidth: 76, textAlign: "center", flexShrink: 0,
-                  }}>
-                    {STATUS_LABEL[m.status]}
+                  <div style={{ minWidth: 76, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                    <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
                   </div>
 
                   {/* Remove button */}
@@ -3124,14 +3065,14 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                 </div>
               )
             })}
-          </div>
+          </CardContainer>
         )}
 
         {/* Settings */}
         {activeTab === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {/* Studio access */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "20px 24px", background: "var(--surface)" }}>
+            <CardContainer>
               <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 14 }}>
                 Studio access
               </div>
@@ -3159,7 +3100,7 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                   )
                 })}
               </div>
-            </div>
+            </CardContainer>
 
             {/* Danger zone */}
             <div style={{ border: "1px solid color-mix(in srgb, var(--badge-error) 30%, transparent)", borderRadius: 12, padding: "20px 24px", background: "color-mix(in srgb, var(--badge-error) 5%, transparent)" }}>
@@ -3170,22 +3111,13 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                 Deleting this group removes it permanently. Members are not removed from the workspace.
               </div>
               {!confirmDelete ? (
-                <button
-                  onClick={() => setConfirmDelete(true)}
-                  style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "var(--badge-error)", background: "transparent", cursor: "pointer" }}
-                >
-                  Delete group
-                </button>
+                <Button variant="warning" size="sm" onClick={() => setConfirmDelete(true)}>Delete group</Button>
               ) : (
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 10 }}>Are you sure? This cannot be undone.</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={onBack} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--badge-error)", color: "#fff", /* audit-ignore: prototype fixture data */ background: "var(--badge-error)", cursor: "pointer" }}>
-                      Delete
-                    </button>
-                    <button onClick={() => setConfirmDelete(false)} style={{ fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}>
-                      Cancel
-                    </button>
+                    <Button variant="warning" size="sm" onClick={onBack}>Delete</Button>
+                    <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
                   </div>
                 </div>
               )}
@@ -3214,7 +3146,6 @@ function MemberRow({
   const [hovered, setHovered] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number } | null>(null)
-  const statusColor = STATUS_COLOR[member.status]
 
   function openMenu(e: React.MouseEvent) {
     e.stopPropagation()
@@ -3229,23 +3160,19 @@ function MemberRow({
       <div
         onClick={() => onSelect(member)}
         style={{
-          padding: "10px 20px", borderBottom: "1px solid var(--border)",
+          padding: "10px 24px", borderBottom: "1px solid var(--border)",
           display: "flex", alignItems: "center", gap: 14,
-          background: hovered ? "var(--accent)" : "transparent",
+          background: hovered ? "var(--el-row-hover)" : "transparent",
           cursor: "pointer", transition: "background 0.1s",
         }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
         {/* Avatar */}
-        <div style={{
-          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-          background: member.status === "active" ? member.avatarColor : "var(--muted)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 12, fontWeight: 700,
-          color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore
-          opacity: member.status === "suspended" ? 0.5 : 1,
-        }}>{member.initials}</div>
+        <div style={{ flexShrink: 0, opacity: member.status === "suspended" ? 0.5 : 1 }}>
+          <AvatarCircle name={member.name} initials={member.initials} sizeKey="lg"
+            avatarStyle={member.status === "active" ? "text" : "empty"} />
+        </div>
 
         {/* Name + email */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -3264,14 +3191,7 @@ function MemberRow({
 
         {/* User type badge */}
         <div style={{ minWidth: 72, display: "flex", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100,
-            background: `${USER_TYPE_COLOR[member.role]}22`,
-            color: USER_TYPE_COLOR[member.role],
-            border: `1px solid ${USER_TYPE_COLOR[member.role]}44`,
-          }}>
-            {member.role}
-          </span>
+          <Tag variant={USER_TYPE_TAG[member.role]} size="sm">{member.role}</Tag>
         </div>
 
         {/* Last active */}
@@ -3289,29 +3209,26 @@ function MemberRow({
         </div>
 
         {/* MFA */}
-        <div
-          title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
-          style={{
-            display: "flex", alignItems: "center", gap: 4, minWidth: 60, justifyContent: "center",
-            padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
-            background: member.mfaEnabled
-              ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-              : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-            color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-            border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-          }}
-        >
-          {member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-          MFA
+        <div style={{ minWidth: 60, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <Tooltip
+            side="cursor"
+            content={member.mfaEnabled
+              ? `MFA enabled${member.mfaMethod ? ` · ${MFA_METHOD_LABEL[member.mfaMethod]}` : ""}`
+              : "MFA not enabled"}
+          >
+            <Tag
+              variant={member.mfaEnabled ? "success" : "alert"}
+              size="sm"
+              leadingIcon={member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+            >
+              MFA
+            </Tag>
+          </Tooltip>
         </div>
 
         {/* Status */}
-        <div style={{
-          padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-          background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-          minWidth: 76, textAlign: "center", flexShrink: 0,
-        }}>
-          {STATUS_LABEL[member.status]}
+        <div style={{ minWidth: 76, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <Tag variant={STATUS_TAG[member.status]} size="sm">{STATUS_LABEL[member.status]}</Tag>
         </div>
 
         {/* Kebab menu */}
@@ -3362,7 +3279,7 @@ function MemberRow({
                 cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left",
                 color: danger ? "var(--badge-error)" : "var(--foreground)",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none" }}
               >
                 <Icon size={13} />
@@ -3386,11 +3303,10 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
   return (
     <div style={{ borderRadius: 12, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Color accent top bar */}
-      <div style={{ height: 4, background: role.color, flexShrink: 0 }} />
       <CardContainer size="default" variant="default" onClick={() => onSelect(role)} className="flex-1 flex flex-col">
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+          <Tag variant={role.system ? "neutral" : "purple"} size="sm">
             {role.system ? "System" : "Custom"}
           </Tag>
         </div>
@@ -3405,14 +3321,13 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
               <div key={m.id} title={m.name} style={{
-                width: 24, height: 24, borderRadius: "50%",
-                background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                border: "2px solid var(--surface)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-                marginLeft: i > 0 ? -6 : 0, flexShrink: 0, position: "relative",
-                zIndex: visible.length - i,
-              }}>{m.initials}</div>
+                borderRadius: "50%", border: "2px solid var(--surface)", display: "flex",
+                marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
+                position: "relative", zIndex: visible.length - i,
+              }}>
+                <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                  avatarStyle={m.status === "active" ? "text" : "empty"} />
+              </div>
             ))}
             {overflow > 0 && (
               <div style={{
@@ -3448,7 +3363,6 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
   return (
     <div style={{ borderRadius: 12, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
       {/* Color accent top bar */}
-      <div style={{ height: 4, background: group.color, flexShrink: 0 }} />
       <CardContainer size="default" variant="default" onClick={() => onSelect(group)} className="flex-1 flex flex-col">
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
         <p style={{
@@ -3458,11 +3372,11 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
           {group.desc}
         </p>
         {/* Studio chips — Tag DS (read-only identity attributes) */}
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, minHeight: 22 }}>
+        <div style={{ display: "flex", gap: "8px 5px", flexWrap: "wrap", marginBottom: 12, minHeight: 22 }}>
           {group.studios.length === 0 ? (
             <Tag variant="secondary" size="sm">No studios</Tag>
           ) : group.studios.map(s => (
-            <Tag key={s} variant="secondary" size="sm">{STUDIO_META[s].label}</Tag>
+            <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{STUDIO_META[s].label}</Tag>
           ))}
         </div>
         <div style={{ flex: 1 }} />
@@ -3470,14 +3384,13 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
               <div key={m.id} title={m.name} style={{
-                width: 24, height: 24, borderRadius: "50%",
-                background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                border: "2px solid var(--surface)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
+                borderRadius: "50%", border: "2px solid var(--surface)", display: "flex",
                 marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
                 position: "relative", zIndex: visible.length - i,
-              }}>{m.initials}</div>
+              }}>
+                <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                  avatarStyle={m.status === "active" ? "text" : "empty"} />
+              </div>
             ))}
             {overflow > 0 && (
               <div style={{
@@ -3601,13 +3514,7 @@ function InviteModal({ onClose, onSend }: {
       }}>
         {/* Header */}
         <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12, position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-          }}>
-            <Icons.UserPlus size={17} />
-          </div>
+          <HighlightIcon size="md" variant="informative" iconName="UserPlus" />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Invite to Avance Financial</div>
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Invitations are sent by email and expire after 7 days.</div>
@@ -3837,7 +3744,6 @@ function MemberPreview({
   onToggleSuspend: (id: string) => void
 }) {
   const [tab, setTab] = useState(0)
-  const statusColor = STATUS_COLOR[member.status]
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
 
@@ -3853,26 +3759,15 @@ function MemberPreview({
     })
   }, [])
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%", padding: "6px 10px", fontSize: 12,
-    border: "1px solid var(--border)", borderRadius: 7,
-    background: "var(--surface)", color: "var(--foreground)", outline: "none",
-  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "0 0 16px", borderBottom: "1px solid var(--border)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-            background: isActive ? member.avatarColor : "var(--muted)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 17, fontWeight: 700,
-            color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-            opacity: member.status === "suspended" ? 0.55 : 1,
-          }}>
-            {member.initials}
+          <div style={{ flexShrink: 0, opacity: member.status === "suspended" ? 0.55 : 1 }}>
+            <AvatarCircle name={member.name} initials={member.initials} sizeKey="xxl"
+              avatarStyle={isActive ? "text" : "empty"} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 2 }}>{member.name}</div>
@@ -3882,36 +3777,26 @@ function MemberPreview({
               </div>
             )}
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100, background: `${ROLE_COLOR[member.role]}22`, color: ROLE_COLOR[member.role], border: `1px solid ${ROLE_COLOR[member.role]}44` }}>
+              <Tag variant={USER_TYPE_TAG[member.role]} size="sm">
                 {member.role}
-              </span>
-              <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100, background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}>
+              </Tag>
+              <Tag variant={STATUS_TAG[member.status]} size="sm">
                 {STATUS_LABEL[member.status]}
-              </span>
+              </Tag>
             </div>
           </div>
         </div>
-        <button
-          onClick={onViewFull}
-          style={{
-            width: "100%", padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-            border: "1px solid var(--border)", borderRadius: 8,
-            background: "var(--surface-raised)", color: "var(--foreground)",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-          }}
-        >
-          <Icons.ExternalLink size={12} />
-          View full profile
-        </button>
+        <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
+          View full profile</Button>
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 20px" }}>
+      <div>
         <PreviewTabBar tabs={["Overview", "Permissions", "Actions"]} active={tab} onChange={setTab} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
 
         {/* Overview */}
         {tab === 0 && (
@@ -3928,16 +3813,13 @@ function MemberPreview({
               <div style={{ color: "var(--muted-foreground)" }}><Icons.ShieldCheck size={13} /></div>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>MFA</div>
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
-                  background: member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 12%, transparent)" : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                  color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                  border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                }}>
-                  {member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                <Tag
+                  variant={member.mfaEnabled ? "success" : "alert"}
+                  size="sm"
+                  leadingIcon={member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                >
                   {member.mfaEnabled ? (member.mfaMethod ? `Enabled · ${MFA_METHOD_LABEL[member.mfaMethod]}` : "Enabled") : "Not enabled"}
-                </div>
+                </Tag>
               </div>
             </div>
             {!isInvited && (member.sessions?.length ?? 0) > 0 && (
@@ -3998,24 +3880,9 @@ function MemberPreview({
               </div>
             )}
             {isInvited ? (
-              <button
-                onClick={() => alert(`Invite resent to ${member.email}`)}
-                style={{ ...inputStyle, cursor: "pointer", textAlign: "left" }}
-              >
-                Resend invite
-              </button>
+              <Button variant="secondary" size="sm" onClick={() => alert(`Invite resent to ${member.email}`)}>Resend invite</Button>
             ) : (
-              <button
-                onClick={() => onToggleSuspend(member.id)}
-                style={{
-                  width: "100%", padding: "8px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  borderRadius: 7, border: "1px solid var(--border)", textAlign: "left",
-                  background: "transparent",
-                  color: isActive ? "var(--badge-alert)" : "var(--badge-success)",
-                }}
-              >
-                {isActive ? "Suspend access" : "Reactivate account"}
-              </button>
+              <Button variant="secondary" size="sm" onClick={() => onToggleSuspend(member.id)}>{isActive ? "Suspend access" : "Reactivate account"}</Button>
             )}
           </div>
         )}
@@ -4039,19 +3906,13 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+      <div style={{ padding: "0 0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-            background: role.color,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Icons.Shield size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
-          </div>
+          <HighlightIcon size="lg" variant={ROLE_HI[role.id] ?? "neutral"} iconName="Shield" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{role.label}</div>
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+              <Tag variant={role.system ? "neutral" : "purple"} size="sm">
                 {role.system ? "System" : "Custom"}
               </Tag>
               <span style={{
@@ -4065,27 +3926,17 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
             </div>
           </div>
         </div>
-        <button
-          onClick={onViewFull}
-          style={{
-            width: "100%", padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-            border: "1px solid var(--border)", borderRadius: 8,
-            background: "var(--surface-raised)", color: "var(--foreground)",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-          }}
-        >
-          <Icons.ExternalLink size={12} />
-          {role.system ? "View role" : "Edit role"}
-        </button>
+        <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
+          {role.system ? "View role" : "Edit role"}</Button>
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+      <div style={{ flexShrink: 0 }}>
         <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {tab === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{role.desc}</p>
@@ -4127,28 +3978,18 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
                   cursor: onMemberClick ? "pointer" : "default",
                   transition: "background 0.1s", borderRadius: 6,
                 }}
-                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
+                <AvatarCircle name={m.name} initials={m.initials} sizeKey="lg"
+                  avatarStyle={m.status === "active" ? "text" : "empty"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {m.title}{m.title && m.department ? " · " : ""}{m.department}
                   </div>
                 </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
-                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
-                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
-                }}>
-                  {STATUS_LABEL[m.status]}
-                </span>
+                <Tag variant={STATUS_TAG[m.status]} size="sm" className="shrink-0">{STATUS_LABEL[m.status]}</Tag>
               </div>
             ))}
           </div>
@@ -4165,18 +4006,12 @@ function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onVi
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+      <div style={{ padding: "0 0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-            background: group.color,
-            display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <Icons.Users size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
-          </div>
+          <HighlightIcon size="lg" variant="informative" iconName="Users" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{group.name}</div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: "8px 5px", flexWrap: "wrap" }}>
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
                 background: "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
@@ -4196,27 +4031,17 @@ function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onVi
             </div>
           </div>
         </div>
-        <button
-          onClick={onViewFull}
-          style={{
-            width: "100%", padding: "7px 0", fontSize: 12, fontWeight: 600, cursor: "pointer",
-            border: "1px solid var(--border)", borderRadius: 8,
-            background: "var(--surface-raised)", color: "var(--foreground)",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-          }}
-        >
-          <Icons.ExternalLink size={12} />
-          Manage group
-        </button>
+        <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
+          Manage group</Button>
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+      <div style={{ flexShrink: 0 }}>
         <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {tab === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{group.desc}</p>
@@ -4259,28 +4084,18 @@ function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onVi
                   cursor: onMemberClick ? "pointer" : "default",
                   transition: "background 0.1s", borderRadius: 6,
                 }}
-                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
+                <AvatarCircle name={m.name} initials={m.initials} sizeKey="lg"
+                  avatarStyle={m.status === "active" ? "text" : "empty"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {m.title}{m.title && m.department ? " · " : ""}{m.department}
                   </div>
                 </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
-                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
-                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
-                }}>
-                  {STATUS_LABEL[m.status]}
-                </span>
+                <Tag variant={STATUS_TAG[m.status]} size="sm" className="shrink-0">{STATUS_LABEL[m.status]}</Tag>
               </div>
             ))}
           </div>
@@ -4626,7 +4441,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
 
       {/* Filters row */}
       {mainTab === "members" && (
-        <div ref={statusContainerRef} style={{ position: "relative", marginTop: 16, marginBottom: 16 }}>
+        <div ref={statusContainerRef} style={{ position: "relative", marginTop: 24, marginBottom: 24 }}>
           <Filters
             showSearch
             searchPlaceholder="Search members…"
@@ -4644,7 +4459,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Members view */}
       {mainTab === "members" && (
         <>
-          <div style={{ border: "1px solid var(--border)", borderRadius: 12, background: "var(--surface)", overflow: "hidden" }}>
+          <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
             <div style={{
               padding: "10px 20px 10px 68px", display: "flex", alignItems: "center", gap: 14,
               background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
@@ -4674,7 +4489,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
                 />
               ))
             )}
-          </div>
+          </CardContainer>
           {filtered.length > 0 && (
             <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
               Showing {filtered.length} of {members.length} members
@@ -4686,7 +4501,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Roles view */}
       {mainTab === "roles" && (
         <>
-          <div style={{ marginTop: 16, marginBottom: 16 }}>
+          <div style={{ marginTop: 24, marginBottom: 24 }}>
             <Filters
               showSearch
               searchPlaceholder="Search roles…"
@@ -4734,7 +4549,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Groups view */}
       {mainTab === "groups" && (
         <>
-          <div style={{ marginTop: 16, marginBottom: 16 }}>
+          <div style={{ marginTop: 24, marginBottom: 24 }}>
             <Filters
               showSearch
               searchPlaceholder="Search groups…"
