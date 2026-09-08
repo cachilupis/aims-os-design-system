@@ -4065,15 +4065,13 @@ function InviteStepAccess({
             const sel = selectedRoleId === role.id
             const counts = ROLE_PERM_COUNTS[role.id]
             return (
-              <CardContainer
+              <div
                 key={role.id}
-                variant="default"
-                size="default"
                 onClick={() => setSelectedRoleId(role.id)}
-                className="flex flex-col cursor-pointer"
+                className="flex flex-col cursor-pointer rounded-xl p-3"
                 style={{
                   border: `1.5px solid ${sel ? "var(--primary)" : "var(--border)"}`,
-                  background: sel ? "color-mix(in srgb, var(--primary) 6%, var(--surface))" : undefined,
+                  background: sel ? "color-mix(in srgb, var(--primary) 6%, var(--surface))" : "var(--surface)",
                   transition: "border-color 0.15s",
                 }}
               >
@@ -4091,7 +4089,7 @@ function InviteStepAccess({
                     {counts.total} permissions
                   </div>
                 )}
-              </CardContainer>
+              </div>
             )
           })}
         </div>
