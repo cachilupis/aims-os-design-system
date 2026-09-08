@@ -236,6 +236,15 @@ const GROUPS: Group[] = [
   { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },  // audit-ignore: prototype fixture data
 ]
 
+// Studios are categories, not states, so they take the non-status variants —
+// success/alert/error would read as "this studio is healthy".
+const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informative"> = {
+  governance: "limeGreen",
+  datastudio: "purple",
+  agentic:    "lightBlue",
+  admin:      "informative",
+}
+
 const STUDIO_META: Record<string, { label: string; color: string }> = {
   governance: { label: "Governance",  color: "#10b981" },  // audit-ignore: prototype fixture data
   datastudio:  { label: "Data Studio", color: "#8b5cf6" },  // audit-ignore: prototype fixture data
@@ -293,6 +302,17 @@ const ROLE_TAG: Record<MemberRole, "error" | "alert" | "informative" | "neutral"
   "Member":        "neutral",
   "Viewer":        "neutral",
 }
+// Filters shows and returns the LABEL, so each mapping lives in one place
+// instead of once at the call site and again inside the menu.
+const STATUS_FILTER_LABEL = {
+  all: "All statuses", active: "Active", invited: "Invited", suspended: "Suspended",
+} as const
+const ROLE_FILTER_LABEL  = { all: "All types",  system: "System", custom: "Custom" } as const
+const GROUP_FILTER_LABEL = { all: "All groups", "with-members": "Has members", empty: "Empty" } as const
+
+const fromLabel = <T extends Record<string, string>>(table: T, label: string) =>
+  (Object.keys(table) as (keyof T)[]).find(k => table[k] === label) ?? ("all" as keyof T)
+
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
 
 function formatRelative(iso: string): string {
@@ -1498,12 +1518,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
             ) : group.studios.map(s => {
               const meta = STUDIO_META[s]
               return (
-                <span key={s} style={{
-                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-                  background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-                }}>
-                  {meta.label}
-                </span>
+                <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{meta.label}</Tag>
               )
             })}
           </div>
@@ -1811,12 +1826,7 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
           ) : group.studios.map(s => {
             const meta = STUDIO_META[s]
             return (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-              }}>
-                {meta.label}
-              </span>
+              <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{meta.label}</Tag>
             )
           })}
         </div>
@@ -1824,14 +1834,13 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
               <div key={m.id} title={m.name} style={{
-                width: 24, height: 24, borderRadius: "50%",
-                background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                border: "2px solid var(--surface)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-                marginLeft: i > 0 ? -6 : 0, flexShrink: 0,
+                borderRadius: "50%", border: "2px solid var(--surface)",
+                marginLeft: i > 0 ? -6 : 0, flexShrink: 0, display: "flex",
                 position: "relative", zIndex: visible.length - i,
-              }}>{m.initials}</div>
+              }}>
+                <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                  avatarStyle={m.status === "active" ? "text" : "empty"} />
+              </div>
             ))}
             {overflow > 0 && (
               <div style={{
@@ -2591,12 +2600,7 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
           ) : group.studios.map(s => {
             const meta = STUDIO_META[s]
             return (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-              }}>
-                {meta.label}
-              </span>
+              <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{meta.label}</Tag>
             )
           })}
         </div>
@@ -2642,7 +2646,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "invited" | "suspended">("all")
   const [roleFilter, setRoleFilter]     = useState<"all" | "system" | "custom">("all")
   const [groupFilter, setGroupFilter]   = useState<"all" | "with-members" | "empty">("all")
-  const [openSlot, setOpenSlot]         = useState<string | null>(null)
   const [query, setQuery]               = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
@@ -2737,7 +2740,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       )}
     >
       {/* Main tab switcher */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 24 }}>
         <Tabs
           items={[
             { id: "members", label: "Members" },
@@ -2745,12 +2748,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             { id: "groups",  label: "Groups"  },
           ]}
           activeId={mainTab}
-          onChange={v => { setMainTab(v as "members" | "roles" | "groups"); setOpenSlot(null) }}
+          onChange={v => setMainTab(v as "members" | "roles" | "groups")}
           size="s"
         />
 
         {mainTab === "members" && (
-          <div style={{ position: "relative", marginTop: 12 }}>
+          <div style={{ marginTop: 24 }}>
             <Filters
               showSearch
               searchPlaceholder="Search members…"
@@ -2758,33 +2761,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               onSearchChange={setQuery}
               slots={[{
                 placeholder: "Status",
-                value: statusFilter !== "all" ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : undefined,
-                onOpen:   () => setOpenSlot(s => s === "member-status" ? null : "member-status"),
-                onRemove: () => { setStatusFilter("all"); setOpenSlot(null) },
+                value: statusFilter !== "all" ? STATUS_FILTER_LABEL[statusFilter] : undefined,
+                options: Object.values(STATUS_FILTER_LABEL),
+                onSelect: v => setStatusFilter(fromLabel(STATUS_FILTER_LABEL, v)),
+                onRemove: () => setStatusFilter("all"),
               }]}
             />
-            {openSlot === "member-status" && (
-              <div style={{
-                position: "absolute", top: 44, left: 0, zIndex: 200,
-                background: "var(--surface)", border: "1px solid var(--border)",
-                borderRadius: 10, overflow: "hidden", minWidth: 160,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
-              }}>
-                {(["all", "active", "invited", "suspended"] as const).map(v => (
-                  <button key={v}
-                    onClick={() => { setStatusFilter(v); setOpenSlot(null) }}
-                    style={{
-                      display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
-                      fontSize: 13, border: "none", cursor: "pointer",
-                      color: statusFilter === v ? "var(--primary)" : "var(--foreground)",
-                      background: statusFilter === v ? "var(--accent)" : "var(--surface)",
-                    }}
-                  >
-                    {v === "all" ? "All statuses" : v.charAt(0).toUpperCase() + v.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -2838,37 +2820,16 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         const customRoles = filteredRoles.filter(r => !r.system)
         return (
           <>
-            <div style={{ position: "relative", marginBottom: 20 }}>
+            <div style={{ marginBottom: 24 }}>
               <Filters
                 slots={[{
                   placeholder: "Type",
-                  value: roleFilter !== "all" ? (roleFilter === "system" ? "System" : "Custom") : undefined,
-                  onOpen:   () => setOpenSlot(s => s === "role-type" ? null : "role-type"),
-                  onRemove: () => { setRoleFilter("all"); setOpenSlot(null) },
+                  value: roleFilter !== "all" ? ROLE_FILTER_LABEL[roleFilter] : undefined,
+                  options: Object.values(ROLE_FILTER_LABEL),
+                  onSelect: v => setRoleFilter(fromLabel(ROLE_FILTER_LABEL, v)),
+                  onRemove: () => setRoleFilter("all"),
                 }]}
               />
-              {openSlot === "role-type" && (
-                <div style={{
-                  position: "absolute", top: 44, left: 0, zIndex: 200,
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: 10, overflow: "hidden", minWidth: 160,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
-                }}>
-                  {(["all", "system", "custom"] as const).map(v => (
-                    <button key={v}
-                      onClick={() => { setRoleFilter(v); setOpenSlot(null) }}
-                      style={{
-                        display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
-                        fontSize: 13, border: "none", cursor: "pointer",
-                        color: roleFilter === v ? "var(--primary)" : "var(--foreground)",
-                        background: roleFilter === v ? "var(--accent)" : "var(--surface)",
-                      }}
-                    >
-                      {v === "all" ? "All types" : v.charAt(0).toUpperCase() + v.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             {systemRoles.length > 0 && (
               <div style={{ marginBottom: 24 }}>
@@ -2905,37 +2866,16 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         )
         return (
           <>
-            <div style={{ position: "relative", marginBottom: 20 }}>
+            <div style={{ marginBottom: 24 }}>
               <Filters
                 slots={[{
                   placeholder: "Members",
-                  value: groupFilter !== "all" ? (groupFilter === "with-members" ? "Has members" : "Empty") : undefined,
-                  onOpen:   () => setOpenSlot(s => s === "group-members" ? null : "group-members"),
-                  onRemove: () => { setGroupFilter("all"); setOpenSlot(null) },
+                  value: groupFilter !== "all" ? GROUP_FILTER_LABEL[groupFilter] : undefined,
+                  options: Object.values(GROUP_FILTER_LABEL),
+                  onSelect: v => setGroupFilter(fromLabel(GROUP_FILTER_LABEL, v)),
+                  onRemove: () => setGroupFilter("all"),
                 }]}
               />
-              {openSlot === "group-members" && (
-                <div style={{
-                  position: "absolute", top: 44, left: 0, zIndex: 200,
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: 10, overflow: "hidden", minWidth: 160,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
-                }}>
-                  {(["all", "with-members", "empty"] as const).map(v => (
-                    <button key={v}
-                      onClick={() => { setGroupFilter(v); setOpenSlot(null) }}
-                      style={{
-                        display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
-                        fontSize: 13, border: "none", cursor: "pointer",
-                        color: groupFilter === v ? "var(--primary)" : "var(--foreground)",
-                        background: groupFilter === v ? "var(--accent)" : "var(--surface)",
-                      }}
-                    >
-                      {v === "all" ? "All groups" : v === "with-members" ? "Has members" : "Empty"}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {filteredGroups.map(g => (
