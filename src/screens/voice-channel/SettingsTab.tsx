@@ -1,13 +1,13 @@
 import { useState } from "react"
 import { Save } from "lucide-react"
 import { CardContainer } from "@/components/ui/card-container"
-import { Select } from "@/components/ui/select"
 import { Toggle } from "@/components/ui/toggle"
 import { Button } from "@/components/ui/button"
 import {
   DISTRIBUTION_MODES,
   TIMEZONES,
 } from "./data"
+import { NativeSelect } from "./configure-shared"
 import { useToast } from "./toast"
 
 const BUSINESS_HOURS_PRESETS = [
@@ -21,6 +21,9 @@ export function SettingsTab() {
   const [recordAll, setRecordAll] = useState(true)
   const [autoTrans, setAutoTrans] = useState(true)
   const [sentiment, setSentiment] = useState(true)
+  const [dist,      setDist]      = useState<string>(DISTRIBUTION_MODES[0].id)
+  const [tz,        setTz]        = useState<string>(TIMEZONES[0])
+  const [hours,     setHours]     = useState<string>(BUSINESS_HOURS_PRESETS[0])
 
   function save() {
     toast.success("Settings saved")
@@ -37,19 +40,34 @@ export function SettingsTab() {
         </div>
 
         <div className="flex flex-col gap-4">
-          <SelectField label="Default Distribution Mode" value={DISTRIBUTION_MODES[0].id}/>
-          <SelectField label="Default Timezone"          value={TIMEZONES[0]}/>
-          <SelectField label="Default Business Hours"    value={BUSINESS_HOURS_PRESETS[0]}/>
+          <SelectField
+            label="Default Distribution Mode"
+            value={dist}
+            onChange={setDist}
+            options={DISTRIBUTION_MODES.map(d => ({ value: d.id, label: d.id }))}
+          />
+          <SelectField
+            label="Default Timezone"
+            value={tz}
+            onChange={setTz}
+            options={TIMEZONES.map(t => ({ value: t, label: t }))}
+          />
+          <SelectField
+            label="Default Business Hours"
+            value={hours}
+            onChange={setHours}
+            options={BUSINESS_HOURS_PRESETS.map(h => ({ value: h, label: h }))}
+          />
 
           <ToggleRow
             label="Record all calls"
-            sub="Stored in S3, accessible in Call History"
+            sub="Recordings kept for 30 days and searchable in Call History"
             checked={recordAll}
             onChange={setRecordAll}
           />
           <ToggleRow
             label="Auto-transcribe"
-            sub="Deepgram Nova-3, 30+ languages"
+            sub="Automatic transcription in 30+ languages"
             checked={autoTrans}
             onChange={setAutoTrans}
           />
@@ -72,11 +90,18 @@ export function SettingsTab() {
 
 // ── Small helpers ──────────────────────────────────────────────────────
 
-function SelectField({ label, value }: { label: string; value: string }) {
+function SelectField({
+  label, value, onChange, options,
+}: {
+  label:    string
+  value:    string
+  onChange: (v: string) => void
+  options:  { value: string; label: string }[]
+}) {
   return (
     <div>
       <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 6 }}>{label}</div>
-      <Select value={value} size="default" />
+      <NativeSelect value={value} onChange={onChange} options={options} size="default"/>
     </div>
   )
 }

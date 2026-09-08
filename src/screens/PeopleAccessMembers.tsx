@@ -1,16 +1,22 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, type ReactElement } from "react"
+import { createPortal } from "react-dom"
+import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
 import { Button }       from "@/components/ui/button"
-import { Input }        from "@/components/ui/input"
-import { Tabs }         from "@/components/ui/tabs"
-import { Filters }      from "@/components/ui/filters"
-import { SlideOut }     from "@/components/ui/slide-out"
-import { ModalDialog }  from "@/components/ui/modal-dialog"
-import { Textarea }     from "@/components/ui/textarea"
+import { Tag }          from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
+import { Tabs }         from "@/components/ui/tabs"
+import { SlideOut }     from "@/components/ui/slide-out"
+import { Filters }     from "@/components/ui/filters"
+import { ModalDialog } from "@/components/ui/modal-dialog"
+import { Chip }        from "@/components/ui/chip"
+import { Toggle }      from "@/components/ui/toggle"
+import { Stepper, type StepItem } from "@/components/ui/stepper"
+import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
+import { SwitchTab, type SwitchTabItem } from "@/components/ui/switch-tab"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -18,7 +24,9 @@ import { CardContainer } from "@/components/ui/card-container"
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type MemberStatus = "active" | "invited" | "suspended"
-type MemberRole   = "Super Admin" | "Tenant Admin" | "Member" | "Viewer" | "Billing Admin"
+type UserType     = "Admin" | "Owner" | "Member"
+// Legacy alias kept only to avoid cascading rename inside fixture data until full refactor
+type MemberRole   = UserType
 type PermState    = "g-direct" | "g-inh" | "g-denied" | ""
 
 interface PermNode {
@@ -60,11 +68,11 @@ type DetailView =
 // ─── Members fixture ──────────────────────────────────────────────────────────
 
 const MEMBERS: Member[] = [
-  { id: "tg",  name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai",   role: "Super Admin",   status: "active",    lastActive: "2026-08-26T09:10:00Z", joinedAt: "2025-01-15T00:00:00Z", initials: "TG", avatarColor: "var(--badge-info)",       title: "Platform Owner",       department: "AIMS OS",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-01-15T00:00:00Z", sessions: [
+  { id: "tg",  name: "Thomas Gonzalez",  email: "thomas.gonzalez@aimsos.ai",   role: "Owner",   status: "active",    lastActive: "2026-08-26T09:10:00Z", joinedAt: "2025-01-15T00:00:00Z", initials: "TG", avatarColor: "var(--badge-info)",       title: "Platform Owner",       department: "AIMS OS",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-01-15T00:00:00Z", sessions: [
     { id: "s1", device: "MacBook Pro",    browser: "Chrome 125",  location: "San Francisco, CA", lastActive: "2026-08-26T09:10:00Z", current: true  },
     { id: "s2", device: "iPhone 15 Pro",  browser: "Safari 17",   location: "San Francisco, CA", lastActive: "2026-08-25T21:00:00Z", current: false },
   ]},
-  { id: "mg",  name: "Maria García",     email: "maria.garcia@avance.com",     role: "Tenant Admin",  status: "active",    lastActive: "2026-08-26T08:45:00Z", joinedAt: "2025-03-02T00:00:00Z", initials: "MG", avatarColor: "var(--badge-success)",    title: "IT Director",           department: "IT",               mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-03-02T00:00:00Z", sessions: [
+  { id: "mg",  name: "Maria García",     email: "maria.garcia@avance.com",     role: "Admin",  status: "active",    lastActive: "2026-08-26T08:45:00Z", joinedAt: "2025-03-02T00:00:00Z", initials: "MG", avatarColor: "var(--badge-success)",    title: "IT Director",           department: "IT",               mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-03-02T00:00:00Z", sessions: [
     { id: "s3", device: "Windows PC",     browser: "Edge 124",    location: "Mexico City, MX",   lastActive: "2026-08-26T08:45:00Z", current: true  },
   ]},
   { id: "es",  name: "Eduardo Suárez",   email: "eduardo.suarez@avance.com",   role: "Member",        status: "active",    lastActive: "2026-08-25T17:30:00Z", joinedAt: "2025-04-10T00:00:00Z", initials: "ES", avatarColor: "var(--badge-alert)",      title: "Data Analyst",          department: "Analytics",        mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-04-12T00:00:00Z", sessions: [
@@ -78,16 +86,16 @@ const MEMBERS: Member[] = [
   { id: "dp",  name: "Diana Pérez",      email: "diana.perez@avance.com",      role: "Member",        status: "active",    lastActive: "2026-08-24T11:20:00Z", joinedAt: "2025-06-01T00:00:00Z", initials: "DP", avatarColor: "var(--badge-info)",       title: "Operations Lead",       department: "Operations",       mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
     { id: "s8", device: "Windows PC",     browser: "Chrome 125",  location: "Mexico City, MX",   lastActive: "2026-08-24T11:20:00Z", current: true  },
   ]},
-  { id: "jp",  name: "James Park",       email: "james.park@avance.com",       role: "Billing Admin", status: "active",    lastActive: "2026-08-23T09:00:00Z", joinedAt: "2025-07-07T00:00:00Z", initials: "JP", avatarColor: "var(--badge-success)",    title: "Finance Manager",       department: "Finance",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-07-08T00:00:00Z", sessions: [
+  { id: "jp",  name: "James Park",       email: "james.park@avance.com",       role: "Member", status: "active",    lastActive: "2026-08-23T09:00:00Z", joinedAt: "2025-07-07T00:00:00Z", initials: "JP", avatarColor: "var(--badge-success)",    title: "Finance Manager",       department: "Finance",          mfaEnabled: true,  mfaMethod: "totp",  mfaEnrolledAt: "2025-07-08T00:00:00Z", sessions: [
     { id: "s9", device: "MacBook Pro",    browser: "Safari 17",   location: "Chicago, IL",       lastActive: "2026-08-23T09:00:00Z", current: true  },
   ]},
-  { id: "at",  name: "Ana Torres",       email: "ana.torres@avance.com",       role: "Viewer",        status: "active",    lastActive: "2026-08-22T16:45:00Z", joinedAt: "2025-08-01T00:00:00Z", initials: "AT", avatarColor: "var(--badge-alert)",      title: "Business Analyst",      department: "Analytics",        mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
+  { id: "at",  name: "Ana Torres",       email: "ana.torres@avance.com",       role: "Member",        status: "active",    lastActive: "2026-08-22T16:45:00Z", joinedAt: "2025-08-01T00:00:00Z", initials: "AT", avatarColor: "var(--badge-alert)",      title: "Business Analyst",      department: "Analytics",        mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined, sessions: [
     { id: "s10", device: "Windows Laptop", browser: "Edge 124",  location: "Guadalajara, MX",   lastActive: "2026-08-22T16:45:00Z", current: true  },
   ]},
   { id: "lr",  name: "Leo Ramírez",      email: "leo.ramirez@avance.com",      role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-20T00:00:00Z", initials: "LR", avatarColor: "var(--muted-foreground)", title: "Data Engineer",         department: "Engineering",      mfaEnabled: false, sessions: [] },
   { id: "cn",  name: "Clara Nakamura",   email: "clara.nakamura@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-21T00:00:00Z", initials: "CN", avatarColor: "var(--muted-foreground)", title: "Product Manager",       department: "Product",          mfaEnabled: false, sessions: [] },
   { id: "rv",  name: "Roberto Vargas",   email: "roberto.vargas@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-22T00:00:00Z", initials: "RV", avatarColor: "var(--muted-foreground)", title: "Solutions Architect",   department: "Engineering",      mfaEnabled: false, sessions: [] },
-  { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Viewer",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance", mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-09-15T00:00:00Z", sessions: [] },
+  { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Member",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance", mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-09-15T00:00:00Z", sessions: [] },
   { id: "ms",  name: "Marcus Silva",     email: "marcus.silva@avance.com",     role: "Member",        status: "suspended", lastActive: "2026-06-30T08:00:00Z", joinedAt: "2025-10-01T00:00:00Z", initials: "MS", avatarColor: "var(--muted-foreground)", title: "Data Scientist",        department: "Analytics",        mfaEnabled: false, sessions: [] },
 ]
 
@@ -112,34 +120,9 @@ const PERM_TREE: Record<string, PermNode[]> = {
       { id:"gov-truth-view",  label:"View truth plane", desc:"Read facts and claims in the production truth plane", code:"governance.truthplane.view",  state:"" },
       { id:"gov-truth-facts", label:"Manage facts",     desc:"Edit, approve, or retire facts in the truth plane",  code:"governance.truthplane.facts", state:"" },
     ]},
-    { id:"gov-packs", label:"Promotion Packs", code:"governance.packs", desc:"Bundle content changes for review and approval", state:"g-direct", scope:"Tenant", children:[
-      { id:"gov-packs-view",   label:"View packs",   desc:"Browse promotion packets and their review status", code:"governance.packs.view", state:"g-direct", scope:"Tenant" },
-      { id:"gov-packs-create", label:"Create packs", desc:"Assemble new promotion packets for approval",      code:"governance.packs.create", state:"", children:[
-        { id:"gov-packs-create-draft",  label:"Save as draft",     desc:"Save an in-progress packet without submitting it for review", code:"governance.packs.create.draft",  state:"" },
-        { id:"gov-packs-create-submit", label:"Submit for review", desc:"Submit a completed packet into the review queue",             code:"governance.packs.create.submit", state:"" },
-      ]},
-      { id:"gov-packs-review", label:"Review packs", desc:"Evaluate submitted promotion packets from other authors", code:"governance.packs.review", state:"", children:[
-        { id:"gov-packs-rev-view",    label:"View submissions", desc:"See all packets pending review and their current status", code:"governance.packs.review.view", state:"" },
-        { id:"gov-packs-rev-comment", label:"Add comments",     desc:"Annotate a packet with structured feedback",             code:"governance.packs.review.comment", state:"", children:[
-          { id:"gov-packs-rev-comment-suggest", label:"Suggest changes", desc:"Request edits without blocking the promotion",             code:"governance.packs.review.comment.suggest", state:"" },
-          { id:"gov-packs-rev-comment-block",   label:"Block promotion", desc:"Flag a packet as ineligible until critical issues are resolved", code:"governance.packs.review.comment.block", state:"" },
-        ]},
-        { id:"gov-packs-rev-approve", label:"Approve packets", desc:"Grant domain-level or cross-domain sign-off on a promotion packet", code:"governance.packs.review.approve", state:"", children:[
-          { id:"gov-packs-rev-approve-domain", label:"Domain approval",       desc:"Sign off on packets that affect only your governance domain",  code:"governance.packs.review.approve.domain", state:"" },
-          { id:"gov-packs-rev-approve-cross",  label:"Cross-domain approval", desc:"Approve packets that span multiple governance domains",        code:"governance.packs.review.approve.cross", state:"", children:[
-            { id:"gov-packs-rev-approve-cross-final", label:"Final sign-off", desc:"Issue the binding final approval that releases a packet to the truth plane", code:"governance.packs.review.approve.cross.final", state:"" },
-          ]},
-        ]},
-      ]},
-    ]},
-    { id:"gov-resolution", label:"Resolution Requests", code:"governance.resolution", desc:"Raise and resolve disputes over facts, claims, or governance decisions", state:"", children:[
-      { id:"gov-res-view",    label:"View requests",   desc:"Browse open and closed resolution requests across all domains", code:"governance.resolution.view",    state:"" },
-      { id:"gov-res-submit",  label:"Submit request",  desc:"Open a new resolution request disputing a fact or decision",   code:"governance.resolution.submit",  state:"" },
-      { id:"gov-res-resolve", label:"Resolve request", desc:"Act on a resolution request as the assigned reviewer",         code:"governance.resolution.resolve", state:"", children:[
-        { id:"gov-res-resolve-accept",   label:"Accept",             desc:"Close the request by accepting the disputed change",           code:"governance.resolution.resolve.accept",   state:"" },
-        { id:"gov-res-resolve-reject",   label:"Reject with reason", desc:"Close the request by rejecting the dispute with a rationale", code:"governance.resolution.resolve.reject",   state:"" },
-        { id:"gov-res-resolve-escalate", label:"Escalate",           desc:"Forward the request to the cross-domain review board",        code:"governance.resolution.resolve.escalate", state:"" },
-      ]},
+    { id:"gov-packs", label:"Promotion Packs", code:"governance.packs", desc:"Bundle content changes for review and approval", state:"", children:[
+      { id:"gov-packs-view",   label:"View packs",   desc:"Browse promotion packets and their review status", code:"governance.packs.view",   state:"g-direct" },
+      { id:"gov-packs-create", label:"Create packs", desc:"Assemble new promotion packets for approval",      code:"governance.packs.create", state:"" },
     ]},
   ],
   datastudio: [
@@ -222,6 +205,77 @@ const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number;
   "compliance-auditor": { governance: 2, datastudio: 2, agentic: 1, admin: 3,  total: 8  },
 }
 
+const ROLE_COLORS = [
+  "#6366f1", "#10b981", "#f97316", "#0ea5e9", // audit-ignore: preset color swatches for role form
+  "#8b5cf6", "#ef4444", "#f59e0b", "#64748b", // audit-ignore: preset color swatches for role form
+]
+
+// Per-role permission states: what each role directly grants
+const ROLE_PERM_STATES: Record<string, Record<string, PermState>> = {
+  "workspace-admin": {
+    "gov-drives": "g-direct", "gov-drives-view": "g-direct", "gov-drives-up": "g-direct", "gov-drives-folder": "g-direct",
+    "gov-sandbox": "g-direct", "gov-sb-view": "g-direct", "gov-sb-det": "g-direct", "gov-sb-claims": "g-direct", "gov-sb-bundles": "g-direct", "gov-sb-sources": "g-direct", "gov-sb-promo": "g-direct",
+    "gov-truth": "g-direct", "gov-truth-view": "g-direct", "gov-truth-facts": "g-direct",
+    "gov-packs": "g-direct", "gov-packs-view": "g-direct", "gov-packs-create": "g-direct",
+    "ds-models": "g-direct", "ds-models-view": "g-direct", "ds-models-author": "g-direct", "ds-models-publish": "g-direct", "ds-models-deprecate": "g-direct",
+    "ds-lineage": "g-direct", "ds-lineage-view": "g-direct", "ds-lineage-trace": "g-direct",
+    "ds-connectors": "g-direct", "ds-conn-view": "g-direct", "ds-conn-manage": "g-direct", "ds-conn-test": "g-direct",
+    "ag-workers": "g-direct", "ag-workers-view": "g-direct", "ag-workers-run": "g-direct", "ag-workers-manage": "g-direct", "ag-workers-deploy": "g-direct",
+    "ag-hitl": "g-direct", "ag-hitl-view": "g-direct", "ag-hitl-approve": "g-direct", "ag-hitl-config": "g-direct",
+    "ag-networks": "g-direct", "ag-net-view": "g-direct", "ag-net-manage": "g-direct",
+    "ag-workflows": "g-direct", "ag-wf-view": "g-direct", "ag-wf-manage": "g-direct",
+    "adm-members": "g-direct", "adm-members-view": "g-direct", "adm-members-invite": "g-direct", "adm-members-remove": "g-direct", "adm-members-suspend": "g-direct",
+    "adm-roles": "g-direct", "adm-roles-view": "g-direct", "adm-roles-manage": "g-direct",
+    "adm-integrations": "g-direct", "adm-int-view": "g-direct", "adm-int-manage": "g-direct",
+    "adm-audit": "g-direct", "adm-audit-view": "g-direct", "adm-audit-export": "g-direct",
+  },
+  "developer": {
+    "ds-models": "g-direct", "ds-models-view": "g-direct", "ds-models-author": "g-direct",
+    "ds-connectors": "g-direct", "ds-conn-view": "g-direct", "ds-conn-manage": "g-direct", "ds-conn-test": "g-direct",
+    "ag-workers": "g-direct", "ag-workers-view": "g-direct", "ag-workers-run": "g-direct", "ag-workers-manage": "g-direct", "ag-workers-deploy": "g-direct",
+    "ag-networks": "g-direct", "ag-net-view": "g-direct", "ag-net-manage": "g-direct",
+    "ag-workflows": "g-direct", "ag-wf-view": "g-direct", "ag-wf-manage": "g-direct",
+    "adm-integrations": "g-direct", "adm-int-view": "g-direct", "adm-int-manage": "g-direct",
+    "adm-audit-view": "g-direct",
+  },
+  "viewer": {
+    "gov-drives-view": "g-direct",
+    "gov-sb-view": "g-direct",
+    "gov-truth-view": "g-direct",
+    "gov-packs-view": "g-direct",
+    "ds-models-view": "g-direct",
+    "ds-lineage": "g-direct", "ds-lineage-view": "g-direct",
+    "ag-workers-view": "g-direct",
+    "ag-hitl-view": "g-direct",
+    "adm-members-view": "g-direct",
+    "adm-roles-view": "g-direct",
+  },
+  "agent-builder": {
+    "ag-workers": "g-direct", "ag-workers-view": "g-direct", "ag-workers-run": "g-direct", "ag-workers-manage": "g-direct", "ag-workers-deploy": "g-direct",
+    "ag-hitl": "g-direct", "ag-hitl-view": "g-direct", "ag-hitl-approve": "g-direct", "ag-hitl-config": "g-direct",
+    "ag-networks": "g-direct", "ag-net-view": "g-direct", "ag-net-manage": "g-direct",
+    "ag-workflows": "g-direct", "ag-wf-view": "g-direct", "ag-wf-manage": "g-direct",
+  },
+  "data-steward": {
+    "gov-drives": "g-direct", "gov-drives-view": "g-direct", "gov-drives-up": "g-direct", "gov-drives-folder": "g-direct",
+    "gov-sandbox": "g-direct", "gov-sb-view": "g-direct", "gov-sb-det": "g-direct", "gov-sb-claims": "g-direct", "gov-sb-bundles": "g-direct",
+    "gov-packs": "g-direct", "gov-packs-view": "g-direct", "gov-packs-create": "g-direct",
+    "ds-models": "g-direct", "ds-models-view": "g-direct", "ds-models-author": "g-direct", "ds-models-publish": "g-direct",
+    "ds-lineage": "g-direct", "ds-lineage-view": "g-direct", "ds-lineage-trace": "g-direct",
+    "adm-audit-view": "g-direct",
+  },
+  "compliance-auditor": {
+    "gov-truth-view": "g-direct",
+    "gov-packs-view": "g-direct",
+    "ds-models-view": "g-direct",
+    "ds-lineage-view": "g-direct",
+    "ag-workers-view": "g-direct",
+    "adm-members-view": "g-direct",
+    "adm-roles-view": "g-direct",
+    "adm-audit": "g-direct", "adm-audit-view": "g-direct", "adm-audit-export": "g-direct",
+  },
+}
+
 // ─── Groups fixture ───────────────────────────────────────────────────────────
 
 const GROUPS: Group[] = [
@@ -233,39 +287,13 @@ const GROUPS: Group[] = [
   { id: "external",     name: "External Consultants", color: "#84cc16", desc: "Limited scoped access for contracted third-party consultants.",            memberIds: [],                   studios: [] },  // audit-ignore: prototype fixture data
 ]
 
-const STUDIO_META: Record<string, { label: string; color: string }> = {
-  governance: { label: "Governance",  color: "#10b981" },  // audit-ignore: prototype fixture data
-  datastudio:  { label: "Data Studio", color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-  agentic:    { label: "Agentic",     color: "#06b6d4" },  // audit-ignore: prototype fixture data
-  admin:      { label: "Admin",       color: "#6366f1" },  // audit-ignore: prototype fixture data
+const STUDIO_META: Record<string, { label: string; color: string; icon: React.ReactNode; desc: string }> = {
+  governance: { label: "Governance Studio",  color: "#10b981", icon: <Icons.ShieldCheck size={16} />,  desc: "Policy management, data lineage, and compliance workflows" },  // audit-ignore
+  datastudio:  { label: "Data Studio",        color: "#8b5cf6", icon: <Icons.Database size={16} />,     desc: "Model authoring, dataset management, and schema design" },     // audit-ignore
+  agentic:    { label: "Agentic Studio",     color: "#06b6d4", icon: <Icons.Bot size={16} />,          desc: "AI worker configuration and agentic network management" },      // audit-ignore
+  admin:      { label: "Admin Console",      color: "#6366f1", icon: <Icons.Settings size={16} />,     desc: "Platform settings, members, billing, and integrations" },       // audit-ignore
 }
 
-const GROUP_ACTIVITY: Record<string, Array<{ type: string; msg: string; time: string }>> = {
-  engineering: [
-    { type: "role",   msg: "Eduardo Suárez added to this group",         time: "Aug 9, 2026"  },
-    { type: "edit",   msg: "Studio access updated — removed \"admin\"",  time: "Aug 3, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Mar 1, 2025"  },
-  ],
-  "ai-ops": [
-    { type: "role",   msg: "Diana Pérez added to this group",            time: "Aug 10, 2026" },
-    { type: "edit",   msg: "Studio access updated — added \"helix\"",    time: "Aug 5, 2026"  },
-    { type: "create", msg: "Group created by Maria García",              time: "Jun 15, 2025" },
-  ],
-  "data-team": [
-    { type: "role",   msg: "Maria García added to this group",           time: "Aug 5, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Apr 2, 2025"  },
-  ],
-  leadership: [
-    { type: "edit",   msg: "Eduardo Suárez added to this group",         time: "Aug 1, 2026"  },
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jan 15, 2025" },
-  ],
-  compliance: [
-    { type: "create", msg: "Group created by Maria García",              time: "May 10, 2025" },
-  ],
-  external: [
-    { type: "create", msg: "Group created by Thomas Gonzalez",           time: "Jul 22, 2025" },
-  ],
-}
 
 // ─── Display helpers ──────────────────────────────────────────────────────────
 
@@ -279,13 +307,13 @@ const STATUS_LABEL: Record<MemberStatus, string> = {
   invited:   "Invited",
   suspended: "Suspended",
 }
-const ROLE_COLOR: Record<MemberRole, string> = {
-  "Super Admin":   "var(--badge-error)",
-  "Tenant Admin":  "var(--badge-alert)",
-  "Billing Admin": "var(--badge-info)",
-  "Member":        "var(--muted-foreground)",
-  "Viewer":        "var(--muted-foreground)",
+const USER_TYPE_COLOR: Record<UserType, string> = {
+  "Owner":  "var(--badge-error)",
+  "Admin":  "var(--badge-alert)",
+  "Member": "var(--muted-foreground)",
 }
+// Keep alias for any legacy references in this file
+const ROLE_COLOR = USER_TYPE_COLOR
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
 
 function formatRelative(iso: string): string {
@@ -305,16 +333,35 @@ function formatDate(iso: string): string {
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
+function BackBreadcrumb({ onBack }: { onBack: () => void }) {
+  return (
+    <button
+      onClick={onBack}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)",
+        background: "none", border: "none", cursor: "pointer",
+        padding: "4px 0", marginBottom: 4,
+        transition: "color 0.1s",
+      }}
+      onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
+      onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+    >
+      <Icons.ChevronLeft size={14} />
+      Back
+    </button>
+  )
+}
 
 function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
   return (
-    <div style={{ display: "flex", borderBottom: "1px solid var(--border)", marginBottom: 0 }}>
+    <div style={{ display: "flex", marginBottom: 0, overflowX: "auto", scrollbarWidth: "none" }}>
       {tabs.map((t, i) => (
         <button
           key={t}
           onClick={() => onChange(i)}
           style={{
-            padding: "10px 20px", fontSize: 13, fontWeight: 600,
+            padding: "8px 10px", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0,
             border: "none", background: "none", cursor: "pointer",
             color: active === i ? "var(--foreground)" : "var(--muted-foreground)",
             borderBottom: active === i ? "2px solid var(--primary)" : "2px solid transparent",
@@ -328,128 +375,38 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
   )
 }
 
-// ─── Permission scope options ─────────────────────────────────────────────────
-
-const SCOPE_OPTS = [
-  { id: "Company",      label: "Company",       desc: "All workspaces in your organization"   },
-  { id: "Tenant",       label: "Tenant",        desc: "This workspace only"                   },
-  { id: "Teams/Groups", label: "Teams / Groups",desc: "Members of the same group(s)"          },
-  { id: "Shared",       label: "Shared with me",desc: "Resources explicitly shared with you"  },
-  { id: "Own",          label: "My own",        desc: "Only resources you created"            },
-]
-
 // ─── Permission state icon ────────────────────────────────────────────────────
 
-function PermIcon({ state }: { state: PermState }) {
-  if (state === "g-direct") {
-    return (
-      <div style={{
-        width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--primary)",
-        background: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <Icons.Check size={10} color={"#fff" /* audit-ignore: prototype fixture data */} strokeWidth={2.5} />
 
-      </div>
-    )
-  }
-  if (state === "g-inh") {
-    return (
-      <div style={{
-        width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--primary)",
-        background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--primary)", opacity: 0.8 }} />
-      </div>
-    )
-  }
-  if (state === "g-denied") {
-    return (
-      <div style={{
-        width: 16, height: 16, borderRadius: 4, border: "1.5px solid var(--badge-error)",
-        background: "color-mix(in srgb, var(--badge-error) 12%, transparent)",
-        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-      }}>
-        <Icons.X size={10} color="var(--badge-error)" strokeWidth={2.5} />
-      </div>
-    )
-  }
-  return (
-    <div style={{
-      width: 16, height: 16, borderRadius: 4,
-      border: "1.5px solid var(--border)", flexShrink: 0,
-    }} />
-  )
-}
-
-function PermTreeNode({
-  node, depth = 0, overrides, onOverride,
-}: {
-  node: PermNode
-  depth?: number
-  overrides: Record<string, { state: PermState; scope: string }>
-  onOverride: (id: string, state: PermState, scope: string) => void
-}) {
-  const override       = overrides[node.id]
-  const effectiveState: PermState = override?.state ?? node.state
-  const effectiveScope = override?.scope ?? node.scope ?? "Tenant"
-  const isEditable     = !node.locked
-
-  const [expanded, setExpanded] = useState(
-    depth === 0 && (effectiveState === "g-inh" || effectiveState === "g-direct")
-  )
-  const [hovered, setHovered] = useState(false)
-  const [scopeOpen, setScopeOpen] = useState(false)
-  const [scopeAnchor, setScopeAnchor] = useState<{ left: number; top: number } | null>(null)
-
-  const hasChildren     = (node.children?.length ?? 0) > 0
-  const grantedChildren = node.children?.filter(c => {
-    const ov = overrides[c.id]
-    return (ov?.state ?? c.state) !== ""
-  }).length ?? 0
-
-  const showToggle      = isEditable && (hovered || !!override)
-  const showScopePicker = isEditable && effectiveState === "g-direct"
-  const currentScopeOpt = SCOPE_OPTS.find(s => s.id === effectiveScope) ?? SCOPE_OPTS[1]
+function PermTreeNode({ node, depth = 0 }: { node: PermNode; depth?: number }) {
+  const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
+  const hasChildren = (node.children?.length ?? 0) > 0
 
   return (
     <div>
       <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onClick={() => hasChildren && setExpanded(e => !e)}
         style={{
           display: "flex", alignItems: "center", gap: 8,
           padding: `8px 16px 8px ${16 + depth * 20}px`,
           borderBottom: "1px solid var(--border)",
-          background: hovered ? "var(--accent)" : "transparent",
-          transition: "background 0.1s",
+          cursor: hasChildren ? "pointer" : "default",
+          background: "transparent",
         }}
+        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
-        {/* Chevron */}
-        <div
-          onClick={() => hasChildren && setExpanded(e => !e)}
-          style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: hasChildren ? "pointer" : "default" }}
-        >
+        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {hasChildren
             ? expanded
               ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" />
               : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />
             : null}
         </div>
-
-        {/* State icon */}
-        <div onClick={() => hasChildren && setExpanded(e => !e)} style={{ cursor: hasChildren ? "pointer" : "default" }}>
-          <PermIcon state={effectiveState} />
-        </div>
-
-        {/* Label */}
-        <div
-          onClick={() => hasChildren && setExpanded(e => !e)}
-          style={{ flex: 1, minWidth: 0, cursor: hasChildren ? "pointer" : "default" }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{node.label}</span>
-            {node.role && !override && (
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
+            {node.role && (
               <span style={{
                 fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
                 background: "color-mix(in srgb, var(--primary) 12%, transparent)",
@@ -458,166 +415,18 @@ function PermTreeNode({
                 via {node.role}
               </span>
             )}
-            {override && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                color: "var(--badge-alert)", border: "1px solid color-mix(in srgb, var(--badge-alert) 30%, transparent)",
-              }}>
-                overridden
-              </span>
+            {node.scope && (
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
             )}
           </div>
-          {depth === 0 && hasChildren && (
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>
-              {grantedChildren} of {node.children?.length} permissions granted
-            </div>
-          )}
-          {!hasChildren && node.desc && (
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.4 }}>
-              {node.desc}
-            </div>
+          {node.desc && (
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>
           )}
         </div>
-
-        {/* Scope dropdown — shown when directly granted */}
-        {showScopePicker && (
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <button
-              onClick={e => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-                const dropdownW = 240
-                const left = rect.right - dropdownW < 8 ? Math.max(8, rect.left) : rect.right - dropdownW
-                setScopeAnchor({ left, top: rect.bottom })
-                setScopeOpen(o => !o)
-                e.stopPropagation()
-              }}
-              style={{
-                display: "flex", alignItems: "center", gap: 4,
-                padding: "3px 8px", fontSize: 11, fontWeight: 600, borderRadius: 6,
-                border: "1px solid var(--primary)",
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", cursor: "pointer",
-              }}
-            >
-              {currentScopeOpt.label}
-              <Icons.ChevronDown size={10} />
-            </button>
-
-            {scopeOpen && scopeAnchor && (
-              <>
-                {/* backdrop */}
-                <div
-                  style={{ position: "fixed", inset: 0, zIndex: 10000 }}
-                  onClick={() => setScopeOpen(false)}
-                />
-                {/* dropdown */}
-                <div style={{
-                  position: "fixed",
-                  left: scopeAnchor.left,
-                  top: scopeAnchor.top + 4,
-                  zIndex: 10001,
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 10,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore: elevation shadow, no token available
-                  width: 240,
-                  overflow: "hidden",
-                }}>
-                  <div style={{
-                    padding: "8px 12px 4px",
-                    fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
-                    color: "var(--muted-foreground)", textTransform: "uppercase",
-                  }}>
-                    Select scope
-                    <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: 0, textTransform: "none", marginTop: 1 }}>
-                      How broadly this permission applies
-                    </div>
-                  </div>
-                  {SCOPE_OPTS.map(s => {
-                    const selected = effectiveScope === s.id
-                    return (
-                      <button
-                        key={s.id}
-                        onClick={() => {
-                          onOverride(node.id, "g-direct", s.id)
-                          setScopeOpen(false)
-                        }}
-                        style={{
-                          width: "100%", textAlign: "left", display: "flex", alignItems: "center",
-                          gap: 10, padding: "8px 12px",
-                          background: selected ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent",
-                          border: "none", cursor: "pointer",
-                          borderTop: "1px solid var(--border)",
-                        }}
-                        onMouseEnter={e => { if (!selected) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
-                        onMouseLeave={e => { if (!selected) (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: selected ? "var(--primary)" : "var(--foreground)" }}>
-                            {s.label}
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{s.desc}</div>
-                        </div>
-                        {selected && <Icons.Check size={13} color="var(--primary)" />}
-                      </button>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 3-state toggle: None | Grant | Deny */}
-        {showToggle && !showScopePicker && (
-          <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-            {([
-              { s: "" as PermState,         label: "None",  icon: <Icons.Minus size={10} />,  tip: "No access"                },
-              { s: "g-direct" as PermState, label: "Grant", icon: <Icons.Check size={10} />,  tip: "Grant direct access"      },
-              { s: "g-denied" as PermState, label: "Deny",  icon: <Icons.X size={10} />,      tip: "Explicitly deny access"   },
-            ] as const).map(opt => {
-              const active = effectiveState === opt.s
-              return (
-                <button
-                  key={opt.s}
-                  title={opt.tip}
-                  onClick={() => onOverride(node.id, opt.s, effectiveScope)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 3,
-                    padding: "2px 7px", fontSize: 10, fontWeight: 600, borderRadius: 4,
-                    border: `1px solid ${active ? (opt.s === "g-denied" ? "var(--badge-error)" : opt.s === "g-direct" ? "var(--primary)" : "var(--border)") : "var(--border)"}`,
-                    background: active
-                      ? opt.s === "g-denied" ? "color-mix(in srgb, var(--badge-error) 15%, transparent)"
-                      : opt.s === "g-direct" ? "color-mix(in srgb, var(--primary) 15%, transparent)"
-                      : "var(--muted)"
-                      : "transparent",
-                    color: active
-                      ? opt.s === "g-denied" ? "var(--badge-error)"
-                      : opt.s === "g-direct" ? "var(--primary)"
-                      : "var(--foreground)"
-                      : "var(--muted-foreground)",
-                    cursor: "pointer",
-                  }}
-                >
-                  {opt.icon}{opt.label}
-                </button>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Scope label — non-editable nodes */}
-        {!isEditable && node.scope && (
-          <span style={{ fontSize: 11, color: "var(--muted-foreground)", flexShrink: 0 }}>· {node.scope}</span>
-        )}
-
-        {node.locked && (
-          <Icons.Lock size={11} color="var(--muted-foreground)" style={{ flexShrink: 0, opacity: 0.5 }} />
-        )}
+        <Toggle checked disabled size="sm" />
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <PermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onOverride={onOverride} />
+        <PermTreeNode key={child.id} node={child} depth={depth + 1} />
       ))}
     </div>
   )
@@ -632,310 +441,554 @@ const STUDIO_TABS = [
   { id: "admin",      label: "Admin" },
 ]
 
-function PermissionsPanel() {
-  const [studio, setStudio]       = useState("governance")
-  const [filter, setFilter]       = useState("")
-  const [overrides, setOverrides] = useState<Record<string, { state: PermState; scope: string }>>({})
-  const [saveOpen, setSaveOpen]   = useState(false)
-  const [saved, setSaved]         = useState(false)
+// ─── Role Permissions Panel ───────────────────────────────────────────────────
 
-  const nodes = PERM_TREE[studio] ?? []
-  const overrideCount = Object.keys(overrides).length
+function buildRoleNodes(studioKey: string, roleId: string): PermNode[] {
+  const states = ROLE_PERM_STATES[roleId] ?? {}
+  return (PERM_TREE[studioKey] ?? []).map(n => ({
+    ...n,
+    state: (states[n.id] ?? "") as PermState,
+    locked: false,
+    role: undefined,
+    children: n.children?.map(c => ({
+      ...c,
+      state: (states[c.id] ?? "") as PermState,
+      locked: false,
+      role: undefined,
+    })),
+  }))
+}
 
-  function collectIds(node: PermNode): string[] {
-    return [node.id, ...(node.children ?? []).flatMap(c => collectIds(c))]
-  }
-  function findNode(nodeList: PermNode[], id: string): PermNode | null {
-    for (const n of nodeList) {
-      if (n.id === id) return n
-      const found = findNode(n.children ?? [], id)
-      if (found) return found
-    }
-    return null
-  }
+function RolePermissionsPanel({ role }: { role: Role }) {
+  const [mode, setMode] = useState<PermMode>("audit")
+  const [studio, setStudio] = useState("governance")
+  const [overrides, setOverrides] = useState<PermOverrides>({})
+  const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
+  const [saved, setSaved] = useState(false)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+  const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
 
-  function handleOverride(id: string, state: PermState, scope: string) {
-    const node = findNode(PERM_TREE[studio] ?? [], id)
-    if (node && (node.children?.length ?? 0) > 0) {
-      // Parent: cascade state to all descendants
-      const ids = collectIds(node)
-      setOverrides(prev => {
-        const next = { ...prev }
-        ids.forEach(did => { next[did] = { state, scope } })
-        return next
-      })
-    } else {
-      // Leaf: only set self, never touches parent
-      setOverrides(prev => ({ ...prev, [id]: { state, scope } }))
-    }
+  const nodes = buildRoleNodes(studio, role.id)
+  const isDirty = Object.keys(overrides).length > 0 || Object.keys(scopeOverrides).length > 0
+  const canEdit = !role.system
+
+  function changeScopeOverride(id: string, scope: string) {
+    setScopeOverrides(prev => ({ ...prev, [id]: scope }))
+    setSaved(false)
   }
 
-  function countGranted(nodeList: PermNode[]): number {
-    return nodeList.reduce((n, nd) => {
-      const ov = overrides[nd.id]
-      const eff = ov?.state ?? nd.state
-      let c = eff !== "" ? 1 : 0
-      if (nd.children) c += countGranted(nd.children)
-      return n + c
-    }, 0)
+  function togglePermission(id: string, on: boolean) {
+    setOverrides(prev => {
+      function findNode(list: PermNode[], targetId: string): PermNode | undefined {
+        for (const n of list) {
+          if (n.id === targetId) return n
+          const found = findNode(n.children ?? [], targetId)
+          if (found) return found
+        }
+      }
+      function descendants(node: PermNode): PermNode[] {
+        return [node, ...(node.children ?? []).flatMap(descendants)]
+      }
+      const copy = { ...prev }
+      if (on) {
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) {
+          if (node.state === "g-direct") delete copy[node.id]
+          else copy[node.id] = "g-direct"
+        }
+      } else {
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) delete copy[node.id]
+      }
+      return copy
+    })
+    setSaved(false)
   }
-  function countTotal(nodeList: PermNode[]): number {
-    return nodeList.reduce((n, nd) => n + 1 + countTotal(nd.children ?? []), 0)
-  }
-  const grantedCount = countGranted(nodes)
-  const totalCount   = countTotal(nodes)
 
-  const filteredNodes = filter.trim()
-    ? nodes.map(nd => ({
-        ...nd,
-        children: nd.children?.filter(ch =>
-          ch.label.toLowerCase().includes(filter.toLowerCase()) ||
-          ch.code.toLowerCase().includes(filter.toLowerCase())
-        ),
-      })).filter(nd =>
-        nd.label.toLowerCase().includes(filter.toLowerCase()) ||
-        (nd.children?.length ?? 0) > 0
-      )
-    : nodes
+  function confirmDiscard() {
+    setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
+  }
+  function confirmSave() {
+    setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const allNodes   = nodes.flatMap(n => [n, ...(n.children ?? [])])
+  const changedNodes  = allNodes.filter(n => overrides[n.id] !== undefined && overrides[n.id] !== n.state)
+  const addedNodes   = changedNodes.filter(n => GRANTED_STATES.includes(overrides[n.id]!))
+  const removedNodes = changedNodes.filter(n => !GRANTED_STATES.includes(overrides[n.id]!))
+  const allGranted   = allNodes.filter(n => GRANTED_STATES.includes(n.state))
+  const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
+
+  const saveSteps: StepItem[] = [
+    { label: "Review changes", state: saveStep === 0 ? "active" : saveStep === 1 ? "completed" : "default" },
+    { label: "Confirm",        state: saveStep === 1 ? "active" : "default" },
+  ]
 
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-      {/* Studio tabs — DS Tabs */}
-      <div style={{ padding: "0 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
-        <Tabs
-          items={STUDIO_TABS}
-          activeId={studio}
-          onChange={id => { setStudio(id); setFilter(""); setOverrides({}) }}
-          size="s"
-        />
-      </div>
-
-      {/* Summary + search + save row */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 16px", borderBottom: "1px solid var(--border)",
-        background: "var(--surface-raised)",
-      }}>
-        <div style={{ flex: 1, position: "relative" }}>
-          <Icons.Search size={12} style={{
-            position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)",
-            color: "var(--muted-foreground)", pointerEvents: "none",
-          }} />
-          <input
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            placeholder="Filter permissions…"
-            style={{
-              width: "100%", paddingLeft: 28, paddingRight: 8, paddingTop: 6, paddingBottom: 6,
-              fontSize: 13, border: "1px solid var(--border)", borderRadius: 6,
-              background: "var(--surface)", color: "var(--foreground)", outline: "none",
-            }}
-          />
+    <div style={{ paddingBottom: mode === "edit" ? 80 : 0 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 4, flex: 1 }}>
+          {STUDIO_TABS.map(s => (
+            <button key={s.id} onClick={() => setStudio(s.id)} style={{
+              padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
+              borderBottom: studio === s.id ? "2px solid var(--primary)" : "2px solid transparent",
+            }}>
+              {s.label}
+            </button>
+          ))}
         </div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0 }}>
-          <span style={{ fontWeight: 700, color: "var(--primary)" }}>{grantedCount}</span>
-          <span> / {totalCount} granted</span>
-        </div>
-        {overrideCount > 0 && (
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <Button size="sm" variant="secondary" onClick={() => setOverrides({})}>Reset</Button>
-            <Button size="sm" variant="primary" onClick={() => setSaveOpen(true)}>Save changes</Button>
-          </div>
+        {mode === "audit" && canEdit && (
+          <Button variant="secondary" size="sm" onClick={() => setMode("edit")}>
+            <Icons.Pencil size={13} style={{ marginRight: 4 }} />
+            Edit permissions
+          </Button>
+        )}
+        {mode === "audit" && !canEdit && (
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.Lock size={11} /> System role · read only
+          </span>
+        )}
+        {mode === "edit" && saveStep === null && saved && (
+          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.CheckCircle size={13} /> Saved
+          </span>
         )}
       </div>
 
-      {/* Legend */}
-      <div style={{
-        display: "flex", gap: 16, padding: "8px 16px",
-        borderBottom: "1px solid var(--border)", background: "var(--surface-raised)",
-      }}>
-        {([
-          { state: "g-direct" as PermState, label: "Direct" },
-          { state: "g-inh"    as PermState, label: "Via role" },
-          { state: "g-denied" as PermState, label: "Denied" },
-          { state: ""         as PermState, label: "None" },
-        ] as const).map(l => (
-          <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <PermIcon state={l.state} />
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
-          </div>
-        ))}
-        {overrideCount > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: 2, background: "var(--badge-alert)" }} />
-            <span style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600 }}>{overrideCount} overridden</span>
-          </div>
-        )}
-      </div>
+      {/* Stats row — only in tree view */}
+      {saveStep === null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Chip variant="secondary" size="s">{allGranted.length} granted</Chip>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+            {allGranted.length} permission{allGranted.length !== 1 ? "s" : ""} this role grants
+          </span>
+          {mode === "audit" && (
+            <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
+              <Icons.Eye size={11} /> View only
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tree */}
-      <div>
-        {filteredNodes.length === 0 ? (
-          <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-            No permissions match "{filter}"
-          </div>
-        ) : (
-          filteredNodes.map(n => (
-            <PermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onOverride={handleOverride} />
-          ))
-        )}
-      </div>
-
-      {/* ── Save changes modal ─────────────────────────────────────── */}
-      {(() => {
-        const STATE_LABEL: Record<string, string> = { "g-direct": "Granted", "g-denied": "Denied", "": "Removed" }
-        const studioLabels: Record<string, string> = { governance: "Governance", datastudio: "Data Studio", agentic: "Agentic", admin: "Admin" }
-
-        function findWithPath(nodeList: PermNode[], id: string, path: string[] = []): { node: PermNode; path: string[] } | null {
-          for (const n of nodeList) {
-            if (n.id === id) return { node: n, path }
-            const found = findWithPath(n.children ?? [], id, [...path, n.label])
-            if (found) return found
+      {saveStep === null && (
+        <div>
+          {mode === "audit"
+            ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+            : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={changeScopeOverride} />)
           }
-          return null
-        }
+          {visibleNodes.length === 0 && (
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
+              {mode === "audit" ? "This role grants no permissions yet." : "No permissions available."}
+            </div>
+          )}
+        </div>
+      )}
 
-        const changes: { id: string; label: string; path: string[]; studioLabel: string; state: PermState; scope: string }[] = []
-        Object.entries(overrides).forEach(([id, ov]) => {
-          for (const [stKey, stNodes] of Object.entries(PERM_TREE)) {
-            const result = findWithPath(stNodes, id)
-            if (result) {
-              changes.push({ id, label: result.node.label, path: result.path, studioLabel: studioLabels[stKey] ?? stKey, state: ov.state, scope: ov.scope })
-              break
-            }
+      {/* Inline save review */}
+      {saveStep !== null && (() => {
+        const effectiveScope = (n: PermNode) => scopeOverrides[n.id] ?? n.scope ?? "Own"
+        function renderDiffSection(
+          items: PermNode[], header: string, accentColor: string, bgMix: string, icon: ReactElement
+        ) {
+          if (items.length === 0) return null
+          const itemIds = new Set(items.map(n => n.id))
+          type DiffGroup = { parent: PermNode; parentInItems: boolean; children: PermNode[] }
+          const groups: DiffGroup[] = []
+          for (const root of nodes) {
+            const pi = itemIds.has(root.id)
+            const ci = (root.children ?? []).filter(c => itemIds.has(c.id))
+            if (pi || ci.length > 0) groups.push({ parent: root, parentInItems: pi, children: ci })
           }
-        })
-
-        const grouped = changes.reduce<Record<string, typeof changes>>((acc, c) => {
-          ;(acc[c.studioLabel] ??= []).push(c)
-          return acc
-        }, {})
-
-        return (
-          <>
-            <ModalDialog
-              isOpen={saveOpen}
-              onClose={() => setSaveOpen(false)}
-              variant="content"
-              showIcon={false}
-              title="Save permission changes"
-              description={`${changes.length} change${changes.length !== 1 ? "s" : ""} to Thomas Gonzalez's permissions`}
-              slotUnstyled
-              slot={
-                <div style={{ overflowY: "auto", maxHeight: "50vh", margin: "0 -24px" }}>
-                  {Object.entries(grouped).map(([studioLabel, rows]) => (
-                    <div key={studioLabel}>
-                      <div style={{ padding: "6px 24px 4px", fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                        {studioLabel}
+          return (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
+                {header} · {items.length}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {groups.map(({ parent, parentInItems, children }) => (
+                  <div key={parent.id}>
+                    {parentInItems ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, background: bgMix }}>
+                        {icon}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{parent.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(parent)}</span>
                       </div>
-                      {rows.map(c => (
-                        <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 24px", borderTop: "1px solid var(--border)" }}>
-                          <PermIcon state={c.state} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            {c.path.length > 0 && (
-                              <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 1 }}>
-                                {c.path.join(" › ")}
-                              </div>
-                            )}
-                            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{c.label}</span>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, flexShrink: 0 }}>
-                            <span style={{
-                              fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100,
-                              background: c.state === "g-direct" ? "color-mix(in srgb, var(--badge-success) 15%, transparent)"
-                                : c.state === "g-denied" ? "color-mix(in srgb, var(--badge-error) 15%, transparent)"
-                                : "var(--muted)",
-                              color: c.state === "g-direct" ? "var(--badge-success)"
-                                : c.state === "g-denied" ? "var(--badge-error)"
-                                : "var(--muted-foreground)",
-                            }}>
-                              {STATE_LABEL[c.state]}
-                            </span>
-                            {c.state === "g-direct" && (
-                              <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>· {c.scope}</span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              }
-              ctaSecondary={{ label: "Cancel", onClick: () => setSaveOpen(false) }}
-              ctaPrimary={{ label: "Confirm changes", onClick: () => {
-                setOverrides({})
-                setSaveOpen(false)
-                setSaved(true)
-                setTimeout(() => setSaved(false), 3000)
-              }}}
-            />
-
-            {/* Success toast */}
-            {saved && (
-              <div style={{
-                position: "fixed", bottom: 24, right: 24, zIndex: 10020,
-                background: "var(--badge-success)", color: "#fff", // audit-ignore: white text on success green, no token for #fff
-                padding: "10px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
-                display: "flex", alignItems: "center", gap: 8,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.2)", // audit-ignore: toast shadow, no token
-              }}>
-                <Icons.CheckCircle size={15} /> Changes saved
+                    ) : (
+                      <div style={{ padding: "4px 10px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>{parent.label}</span>
+                      </div>
+                    )}
+                    {children.map(child => (
+                      <div key={child.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 28px", borderRadius: 6, marginTop: 2, background: bgMix }}>
+                        <Icons.CornerDownRight size={10} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+                        {icon}
+                        <span style={{ fontSize: 12, color: "var(--foreground)" }}>{child.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(child)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            <div style={{ marginBottom: 20 }}><Stepper steps={saveSteps} /></div>
+            {saveStep === 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {changedNodes.length === 0 && (
+                  <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>No changes to review.</div>
+                )}
               </div>
             )}
-          </>
+            {saveStep === 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8, background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <Icons.ShieldCheck size={16} color="var(--primary)" />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>
+                      {changedNodes.length} permission{changedNodes.length !== 1 ? "s" : ""} will change
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      {addedNodes.length > 0 && `${addedNodes.length} new`}
+                      {addedNodes.length > 0 && removedNodes.length > 0 && " · "}
+                      {removedNodes.length > 0 && `${removedNodes.length} removed`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "4px 2px" }}>
+                  Changes apply to all members assigned this role. They take effect immediately.
+                </div>
+              </div>
+            )}
+          </div>
         )
       })()}
+
+      {/* StepperNavFooter portal */}
+      {mode === "edit" && createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 56, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={saveStep === null || saveStep === 0 ? "cancel-next" : "back-next"}
+            cancelLabel={saveStep === null ? "Discard" : "Keep editing"}
+            onCancel={saveStep === null ? () => setShowDiscardModal(true) : () => setSaveStep(null)}
+            onBack={() => setSaveStep(0)}
+            nextLabel={saveStep === null ? "Save changes" : saveStep === 0 ? "Review & confirm" : "Apply changes"}
+            nextDisabled={saveStep === null ? !isDirty : changedNodes.length === 0}
+            onNext={saveStep === null ? () => setSaveStep(0) : saveStep === 0 ? () => setSaveStep(1) : confirmSave}
+          />
+        </div>,
+        document.body
+      )}
+
+      {/* Discard modal */}
+      <ModalDialog
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        tone="warning"
+        iconName="AlertTriangle"
+        title="Discard changes?"
+        description="Your permission edits will be lost. This can't be undone."
+        ctaPrimary={{ label: "Discard changes", destructive: true, onClick: confirmDiscard }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowDiscardModal(false) }}
+      />
     </div>
   )
 }
 
-// ─── Activity panel ───────────────────────────────────────────────────────────
+// ─── Activity / Audit Log panel ───────────────────────────────────────────────
 
-const ACTIVITY_LOG = [
-  { msg: "Signed in from Chrome on macOS",          time: "2 hours ago",          type: "auth"  },
-  { msg: "Updated Data Studio model configuration", time: "Yesterday at 2:34 PM", type: "edit"  },
-  { msg: "Added to Engineering group by Admin",     time: "Aug 20 at 9:15 AM",    type: "group" },
-  { msg: "Role updated: Viewer → Member",           time: "Aug 18 at 4:10 PM",    type: "role"  },
-  { msg: "Approved promotion packet GV-2200",       time: "Aug 15 at 11:30 AM",   type: "check" },
-  { msg: "Signed in from Safari on macOS",          time: "Aug 12 at 8:05 AM",    type: "auth"  },
-  { msg: "Uploaded 3 files to Governance Drives",   time: "Aug 10 at 3:20 PM",    type: "edit"  },
-  { msg: "Created sandbox SB-2026-08",              time: "Aug 8 at 10:05 AM",    type: "edit"  },
-]
+type AuditAction = "Login" | "Update" | "Create" | "Delete" | "Permission" | "Group" | "Export"
+type AuditResult = "Success" | "Failed"
+type AuditSource = "UI" | "API" | "System"
 
-const ACTIVITY_ICON: Record<string, React.ReactNode> = {
-  auth:  <Icons.LogIn size={14} />,
-  edit:  <Icons.FileEdit size={14} />,
-  group: <Icons.Users size={14} />,
-  role:  <Icons.ShieldCheck size={14} />,
-  check: <Icons.CheckCircle size={14} />,
+type AuditEvent = {
+  timestamp: string   // "Sep 4, 2026 20:14:02 UTC"
+  relative: string    // "2h ago"
+  user: string
+  userId: string
+  action: AuditAction
+  resource: string
+  description: string
+  result: AuditResult
+  source: AuditSource
+  roleAtEvent: string
+  ip: string
+  sessionId: string
+  resourcePath: string
+  diff?: { before: string; after: string }
 }
 
-function ActivityPanel({ log = ACTIVITY_LOG }: { log?: typeof ACTIVITY_LOG }) {
+const AUDIT_LOG: AuditEvent[] = [
+  {
+    timestamp: "Sep 4, 2026 14:02:18 UTC", relative: "2h ago",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Login",
+    resource: "platform", description: "Signed in successfully.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F12", resourcePath: "avance-corp / platform / session",
+  },
+  {
+    timestamp: "Sep 3, 2026 10:17:44 UTC", relative: "Yesterday",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Permission",
+    resource: "governance.sandbox.connect_sources",
+    description: "Permission override applied — connect_sources granted.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F11", resourcePath: "avance-corp / Governance Studio / sandbox / connect_sources",
+    diff: { before: '{ "state": "" }', after: '{ "state": "g-direct" }' },
+  },
+  {
+    timestamp: "Sep 2, 2026 16:34:05 UTC", relative: "2d ago",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Update",
+    resource: "customer_360_v2", description: "Updated model configuration.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F10", resourcePath: "avance-corp / Data Studio / models / customer_360_v2",
+    diff: { before: '{ "retention_days": 30 }', after: '{ "retention_days": 90 }' },
+  },
+  {
+    timestamp: "Aug 20, 2026 09:15:00 UTC", relative: "Aug 20",
+    user: "Maria García", userId: "usr_mg002", action: "Group",
+    resource: "Leadership", description: "Added Thomas Gonzalez to Leadership group.",
+    result: "Success", source: "UI", roleAtEvent: "Admin",
+    ip: "10.0.0.5", sessionId: "sess-MG401", resourcePath: "avance-corp / People & Access / groups / Leadership",
+  },
+  {
+    timestamp: "Aug 18, 2026 16:10:33 UTC", relative: "Aug 18",
+    user: "Maria García", userId: "usr_mg002", action: "Update",
+    resource: "role assignment", description: "Role changed from Viewer to Owner.",
+    result: "Success", source: "UI", roleAtEvent: "Admin",
+    ip: "10.0.0.5", sessionId: "sess-MG400", resourcePath: "avance-corp / People & Access / members / usr_tg001 / role",
+    diff: { before: '{ "role": "Viewer" }', after: '{ "role": "Owner" }' },
+  },
+  {
+    timestamp: "Aug 15, 2026 11:30:20 UTC", relative: "Aug 15",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Update",
+    resource: "GV-2200", description: "Promotion packet GV-2200 approved.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F09", resourcePath: "avance-corp / Governance Studio / promotion-packets / GV-2200",
+  },
+  {
+    timestamp: "Aug 10, 2026 15:20:44 UTC", relative: "Aug 10",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Create",
+    resource: "governance_drives", description: "Uploaded 3 files to Governance Drives.",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F08", resourcePath: "avance-corp / Governance Studio / drives / governance_drives",
+  },
+  {
+    timestamp: "Aug 1, 2026 09:00:00 UTC", relative: "Aug 1",
+    user: "Thomas Gonzalez", userId: "usr_tg001", action: "Update",
+    resource: "mfa_device", description: "MFA device enrolled — Authenticator app (TOTP).",
+    result: "Success", source: "UI", roleAtEvent: "Owner",
+    ip: "192.168.1.42", sessionId: "sess-A9F05", resourcePath: "avance-corp / platform / security / mfa",
+  },
+  {
+    timestamp: "Jul 28, 2026 14:40:11 UTC", relative: "Jul 28",
+    user: "Maria García", userId: "usr_mg002", action: "Permission",
+    resource: "datastudio.models.publish", description: "Permission denial removed — publish cleared.",
+    result: "Success", source: "UI", roleAtEvent: "Admin",
+    ip: "10.0.0.5", sessionId: "sess-MG390", resourcePath: "avance-corp / Data Studio / permissions / models.publish",
+    diff: { before: '{ "state": "g-denied" }', after: '{ "state": "" }' },
+  },
+  {
+    timestamp: "Jan 14, 2025 09:00:00 UTC", relative: "Jan 14, 2025",
+    user: "System", userId: "sys", action: "Create",
+    resource: "workspace_membership", description: "Workspace invitation accepted.",
+    result: "Success", source: "System", roleAtEvent: "—",
+    ip: "—", sessionId: "—", resourcePath: "avance-corp / People & Access / members / usr_tg001",
+  },
+]
+
+const ACTION_COLOR: Record<AuditAction, string> = {
+  Login:      "var(--badge-info)",
+  Update:     "var(--primary)",
+  Create:     "var(--badge-success)",
+  Delete:     "var(--badge-error, #ef4444)", // audit-ignore: hex is CSS var fallback
+  Permission: "var(--badge-alert)",
+  Group:      "var(--muted-foreground)",
+  Export:     "var(--muted-foreground)",
+}
+
+const ACTION_FILTERS: Array<AuditAction | "All"> = ["All", "Login", "Update", "Create", "Permission", "Group"]
+const RESULT_FILTERS: Array<AuditResult | "All"> = ["All", "Success", "Failed"]
+
+function AuditUserAvatar({ name, size = 26 }: { name: string; size?: number }) {
+  const initials = name === "System" ? "SY" : name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+  const hue = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-      {log.map((ev, i) => (
-        <div
-          key={i}
-          style={{
-            display: "flex", gap: 14, padding: "14px 20px",
-            borderBottom: i < log.length - 1 ? "1px solid var(--border)" : "none",
-            alignItems: "flex-start",
-          }}
-        >
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-            background: "var(--surface-raised)", border: "1px solid var(--border)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "var(--muted-foreground)",
-          }}>
-            {ACTIVITY_ICON[ev.type] ?? <Icons.Circle size={14} />}
-          </div>
-          <div>
-            <div style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{ev.time}</div>
-          </div>
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: `hsl(${hue}, 55%, 42%)`, /* audit-ignore */
+      display: "flex", alignItems: "center", justifyContent: "center",
+      fontSize: size * 0.38, fontWeight: 700, color: "#fff", /* audit-ignore */
+      letterSpacing: 0.3,
+    }}>{initials}</div>
+  )
+}
+
+function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const actionColor = ACTION_COLOR[ev.action]
+
+  return (
+    <div style={{ borderBottom: isLast ? "none" : "1px solid var(--border)" }}>
+      {/* Main row */}
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
+          padding: "11px 14px", cursor: "pointer", gap: 10, alignItems: "center",
+          background: expanded ? "var(--accent)" : "transparent",
+        }}
+        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseLeave={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "transparent" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)" }}>
+          {expanded ? <Icons.ChevronDown size={12} /> : <Icons.ChevronRight size={12} />}
         </div>
-      ))}
+        {/* Timestamp */}
+        <div>
+          <div style={{ fontSize: 12, color: "var(--foreground)", fontVariantNumeric: "tabular-nums" }}>{ev.timestamp.split(" ").slice(0, 2).join(" ")}</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{ev.relative}</div>
+        </div>
+        {/* User */}
+        <div style={{ display: "flex", alignItems: "center", gap: 7, overflow: "hidden" }}>
+          <AuditUserAvatar name={ev.user} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.user}</span>
+        </div>
+        {/* Action badge */}
+        <span style={{
+          fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
+          background: `color-mix(in srgb, ${actionColor} 14%, transparent)`,
+          color: actionColor, border: `1px solid color-mix(in srgb, ${actionColor} 28%, transparent)`,
+          width: "fit-content",
+        }}>{ev.action}</span>
+        {/* Resource */}
+        <span style={{ fontSize: 11, color: "var(--foreground)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.resource}</span>
+        {/* Description */}
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.description}</span>
+        {/* Result */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {ev.result === "Success"
+            ? <><Icons.Check size={11} color="var(--badge-success)" /><span style={{ fontSize: 11, color: "var(--badge-success)", fontWeight: 600 }}>Success</span></>
+            : <><Icons.X size={11} color="var(--badge-error, #ef4444)" /><span style={{ fontSize: 11, color: "var(--badge-error, #ef4444)", fontWeight: 600 }}>Failed</span></> // audit-ignore: hex is CSS var fallback
+          }
+        </div>
+        {/* Source */}
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)", textAlign: "right" }}>
+          {ev.source === "UI" ? <><Icons.Monitor size={11} style={{ display: "inline", marginRight: 3 }} />UI</>
+           : ev.source === "API" ? <><Icons.Code size={11} style={{ display: "inline", marginRight: 3 }} />API</>
+           : "System"}
+        </span>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{ background: "var(--surface-raised)", borderTop: "1px solid var(--border)", padding: "14px 44px 16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px 20px", marginBottom: 12 }}>
+            {[
+              { label: "USER ID",        value: ev.userId },
+              { label: "ROLE AT EVENT",  value: ev.roleAtEvent },
+              { label: "IP ADDRESS",     value: ev.ip },
+              { label: "SESSION ID",     value: ev.sessionId },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 3 }}>{label}</div>
+                <div style={{ fontSize: 12, color: "var(--foreground)", fontFamily: "monospace" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginBottom: ev.diff ? 12 : 0 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 3 }}>RESOURCE PATH</div>
+            <div style={{ fontSize: 12, color: "var(--foreground)", fontFamily: "monospace" }}>{ev.resourcePath}</div>
+          </div>
+          {ev.diff && (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.07em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 6 }}>CHANGE DIFF</div>
+              <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", fontSize: 12, fontFamily: "monospace" }}>
+                <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-error, #ef4444) 8%, transparent)", borderBottom: "1px solid var(--border)" }}> {/* audit-ignore: hex is CSS var fallback */}
+                  <span style={{ color: "var(--muted-foreground)", marginRight: 8 }}>before</span>{ev.diff.before}
+                </div>
+                <div style={{ padding: "8px 14px", background: "color-mix(in srgb, var(--badge-success) 8%, transparent)" }}>
+                  <span style={{ color: "var(--muted-foreground)", marginRight: 8 }}>after &nbsp;</span>{ev.diff.after}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ActivityPanel() {
+  const [actionFilter, setActionFilter] = useState<AuditAction | "All">("All")
+  const [resultFilter, setResultFilter] = useState<AuditResult | "All">("All")
+  const [search, setSearch] = useState("")
+
+  const filtered = AUDIT_LOG.filter(ev => {
+    if (actionFilter !== "All" && ev.action !== actionFilter) return false
+    if (resultFilter !== "All" && ev.result !== resultFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return ev.description.toLowerCase().includes(q) || ev.resource.toLowerCase().includes(q) || ev.user.toLowerCase().includes(q)
+    }
+    return true
+  })
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events, resources…"
+          style={{ flex: 1, minWidth: 160, padding: "5px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)" }} />
+        <select value={actionFilter} onChange={e => setActionFilter(e.target.value as AuditAction | "All")}
+          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
+          {ACTION_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Action: All" : f}</option>)}
+        </select>
+        <select value={resultFilter} onChange={e => setResultFilter(e.target.value as AuditResult | "All")}
+          style={{ padding: "5px 8px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 6, background: "var(--background)", color: "var(--foreground)", cursor: "pointer" }}>
+          {RESULT_FILTERS.map(f => <option key={f} value={f}>{f === "All" ? "Result: All" : f}</option>)}
+        </select>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>{filtered.length} event{filtered.length !== 1 ? "s" : ""}</span>
+        <button style={{ padding: "5px 10px", fontSize: 11, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 6, cursor: "pointer", background: "none", color: "var(--foreground)", display: "flex", alignItems: "center", gap: 5 }}>
+          <Icons.Download size={12} />Export
+        </button>
+      </div>
+
+      {/* Table */}
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
+          padding: "8px 14px", gap: 10,
+          background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+          fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
+        }}>
+          <span />
+          <span>Timestamp</span><span>User</span><span>Action</span><span>Resource</span>
+          <span>Description</span><span>Result</span><span style={{ textAlign: "right" }}>Source</span>
+        </div>
+        {filtered.map((ev, i) => (
+          <AuditRow key={i} ev={ev} isLast={i === filtered.length - 1} />
+        ))}
+        {filtered.length === 0 && (
+          <div style={{ padding: "40px 24px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
+            No events match the current filters
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -1150,21 +1203,19 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
 // ─── Member detail page ───────────────────────────────────────────────────────
 
-const ROLE_OPTIONS: MemberRole[] = ["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"]
+const USER_TYPE_OPTIONS: UserType[] = ["Owner", "Admin", "Member"]
 
 function MemberDetailPage({
-  member, onBack, onRoleChange, onToggleSuspend, onRemove, onUpdate,
+  member, onBack, onToggleSuspend, onRemove, onUpdate,
 }: {
   member: Member
   onBack: () => void
-  onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
   onRemove: (id: string) => void
   onUpdate: (m: Member) => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
-  const statusColor = STATUS_COLOR[member.status]
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
 
@@ -1175,34 +1226,24 @@ function MemberDetailPage({
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={(isScrolled) => (
-        <Header
-          size={isScrolled ? "compress" : "size-m"}
-          title={member.name}
-          description="People & Access"
-          backButton
-          showBackInCompress
-          onBack={onBack}
-        />
-      )}
     >
+      <BackBreadcrumb onBack={onBack} />
 
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
         {/* Left: identity card */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden", background: "var(--surface)" }}>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
           {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
-            padding: "28px 24px 20px", borderBottom: "1px solid var(--border)",
-            background: "var(--surface-raised)",
+            padding: "28px 24px 20px",
           }}>
             <div style={{
-              width: 64, height: 64, borderRadius: "50%",
+              width: 80, height: 80, borderRadius: "50%",
               background: isActive ? member.avatarColor : "var(--muted)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 22, fontWeight: 700,
+              fontSize: 26, fontWeight: 700,
               color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
               opacity: member.status === "suspended" ? 0.6 : 1,
             }}>
@@ -1217,16 +1258,14 @@ function MemberDetailPage({
                   {member.title}{member.title && member.department ? " · " : ""}{member.department}
                 </div>
               )}
-              <div style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-              }}>
-                <div style={{ width: 5, height: 5, borderRadius: "50%", background: statusColor }} />
+              <Tag variant={isActive ? "success" : member.status === "suspended" ? "alert" : "secondary"}>
                 {STATUS_LABEL[member.status]}
-              </div>
+              </Tag>
             </div>
           </div>
+
+          {/* Divider after active tag */}
+          <div style={{ height: 1, background: "var(--border)" }} />
 
           {/* Info fields */}
           <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
@@ -1239,80 +1278,40 @@ function MemberDetailPage({
               <InfoRow icon={<Icons.Send size={14} />}   label="Invite sent" value={formatRelative(member.joinedAt)} />
             )}
 
-            {/* Role picker */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--muted-foreground)" }}>
-                <Icons.ShieldCheck size={14} />
-                <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Role</span>
-              </div>
-              <select
-                value={member.role}
-                onChange={e => onRoleChange(member.id, e.target.value as MemberRole)}
-                style={{
-                  width: "100%", padding: "8px 12px", fontSize: 13, borderRadius: 8,
-                  border: "1px solid var(--border)", background: "var(--surface)",
-                  color: "var(--foreground)", cursor: "pointer", outline: "none",
-                }}
-              >
-                {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
+            {/* User Type — read-only */}
+            <InfoRow icon={<Icons.ShieldCheck size={14} />} label="User Type" value={member.role} />
           </div>
 
-          {/* Actions */}
-          <div style={{ margin: "0 16px 16px", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{
-              padding: "8px 14px",
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
-              color: "var(--muted-foreground)", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-            }}>
-              Actions
-            </div>
-            {!isInvited && (
-              <DangerRow
-                icon={isActive ? <Icons.UserX size={14} /> : <Icons.UserCheck size={14} />}
-                label={isActive ? "Suspend access" : "Reactivate account"}
-                desc={isActive ? "Block login and API access immediately" : "Restore login access for this member"}
-                onClick={() => { onToggleSuspend(member.id); onBack() }}
-              />
-            )}
-            {isInvited && (
-              <DangerRow
-                icon={<Icons.RefreshCw size={14} />}
-                label="Resend invite"
-                desc="Send a new invitation email to this address"
-                onClick={() => alert(`Invite resent to ${member.email}`)}
-              />
+          {/* Divider after info */}
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Action buttons */}
+          <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {isInvited ? (
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => alert(`Invite resent to ${member.email}`)}>
+                <Icons.RefreshCw size={13} /> Resend invite
+              </Button>
+            ) : (
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => { onToggleSuspend(member.id); onBack() }}>
+                {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
+              </Button>
             )}
             {!confirmRemove ? (
-              <DangerRow
-                icon={<Icons.Trash2 size={14} />}
-                label="Remove from workspace"
-                desc="Permanently removes access. Cannot be undone."
-                destructive
-                onClick={() => setConfirmRemove(true)}
-              />
+              <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => setConfirmRemove(true)}>
+                <Icons.Trash2 size={13} /> Remove from workspace
+              </Button>
             ) : (
-              <div style={{ padding: "14px", background: "color-mix(in srgb, var(--badge-error) 8%, transparent)" }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--badge-error)", marginBottom: 6 }}>
-                  Remove {member.name}?
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 12 }}>
-                  They will lose all access immediately. This cannot be undone.
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={() => { onRemove(member.id); onBack() }}
-                    style={{ flex: 1, padding: "7px 0", border: "1px solid var(--badge-error)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--badge-error)", background: "none", cursor: "pointer" }}
-                  >
-                    Yes, remove
-                  </button>
-                  <button
-                    onClick={() => setConfirmRemove(false)}
-                    style={{ flex: 1, padding: "7px 0", border: "1px solid var(--border)", borderRadius: 7, fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--surface)", cursor: "pointer" }}
-                  >
-                    Cancel
-                  </button>
+              <div style={{ padding: "12px", border: "1px solid var(--badge-error)", borderRadius: 8, background: "color-mix(in srgb, var(--badge-error) 6%, transparent)" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 4 }}>Remove {member.name}?</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>This cannot be undone.</div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Button variant="warning" size="sm" style={{ flex: 1, justifyContent: "center" }}
+                    onClick={() => { onRemove(member.id); onBack() }}>Confirm</Button>
+                  <Button variant="secondary" size="sm" style={{ flex: 1, justifyContent: "center" }}
+                    onClick={() => setConfirmRemove(false)}>Cancel</Button>
                 </div>
               </div>
             )}
@@ -1321,15 +1320,1180 @@ function MemberDetailPage({
 
         {/* Right: tabs */}
         <div>
-          <DetailTabs tabs={["Permissions", "Activity", "Security"]} active={activeTab} onChange={setActiveTab} />
+          <DetailTabs
+            tabs={["Apps", "Roles", "Groups", "Permissions", "Resources", "Security", "Activity"]}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
           <div style={{ marginTop: 20 }}>
-            {activeTab === 0 && <PermissionsPanel />}
-            {activeTab === 1 && <ActivityPanel />}
-            {activeTab === 2 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 0 && <AppsPanel member={member} />}
+            {activeTab === 1 && <MemberRolesPanel member={member} />}
+            {activeTab === 2 && <MemberGroupsPanel member={member} />}
+            {activeTab === 3 && <MemberPermissionsPanel member={member} />}
+            {activeTab === 4 && <ResourcesPanel member={member} />}
+            {activeTab === 5 && <SecurityPanel member={member} onUpdate={onUpdate} />}
+            {activeTab === 6 && <ActivityPanel />}
           </div>
         </div>
       </div>
     </ScreenLayout>
+  )
+}
+
+
+// ─── Apps tab ─────────────────────────────────────────────────────────────────
+
+function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack: () => void }) {
+  const meta = STUDIO_META[studioId]
+  const nodes = PERM_TREE[studioId] ?? []
+  const granted = filterGrantedTree(nodes)
+  const directCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-direct").length
+  const inhCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-inh").length
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <button onClick={onBack} style={{
+          display: "flex", alignItems: "center", gap: 4, padding: "5px 10px",
+          fontSize: 12, fontWeight: 600, border: "1px solid var(--border)", borderRadius: 7,
+          background: "var(--surface)", color: "var(--muted-foreground)", cursor: "pointer",
+        }}>
+          <Icons.ChevronLeft size={13} /> Apps
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+            background: "var(--surface-raised)", border: "1px solid var(--border)",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
+          }}>{meta?.icon}</div>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{meta?.label} — Permissions</span>
+        </div>
+      </div>
+      <CardContainer size="sm" className="flex gap-[16px] mb-[14px]">
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct
+        </span>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role
+        </span>
+      </CardContainer>
+      {granted.length === 0 ? (
+        <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
+          No permissions granted in this studio.
+        </div>
+      ) : (
+        <CardContainer className="!p-0 overflow-hidden">
+          {granted.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)}
+        </CardContainer>
+      )}
+    </div>
+  )
+}
+
+function AppsPanel({ member }: { member: Member }) {
+  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
+  const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
+  memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
+  const [studios, setStudios] = useState(Array.from(studioSet))
+  const [selectedStudio, setSelectedStudio] = useState<string | null>(null)
+  const [grantOpen, setGrantOpen] = useState(false)
+  const [removingStudio, setRemovingStudio] = useState<string | null>(null)
+
+  const allAssigned = studios.length >= Object.keys(STUDIO_META).length
+  const available = Object.entries(STUDIO_META).filter(([id]) => !studios.includes(id))
+
+  function confirmRemove() {
+    if (removingStudio) {
+      setStudios(p => p.filter(id => id !== removingStudio))
+      setRemovingStudio(null)
+    }
+  }
+
+  const removingMeta = removingStudio ? STUDIO_META[removingStudio] : null
+
+  // ── Remove confirmation modal ─────────────────────────────────────────────
+  const removeModal = (
+    <ModalDialog
+      isOpen={!!removingStudio}
+      onClose={() => setRemovingStudio(null)}
+      tone="error"
+      iconName="ShieldOff"
+      title={`Remove access to ${removingMeta?.label ?? "this studio"}?`}
+      description={`${member.name} will immediately lose all permissions in ${removingMeta?.label ?? "this studio"} and won't be able to access any of its features or data.`}
+      informativeCard="This action removes all permissions for this studio. If the member needs access again, it must be granted manually."
+      ctaPrimary={{ label: "Remove access", destructive: true, onClick: confirmRemove }}
+      ctaSecondary={{ label: "Keep access", onClick: () => setRemovingStudio(null) }}
+    />
+  )
+
+  // ── Grant access modal (DS ModalDialog, content variant) ──────────────────
+  const grantModal = (
+    <ModalDialog
+      isOpen={grantOpen}
+      onClose={() => setGrantOpen(false)}
+      variant="content"
+      tone="default"
+      iconName="KeyRound"
+      title="Grant studio access"
+      description="Select a studio to give this member access. You can configure individual permissions after granting."
+      showClose
+      slot={
+        available.length === 0 ? (
+          <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "8px 0" }}>
+            Member already has access to all available studios.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {available.map(([id, meta]) => (
+              <div key={id} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
+                background: "var(--surface)",
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                  background: "var(--surface-raised)", border: "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
+                }}>{meta.icon}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => { setStudios(p => [...p, id]); setGrantOpen(false) }}
+                >
+                  Grant
+                </Button>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    />
+  )
+
+  if (selectedStudio) {
+    return (
+      <>
+        <StudioPermissionsView studioId={selectedStudio} onBack={() => setSelectedStudio(null)} />
+        {removeModal}
+      </>
+    )
+  }
+
+  if (studios.length === 0) {
+    return (
+      <>
+        {removeModal}
+        {grantModal}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+          <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
+            <Icons.Plus size={13} /> Grant access
+          </Button>
+        </div>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+          <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No studio access</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Grant access to a studio to configure this member's permissions.</div>
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      {removeModal}
+      {grantModal}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {/* Only show Grant access when there are still studios left to add */}
+        {!allAssigned && (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+            <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
+              <Icons.Plus size={13} /> Grant access
+            </Button>
+          </div>
+        )}
+        {studios.map(s => {
+          const meta = STUDIO_META[s]
+          if (!meta) return null
+          const via = memberGroups.filter(g => g.studios.includes(s)).map(g => g.name)
+          return (
+            <div key={s}
+              onClick={() => setSelectedStudio(s)}
+              style={{
+                display: "flex", alignItems: "center", gap: 16,
+                padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+                background: "var(--surface)", cursor: "pointer", transition: "background 0.1s",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--surface)" }}
+            >
+              <div style={{
+                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                background: "var(--surface-raised)", border: "1px solid var(--border)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "var(--primary)",
+              }}>{meta.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>{meta.label}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+              </div>
+              <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5 }}>
+                <Chip variant="success-secondary" size="s">Active</Chip>
+                {via.length > 0 && (
+                  <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {via.slice(0, 2).map(v => (
+                      <Chip key={v} variant="secondary" size="s">via {v}</Chip>
+                    ))}
+                    {via.length > 2 && <Chip variant="secondary" size="s">+{via.length - 2} more</Chip>}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 12 }}>
+                <button
+                  onClick={e => { e.stopPropagation(); setRemovingStudio(s) }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
+                    background: "var(--surface-raised)", color: "var(--muted-foreground)", cursor: "pointer",
+                    opacity: 0.7,
+                  }}
+                  title="Remove studio access"
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--badge-error)"
+                    ;(e.currentTarget as HTMLElement).style.opacity = "1"
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.color = "var(--muted-foreground)"
+                    ;(e.currentTarget as HTMLElement).style.opacity = "0.7"
+                  }}
+                >
+                  <Icons.Trash2 size={12} />
+                </button>
+                <Icons.ChevronRight size={14} style={{ color: "var(--muted-foreground)" }} />
+              </div>
+            </div>
+          )
+        })}
+        {/* Footer note when all studios are assigned */}
+        {allAssigned && (
+          <div style={{ textAlign: "center", padding: "8px 0", fontSize: 12, color: "var(--muted-foreground)" }}>
+            This member has access to all available studios.
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
+// ─── Roles tab ────────────────────────────────────────────────────────────────
+
+function MemberRolesPanel({ member }: { member: Member }) {
+  const assignedRoles = ROLES.filter(r => r.memberIds.includes(member.id))
+
+  if (assignedRoles.length === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.Shield size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No roles assigned</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Permissions are inherited from the member's user type only.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {assignedRoles.map(role => {
+        const perms = ROLE_PERM_COUNTS[role.id] ?? { total: 0 }
+        return (
+          <div key={role.id} style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+            background: "var(--surface)",
+          }}>
+            <div style={{
+              width: 10, height: 10, borderRadius: "50%", flexShrink: 0,
+              background: role.color,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</span>
+                {role.system && (
+                  <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>System</span>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{role.desc}</div>
+            </div>
+            <div style={{ flexShrink: 0, textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 2 }}>
+                {perms.total} permission{perms.total !== 1 ? "s" : ""}
+              </div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                Assigned by Admin · 14 days ago
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Groups tab ───────────────────────────────────────────────────────────────
+
+function MemberGroupsPanel({ member }: { member: Member }) {
+  const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
+
+  if (memberGroups.length === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.Users size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>Not in any groups</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Groups define shared studio access and can be used to batch-assign permissions.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {memberGroups.map(group => (
+        <div key={group.id} style={{
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
+          background: "var(--surface)",
+        }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8, flexShrink: 0,
+            background: `${group.color}22`, border: `1px solid ${group.color}44`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: group.color, fontWeight: 700, fontSize: 12,
+          }}>
+            {group.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{group.name}</div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+              {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 180 }}>
+            {group.studios.slice(0, 3).map(s => (
+              <span key={s} style={{
+                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                background: "var(--surface-raised)", color: "var(--muted-foreground)",
+                border: "1px solid var(--border)",
+              }}>{STUDIO_META[s]?.label ?? s}</span>
+            ))}
+            {group.studios.length > 3 && (
+              <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{group.studios.length - 3}</span>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Permissions tab (dual-mode: Audit / Edit) ───────────────────────────────
+
+const GRANTED_STATES: PermState[] = ["g-direct", "g-inh"]
+const SCOPE_ITEMS: SwitchTabItem[] = [
+  { id: "Own",    label: "Own" },
+  { id: "Team",   label: "Team" },
+  { id: "Tenant", label: "Tenant" },
+]
+
+function filterGrantedTree(nodes: PermNode[]): PermNode[] {
+  return nodes.flatMap(n => {
+    const grantedChildren = n.children ? filterGrantedTree(n.children) : []
+    const isGranted = GRANTED_STATES.includes(n.state)
+    if (!isGranted && grantedChildren.length === 0) return []
+    return [{ ...n, children: grantedChildren }]
+  })
+}
+
+type PermMode = "audit" | "edit"
+type PermOverrides = Record<string, PermState>
+
+function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOverrides, onScopeChange }: {
+  node: PermNode; depth: number; overrides: PermOverrides; onToggle: (id: string, on: boolean) => void
+  mode: PermMode; scopeOverrides: Record<string, string>; onScopeChange: (id: string, scope: string) => void
+}) {
+  const effective = overrides[node.id] !== undefined ? overrides[node.id] : node.state
+  // Toggle = "is directly granted?" — g-inh alone does NOT turn the toggle ON
+  const isDirect      = effective === "g-direct"
+  const isInheritedOnly = node.state === "g-inh" && effective !== "g-direct"
+  const isPinned      = node.state === "g-inh" && effective === "g-direct"
+  const hasOverride   = overrides[node.id] !== undefined && overrides[node.id] !== node.state
+  const [expanded, setExpanded] = useState(depth === 0)
+  const hasChildren   = node.children && node.children.length > 0
+
+  // Row background: pinned/override → primary tint; inherited-only → blue-ish surface hint
+  const rowBg = isPinned || (hasOverride && !isInheritedOnly)
+    ? "color-mix(in srgb, var(--primary) 4%, transparent)"
+    : isInheritedOnly
+      ? "color-mix(in srgb, var(--primary) 2%, transparent)"
+      : "transparent"
+  const rowBgHover = isPinned || (hasOverride && !isInheritedOnly)
+    ? "color-mix(in srgb, var(--primary) 6%, transparent)"
+    : isInheritedOnly
+      ? "color-mix(in srgb, var(--primary) 4%, transparent)"
+      : "var(--accent)"
+
+  return (
+    <div>
+      <div
+        onClick={() => hasChildren && setExpanded(e => !e)}
+        style={{
+          display: "flex", alignItems: "flex-start", gap: 8,
+          padding: `8px 16px 8px ${16 + depth * 20}px`,
+          borderBottom: "1px solid var(--border)",
+          cursor: hasChildren ? "pointer" : "default",
+          background: rowBg,
+        }}
+        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = rowBgHover }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg }}
+      >
+        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 3 }}>
+          {hasChildren
+            ? expanded
+              ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" />
+              : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />
+            : null}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
+            {node.role && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
+              }}>via {node.role}</span>
+            )}
+            {/* Static scope badge — audit mode only; edit mode shows SwitchTab below */}
+            {node.scope && mode !== "edit" && (
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
+            )}
+            {isPinned && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Pinned</span>
+            )}
+            {hasOverride && !isPinned && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Modified</span>
+            )}
+          </div>
+          {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>}
+          {isInheritedOnly && (
+            <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1, fontStyle: "italic" }}>
+              Inherited via role · toggle to confirm direct access
+            </div>
+          )}
+          {/* Scope selector — edit mode, all permission nodes */}
+          {mode === "edit" && (
+            <div
+              style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
+              onClick={e => e.stopPropagation()}
+            >
+              <SwitchTab
+                size="s"
+                items={SCOPE_ITEMS}
+                value={scopeOverrides[node.id] ?? node.scope ?? "Own"}
+                onChange={scope => onScopeChange(node.id, scope)}
+                aria-label={`Scope for ${node.label}`}
+              />
+            </div>
+          )}
+        </div>
+        <span onClick={e => e.stopPropagation()} style={{ paddingTop: 2 }}>
+          <Toggle
+            checked={isDirect}
+            disabled={node.locked && node.state !== "g-inh"}
+            size="sm"
+            onChange={on => { onToggle(node.id, on) }}
+          />
+        </span>
+      </div>
+      {expanded && hasChildren && node.children!.map(child => (
+        <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle}
+          mode={mode} scopeOverrides={scopeOverrides} onScopeChange={onScopeChange} />
+      ))}
+    </div>
+  )
+}
+
+// Prototype: current session user is Platform Owner → can edit any member's permissions.
+// In production this would come from the authenticated user's role/scope check.
+const CURRENT_USER_CAN_EDIT_PERMISSIONS = true
+
+function MemberPermissionsPanel({ member: _member }: { member: Member }) {
+  const [mode, setMode] = useState<PermMode>("audit")
+  const [studio, setStudio] = useState("governance")
+  const [overrides, setOverrides] = useState<PermOverrides>({})
+  const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
+  const [saved, setSaved] = useState(false)
+  const [showDiscardModal, setShowDiscardModal] = useState(false)
+  const [saveStep, setSaveStep] = useState<null | 0 | 1>(null)
+
+  const nodes = PERM_TREE[studio] ?? []
+  const isDirty = Object.keys(overrides).length > 0 || Object.keys(scopeOverrides).length > 0
+
+  function changeScopeOverride(id: string, scope: string) {
+    setScopeOverrides(prev => ({ ...prev, [id]: scope }))
+    setSaved(false)
+  }
+
+  function togglePermission(id: string, on: boolean) {
+    setOverrides(prev => {
+      function findNode(list: PermNode[], targetId: string): PermNode | undefined {
+        for (const n of list) {
+          if (n.id === targetId) return n
+          const found = findNode(n.children ?? [], targetId)
+          if (found) return found
+        }
+      }
+      function descendants(node: PermNode): PermNode[] {
+        return [node, ...(node.children ?? []).flatMap(descendants)]
+      }
+
+      const copy = { ...prev }
+
+      if (on) {
+        // Grant: set this node + all descendants to g-direct.
+        // If a descendant is already natively g-direct, clear its override instead.
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) {
+          if (node.state === "g-direct") {
+            delete copy[node.id]
+          } else {
+            copy[node.id] = "g-direct"
+          }
+        }
+      } else {
+        // Revoke: clear this node + all descendants' overrides (cascade off).
+        const target = findNode(nodes, id)
+        const affected = target ? descendants(target) : [{ id, state: "" } as PermNode]
+        for (const node of affected) {
+          delete copy[node.id]
+        }
+      }
+
+      return copy
+    })
+    setSaved(false)
+  }
+
+  function confirmDiscard() {
+    setShowDiscardModal(false); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(false)
+  }
+  function confirmSave() {
+    setSaveStep(null); setOverrides({}); setScopeOverrides({}); setMode("audit"); setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  // Compute changed permissions for the Review step
+  const allNodes    = nodes.flatMap(n => [n, ...(n.children ?? [])])
+  const changedNodes  = allNodes.filter(n => overrides[n.id] !== undefined && overrides[n.id] !== n.state)
+  // Pinned: base was g-inh, now promoted to g-direct
+  const pinnedNodes  = changedNodes.filter(n => n.state === "g-inh" && overrides[n.id] === "g-direct")
+  // New direct grants (base was "")
+  const addedNodes   = changedNodes.filter(n => n.state !== "g-inh" && GRANTED_STATES.includes(overrides[n.id]!))
+  const removedNodes = changedNodes.filter(n => !GRANTED_STATES.includes(overrides[n.id]!))
+
+  const allGranted = nodes.flatMap(n => [n, ...(n.children ?? [])]).filter(n => GRANTED_STATES.includes(n.state))
+  const directCount = allGranted.filter(n => n.state === "g-direct").length
+  const inhCount    = allGranted.filter(n => n.state === "g-inh").length
+  const visibleNodes = mode === "audit" ? filterGrantedTree(nodes) : nodes
+
+  const saveSteps: StepItem[] = [
+    { label: "Review changes", state: saveStep === 0 ? "active" : saveStep === 1 ? "completed" : "default" },
+    { label: "Confirm",        state: saveStep === 1 ? "active" : "default" },
+  ]
+
+  return (
+    <div style={{ paddingBottom: mode === "edit" ? 80 : 0 }}>
+      {/* Header row: studio sub-tabs + action button */}
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 4, flex: 1 }}>
+          {STUDIO_TABS.map(s => (
+            <button key={s.id} onClick={() => setStudio(s.id)} style={{
+              padding: "4px 10px", fontSize: 12, fontWeight: 600, border: "none", background: "none", cursor: "pointer",
+              color: studio === s.id ? "var(--foreground)" : "var(--muted-foreground)",
+              borderBottom: studio === s.id ? "2px solid var(--primary)" : "2px solid transparent",
+            }}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === "audit" && CURRENT_USER_CAN_EDIT_PERMISSIONS && (
+          <Button variant="secondary" size="sm" onClick={() => setMode("edit")}>
+            <Icons.Pencil size={13} style={{ marginRight: 4 }} />
+            Edit permissions
+          </Button>
+        )}
+        {mode === "edit" && saveStep === null && saved && (
+          <span style={{ fontSize: 12, color: "var(--color-text-success, #22c55e)" /* audit-ignore */, display: "flex", alignItems: "center", gap: 4 }}>
+            <Icons.CheckCircle size={13} /> Saved
+          </span>
+        )}
+      </div>
+
+      {/* Lightweight stats row — only in tree view */}
+      {saveStep === null && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <Chip variant="secondary" size="s">{allGranted.length} granted</Chip>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{directCount} direct · {inhCount} via role</span>
+          {mode === "audit" && (
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 4 }}>
+              <Icons.Eye size={11} /> View only
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Tree (hidden during save review steps) */}
+      {saveStep === null && (
+        <div>
+          {mode === "audit"
+            ? visibleNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)
+            : visibleNodes.map(n => <EditablePermTreeNode key={n.id} node={n} depth={0} overrides={overrides} onToggle={togglePermission} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={changeScopeOverride} />)
+          }
+          {visibleNodes.length === 0 && (
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)", padding: "20px 0", textAlign: "center" }}>
+              {mode === "audit" ? "No permissions granted in this studio." : "No permissions available."}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Inline save review (replaces tree when saveStep !== null) ─────── */}
+      {saveStep !== null && (() => {
+        const effectiveScope = (n: PermNode) => scopeOverrides[n.id] ?? n.scope ?? "Own"
+
+        function renderDiffSection(
+          items: PermNode[],
+          header: string,
+          accentColor: string,
+          bgMix: string,
+          icon: ReactElement
+        ) {
+          if (items.length === 0) return null
+          const itemIds = new Set(items.map(n => n.id))
+          type DiffGroup = { parent: PermNode; parentInItems: boolean; children: PermNode[] }
+          const groups: DiffGroup[] = []
+          for (const root of nodes) {
+            const pi = itemIds.has(root.id)
+            const ci = (root.children ?? []).filter(c => itemIds.has(c.id))
+            if (pi || ci.length > 0) groups.push({ parent: root, parentInItems: pi, children: ci })
+          }
+          return (
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>
+                {header} · {items.length}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {groups.map(({ parent, parentInItems, children }) => (
+                  <div key={parent.id}>
+                    {parentInItems ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, background: bgMix }}>
+                        {icon}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{parent.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(parent)}</span>
+                        {parent.role && <span style={{ fontSize: 10, color: "var(--muted-foreground)", marginLeft: "auto" }}>via {parent.role}</span>}
+                      </div>
+                    ) : (
+                      <div style={{ padding: "4px 10px" }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>{parent.label}</span>
+                      </div>
+                    )}
+                    {children.map(child => (
+                      <div key={child.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 28px", borderRadius: 6, marginTop: 2, background: bgMix }}>
+                        <Icons.CornerDownRight size={10} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+                        {icon}
+                        <span style={{ fontSize: 12, color: "var(--foreground)" }}>{child.label}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {effectiveScope(child)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        }
+
+        return (
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {/* Stepper */}
+            <div style={{ marginBottom: 20 }}>
+              <Stepper steps={saveSteps} />
+            </div>
+
+            {/* Step 0: Review diff */}
+            {saveStep === 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {renderDiffSection(pinnedNodes, "Pinned — stays if role is removed", "var(--primary)", "color-mix(in srgb, var(--primary) 8%, transparent)", <Icons.Pin size={11} color="var(--primary)" />)}
+                {renderDiffSection(addedNodes, "New access", "var(--color-text-success, #22c55e)" /* audit-ignore */, "color-mix(in srgb, #22c55e 8%, transparent)" /* audit-ignore */, <Icons.Plus size={11} color="var(--color-text-success, #22c55e)" /* audit-ignore */ />)}
+                {renderDiffSection(removedNodes, "Access removed", "var(--error, #ef4444)" /* audit-ignore */, "color-mix(in srgb, #ef4444 8%, transparent)" /* audit-ignore */, <Icons.Minus size={11} color="var(--error, #ef4444)" /* audit-ignore */ />)}
+                {changedNodes.length === 0 && (
+                  <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "16px 0" }}>
+                    No changes to review.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 1: Confirm */}
+            {saveStep === 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 8,
+                  background: "var(--surface)", border: "1px solid var(--border)" }}>
+                  <Icons.ShieldCheck size={16} color="var(--primary)" />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>
+                      {changedNodes.length} permission{changedNodes.length !== 1 ? "s" : ""} will change
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      {pinnedNodes.length > 0 && `${pinnedNodes.length} pinned`}
+                      {pinnedNodes.length > 0 && (addedNodes.length > 0 || removedNodes.length > 0) && " · "}
+                      {addedNodes.length > 0 && `${addedNodes.length} new`}
+                      {addedNodes.length > 0 && removedNodes.length > 0 && " · "}
+                      {removedNodes.length > 0 && `${removedNodes.length} removed`}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "4px 2px" }}>
+                  Access updates take effect immediately. The member will see changes on their next action.
+                </div>
+              </div>
+            )}
+
+          </div>
+        )
+      })()}
+
+      {/* ── StepperNavFooter portal — renders at full-screen bottom ──────── */}
+      {mode === "edit" && createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 56, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={saveStep === null || saveStep === 0 ? "cancel-next" : "back-next"}
+            cancelLabel={saveStep === null ? "Discard" : "Keep editing"}
+            onCancel={saveStep === null ? () => setShowDiscardModal(true) : () => setSaveStep(null)}
+            onBack={() => setSaveStep(0)}
+            nextLabel={saveStep === null ? "Save changes" : saveStep === 0 ? "Review & confirm" : "Apply changes"}
+            nextDisabled={saveStep === null ? !isDirty : changedNodes.length === 0}
+            onNext={saveStep === null ? () => setSaveStep(0) : saveStep === 0 ? () => setSaveStep(1) : confirmSave}
+          />
+        </div>,
+        document.body
+      )}
+
+      {/* ── Discard confirmation modal ─────────────────────────────────────── */}
+      <ModalDialog
+        isOpen={showDiscardModal}
+        onClose={() => setShowDiscardModal(false)}
+        tone="warning"
+        iconName="AlertTriangle"
+        title="Discard changes?"
+        description="Your permission edits will be lost. This can't be undone."
+        ctaPrimary={{ label: "Discard changes", destructive: true, onClick: confirmDiscard }}
+        ctaSecondary={{ label: "Keep editing", onClick: () => setShowDiscardModal(false) }}
+      />
+
+    </div>
+  )
+}
+
+// ─── Resources tab ────────────────────────────────────────────────────────────
+
+type ResourceGrantPath = "direct" | "via-role" | "via-group"
+
+type MemberResource = {
+  id: string
+  name: string
+  type: string
+  scope: string
+  access: string
+  source: string
+  grantedBy: string
+  grantedAt: string
+  grantPath: ResourceGrantPath
+  groupName?: string
+  groupMemberCount?: number
+  roleName?: string
+  removable?: boolean        // false = system-managed, cannot be manually removed
+  criticalAccess?: boolean   // owner-level on critical resource → extra warning
+  lastPath?: boolean         // removing this leaves the member with no access to this resource
+  dualPath?: boolean         // resource is accessible via another path too — safe to remove this one
+}
+
+const MEMBER_RESOURCES: Record<string, MemberResource[]> = {
+  tg: [
+    // ── Direct grants (normal remove flow) ────────────────────────────────
+    { id: "tg-r1",  name: "customer_360",         type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "Direct",              grantedBy: "Thomas Gonzalez", grantedAt: "Jan 14, 2025", grantPath: "direct",    criticalAccess: true,  lastPath: true  },
+    { id: "tg-r2",  name: "fraud_signals_v2",     type: "Model",     scope: "Tenant",    access: "Owner",       source: "Direct",              grantedBy: "Thomas Gonzalez", grantedAt: "Mar 2, 2025",  grantPath: "direct",    criticalAccess: true,  lastPath: true  },
+    // ── Via group (removing here removes from the group) ──────────────────
+    { id: "tg-r3",  name: "governance_audit_log", type: "Dataset",   scope: "Tenant",    access: "Read",        source: "via Leadership",      grantedBy: "Maria García",    grantedAt: "Aug 20, 2026", grantPath: "via-group", groupName: "Leadership",    groupMemberCount: 12, lastPath: true  },
+    { id: "tg-r4",  name: "sandbox_env_prod",     type: "Sandbox",   scope: "Own",       access: "Manager",     source: "via Leadership",      grantedBy: "Maria García",    grantedAt: "Aug 20, 2026", grantPath: "via-group", groupName: "Leadership",    groupMemberCount: 12, lastPath: false, dualPath: true },
+    // ── Via role ──────────────────────────────────────────────────────────
+    { id: "tg-r5",  name: "platform_events",      type: "Event Bus", scope: "Tenant",    access: "Owner",       source: "via Workspace Admin", grantedBy: "System",          grantedAt: "Jan 14, 2025", grantPath: "via-role",  roleName: "Workspace Admin",  lastPath: false, dualPath: true },
+    // ── Dual path: direct + group (safe to remove individual grant) ───────
+    { id: "tg-r6",  name: "sandbox_env_prod",     type: "Sandbox",   scope: "Own",       access: "Owner",       source: "Direct",              grantedBy: "Thomas Gonzalez", grantedAt: "Feb 1, 2026",  grantPath: "direct",    dualPath: true, lastPath: false },
+    // ── System-managed — not removable ────────────────────────────────────
+    { id: "tg-r7",  name: "workspace_root",       type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "System",              grantedBy: "System",          grantedAt: "Jan 14, 2025", grantPath: "direct",    removable: false },
+    // ── Last resource of its type for this member ─────────────────────────
+    { id: "tg-r8",  name: "billing_export",       type: "Dataset",   scope: "Tenant",    access: "Read",        source: "Direct",              grantedBy: "Maria García",    grantedAt: "Jul 5, 2026",  grantPath: "direct",    lastPath: true  },
+    // ── Very old grant — might be stale ───────────────────────────────────
+    { id: "tg-r9",  name: "legacy_crm_v1",        type: "Dataset",   scope: "Tenant",    access: "Contributor", source: "Direct",              grantedBy: "System",          grantedAt: "Jan 14, 2025", grantPath: "direct",    lastPath: true  },
+  ],
+  mg: [
+    { id: "mg-r1",  name: "employee_directory",   type: "Dataset",   scope: "IT",        access: "Manager",     source: "Direct",              grantedBy: "Maria García",    grantedAt: "Feb 5, 2025",  grantPath: "direct",    lastPath: true  },
+    { id: "mg-r2",  name: "access_audit_log",     type: "Dataset",   scope: "IT",        access: "Read",        source: "via IT Admin",        grantedBy: "Thomas Gonzalez", grantedAt: "Apr 1, 2025",  grantPath: "via-group", groupName: "IT Admin",      groupMemberCount: 5,  lastPath: true  },
+    { id: "mg-r3",  name: "hr_events_stream",     type: "Event Bus", scope: "IT",        access: "Read",        source: "via IT Admin",        grantedBy: "Thomas Gonzalez", grantedAt: "Apr 1, 2025",  grantPath: "via-group", groupName: "IT Admin",      groupMemberCount: 5,  lastPath: false, dualPath: true },
+    { id: "mg-r4",  name: "workspace_root",       type: "Dataset",   scope: "Tenant",    access: "Owner",       source: "System",              grantedBy: "System",          grantedAt: "Feb 5, 2025",  grantPath: "direct",    removable: false },
+  ],
+  es: [
+    { id: "es-r1",  name: "revenue_pipeline",     type: "Model",     scope: "Analytics", access: "Contributor", source: "Direct",              grantedBy: "Maria García",    grantedAt: "Jun 10, 2025", grantPath: "direct",    lastPath: true  },
+    { id: "es-r2",  name: "churn_predictions",    type: "Model",     scope: "Analytics", access: "Read",        source: "via Analytics",       grantedBy: "Thomas Gonzalez", grantedAt: "Jun 10, 2025", grantPath: "via-group", groupName: "Analytics",     groupMemberCount: 8,  lastPath: true  },
+    { id: "es-r3",  name: "user_events",          type: "Event Bus", scope: "Analytics", access: "Read",        source: "via Analytics",       grantedBy: "Thomas Gonzalez", grantedAt: "Jun 10, 2025", grantPath: "via-group", groupName: "Analytics",     groupMemberCount: 8,  lastPath: false, dualPath: true },
+  ],
+  sb: [
+    { id: "sb-r1",  name: "risk_scoring_v3",      type: "Model",     scope: "Risk",      access: "Read",        source: "Direct",              grantedBy: "Maria García",    grantedAt: "Jul 3, 2025",  grantPath: "direct",    lastPath: true  },
+    { id: "sb-r2",  name: "compliance_reports",   type: "Dataset",   scope: "Risk",      access: "Read",        source: "via Compliance",      grantedBy: "Thomas Gonzalez", grantedAt: "Jul 3, 2025",  grantPath: "via-group", groupName: "Compliance",    groupMemberCount: 4,  lastPath: true  },
+  ],
+  dp: [
+    { id: "dp-r1",  name: "ops_metrics",          type: "Dataset",   scope: "Ops",       access: "Contributor", source: "Direct",              grantedBy: "Maria García",    grantedAt: "May 20, 2025", grantPath: "direct",    lastPath: true  },
+    { id: "dp-r2",  name: "ops_events",           type: "Event Bus", scope: "Ops",       access: "Read",        source: "via Operations",      grantedBy: "Thomas Gonzalez", grantedAt: "May 20, 2025", grantPath: "via-group", groupName: "Operations",    groupMemberCount: 6,  lastPath: true  },
+  ],
+}
+
+const RESOURCE_TYPE_COLOR: Record<string, string> = {
+  Dataset:    "var(--badge-info)",
+  Model:      "var(--badge-success)",
+  "Event Bus":"var(--badge-alert)",
+  Sandbox:    "var(--muted-foreground)",
+}
+
+const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
+  Dataset:    <Icons.Database size={13} />,
+  Model:      <Icons.Cpu size={13} />,
+  "Event Bus":<Icons.Zap size={13} />,
+  Sandbox:    <Icons.Box size={13} />,
+}
+
+// ─── Remove Access Modal ──────────────────────────────────────────────────────
+
+function RemoveAccessModal({
+  resource, memberName, onConfirm, onCancel,
+}: {
+  resource: MemberResource
+  memberName: string
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  const typeColor = RESOURCE_TYPE_COLOR[resource.type] ?? "var(--muted-foreground)"
+  const isViaGroup = resource.grantPath === "via-group"
+  const isViaRole  = resource.grantPath === "via-role"
+  const isSystem   = resource.removable === false
+
+  // Warnings in priority order
+  const warnings: Array<{ icon: React.ReactNode; color: string; text: React.ReactNode }> = []
+
+  if (isSystem) {
+    warnings.push({
+      icon: <Icons.Lock size={14} />,
+      color: "var(--muted-foreground)",
+      text: "This access is managed by the system and cannot be removed manually.",
+    })
+  } else if (resource.criticalAccess) {
+    warnings.push({
+      icon: <Icons.AlertTriangle size={14} />,
+      color: "var(--badge-error)",
+      text: <>Removing <strong>Owner</strong> access to <strong>{resource.name}</strong> may break {memberName}'s ability to manage or share this resource.</>,
+    })
+  }
+
+  if (isViaGroup && !isSystem) {
+    warnings.push({
+      icon: <Icons.Users size={14} />,
+      color: "var(--badge-alert)",
+      text: <>This access comes from the <strong>{resource.groupName}</strong> group ({resource.groupMemberCount} members). Removing it here removes access for the <strong>entire group</strong>, not just this member.</>,
+    })
+  }
+
+  if (isViaRole && !isSystem) {
+    warnings.push({
+      icon: <Icons.Shield size={14} />,
+      color: "var(--badge-alert)",
+      text: <>This access is inherited from the <strong>{resource.roleName}</strong> role. Removing it will revoke all permissions granted by that role on this resource.</>,
+    })
+  }
+
+  if (resource.lastPath && !isSystem) {
+    warnings.push({
+      icon: <Icons.AlertCircle size={14} />,
+      color: "var(--badge-error)",
+      text: <>{memberName} has <strong>no other access path</strong> to this resource. After removal, they will lose access completely.</>,
+    })
+  }
+
+  if (resource.dualPath && !isSystem) {
+    warnings.push({
+      icon: <Icons.CheckCircle size={14} />,
+      color: "var(--badge-success)",
+      text: <>Safe to remove — {memberName} will still be able to access <strong>{resource.name}</strong> via another path.</>,
+    })
+  }
+
+  return (
+    <>
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 10100, background: "rgba(0,0,0,0.5)" }} // audit-ignore: scrim
+        onClick={onCancel}
+      />
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+        zIndex: 10101, width: 480, maxWidth: "90vw",
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 14, overflow: "hidden",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.3)", // audit-ignore: modal shadow
+      }}>
+        {/* Header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
+            {isSystem ? "Access is system-managed" : "Remove resource access?"}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            {isSystem
+              ? "This access cannot be changed from here."
+              : `You're about to remove ${memberName}'s access to the resource below.`}
+          </div>
+        </div>
+
+        {/* Resource card */}
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
+              {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>{resource.name}</span>
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, marginLeft: 4,
+              background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
+              color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
+            }}>{resource.type}</span>
+          </div>
+          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
+            {[
+              { label: "ACCESS",     value: resource.access    },
+              { label: "SOURCE",     value: resource.source    },
+              { label: "GRANTED",    value: resource.grantedAt },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+                <div style={{ fontSize: 12, color: "var(--foreground)" }}>{value}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <div style={{ padding: "14px 24px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
+            {warnings.map((w, i) => (
+              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <span style={{ color: w.color, flexShrink: 0, marginTop: 1 }}>{w.icon}</span>
+                <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.55 }}>{w.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button onClick={onCancel} style={{
+            padding: "7px 16px", fontSize: 12, fontWeight: 600, borderRadius: 8,
+            border: "1px solid var(--border)", background: "transparent", color: "var(--foreground)", cursor: "pointer",
+          }}>Cancel</button>
+          {!isSystem && (
+            <button onClick={onConfirm} style={{
+              padding: "7px 16px", fontSize: 12, fontWeight: 600, borderRadius: 8,
+              border: "none", cursor: "pointer",
+              background: isViaGroup ? "var(--badge-alert)" : "var(--badge-error)",
+              color: "#fff", // audit-ignore: white text on colored button
+            }}>
+              {isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function ResourcesPanel({ member }: { member: Member }) {
+  const initialResources = MEMBER_RESOURCES[member.id] ?? []
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
+  const [pendingRemove, setPendingRemove] = useState<MemberResource | null>(null)
+  const [justRemoved, setJustRemoved] = useState<string | null>(null)
+
+  const allResources = initialResources.filter(r => !removedIds.has(r.id))
+  const types = ["All", ...Array.from(new Set(initialResources.map(r => r.type)))]
+  const [activeType, setActiveType] = useState("All")
+
+  const resources = activeType === "All" ? allResources : allResources.filter(r => r.type === activeType)
+
+  function handleRemoveConfirm() {
+    if (!pendingRemove) return
+    setRemovedIds(prev => new Set(prev).add(pendingRemove.id))
+    setJustRemoved(pendingRemove.name)
+    setPendingRemove(null)
+    setTimeout(() => setJustRemoved(null), 3000)
+  }
+
+  if (allResources.length === 0 && removedIds.size === 0) {
+    return (
+      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+        <Icons.Package size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources assigned</div>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Resources are datasets, models, and event buses this member can access.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Remove modal */}
+      {pendingRemove && (
+        <RemoveAccessModal
+          resource={pendingRemove}
+          memberName={member.name}
+          onConfirm={handleRemoveConfirm}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
+
+      {/* Success toast */}
+      {justRemoved && (
+        <div style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 10200,
+          background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
+          padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
+          boxShadow: "0 4px 20px rgba(0,0,0,0.15)", // audit-ignore: toast shadow
+          animation: "tab-indicator-in 180ms ease-out both",
+        }}>
+          <Icons.CheckCircle size={15} style={{ color: "var(--badge-success)", flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>
+            Access to <strong>{justRemoved}</strong> removed
+          </span>
+        </div>
+      )}
+
+      {/* Empty state after removing all */}
+      {allResources.length === 0 && removedIds.size > 0 && (
+        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
+          <Icons.ShieldOff size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources remaining</div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>All resource access has been removed for this member.</div>
+        </div>
+      )}
+
+      {allResources.length > 0 && (
+        <>
+          {/* Type filter chips */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+            {types.map(t => (
+              <button key={t} onClick={() => setActiveType(t)} style={{
+                padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
+                border: "1px solid", cursor: "pointer",
+                background: activeType === t ? "var(--primary)" : "transparent",
+                color: activeType === t ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
+                borderColor: activeType === t ? "var(--primary)" : "var(--border)",
+              }}>{t}</button>
+            ))}
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
+              {resources.length} resource{resources.length !== 1 ? "s" : ""}
+              {removedIds.size > 0 && <span style={{ color: "var(--badge-error)", marginLeft: 6 }}>· {removedIds.size} removed</span>}
+            </span>
+          </div>
+
+          {/* Table */}
+          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
+              padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
+              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
+            }}>
+              <span>Resource</span><span>Type</span><span>Access</span><span>Granted by</span><span>When</span><span />
+            </div>
+            {resources.map((r, i) => {
+              const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
+              const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
+              const isSystem  = r.removable === false
+              return (
+                <div key={r.id} style={{
+                  display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
+                  padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
+                  alignItems: "center",
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
+                    {isSystem && (
+                      <span title="System-managed" style={{ display: "flex", color: "var(--muted-foreground)" }}>
+                        <Icons.Lock size={11} />
+                      </span>
+                    )}
+                    {r.dualPath && (
+                      <span title="Accessible via another path" style={{ display: "flex", color: "var(--badge-success)" }}>
+                        <Icons.GitMerge size={11} />
+                      </span>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
+                    background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
+                    color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
+                    width: "fit-content",
+                  }}>{r.type}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span style={{ fontSize: 12, color: "var(--foreground)" }}>{r.grantedBy}</span>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>{r.source}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>
+                  <button
+                    onClick={e => { e.stopPropagation(); setPendingRemove(r) }}
+                    title={isSystem ? "System-managed — cannot be removed" : "Remove access"}
+                    disabled={isSystem}
+                    style={{
+                      width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: isSystem ? "not-allowed" : "pointer",
+                      color: isSystem ? "var(--muted-foreground)" : "var(--badge-error)",
+                      opacity: isSystem ? 0.35 : 0.7,
+                    }}
+                    onMouseEnter={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "1" }}
+                    onMouseLeave={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "0.7" }}
+                  >
+                    {isSystem ? <Icons.Lock size={12} /> : <Icons.Trash2 size={13} />}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -1345,35 +2509,22 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
   )
 }
 
-function DangerRow({ icon, label, desc, destructive, onClick }: {
-  icon: React.ReactNode; label: string; desc: string; destructive?: boolean; onClick: () => void
-}) {
-  const [hov, setHov] = useState(false)
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      style={{
-        width: "100%", textAlign: "left", padding: "10px 14px",
-        display: "flex", alignItems: "center", gap: 10,
-        background: hov ? (destructive ? "color-mix(in srgb, var(--badge-error) 8%, transparent)" : "var(--accent)") : "transparent",
-        border: "none", borderBottom: "1px solid var(--border)", cursor: "pointer", transition: "background 0.1s",
-      }}
-    >
-      <div style={{ color: destructive ? "var(--badge-error)" : "var(--muted-foreground)", flexShrink: 0 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: destructive ? "var(--badge-error)" : "var(--foreground)" }}>{label}</div>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{desc}</div>
-      </div>
-    </button>
-  )
-}
 
 // ─── Role detail page ─────────────────────────────────────────────────────────
 
-function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
+function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
+  role: Role; onBack: () => void
+  onDelete?: () => void
+  onMemberClick?: (m: Member) => void
+}) {
   const [activeTab, setActiveTab] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [draftName, setDraftName] = useState(role.label)
+  const [draftDesc, setDraftDesc] = useState(role.desc)
+  const [savedName, setSavedName] = useState(role.label)
+  const [savedDesc, setSavedDesc] = useState(role.desc)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
 
@@ -1384,93 +2535,165 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={(isScrolled) => (
-        <Header
-          size={isScrolled ? "compress" : "size-m"}
-          title={role.label}
-          description="People & Access"
-          backButton
-          showBackInCompress
-          onBack={onBack}
-          secondaryAction={!role.system ? { label: "Edit role" } : undefined}
-          primaryAction={!role.system ? { label: "Delete role", priority: "secondary" } : undefined}
-        />
-      )}
     >
+      <BackBreadcrumb onBack={onBack} />
 
-      {/* Color accent + identity row */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 14, marginTop: 16, marginBottom: 24,
-        padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
-        background: "var(--surface)", borderLeft: `4px solid ${role.color}`,
-      }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-              background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-              color: role.system ? "var(--muted-foreground)" : role.color,
-              border: `1px solid ${role.system ? "var(--border)" : role.color + "55"}`,
-              textTransform: "uppercase", letterSpacing: "0.06em",
-            }}>
-              {role.system ? "System" : "Custom"}
-            </span>
+      {/* Delete confirmation overlay */}
+      {confirmDelete && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10002,
+          background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "28px 32px", width: 400, maxWidth: "90vw",
+            boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+              Delete "{role.label}"?
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 24px", lineHeight: 1.6 }}>
+              This role will be removed permanently. Members who had this role will lose any permissions it granted. This can't be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+              <Button variant="warning" size="sm" onClick={() => { setConfirmDelete(false); onDelete?.() }}>Delete role</Button>
+            </div>
           </div>
-          <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{role.desc}</p>
         </div>
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{members.length}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+      )}
+
+      {/* Role identity card — DS composition: CardContainer + Tag + Button */}
+      <div style={{ marginTop: 16, marginBottom: 24 }}>
+        <div style={{ borderLeft: `4px solid ${role.color}`, borderRadius: 12, overflow: "hidden" }}>
+        <CardContainer size="default" variant="default">
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* Name row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                {editingName && !role.system ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    onChange={e => setDraftName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { setSavedName(draftName); setEditingName(false) }
+                      if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
+                    }}
+                    style={{
+                      fontSize: 16, fontWeight: 700, color: "var(--foreground)",
+                      background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                      borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
+                )}
+                {/* System / Custom badge — read-only identity tag */}
+                <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                  {role.system ? "System" : "Custom"}
+                </Tag>
+                {!role.system && !editingName && (
+                  <Button
+                    variant="tertiary" size="sm" iconPosition="alone"
+                    icon={<Icons.Pencil size={13} />}
+                    aria-label="Edit name"
+                    onClick={() => { setDraftName(savedName); setEditingName(true) }}
+                  />
+                )}
+                {editingName && !role.system && (
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Button variant="secondary" size="sm"
+                      onClick={() => { setSavedName(draftName); setEditingName(false) }}>
+                      Save
+                    </Button>
+                    <Button variant="tertiary" size="sm"
+                      onClick={() => { setDraftName(savedName); setEditingName(false) }}>
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Description row */}
+              {editingDesc && !role.system ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <textarea
+                    autoFocus
+                    value={draftDesc}
+                    onChange={e => setDraftDesc(e.target.value)}
+                    rows={2}
+                    style={{
+                      fontSize: 13, color: "var(--foreground)", lineHeight: 1.5,
+                      background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                      borderRadius: 6, padding: "4px 8px", outline: "none", resize: "vertical",
+                      width: "100%", fontFamily: "inherit",
+                    }}
+                  />
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Button variant="secondary" size="sm"
+                      onClick={() => { setSavedDesc(draftDesc); setEditingDesc(false) }}>
+                      Save
+                    </Button>
+                    <Button variant="tertiary" size="sm"
+                      onClick={() => { setDraftDesc(savedDesc); setEditingDesc(false) }}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                  <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>{savedDesc}</p>
+                  {!role.system && (
+                    <Button
+                      variant="tertiary" size="sm" iconPosition="alone"
+                      icon={<Icons.Pencil size={12} />}
+                      aria-label="Edit description"
+                      onClick={() => { setDraftDesc(savedDesc); setEditingDesc(true) }}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Stats + delete */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{members.length}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permissions</div>
+              </div>
+              {!role.system && (
+                <Button
+                  variant="tertiary" size="sm" iconPosition="alone"
+                  icon={<Icons.Trash2 size={14} />}
+                  aria-label="Delete role"
+                  onClick={() => setConfirmDelete(true)}
+                />
+              )}
+            </div>
           </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{perms.total}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>permissions</div>
-          </div>
+        </CardContainer>
         </div>
       </div>
 
-      <DetailTabs tabs={["Overview", "Members", "Permissions"]} active={activeTab} onChange={setActiveTab} />
+      <DetailTabs tabs={["Members", "Permissions", "Activity"]} active={activeTab} onChange={setActiveTab} />
 
       <div style={{ marginTop: 20 }}>
-        {/* Overview */}
-        {activeTab === 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
-            {([
-              { label: "Governance",  value: perms.governance, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-              { label: "Data Studio", value: perms.datastudio, color: "#10b981" },  // audit-ignore: prototype fixture data
-              { label: "Agentic",     value: perms.agentic,    color: "#f97316" },  // audit-ignore: prototype fixture data
-              { label: "Admin",       value: perms.admin,      color: "#6366f1" },  // audit-ignore: prototype fixture data
-            ] as const).map(s => (
-              <div key={s.label} style={{
-                padding: "20px 24px", borderRadius: 12,
-                background: "var(--surface)", border: "1px solid var(--border)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
-                </div>
-                <div style={{ fontSize: 32, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.4, lineHeight: 1 }}>
-                  {s.value}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>
-                  permission{s.value !== 1 ? "s" : ""}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Members */}
-        {activeTab === 1 && (
+        {activeTab === 0 && (
           <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
             <div style={{
               padding: "12px 20px", borderBottom: "1px solid var(--border)",
               background: "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "space-between",
             }}>
               <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-                <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""} assigned this role
+                <b style={{ color: "var(--foreground)" }}>{members.length}</b> member{members.length !== 1 ? "s" : ""}
               </span>
               {!role.system && (
                 <button style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", border: "none", background: "none", cursor: "pointer" }}>
@@ -1484,28 +2707,113 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
                 <div style={{ fontSize: 14, fontWeight: 500 }}>No members assigned</div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
               </div>
-            ) : members.map(m => (
-              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+            ) : members.map(m => {
+              const statusColor = STATUS_COLOR[m.status]
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => onMemberClick?.(m)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14, padding: "10px 20px",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: onMemberClick ? "pointer" : "default",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+                >
+                  {/* Avatar */}
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
+                  }}>{m.initials}</div>
+
+                  {/* Name + email */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                  </div>
+
+                  {/* Department */}
+                  <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {m.department}
+                  </div>
+
+                  {/* User type badge */}
+                  <div style={{
+                    minWidth: 72, textAlign: "center", flexShrink: 0,
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
+                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
+                  }}>
+                    {m.role}
+                  </div>
+
+                  {/* Last active */}
+                  <div style={{ minWidth: 88, textAlign: "right", flexShrink: 0 }}>
+                    {m.status === "invited" ? (
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Invite sent</div>
+                    ) : m.lastActive ? (
+                      <>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 1 }}>Last active</div>
+                        <div style={{ fontSize: 11, color: "var(--foreground)" }}>{formatRelative(m.lastActive)}</div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* MFA badge */}
+                  <div
+                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
+                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                      background: m.mfaEnabled
+                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+                    }}
+                  >
+                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    MFA
+                  </div>
+
+                  {/* Status */}
+                  <div style={{
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
+                    minWidth: 76, textAlign: "center", flexShrink: 0,
+                  }}>
+                    {STATUS_LABEL[m.status]}
+                  </div>
+
+                  {/* Unassign button — system roles are read-only */}
+                  {!role.system ? (
+                    <button
+                      title="Unassign from role"
+                      onClick={e => e.stopPropagation()}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
+                      onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
+                      onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                    >
+                      <Icons.X size={14} />
+                    </button>
+                  ) : (
+                    <div style={{ width: 26, flexShrink: 0 }} />
+                  )}
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status] }}>
-                  {STATUS_LABEL[m.status]}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 
         {/* Permissions */}
-        {activeTab === 2 && <PermissionsPanel />}
+        {activeTab === 1 && <RolePermissionsPanel role={role} />}
+
+        {/* Activity */}
+        {activeTab === 2 && <ActivityPanel />}
       </div>
     </ScreenLayout>
   )
@@ -1513,19 +2821,17 @@ function RoleDetailPage({ role, onBack }: { role: Role; onBack: () => void }) {
 
 // ─── Group detail page ────────────────────────────────────────────────────────
 
-const ACTIVITY_TYPE_ICON_GROUP: Record<string, React.ReactNode> = {
-  role:   <Icons.UserPlus size={14} />,
-  edit:   <Icons.Settings size={14} />,
-  create: <Icons.PlusCircle size={14} />,
-  remove: <Icons.UserMinus size={14} />,
-}
-
-function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack: () => void }) {
+function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group: Group; onBack: () => void; onMemberClick?: (m: Member) => void }) {
   const [activeTab, setActiveTab] = useState(0)
   const [group, setGroup] = useState(initialGroup)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [draftName, setDraftName] = useState(initialGroup.name)
+  const [savedName, setSavedName] = useState(initialGroup.name)
+  const [editingDesc, setEditingDesc] = useState(false)
+  const [draftDesc, setDraftDesc] = useState(initialGroup.desc)
+  const [savedDesc, setSavedDesc] = useState(initialGroup.desc)
   const groupMembers = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
-  const log = GROUP_ACTIVITY[group.id] ?? []
   const allStudios = ["governance", "datastudio", "agentic", "admin"]
 
   function toggleStudio(s: string) {
@@ -1548,54 +2854,157 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
       userEmail="thomas.gonzalez@aimsos.ai"
       sidebarItems={SIDEBAR}
       activeSidebarId="people"
-      header={(isScrolled) => (
-        <Header
-          size={isScrolled ? "compress" : "size-m"}
-          title={group.name}
-          description="People & Access"
-          backButton
-          showBackInCompress
-          onBack={onBack}
-          primaryAction={{ label: "Add member", icon: Icons.UserPlus }}
-        />
-      )}
     >
+      <BackBreadcrumb onBack={onBack} />
 
-      {/* Group identity bar */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 16, marginTop: 16, marginBottom: 24,
-        padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 12,
-        background: "var(--surface)", borderLeft: `4px solid ${group.color}`,
-      }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {group.studios.length === 0 ? (
-              <span style={{ fontSize: 12, color: "var(--muted-foreground)", opacity: 0.6 }}>No studios</span>
-            ) : group.studios.map(s => {
-              const meta = STUDIO_META[s]
-              return (
-                <span key={s} style={{
-                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-                  background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-                }}>
-                  {meta.label}
-                </span>
-              )
-            })}
+      {/* Group identity card — DS composition: CardContainer + Tag + Button */}
+      <div style={{ marginTop: 16, marginBottom: 24 }}>
+        <div style={{ borderLeft: `4px solid ${group.color}`, borderRadius: 12, overflow: "hidden" }}>
+        <CardContainer size="default" variant="default">
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* Editable name row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                {editingName ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    onChange={e => setDraftName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }
+                      if (e.key === "Escape") { setDraftName(savedName); setEditingName(false) }
+                    }}
+                    style={{
+                      fontSize: 16, fontWeight: 700, color: "var(--foreground)",
+                      background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                      borderRadius: 6, padding: "2px 8px", outline: "none", flex: 1, maxWidth: 280,
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)" }}>{savedName}</span>
+                )}
+                {!editingName && (
+                  <Button
+                    variant="tertiary" size="sm" iconPosition="alone"
+                    icon={<Icons.Pencil size={13} />}
+                    aria-label="Edit name"
+                    onClick={() => { setDraftName(savedName); setEditingName(true) }}
+                  />
+                )}
+                {editingName && (
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <Button variant="secondary" size="sm"
+                      onClick={() => { setSavedName(draftName); setGroup(g => ({ ...g, name: draftName })); setEditingName(false) }}>
+                      Save
+                    </Button>
+                    <Button variant="tertiary" size="sm"
+                      onClick={() => { setDraftName(savedName); setEditingName(false) }}>
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Editable description */}
+              <div style={{ marginBottom: 12 }}>
+                {editingDesc ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <textarea
+                      autoFocus
+                      value={draftDesc}
+                      onChange={e => setDraftDesc(e.target.value)}
+                      rows={2}
+                      style={{
+                        fontSize: 13, color: "var(--foreground)", lineHeight: 1.5,
+                        background: "var(--surface-raised)", border: "1px solid var(--primary)",
+                        borderRadius: 6, padding: "4px 8px", outline: "none", resize: "vertical",
+                        width: "100%", fontFamily: "inherit",
+                      }}
+                    />
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <Button variant="secondary" size="sm"
+                        onClick={() => { setSavedDesc(draftDesc); setEditingDesc(false) }}>
+                        Save
+                      </Button>
+                      <Button variant="tertiary" size="sm"
+                        onClick={() => { setDraftDesc(savedDesc); setEditingDesc(false) }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+                    <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: 0, lineHeight: 1.5 }}>
+                      {savedDesc || <span style={{ opacity: 0.5, fontStyle: "italic" }}>No description</span>}
+                    </p>
+                    <Button
+                      variant="tertiary" size="sm" iconPosition="alone"
+                      icon={<Icons.Pencil size={12} />}
+                      aria-label="Edit description"
+                      onClick={() => { setDraftDesc(savedDesc); setEditingDesc(true) }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Studio chips — Tag (read-only identity attribute, not Chip interactivo) */}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {group.studios.length === 0 ? (
+                  <Tag variant="secondary" size="sm">No studios</Tag>
+                ) : group.studios.map(s => (
+                  <Tag key={s} variant="secondary" size="sm">{STUDIO_META[s].label}</Tag>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats + delete action */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexShrink: 0 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{groupMembers.length}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{group.studios.length}</div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>studios</div>
+              </div>
+              <Button
+                variant="tertiary" size="sm" iconPosition="alone"
+                icon={<Icons.Trash2 size={14} />}
+                aria-label="Delete group"
+                onClick={() => setConfirmDelete(true)}
+              />
+            </div>
           </div>
-        </div>
-        <div style={{ display: "flex", gap: 24, flexShrink: 0 }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{groupMembers.length}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>members</div>
-          </div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "var(--foreground)" }}>{group.studios.length}</div>
-            <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>studios</div>
-          </div>
+        </CardContainer>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmDelete && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10002,
+          background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 14, padding: "28px 32px", width: 400, maxWidth: "90vw",
+            boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
+          }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+              Delete "{savedName}"?
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", margin: "0 0 24px", lineHeight: 1.6 }}>
+              This group will be removed permanently. Members are not removed from the workspace.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+              <Button variant="warning" size="sm" onClick={onBack}>Delete group</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DetailTabs tabs={["Members", "Settings", "Activity"]} active={activeTab} onChange={setActiveTab} />
 
@@ -1620,34 +3029,101 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
                 <div style={{ fontSize: 14, fontWeight: 500 }}>No members yet</div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>Add members to this group to grant them shared access</div>
               </div>
-            ) : groupMembers.map(m => (
-              <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: "1px solid var(--border)" }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 12, fontWeight: 700, color: m.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{m.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
-                  </div>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 100, background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], flexShrink: 0 }}>
-                  {STATUS_LABEL[m.status]}
-                </div>
-                <button
-                  onClick={() => removeMember(m.id)}
-                  title="Remove from group"
-                  style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6 }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+            ) : groupMembers.map(m => {
+              const statusColor = STATUS_COLOR[m.status]
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => onMemberClick?.(m)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 14, padding: "10px 20px",
+                    borderBottom: "1px solid var(--border)",
+                    cursor: onMemberClick ? "pointer" : "default",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
                 >
-                  <Icons.X size={15} />
-                </button>
-              </div>
-            ))}
+                  {/* Avatar */}
+                  <div style={{
+                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
+                  }}>{m.initials}</div>
+
+                  {/* Name + email */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                  </div>
+
+                  {/* Department */}
+                  <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {m.department}
+                  </div>
+
+                  {/* User type badge */}
+                  <div style={{
+                    minWidth: 72, textAlign: "center", flexShrink: 0,
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
+                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
+                  }}>
+                    {m.role}
+                  </div>
+
+                  {/* Last active */}
+                  <div style={{ minWidth: 88, textAlign: "right", flexShrink: 0 }}>
+                    {m.status === "invited" ? (
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Invite sent</div>
+                    ) : m.lastActive ? (
+                      <>
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginBottom: 1 }}>Last active</div>
+                        <div style={{ fontSize: 11, color: "var(--foreground)" }}>{formatRelative(m.lastActive)}</div>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* MFA badge */}
+                  <div
+                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
+                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                      background: m.mfaEnabled
+                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+                    }}
+                  >
+                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    MFA
+                  </div>
+
+                  {/* Status */}
+                  <div style={{
+                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
+                    minWidth: 76, textAlign: "center", flexShrink: 0,
+                  }}>
+                    {STATUS_LABEL[m.status]}
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    onClick={e => { e.stopPropagation(); removeMember(m.id) }}
+                    title="Remove from group"
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
+                  >
+                    <Icons.X size={14} />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
 
@@ -1718,31 +3194,7 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
         )}
 
         {/* Activity */}
-        {activeTab === 2 && (
-          log.length === 0 ? (
-            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)", border: "1px solid var(--border)", borderRadius: 12 }}>
-              No activity yet
-            </div>
-          ) : (
-            <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-              {log.map((ev, i) => (
-                <div key={i} style={{ display: "flex", gap: 14, padding: "14px 20px", borderBottom: i < log.length - 1 ? "1px solid var(--border)" : "none", alignItems: "flex-start" }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                    background: "var(--surface-raised)", border: "1px solid var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
-                  }}>
-                    {ACTIVITY_TYPE_ICON_GROUP[ev.type] ?? <Icons.Circle size={14} />}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, color: "var(--foreground)", lineHeight: 1.4 }}>{ev.msg}</div>
-                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 3 }}>{ev.time}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        )}
+        {activeTab === 2 && <ActivityPanel />}
       </div>
     </ScreenLayout>
   )
@@ -1750,89 +3202,177 @@ function GroupDetailPage({ group: initialGroup, onBack }: { group: Group; onBack
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
-function MemberRow({ member, onSelect }: { member: Member; onSelect: (m: Member) => void }) {
+type MemberAction = "reset-password" | "reset-mfa" | "suspend" | "unsuspend" | "deactivate" | "update"
+
+function MemberRow({
+  member, onSelect, onAction,
+}: {
+  member: Member
+  onSelect: (m: Member) => void
+  onAction?: (m: Member, action: MemberAction) => void
+}) {
   const [hovered, setHovered] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; left: number } | null>(null)
   const statusColor = STATUS_COLOR[member.status]
 
-  return (
-    <div
-      onClick={() => onSelect(member)}
-      style={{
-        padding: "12px 20px", borderBottom: "1px solid var(--border)",
-        display: "flex", alignItems: "center", gap: 14,
-        background: hovered ? "var(--accent)" : "transparent",
-        cursor: "pointer", transition: "background 0.1s",
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div style={{
-        width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-        background: member.status === "active" ? member.avatarColor : "var(--muted)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12, fontWeight: 700,
-        color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-        opacity: member.status === "suspended" ? 0.5 : 1,
-      }}>{member.initials}</div>
+  function openMenu(e: React.MouseEvent) {
+    e.stopPropagation()
+    const btn = (e.currentTarget as HTMLElement)
+    const rect = btn.getBoundingClientRect()
+    setMenuAnchor({ top: rect.bottom + 4, left: rect.right })
+    setMenuOpen(true)
+  }
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1 }}>
+  return (
+    <>
+      <div
+        onClick={() => onSelect(member)}
+        style={{
+          padding: "10px 20px", borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", gap: 14,
+          background: hovered ? "var(--accent)" : "transparent",
+          cursor: "pointer", transition: "background 0.1s",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {/* Avatar */}
+        <div style={{
+          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+          background: member.status === "active" ? member.avatarColor : "var(--muted)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 12, fontWeight: 700,
+          color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore
+          opacity: member.status === "suspended" ? 0.5 : 1,
+        }}>{member.initials}</div>
+
+        {/* Name + email */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1, marginBottom: 1 }}>
             {member.name}
-          </span>
-          <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100, background: `${ROLE_COLOR[member.role]}22`, color: ROLE_COLOR[member.role], border: `1px solid ${ROLE_COLOR[member.role]}44` }}>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {member.email}
+          </div>
+        </div>
+
+        {/* Department */}
+        <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {member.department ?? "—"}
+        </div>
+
+        {/* User type badge */}
+        <div style={{ minWidth: 72, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <span style={{
+            fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 100,
+            background: `${USER_TYPE_COLOR[member.role]}22`,
+            color: USER_TYPE_COLOR[member.role],
+            border: `1px solid ${USER_TYPE_COLOR[member.role]}44`,
+          }}>
             {member.role}
           </span>
         </div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {member.email}
-        </div>
-      </div>
 
-      <div style={{ textAlign: "right", flexShrink: 0, minWidth: 88 }}>
-        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 2 }}>
-          {member.status === "invited" ? "Invite sent" : member.status === "suspended" ? "Suspended" : "Last active"}
-        </div>
-        {member.lastActive ? (
-          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
-        ) : (
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>
-            {member.status === "invited" ? formatRelative(member.joinedAt) : "—"}
+        {/* Last active */}
+        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 88 }}>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 1 }}>
+            {member.status === "invited" ? "Invite sent" : member.status === "suspended" ? "Suspended" : "Last active"}
           </div>
-        )}
+          {member.lastActive ? (
+            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
+          ) : (
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>
+              {member.status === "invited" ? formatRelative(member.joinedAt) : "—"}
+            </div>
+          )}
+        </div>
+
+        {/* MFA */}
+        <div
+          title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
+          style={{
+            display: "flex", alignItems: "center", gap: 4, minWidth: 60, justifyContent: "center",
+            padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
+            background: member.mfaEnabled
+              ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
+              : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
+            color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
+            border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
+          }}
+        >
+          {member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+          MFA
+        </div>
+
+        {/* Status */}
+        <div style={{
+          padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
+          background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
+          minWidth: 76, textAlign: "center", flexShrink: 0,
+        }}>
+          {STATUS_LABEL[member.status]}
+        </div>
+
+        {/* Kebab menu */}
+        <button
+          onClick={openMenu}
+          onMouseEnter={() => setHovered(true)}
+          style={{
+            width: 28, height: 28, borderRadius: 6, border: "none",
+            background: menuOpen ? "var(--accent)" : "transparent",
+            color: "var(--muted-foreground)", cursor: "pointer", flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            opacity: hovered || menuOpen ? 1 : 0, transition: "opacity 0.1s",
+          }}
+          title="Member actions"
+        >
+          <Icons.MoreVertical size={14} />
+        </button>
       </div>
 
-      {/* MFA badge */}
-      <div
-        title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
-        style={{
-          display: "flex", alignItems: "center", gap: 4,
-          padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
-          background: member.mfaEnabled
-            ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-            : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-          color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-          border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-        }}
-      >
-        {member.mfaEnabled
-          ? <Icons.ShieldCheck size={11} />
-          : <Icons.ShieldAlert size={11} />}
-        MFA
-      </div>
-
-      <div style={{
-        padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-        background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-        minWidth: 76, textAlign: "center", flexShrink: 0,
-      }}>
-        {STATUS_LABEL[member.status]}
-      </div>
-
-      <div style={{ color: "var(--muted-foreground)", flexShrink: 0, opacity: hovered ? 0.5 : 0, transition: "opacity 0.1s" }}>
-        <Icons.ChevronRight size={15} />
-      </div>
-    </div>
+      {/* Dropdown menu */}
+      {menuOpen && menuAnchor && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 10000 }} onClick={() => setMenuOpen(false)} />
+          <div style={{
+            position: "fixed", top: menuAnchor.top, left: menuAnchor.left,
+            transform: "translateX(-100%)", zIndex: 10001,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: "4px 0",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
+            minWidth: 200,
+          }}>
+            {[
+              { key: "reset-password", label: "Reset password", icon: Icons.KeyRound },
+              { key: "reset-mfa",      label: "Reset MFA",       icon: Icons.ShieldOff },
+              { key: member.status === "suspended" ? "unsuspend" : "suspend",
+                label: member.status === "suspended" ? "Unsuspend access" : "Suspend access",
+                icon: member.status === "suspended" ? Icons.UserCheck : Icons.UserX,
+              },
+              { key: "deactivate", label: "Deactivate user", icon: Icons.Ban, danger: true },
+            ].map(({ key, label, icon: Icon, danger }) => (
+              <button key={key} onClick={e => {
+                e.stopPropagation()
+                setMenuOpen(false)
+                onAction?.(member, key as MemberAction)
+              }} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%", padding: "8px 14px", border: "none", background: "none",
+                cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left",
+                color: danger ? "var(--badge-error)" : "var(--foreground)",
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none" }}
+              >
+                <Icon size={13} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
@@ -1844,20 +3384,15 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
   const overflow = members.length - visible.length
 
   return (
-    <CardContainer size="sm" className="!p-0 overflow-hidden" onClick={() => onSelect(role)}>
-      <div style={{ height: 5, background: role.color }} />
-      <div style={{ padding: "14px 16px" }}>
+    <div style={{ borderRadius: 12, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Color accent top bar */}
+      <div style={{ height: 4, background: role.color, flexShrink: 0 }} />
+      <CardContainer size="default" variant="default" onClick={() => onSelect(role)} className="flex-1 flex flex-col">
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
-          }}>
+          <Tag variant={role.system ? "secondary" : "informative"} size="sm">
             {role.system ? "System" : "Custom"}
-          </span>
+          </Tag>
         </div>
         <p style={{
           fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 14px",
@@ -1865,6 +3400,7 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
         }}>
           {role.desc}
         </p>
+        <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
@@ -1893,12 +3429,12 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
             <Button variant="secondary" size="sm" onClick={() => onSelect(role)}>
-              {role.system ? "View" : "Edit"}
+              {role.system ? "View role" : "Edit role"}
             </Button>
           </div>
         </div>
-      </div>
-    </CardContainer>
+      </CardContainer>
+    </div>
   )
 }
 
@@ -1910,9 +3446,10 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
   const overflow = members.length - visible.length
 
   return (
-    <CardContainer size="sm" className="!p-0 overflow-hidden" onClick={() => onSelect(group)}>
-      <div style={{ height: 5, background: group.color }} />
-      <div style={{ padding: "14px 16px" }}>
+    <div style={{ borderRadius: 12, overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Color accent top bar */}
+      <div style={{ height: 4, background: group.color, flexShrink: 0 }} />
+      <CardContainer size="default" variant="default" onClick={() => onSelect(group)} className="flex-1 flex flex-col">
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
         <p style={{
           fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.45, margin: "0 0 12px",
@@ -1920,21 +3457,15 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
         }}>
           {group.desc}
         </p>
+        {/* Studio chips — Tag DS (read-only identity attributes) */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12, minHeight: 22 }}>
           {group.studios.length === 0 ? (
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studios</span>
-          ) : group.studios.map(s => {
-            const meta = STUDIO_META[s]
-            return (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
-              }}>
-                {meta.label}
-              </span>
-            )
-          })}
+            <Tag variant="secondary" size="sm">No studios</Tag>
+          ) : group.studios.map(s => (
+            <Tag key={s} variant="secondary" size="sm">{STUDIO_META[s].label}</Tag>
+          ))}
         </div>
+        <div style={{ flex: 1 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 8, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             {visible.map((m, i) => (
@@ -1963,40 +3494,37 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
             <Button variant="secondary" size="sm" onClick={() => onSelect(group)}>
-              Manage
+              Manage group
             </Button>
           </div>
         </div>
-      </div>
-    </CardContainer>
+      </CardContainer>
+    </div>
   )
 }
 
 // ─── Invite modal ─────────────────────────────────────────────────────────────
 
-const ALL_ROLES: MemberRole[] = ["Super Admin", "Tenant Admin", "Member", "Viewer", "Billing Admin"]
-
-// Role-based permission preview states for InviteModal step 2
-const ROLE_PERM_PREVIEW: Record<MemberRole, Record<string, PermState>> = {
-  "Super Admin":   { "gov-drives":"g-direct","gov-sandbox":"g-direct","gov-truth":"g-direct","gov-packs":"g-direct","gov-resolution":"g-direct","ds-models":"g-direct","ds-lineage":"g-direct","ds-connectors":"g-direct","ag-workers":"g-direct","ag-hitl":"g-direct","ag-networks":"g-direct","ag-workflows":"g-direct","adm-members":"g-direct","adm-roles":"g-direct","adm-integrations":"g-direct","adm-audit":"g-direct" },
-  "Tenant Admin":  { "gov-drives":"g-direct","gov-sandbox":"g-direct","gov-packs":"g-direct","ds-models":"g-direct","ds-lineage":"g-direct","ag-workers":"g-direct","ag-hitl":"g-direct","ag-workflows":"g-direct","adm-members":"g-direct","adm-roles":"g-direct","adm-integrations":"g-direct" },
-  "Member":        { "gov-drives":"g-inh","gov-sandbox":"g-inh","ds-models":"g-inh","ag-workers":"g-inh","ag-hitl":"g-direct" },
-  "Viewer":        { "gov-drives":"g-inh","ds-models":"g-inh","ds-lineage":"g-direct","ag-workers":"g-inh" },
-  "Billing Admin": { "adm-members":"g-inh" },
-}
+const INVITE_STUDIO_OPTIONS = [
+  { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={13} /> },
+  { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={13} /> },
+  { id: "agentic",    label: "Agentic Studio",     icon: <Icons.Bot size={13} /> },
+  { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={13} /> },
+]
 
 function InviteModal({ onClose, onSend }: {
   onClose: () => void
   onSend: (emails: string[], role: MemberRole) => void
 }) {
-  const [step, setStep]             = useState<1 | 2>(1)
-  const [emailInput, setEmailInput] = useState("")
-  const [emails, setEmails]         = useState<string[]>([])
-  const [role, setRole]             = useState<MemberRole>("Member")
-  const [note, setNote]             = useState("")
-  const [permOverrides, setPermOverrides]   = useState<Record<string, { state: PermState; scope: string }>>({})
-  const [previewStudio, setPreviewStudio]   = useState("governance")
-  const [customAccess, setCustomAccess]     = useState(false)
+  const [emailInput, setEmailInput]   = useState("")
+  const [emails, setEmails]           = useState<string[]>([])
+  const [role, setRole]               = useState<MemberRole>("Member")
+  const [studios, setStudios]         = useState<string[]>(["governance"])
+  const [groupIds, setGroupIds]       = useState<string[]>([])
+  const [note, setNote]               = useState("")
+  const [done, setDone]               = useState(false)
+
+  const recipientCount = emails.length + (emailInput.trim() ? 1 : 0)
 
   function addEmail() {
     const trimmed = emailInput.trim().toLowerCase()
@@ -2009,429 +3537,270 @@ function InviteModal({ onClose, onSend }: {
     if (e.key === "Backspace" && !emailInput && emails.length) setEmails(e => e.slice(0, -1))
   }
 
-  function goNext() {
-    const all = emailInput.trim() ? [...emails, emailInput.trim()] : emails
-    if (all.length === 0) return
-    if (emailInput.trim()) { addEmail() }
-    setStep(2)
+  function toggleStudio(id: string) {
+    setStudios(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
+  }
+
+  function toggleGroup(id: string) {
+    setGroupIds(g => g.includes(id) ? g.filter(x => x !== id) : [...g, id])
   }
 
   function submit() {
-    const all = emailInput.trim() ? [...emails, emailInput.trim()] : emails
+    const all = emailInput.trim() ? [...emails, emailInput.trim().toLowerCase()] : emails
     if (all.length === 0) return
     onSend(all, role)
-    onClose()
+    setDone(true)
+    setTimeout(() => onClose(), 2200)
   }
 
-  // Build preview nodes for selected studio, merging role defaults + overrides
-  const previewNodes = (PERM_TREE[previewStudio] ?? []).map(n => {
-    const roleState = ROLE_PERM_PREVIEW[role][n.id] ?? ""
-    const ov = permOverrides[n.id]
-    return { ...n, state: (ov?.state ?? roleState) as PermState, scope: ov?.scope ?? n.scope }
-  })
+  const inviteeCount = emails.length + (emailInput.trim() ? 1 : 0)
+
+  const Backdrop = (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,  // audit-ignore
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }} onClick={e => { if (e.target === e.currentTarget && !done) onClose() }} />
+  )
+
+  if (done) return (
+    <>
+      {Backdrop}
+      <div style={{
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10000,
+        width: 420, background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, padding: "40px 32px", textAlign: "center",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: "50%", margin: "0 auto 16px",
+          background: "color-mix(in srgb, var(--badge-success) 15%, transparent)",
+          border: "2px solid color-mix(in srgb, var(--badge-success) 30%, transparent)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--badge-success)",
+        }}>
+          <Icons.Check size={24} />
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>
+          {recipientCount} invitation{recipientCount !== 1 ? "s" : ""} sent
+        </div>
+        <div style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+          {recipientCount === 1 ? "They'll" : "They'll each"} receive an email with a link to join Avance Financial. Invitations expire in 7 days.
+        </div>
+      </div>
+    </>
+  )
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999,  // audit-ignore: prototype fixture data
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+    <>
+      {Backdrop}
       <div style={{
-        width: 780, maxHeight: "90vh", background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 16, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore: prototype fixture data
-        display: "flex", flexDirection: "column",
+        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%,-50%)", zIndex: 10000,
+        width: 560, maxHeight: "90vh", overflowY: "auto",
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, boxShadow: "0 20px 60px rgba(0,0,0,0.4)",  // audit-ignore
       }}>
         {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "flex-start", gap: 12, position: "sticky", top: 0, background: "var(--surface)", zIndex: 1 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10, flexShrink: 0,
             background: "color-mix(in srgb, var(--primary) 15%, transparent)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "var(--primary)",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
           }}>
             <Icons.UserPlus size={17} />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Invite to Avance Financial</div>
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-              Invitations are sent by email and expire after 7 days
-            </div>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Invitations are sent by email and expire after 7 days.</div>
           </div>
           <button onClick={onClose} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
             onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
             onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Icons.X size={16} />
-          </button>
+          ><Icons.X size={16} /></button>
         </div>
 
-        {/* Step indicator */}
-        <div style={{ display: "flex", alignItems: "center", gap: 0, padding: "10px 24px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
-          {(["Details", "Permissions"] as const).map((label, i) => {
-            const idx = i + 1
-            const active = step === idx
-            const done   = step > idx
-            return (
-              <div key={label} style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: "50%",
-                    background: done ? "var(--badge-success)" : active ? "var(--primary)" : "var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 10, fontWeight: 700,
-                    color: (done || active) ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-                  }}>
-                    {done ? <Icons.Check size={10} /> : idx}
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: active ? "var(--foreground)" : "var(--muted-foreground)" }}>{label}</span>
-                </div>
-                {i < 1 && <div style={{ width: 32, height: 1, background: "var(--border)", margin: "0 8px" }} />}
-              </div>
-            )
-          })}
-        </div>
+        {/* Body */}
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-        {step === 1 ? (
-          /* ── Step 1: Details ── */
-          <>
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto", flex: 1 }}>
-              {/* Email chips input */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-                  Email addresses
-                </label>
-                <div style={{
-                  minHeight: 44, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px",
-                  display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
-                  background: "var(--surface-raised)", cursor: "text",
-                }} onClick={e => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}>
-                  {emails.map(em => (
-                    <span key={em} style={{
-                      display: "flex", alignItems: "center", gap: 4,
-                      padding: "2px 8px 2px 10px", borderRadius: 100,
-                      background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                      border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-                      fontSize: 12, color: "var(--primary)", fontWeight: 500,
-                    }}>
-                      {em}
-                      <button
-                        onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
-                        style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}
-                      >
-                        <Icons.X size={11} />
-                      </button>
-                    </span>
-                  ))}
-                  <input
-                    value={emailInput}
-                    onChange={e => setEmailInput(e.target.value)}
-                    onKeyDown={handleKey}
-                    onBlur={addEmail}
-                    placeholder={emails.length === 0 ? "name@company.com, another@company.com" : "Add another…"}
-                    style={{
-                      flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent",
-                      fontSize: 13, color: "var(--foreground)",
-                    }}
-                  />
-                </div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
-                  Press Enter or comma to add multiple addresses
-                </div>
-              </div>
+          {/* 1 · Emails */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>Email addresses</label>
+            <div style={{
+              minHeight: 44, border: "1px solid var(--border)", borderRadius: 8, padding: "6px 10px",
+              display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center",
+              background: "var(--surface-raised)", cursor: "text",
+            }} onClick={e => (e.currentTarget.querySelector("input") as HTMLInputElement)?.focus()}>
+              {emails.map(em => (
+                <span key={em} style={{
+                  display: "flex", alignItems: "center", gap: 4,
+                  padding: "2px 8px 2px 10px", borderRadius: 100,
+                  background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+                  fontSize: 12, color: "var(--primary)", fontWeight: 500,
+                }}>
+                  {em}
+                  <button onClick={ev => { ev.stopPropagation(); setEmails(e => e.filter(x => x !== em)) }}
+                    style={{ border: "none", background: "none", cursor: "pointer", color: "var(--primary)", padding: 0, lineHeight: 1 }}>
+                    <Icons.X size={11} />
+                  </button>
+                </span>
+              ))}
+              <input value={emailInput} onChange={e => setEmailInput(e.target.value)} onKeyDown={handleKey} onBlur={addEmail}
+                placeholder={emails.length === 0 ? "name@company.com, another@company.com" : "Add another…"}
+                style={{ flex: 1, minWidth: 180, border: "none", outline: "none", background: "transparent", fontSize: 13, color: "var(--foreground)" }} />
+            </div>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>Press Enter or comma to add multiple addresses.</div>
+          </div>
 
-              {/* Role */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-                  Role
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {ALL_ROLES.map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setRole(r)}
-                      style={{
-                        padding: "10px 14px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
-                        borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
-                        cursor: "pointer", textAlign: "left", display: "flex", alignItems: "center", gap: 8,
-                      }}
-                    >
-                      <div style={{
-                        width: 14, height: 14, borderRadius: "50%", flexShrink: 0, border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
-                        background: role === r ? "var(--primary)" : "transparent",
-                      }} />
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</div>
-                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1 }}>
-                          {r === "Super Admin" ? "Full platform access" : r === "Tenant Admin" ? "Manage members & settings" : r === "Member" ? "Access assigned studios" : r === "Viewer" ? "Read-only access" : "Billing & seats only"}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Optional note */}
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-                  Personal note <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
-                </label>
-                <textarea
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                  placeholder="Welcome to AIMS-OS! We're excited to have you…"
-                  rows={3}
-                  style={{
-                    width: "100%", border: "1px solid var(--border)", borderRadius: 8,
-                    padding: "10px 12px", background: "var(--surface-raised)", color: "var(--foreground)",
-                    fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </div>
-
-              {/* Custom access toggle */}
-              <div>
-                <button
-                  onClick={() => setCustomAccess(c => !c)}
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "12px 16px", borderRadius: 10, cursor: "pointer", textAlign: "left",
-                    border: `1px solid ${customAccess ? "var(--primary)" : "var(--border)"}`,
-                    background: customAccess ? "color-mix(in srgb, var(--primary) 6%, transparent)" : "var(--surface-raised)",
-                    transition: "border-color 0.15s, background 0.15s",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* 2 · Role */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 8 }}>Role</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {(["Member", "Admin", "Owner"] as MemberRole[]).map(r => (
+                <button key={r} onClick={() => setRole(r)} style={{
+                  padding: "10px 12px", border: `1px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                  borderRadius: 8, background: role === r ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
+                  cursor: "pointer", textAlign: "left",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                     <div style={{
-                      width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                      background: customAccess ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface-raised)",
-                      border: `1px solid ${customAccess ? "var(--primary)" : "var(--border)"}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      color: customAccess ? "var(--primary)" : "var(--muted-foreground)",
-                    }}>
-                      <Icons.SlidersHorizontal size={15} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: customAccess ? "var(--primary)" : "var(--foreground)" }}>
-                        Customize permissions
-                      </div>
-                      <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>
-                        Override specific permissions beyond the role defaults
-                      </div>
-                    </div>
-                  </div>
-                  {/* Toggle pill */}
-                  <div style={{
-                    width: 36, height: 20, borderRadius: 100, flexShrink: 0,
-                    background: customAccess ? "var(--primary)" : "var(--border)",
-                    position: "relative", transition: "background 0.2s",
-                  }}>
-                    <div style={{
-                      position: "absolute", top: 2, left: customAccess ? 18 : 2,
-                      width: 16, height: 16, borderRadius: "50%", background: "#fff",  // audit-ignore
-                      transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)",  // audit-ignore
+                      width: 12, height: 12, borderRadius: "50%", flexShrink: 0,
+                      border: `2px solid ${role === r ? "var(--primary)" : "var(--border)"}`,
+                      background: role === r ? "var(--primary)" : "transparent",
                     }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: role === r ? "var(--primary)" : "var(--foreground)" }}>{r}</span>
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", lineHeight: 1.4 }}>
+                    {r === "Owner" ? "Full admin + transferable ownership" : r === "Admin" ? "Manage members, studios & billing" : "Access assigned studios only"}
                   </div>
                 </button>
+              ))}
+            </div>
+          </div>
 
-                {/* Inline permission editor */}
-                {customAccess && (
-                  <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-                    {/* Info banner */}
-                    <div style={{
-                      display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px",
-                      borderRadius: 8, background: "color-mix(in srgb, var(--primary) 8%, transparent)",
-                      border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
+          {/* 3 · Studio access (shown for Member role) */}
+          {role === "Member" && (
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 4 }}>
+                Studio access
+              </label>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>
+                Select which studios this member can access. Admins and Owners get all studios automatically.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                {INVITE_STUDIO_OPTIONS.map(s => {
+                  const on = studios.includes(s.id)
+                  return (
+                    <button key={s.id} onClick={() => toggleStudio(s.id)} style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "9px 12px",
+                      border: `1px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                      borderRadius: 8,
+                      background: on ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "var(--surface-raised)",
+                      cursor: "pointer", textAlign: "left",
                     }}>
-                      <Icons.Info size={14} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
-                      <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>
-                        The <strong>{role}</strong> role grants the permissions below.
-                        Click any row to add a direct override for this user.
+                      <div style={{
+                        width: 12, height: 12, borderRadius: 3, flexShrink: 0,
+                        border: `2px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                        background: on ? "var(--primary)" : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {on && <Icons.Check size={8} color="var(--background)" />}
                       </div>
-                    </div>
-
-                    {/* Studio tabs */}
-                    <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)" }}>
-                      {STUDIO_TABS.map(t => (
-                        <button
-                          key={t.id}
-                          onClick={() => setPreviewStudio(t.id)}
-                          style={{
-                            padding: "6px 12px", fontSize: 12, fontWeight: 600,
-                            border: "none", background: "none", cursor: "pointer",
-                            color: previewStudio === t.id ? "var(--primary)" : "var(--muted-foreground)",
-                            borderBottom: previewStudio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
-                            marginBottom: -1,
-                          }}
-                        >
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Legend */}
-                    <div style={{ display: "flex", gap: 12 }}>
-                      {([
-                        { state: "g-direct" as PermState, label: "Direct" },
-                        { state: "g-inh"    as PermState, label: "Via role" },
-                        { state: ""         as PermState, label: "None" },
-                      ] as const).map(l => (
-                        <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <PermIcon state={l.state} />
-                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Permission tree */}
-                    <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 240, overflowY: "auto" }}>
-                      {previewNodes.map(n => (
-                        <PermTreeNode
-                          key={n.id}
-                          node={n}
-                          depth={0}
-                          overrides={permOverrides}
-                          onOverride={(id, state, scope) => setPermOverrides(prev => ({ ...prev, [id]: { state, scope } }))}
-                        />
-                      ))}
-                    </div>
-
-                    {Object.keys(permOverrides).length > 0 && (
-                      <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600 }}>
-                        {Object.keys(permOverrides).length} permission override{Object.keys(permOverrides).length !== 1 ? "s" : ""} applied
-                      </div>
-                    )}
-                  </div>
-                )}
+                      <span style={{ color: on ? "var(--primary)" : "var(--muted-foreground)" }}>{s.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: on ? "var(--primary)" : "var(--foreground)" }}>{s.label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
+          )}
 
-            <div style={{
-              padding: "14px 24px", borderTop: "1px solid var(--border)",
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "var(--surface-raised)", flexShrink: 0,
-            }}>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                {emails.length + (emailInput.trim() ? 1 : 0)} recipient{(emails.length + (emailInput.trim() ? 1 : 0)) !== 1 ? "s" : ""}
-                {customAccess && Object.keys(permOverrides).length > 0 && (
-                  <span style={{ marginLeft: 8, color: "var(--badge-alert)", fontWeight: 600 }}>
-                    · {Object.keys(permOverrides).length} override{Object.keys(permOverrides).length !== 1 ? "s" : ""}
-                  </span>
-                )}
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-                {customAccess ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={submit}
-                    disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
-                  >
-                    Send {(emails.length + (emailInput.trim() ? 1 : 0)) > 1
-                      ? `${emails.length + (emailInput.trim() ? 1 : 0)} invitations`
-                      : "invitation"}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={goNext}
-                    disabled={(emails.length + (emailInput.trim() ? 1 : 0)) === 0}
-                  >
-                    Review permissions
-                    <Icons.ChevronRight size={13} style={{ marginLeft: 4 }} />
-                  </Button>
-                )}
-              </div>
+          {/* 4 · Groups */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 4 }}>
+              Add to groups <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
+            </label>
+            <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 8 }}>
+              Group membership grants additional studio access and permissions.
             </div>
-          </>
-        ) : (
-          /* ── Step 2: Permission preview ── */
-          <>
-            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto", flex: 1 }}>
-              {/* Context banner */}
-              <div style={{
-                display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px",
-                borderRadius: 8, background: "color-mix(in srgb, var(--primary) 8%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--primary) 20%, transparent)",
-              }}>
-                <Icons.Info size={14} style={{ color: "var(--primary)", flexShrink: 0, marginTop: 1 }} />
-                <div style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.5 }}>
-                  The <strong>{role}</strong> role grants the permissions below.
-                  Hover any row to add a direct override before sending.
-                </div>
-              </div>
-
-              {/* Studio tabs */}
-              <div style={{ display: "flex", gap: 4, borderBottom: "1px solid var(--border)", paddingBottom: 0 }}>
-                {STUDIO_TABS.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setPreviewStudio(t.id)}
-                    style={{
-                      padding: "6px 12px", fontSize: 12, fontWeight: 600,
-                      border: "none", background: "none", cursor: "pointer",
-                      color: previewStudio === t.id ? "var(--primary)" : "var(--muted-foreground)",
-                      borderBottom: previewStudio === t.id ? "2px solid var(--primary)" : "2px solid transparent",
-                      marginBottom: -1,
-                    }}
-                  >
-                    {t.label}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {GROUPS.map(g => {
+                const on = groupIds.includes(g.id)
+                return (
+                  <button key={g.id} onClick={() => toggleGroup(g.id)} style={{
+                    display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
+                    border: `1px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                    borderRadius: 8,
+                    background: on ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--surface-raised)",
+                    cursor: "pointer", textAlign: "left",
+                  }}>
+                    <div style={{
+                      width: 12, height: 12, borderRadius: 3, flexShrink: 0,
+                      border: `2px solid ${on ? "var(--primary)" : "var(--border)"}`,
+                      background: on ? "var(--primary)" : "transparent",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {on && <Icons.Check size={8} color="var(--background)" />}
+                    </div>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: g.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: on ? "var(--primary)" : "var(--foreground)" }}>{g.name}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>{g.memberIds.length} members</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                      {g.studios.map(s => (
+                        <span key={s} style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "1px 5px", border: "1px solid var(--border)", borderRadius: 4 }}>
+                          {s === "governance" ? "Gov" : s === "datastudio" ? "Data" : s === "agentic" ? "Agentic" : "Admin"}
+                        </span>
+                      ))}
+                    </div>
                   </button>
-                ))}
-              </div>
-
-              {/* Legend */}
-              <div style={{ display: "flex", gap: 12 }}>
-                {([
-                  { state: "g-direct" as PermState, label: "Direct" },
-                  { state: "g-inh"    as PermState, label: "Via role" },
-                  { state: ""         as PermState, label: "None" },
-                ] as const).map(l => (
-                  <div key={l.state} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <PermIcon state={l.state} />
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{l.label}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Permission tree preview */}
-              <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", maxHeight: 280, overflowY: "auto" }}>
-                {previewNodes.map(n => (
-                  <PermTreeNode
-                    key={n.id}
-                    node={n}
-                    depth={0}
-                    overrides={permOverrides}
-                    onOverride={(id, state, scope) => setPermOverrides(prev => ({ ...prev, [id]: { state, scope } }))}
-                  />
-                ))}
-              </div>
-
-              {Object.keys(permOverrides).length > 0 && (
-                <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600 }}>
-                  {Object.keys(permOverrides).length} permission override{Object.keys(permOverrides).length !== 1 ? "s" : ""} added
-                </div>
-              )}
+                )
+              })}
             </div>
+          </div>
 
-            <div style={{
-              padding: "14px 24px", borderTop: "1px solid var(--border)",
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              background: "var(--surface-raised)", flexShrink: 0,
-            }}>
-              <Button variant="secondary" size="sm" onClick={() => setStep(1)}>
-                <Icons.ChevronLeft size={13} style={{ marginRight: 4 }} />
-                Back
-              </Button>
-              <Button variant="primary" size="sm" onClick={submit}>
-                Send {emails.length > 1 ? `${emails.length} invitations` : "invitation"}
-              </Button>
-            </div>
-          </>
-        )}
+          {/* 5 · Personal note */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+              Personal note <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span>
+            </label>
+            <textarea value={note} onChange={e => setNote(e.target.value)}
+              placeholder="Welcome to AIMS-OS! We're excited to have you on the team…"
+              rows={2}
+              style={{
+                width: "100%", border: "1px solid var(--border)", borderRadius: 8,
+                padding: "10px 12px", background: "var(--surface-raised)", color: "var(--foreground)",
+                fontSize: 13, resize: "none", outline: "none", boxSizing: "border-box", fontFamily: "inherit",
+              }}
+            />
+          </div>
+
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: "14px 24px", borderTop: "1px solid var(--border)",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: "var(--surface-raised)", position: "sticky", bottom: 0,
+        }}>
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            {inviteeCount} recipient{inviteeCount !== 1 ? "s" : ""}
+            {role === "Member" && studios.length > 0 && (
+              <span> · {studios.length} studio{studios.length !== 1 ? "s" : ""}</span>
+            )}
+            {groupIds.length > 0 && (
+              <span> · {groupIds.length} group{groupIds.length !== 1 ? "s" : ""}</span>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={submit} >
+              Send {inviteeCount > 1 ? `${inviteeCount} invitations` : "invitation"}
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -2616,13 +3985,13 @@ function MemberPreview({
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {!isInvited && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change role</div>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change user type</div>
                 <select
                   value={member.role}
-                  onChange={e => onRoleChange(member.id, e.target.value as MemberRole)}
+                  onChange={e => onRoleChange(member.id, e.target.value as UserType)}
                   style={{ width: "100%", padding: "8px 10px", fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none", cursor: "pointer" }}
                 >
-                  {(["Super Admin", "Tenant Admin", "Billing Admin", "Member", "Viewer"] as MemberRole[]).map(r => (
+                  {USER_TYPE_OPTIONS.map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
@@ -2655,28 +4024,47 @@ function MemberPreview({
   )
 }
 
-function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void }) {
+function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+  const [tab, setTab] = useState(0)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
+
+  const permRows = [
+    { label: "Governance",  value: perms.governance, max: 10, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
+    { label: "Data Studio", value: perms.datastudio, max: 10, color: "#10b981" },  // audit-ignore: prototype fixture data
+    { label: "Agentic",     value: perms.agentic,    max: 10, color: "#f97316" },  // audit-ignore: prototype fixture data
+    { label: "Admin",       value: perms.admin,       max: 10, color: "#6366f1" },  // audit-ignore: prototype fixture data
+  ]
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ height: 4, background: role.color }} />
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{role.label}</span>
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4,
-            background: role.system ? "var(--surface-raised)" : `${role.color}22`,
-            color: role.system ? "var(--muted-foreground)" : role.color,
-            border: `1px solid ${role.system ? "var(--border)" : role.color + "44"}`,
-            textTransform: "uppercase", letterSpacing: "0.06em",
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+            background: role.color,
+            display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            {role.system ? "System" : "Custom"}
-          </span>
+            <Icons.Shield size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{role.label}</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                {role.system ? "System" : "Custom"}
+              </Tag>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)",
+                border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+              }}>
+                {perms.total} permissions
+              </span>
+            </div>
+          </div>
         </div>
-        <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 12px" }}>{role.desc}</p>
         <button
           onClick={onViewFull}
           style={{
@@ -2691,83 +4079,122 @@ function RolePreview({ role, onViewFull }: { role: Role; onViewFull: () => void 
         </button>
       </div>
 
-      {/* Permission stats */}
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Permissions · <span style={{ color: "var(--primary)" }}>{perms.total}</span> total
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          {([
-            { label: "Governance",  value: perms.governance, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-            { label: "Data Studio", value: perms.datastudio, color: "#10b981" },  // audit-ignore: prototype fixture data
-            { label: "Agentic",     value: perms.agentic,    color: "#f97316" },  // audit-ignore: prototype fixture data
-            { label: "Admin",       value: perms.admin,      color: "#6366f1" },  // audit-ignore: prototype fixture data
-          ] as const).map(s => (
-            <div key={s.label} style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: s.color }} />
-                <span style={{ fontSize: 10, fontWeight: 600, color: "var(--muted-foreground)" }}>{s.label}</span>
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: s.value > 0 ? "var(--foreground)" : "var(--muted-foreground)", opacity: s.value > 0 ? 1 : 0.35 }}>
-                {s.value}
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* Tabs */}
+      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+        <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
       </div>
 
-      {/* Members */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Members · {members.length}
-        </div>
-        {members.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
-            No members assigned to this role
-          </div>
-        ) : members.map(m => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-            <div style={{
-              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-              background: m.status === "active" ? m.avatarColor : "var(--muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-            }}>{m.initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+        {tab === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{role.desc}</p>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 2 }}>
+              Permissions breakdown
             </div>
+            {permRows.map(s => (
+              <div key={s.label} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                    <span style={{ fontWeight: 700, color: s.value > 0 ? "var(--primary)" : "var(--muted-foreground)" }}>{s.value}</span>
+                  </span>
+                </div>
+                <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min((s.value / s.max) * 100, 100)}%`, background: s.value > 0 ? s.color : "transparent", borderRadius: 2, transition: "width 0.3s" }} />
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {tab === 1 && (
+          <div>
+            {members.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
+                No members assigned to this role
+              </div>
+            ) : members.map(m => (
+              <div
+                key={m.id}
+                onClick={() => onMemberClick?.(m)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                  borderBottom: "1px solid var(--border)",
+                  cursor: onMemberClick ? "pointer" : "default",
+                  transition: "background 0.1s", borderRadius: 6,
+                }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+              >
+                <div style={{
+                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
+                }}>{m.initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
+                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
+                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
+                }}>
+                  {STATUS_LABEL[m.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => void }) {
+function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+  const [tab, setTab] = useState(0)
   const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ height: 4, background: group.color }} />
-      <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>{group.name}</div>
-        <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 10px" }}>{group.desc}</p>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 12 }}>
-          {group.studios.length === 0 ? (
-            <span style={{ fontSize: 11, color: "var(--muted-foreground)", opacity: 0.5 }}>No studio access</span>
-          ) : group.studios.map(s => {
-            const meta = STUDIO_META[s]
-            return (
-              <span key={s} style={{
-                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                background: `${meta.color}1a`, color: meta.color, border: `1px solid ${meta.color}44`,
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+            background: group.color,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Icons.Users size={22} style={{ color: "#fff" }} /* audit-ignore: icon on colored bg, always white */ />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>{group.name}</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+                background: "color-mix(in srgb, var(--muted-foreground) 12%, transparent)",
+                color: "var(--muted-foreground)",
+                border: "1px solid color-mix(in srgb, var(--muted-foreground) 25%, transparent)",
               }}>
-                {meta.label}
+                {members.length} member{members.length !== 1 ? "s" : ""}
               </span>
-            )
-          })}
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
+                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+                color: "var(--primary)",
+                border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+              }}>
+                {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </div>
         </div>
         <button
           onClick={onViewFull}
@@ -2783,37 +4210,260 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
         </button>
       </div>
 
-      {/* Members */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-          Members · {members.length}
-        </div>
-        {members.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
-            No members in this group yet
+      {/* Tabs */}
+      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+        <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
+      </div>
+
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+        {tab === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{group.desc}</p>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>
+                Studio access
+              </div>
+              {group.studios.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>No studios assigned</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {group.studios.map(s => {
+                    const meta = STUDIO_META[s]
+                    return (
+                      <div key={s} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        ) : members.map(m => (
-          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+        )}
+
+        {tab === 1 && (
+          <div>
+            {members.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "32px 0", color: "var(--muted-foreground)", fontSize: 12 }}>
+                No members in this group yet
+              </div>
+            ) : members.map(m => (
+              <div
+                key={m.id}
+                onClick={() => onMemberClick?.(m)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+                  borderBottom: "1px solid var(--border)",
+                  cursor: onMemberClick ? "pointer" : "default",
+                  transition: "background 0.1s", borderRadius: 6,
+                }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
+              >
+                <div style={{
+                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
+                }}>{m.initials}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {m.title}{m.title && m.department ? " · " : ""}{m.department}
+                  </div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
+                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
+                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
+                }}>
+                  {STATUS_LABEL[m.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Role form modal (create / edit) ─────────────────────────────────────────
+
+function RoleFormModal({ role, onSave, onClose }: {
+  role: Role | null
+  onSave: (saved: Role) => void
+  onClose: () => void
+}) {
+  const isEdit = role !== null
+  const [name, setName]   = useState(role?.label ?? "")
+  const [desc, setDesc]   = useState(role?.desc ?? "")
+  const [color, setColor] = useState(role?.color ?? ROLE_COLORS[0])
+  const [done, setDone]   = useState(false)
+
+  function handleSave() {
+    if (!name.trim()) return
+    const saved: Role = {
+      id: role?.id ?? name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      label: name.trim(),
+      system: false,
+      color,
+      desc: desc.trim(),
+      memberIds: role?.memberIds ?? [],
+    }
+    onSave(saved)
+    setDone(true)
+    setTimeout(onClose, 1600)
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 10002,
+      background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <div style={{
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: 16, width: 480, maxWidth: "95vw",
+        boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
+        overflow: "hidden",
+      }}>
+        {done ? (
+          <div style={{ padding: "48px 40px", textAlign: "center" }}>
             <div style={{
-              width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-              background: m.status === "active" ? m.avatarColor : "var(--muted)",
+              width: 52, height: 52, borderRadius: "50%", margin: "0 auto 16px",
+              background: "color-mix(in srgb, var(--color-text-success) 12%, transparent)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-            }}>{m.initials}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
-              <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {m.title}{m.title && m.department ? " · " : ""}{m.department}
+            }}>
+              <Icons.CheckCircle2 size={26} style={{ color: "var(--color-text-success)" }} />
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>
+              Role {isEdit ? "updated" : "created"}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+              "{name.trim()}" is {isEdit ? "now updated" : "ready to assign to members"}.
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div style={{
+              padding: "20px 24px 16px",
+              borderBottom: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>
+                  {isEdit ? "Edit role" : "New role"}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
+                  {isEdit ? "Update this custom role's name, description, and color." : "Create a custom role to bundle permissions for specific team members."}
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
+              >
+                <Icons.X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: "24px 24px 8px" }}>
+              {/* Name */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Role name
+                </label>
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Risk Analyst"
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "9px 12px", borderRadius: 8,
+                    border: "1px solid var(--border)", background: "var(--background)",
+                    color: "var(--foreground)", fontSize: 14, fontFamily: "inherit", outline: "none",
+                  }}
+                />
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Description
+                </label>
+                <textarea
+                  value={desc}
+                  onChange={e => setDesc(e.target.value)}
+                  placeholder="What does this role allow members to do?"
+                  rows={3}
+                  style={{
+                    width: "100%", boxSizing: "border-box",
+                    padding: "9px 12px", borderRadius: 8,
+                    border: "1px solid var(--border)", background: "var(--background)",
+                    color: "var(--foreground)", fontSize: 14, fontFamily: "inherit",
+                    resize: "vertical", outline: "none", lineHeight: 1.5,
+                  }}
+                />
+              </div>
+
+              {/* Color picker */}
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Role color
+                </label>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {ROLE_COLORS.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      title={c}
+                      style={{
+                        width: 30, height: 30, borderRadius: "50%", background: c,
+                        border: color === c ? "3px solid var(--foreground)" : "3px solid transparent",
+                        outline: color === c ? `2px solid ${c}` : "none",
+                        outlineOffset: 2, cursor: "pointer", flexShrink: 0,
+                        transition: "outline 0.12s, border 0.12s",
+                      }}
+                    />
+                  ))}
+                </div>
+                {/* Preview */}
+                <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{
+                    width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontSize: 12, fontWeight: 600, padding: "2px 10px", borderRadius: 6,
+                    background: `${color}22`, color: color, border: `1px solid ${color}55`,
+                  }}>
+                    {name.trim() || "Role name"}
+                  </span>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>preview</span>
+                </div>
               </div>
             </div>
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
-              background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status], border: `1px solid ${STATUS_COLOR[m.status]}44`,
+
+            {/* Footer */}
+            <div style={{
+              padding: "16px 24px 20px",
+              display: "flex", justifyContent: "flex-end", gap: 10,
             }}>
-              {STATUS_LABEL[m.status]}
-            </span>
-          </div>
-        ))}
+              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+              <Button
+                variant="primary" size="sm"
+                onClick={handleSave}
+                disabled={!name.trim()}
+              >
+                {isEdit ? "Save changes" : "Create role"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -2823,20 +4473,25 @@ function GroupPreview({ group, onViewFull }: { group: Group; onViewFull: () => v
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "invited" | "suspended">("all")
-  const [roleFilter, setRoleFilter]     = useState<"all" | "system" | "custom">("all")
-  const [groupFilter, setGroupFilter]   = useState<"all" | "with-members" | "empty">("all")
-  const [openSlot, setOpenSlot]         = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<"all" | MemberStatus>("all")
   const [query, setQuery]               = useState("")
+  const [rolesQuery, setRolesQuery]     = useState("")
+  const [groupsQuery, setGroupsQuery]   = useState("")
   const [members, setMembers]           = useState<Member[]>(MEMBERS)
+  const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [detailView, setDetailView]     = useState<DetailView>(null)
   const [previewItem, setPreviewItem]   = useState<DetailView>(null)
   const [showInvite, setShowInvite]     = useState(false)
-  const [roles, setRoles]               = useState<Role[]>(ROLES)
-  const [showCreateRole, setShowCreateRole] = useState(false)
-  const [createName, setCreateName]     = useState("")
-  const [createDesc, setCreateDesc]     = useState("")
-  const [createColor, setCreateColor]   = useState("#f97316") // audit-ignore: default role color
+  const [roleForm, setRoleForm]         = useState<{ role: Role | null } | null>(null)
+
+  function handleRoleSave(saved: Role) {
+    setRoles(prev => {
+      const exists = prev.some(r => r.id === saved.id)
+      return exists ? prev.map(r => r.id === saved.id ? saved : r) : [...prev, saved]
+    })
+    setDetailView(dv => dv?.type === "role" && dv.role.id === saved.id ? { type: "role", role: saved } : dv)
+    setRoleForm(null)
+  }
 
   const counts = useMemo(() => ({
     all:       members.length,
@@ -2844,6 +4499,19 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     invited:   members.filter(m => m.status === "invited").length,
     suspended: members.filter(m => m.status === "suspended").length,
   }), [members])
+
+  const { containerRef: statusContainerRef, slot: statusSlot, menu: statusMenu } = useFilterDropdown({
+    placeholder:  "Status",
+    value:        statusFilter,
+    defaultValue: "all" as const,
+    options: [
+      { id: "all",       label: "All members", count: counts.all       },
+      { id: "active",    label: "Active",      count: counts.active    },
+      { id: "invited",   label: "Invited",     count: counts.invited   },
+      { id: "suspended", label: "Suspended",   count: counts.suspended },
+    ],
+    onChange: (id) => setStatusFilter(id as "all" | MemberStatus),
+  })
 
   const filtered = useMemo(() => {
     let result = members
@@ -2856,6 +4524,18 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     }
     return result
   }, [members, statusFilter, query])
+
+  const filteredRoles = useMemo(() => {
+    const q = rolesQuery.trim().toLowerCase()
+    if (!q) return roles
+    return roles.filter(r => r.label.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q))
+  }, [roles, rolesQuery])
+
+  const filteredGroups = useMemo(() => {
+    const q = groupsQuery.trim().toLowerCase()
+    if (!q) return GROUPS
+    return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+  }, [groupsQuery])
 
   function handleRoleChange(id: string, role: MemberRole) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
@@ -2878,7 +4558,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       <MemberDetailPage
         member={detailView.member}
         onBack={() => setDetailView(null)}
-        onRoleChange={handleRoleChange}
         onToggleSuspend={handleToggleSuspend}
         onRemove={handleRemove}
         onUpdate={handleMemberUpdate}
@@ -2886,10 +4565,20 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     )
   }
   if (detailView?.type === "role") {
-    return <RoleDetailPage role={detailView.role} onBack={() => setDetailView(null)} />
+    const dRole = detailView.role
+    return (
+      <>
+        <RoleDetailPage
+          role={dRole}
+          onBack={() => setDetailView(null)}
+          onDelete={!dRole.system ? () => { setRoles(prev => prev.filter(r => r.id !== dRole.id)); setDetailView(null) } : undefined}
+          onMemberClick={m => setDetailView({ type: "member", member: m })}
+        />
+      </>
+    )
   }
   if (detailView?.type === "group") {
-    return <GroupDetailPage group={detailView.group} onBack={() => setDetailView(null)} />
+    return <GroupDetailPage group={detailView.group} onBack={() => setDetailView(null)} onMemberClick={m => setDetailView({ type: "member", member: m })} />
   }
 
   // List screen
@@ -2910,68 +4599,47 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             : mainTab === "roles"  ? `${roles.length} roles · ${roles.filter(r => !r.system).length} custom`
             : `${GROUPS.length} groups · manage shared access across the workspace`
           }
+          // primaryAction takes an action object since #85 — Header picks the
+          // variant itself, which is why no screen writes variant="main" any
+          // more. Same three actions, same handlers.
           primaryAction={
             mainTab === "members"
-              ? { label: "Invite member", icon: Icons.UserPlus, onClick: () => setShowInvite(true) }
+              ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
               : mainTab === "roles"
-              ? { label: "New role", icon: Icons.ShieldPlus, onClick: () => { setCreateName(""); setCreateDesc(""); setCreateColor("#f97316"); setShowCreateRole(true) } } // audit-ignore: default role color
-              : { label: "New group", icon: Icons.FolderPlus }
+              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setRoleForm({ role: null }) }
+              : { label: "New group",     icon: Icons.FolderPlus }
           }
         />
       )}
     >
       {/* Main tab switcher */}
-      <div style={{ marginBottom: 20 }}>
-        <Tabs
-          items={[
-            { id: "members", label: "Members" },
-            { id: "roles",   label: "Roles"   },
-            { id: "groups",  label: "Groups"  },
-          ]}
-          activeId={mainTab}
-          onChange={v => { setMainTab(v as "members" | "roles" | "groups"); setOpenSlot(null) }}
-          size="s"
-        />
+      <Tabs
+        items={[
+          { id: "members", label: `Members (${counts.all})` },
+          { id: "roles",   label: `Roles (${roles.length})`  },
+          { id: "groups",  label: `Groups (${GROUPS.length})` },
+        ]}
+        activeId={mainTab}
+        onChange={v => setMainTab(v as "members" | "roles" | "groups")}
+        size="m"
+      />
 
-        {mainTab === "members" && (
-          <div style={{ position: "relative", marginTop: 12 }}>
-            <Filters
-              showSearch
-              searchPlaceholder="Search members…"
-              searchValue={query}
-              onSearchChange={setQuery}
-              slots={[{
-                placeholder: "Status",
-                value: statusFilter !== "all" ? statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1) : undefined,
-                onOpen:   () => setOpenSlot(s => s === "member-status" ? null : "member-status"),
-                onRemove: () => { setStatusFilter("all"); setOpenSlot(null) },
-              }]}
-            />
-            {openSlot === "member-status" && (
-              <div style={{
-                position: "absolute", top: 44, left: 0, zIndex: 200,
-                background: "var(--surface)", border: "1px solid var(--border)",
-                borderRadius: 10, overflow: "hidden", minWidth: 160,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
-              }}>
-                {(["all", "active", "invited", "suspended"] as const).map(v => (
-                  <button key={v}
-                    onClick={() => { setStatusFilter(v); setOpenSlot(null) }}
-                    style={{
-                      display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
-                      fontSize: 13, border: "none", cursor: "pointer",
-                      color: statusFilter === v ? "var(--primary)" : "var(--foreground)",
-                      background: statusFilter === v ? "var(--accent)" : "var(--surface)",
-                    }}
-                  >
-                    {v === "all" ? "All statuses" : v.charAt(0).toUpperCase() + v.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Filters row */}
+      {mainTab === "members" && (
+        <div ref={statusContainerRef} style={{ position: "relative", marginTop: 16, marginBottom: 16 }}>
+          <Filters
+            showSearch
+            searchPlaceholder="Search members…"
+            searchValue={query}
+            onSearchChange={setQuery}
+            slots={[statusSlot]}
+            showAllFilters={false}
+            showSort={false}
+            showViewToggle={false}
+          />
+          {statusMenu}
+        </div>
+      )}
 
       {/* Members view */}
       {mainTab === "members" && (
@@ -2984,10 +4652,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               textTransform: "uppercase", letterSpacing: "0.07em",
             }}>
               <span style={{ flex: 1 }}>Member</span>
+              <span style={{ minWidth: 120 }}>Department</span>
+              <span style={{ minWidth: 72, textAlign: "center" }}>User Type</span>
               <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
               <span style={{ minWidth: 60, textAlign: "center" }}>MFA</span>
               <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
-              <span style={{ width: 15 }} />
+              <span style={{ width: 28 }} />
             </div>
             {filtered.length === 0 ? (
               <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
@@ -3014,121 +4684,82 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       )}
 
       {/* Roles view */}
-      {mainTab === "roles" && (() => {
-        const filteredRoles = roles.filter(r =>
-          roleFilter === "all" ? true : roleFilter === "system" ? r.system : !r.system
-        )
-        const systemRoles = filteredRoles.filter(r => r.system)
-        const customRoles = filteredRoles.filter(r => !r.system)
-        return (
-          <>
-            <div style={{ position: "relative", marginBottom: 20 }}>
-              <Filters
-                slots={[{
-                  placeholder: "Type",
-                  value: roleFilter !== "all" ? (roleFilter === "system" ? "System" : "Custom") : undefined,
-                  onOpen:   () => setOpenSlot(s => s === "role-type" ? null : "role-type"),
-                  onRemove: () => { setRoleFilter("all"); setOpenSlot(null) },
-                }]}
-              />
-              {openSlot === "role-type" && (
-                <div style={{
-                  position: "absolute", top: 44, left: 0, zIndex: 200,
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: 10, overflow: "hidden", minWidth: 160,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
-                }}>
-                  {(["all", "system", "custom"] as const).map(v => (
-                    <button key={v}
-                      onClick={() => { setRoleFilter(v); setOpenSlot(null) }}
-                      style={{
-                        display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
-                        fontSize: 13, border: "none", cursor: "pointer",
-                        color: roleFilter === v ? "var(--primary)" : "var(--foreground)",
-                        background: roleFilter === v ? "var(--accent)" : "var(--surface)",
-                      }}
-                    >
-                      {v === "all" ? "All types" : v.charAt(0).toUpperCase() + v.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              )}
+      {mainTab === "roles" && (
+        <>
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search roles…"
+              searchValue={rolesQuery}
+              onSearchChange={setRolesQuery}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
+            />
+          </div>
+          {filteredRoles.filter(r => r.system).length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+                System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {filteredRoles.filter(r => r.system).length}</span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {filteredRoles.filter(r => r.system).map(r => (
+                  <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+                ))}
+              </div>
             </div>
-            {systemRoles.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-                  System roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {systemRoles.length}</span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-                  {systemRoles.map(r => (
-                    <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
-                  ))}
-                </div>
+          )}
+          {filteredRoles.filter(r => !r.system).length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
+                Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {filteredRoles.filter(r => !r.system).length}</span>
               </div>
-            )}
-            {customRoles.length > 0 && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>
-                  Custom roles <span style={{ fontWeight: 400, opacity: 0.6 }}>· {customRoles.length}</span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-                  {customRoles.map(r => (
-                    <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
-                  ))}
-                </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {filteredRoles.filter(r => !r.system).map(r => (
+                  <RoleCard key={r.id} role={r} onSelect={role => setPreviewItem({ type: "role", role })} />
+                ))}
               </div>
-            )}
-          </>
-        )
-      })()}
+            </div>
+          )}
+          {filteredRoles.length === 0 && (
+            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No roles match</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different search term</div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Groups view */}
-      {mainTab === "groups" && (() => {
-        const filteredGroups = GROUPS.filter(g =>
-          groupFilter === "all" ? true : groupFilter === "with-members" ? g.memberIds.length > 0 : g.memberIds.length === 0
-        )
-        return (
-          <>
-            <div style={{ position: "relative", marginBottom: 20 }}>
-              <Filters
-                slots={[{
-                  placeholder: "Members",
-                  value: groupFilter !== "all" ? (groupFilter === "with-members" ? "Has members" : "Empty") : undefined,
-                  onOpen:   () => setOpenSlot(s => s === "group-members" ? null : "group-members"),
-                  onRemove: () => { setGroupFilter("all"); setOpenSlot(null) },
-                }]}
-              />
-              {openSlot === "group-members" && (
-                <div style={{
-                  position: "absolute", top: 44, left: 0, zIndex: 200,
-                  background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: 10, overflow: "hidden", minWidth: 160,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
-                }}>
-                  {(["all", "with-members", "empty"] as const).map(v => (
-                    <button key={v}
-                      onClick={() => { setGroupFilter(v); setOpenSlot(null) }}
-                      style={{
-                        display: "block", width: "100%", padding: "9px 14px", textAlign: "left",
-                        fontSize: 13, border: "none", cursor: "pointer",
-                        color: groupFilter === v ? "var(--primary)" : "var(--foreground)",
-                        background: groupFilter === v ? "var(--accent)" : "var(--surface)",
-                      }}
-                    >
-                      {v === "all" ? "All groups" : v === "with-members" ? "Has members" : "Empty"}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+      {mainTab === "groups" && (
+        <>
+          <div style={{ marginTop: 16, marginBottom: 16 }}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search groups…"
+              searchValue={groupsQuery}
+              onSearchChange={setGroupsQuery}
+              showAllFilters={false}
+              showSort={false}
+              showViewToggle={false}
+            />
+          </div>
+          {filteredGroups.length > 0 ? (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {filteredGroups.map(g => (
                 <GroupCard key={g.id} group={g} onSelect={group => setPreviewItem({ type: "group", group })} />
               ))}
             </div>
-          </>
-        )
-      })()}
+          ) : (
+            <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
+              <Icons.SearchX size={28} style={{ marginBottom: 10, opacity: 0.35 }} />
+              <div style={{ fontSize: 14, fontWeight: 500 }}>No groups match</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Try a different search term</div>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Preview slide-out */}
       <SlideOut
@@ -3158,124 +4789,17 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           <RolePreview
             role={previewItem.role}
             onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+            onMemberClick={m => { setPreviewItem(null); setDetailView({ type: "member", member: m }) }}
           />
         )}
         {previewItem?.type === "group" && (
           <GroupPreview
             group={previewItem.group}
             onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
+            onMemberClick={m => { setPreviewItem(null); setDetailView({ type: "member", member: m }) }}
           />
         )}
       </SlideOut>
-
-      {/* Create role modal */}
-      {(() => {
-        const COLOR_SWATCHES = [
-          "#f97316", "#8b5cf6", "#0ea5e9", "#10b981", "#6366f1", // audit-ignore: role color picker swatches
-          "#ec4899", "#ef4444", "#f59e0b", "#14b8a6", "#64748b", // audit-ignore: role color picker swatches
-        ]
-        const valid = createName.trim().length > 0
-        return (
-          <ModalDialog
-            isOpen={showCreateRole}
-            onClose={() => setShowCreateRole(false)}
-            variant="content"
-            showIcon={false}
-            title="Create new role"
-            description="Custom roles bundle specific permissions for a job function."
-            slotUnstyled
-            slot={
-              <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
-                {/* Name */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
-                    Role name <span style={{ color: "var(--badge-error)" }}>*</span>
-                  </div>
-                  <Input
-                    value={createName}
-                    onChange={e => setCreateName(e.target.value)}
-                    placeholder="e.g. Data Analyst, Marketing Ops…"
-                  />
-                </div>
-                {/* Description */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 6 }}>
-                    Description
-                  </div>
-                  <Textarea
-                    value={createDesc}
-                    onChange={e => setCreateDesc(e.target.value)}
-                    placeholder="Briefly describe what this role can do…"
-                    rows={3}
-                  />
-                </div>
-                {/* Color */}
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8 }}>
-                    Role color
-                  </div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {COLOR_SWATCHES.map(c => (
-                      <button
-                        key={c}
-                        onClick={() => setCreateColor(c)}
-                        style={{
-                          width: 28, height: 28, borderRadius: "50%",
-                          background: c,
-                          border: createColor === c ? `3px solid var(--foreground)` : "3px solid transparent",
-                          outline: createColor === c ? `2px solid ${c}` : "none",
-                          cursor: "pointer", padding: 0, flexShrink: 0,
-                          transition: "outline 0.1s, border 0.1s",
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                {/* Preview */}
-                <div style={{
-                  padding: "10px 14px", borderRadius: 8, border: "1px solid var(--border)",
-                  background: "var(--surface-raised)", borderLeft: `4px solid ${createColor}`,
-                  display: "flex", alignItems: "center", gap: 10,
-                }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>
-                      {createName.trim() || <span style={{ color: "var(--muted-foreground)", fontStyle: "italic" }}>Role name…</span>}
-                    </div>
-                    {createDesc.trim() && (
-                      <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{createDesc.trim()}</div>
-                    )}
-                  </div>
-                  <span style={{
-                    marginLeft: "auto", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 4,
-                    background: `${createColor}22`, color: createColor,
-                    border: `1px solid ${createColor}55`,
-                    textTransform: "uppercase" as const, letterSpacing: "0.06em", flexShrink: 0,
-                  }}>Custom</span>
-                </div>
-              </div>
-            }
-            ctaSecondary={{ label: "Cancel", onClick: () => setShowCreateRole(false) }}
-            ctaPrimary={{
-              label: "Create role",
-              disabled: !valid,
-              onClick: () => {
-                const id = `role-${createName.trim().toLowerCase().replace(/\s+/g, "-")}-${Date.now()}`
-                const newRole: Role = {
-                  id,
-                  label: createName.trim(),
-                  system: false,
-                  color: createColor,
-                  desc: createDesc.trim() || `Custom role: ${createName.trim()}`,
-                  memberIds: [],
-                }
-                setRoles(rs => [...rs, newRole])
-                setShowCreateRole(false)
-                setDetailView({ type: "role", role: newRole })
-              },
-            }}
-          />
-        )
-      })()}
 
       {/* Invite modal */}
       {showInvite && (
@@ -3297,6 +4821,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             setMembers(ms => [...ms, ...newMembers])
           }}
         />
+      )}
+
+      {roleForm !== null && (
+        <RoleFormModal role={roleForm.role} onSave={handleRoleSave} onClose={() => setRoleForm(null)} />
       )}
     </ScreenLayout>
   )

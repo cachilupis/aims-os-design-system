@@ -4,7 +4,7 @@ import { Sparkles, Bell, Settings } from "lucide-react"
 import { Topbar } from "@/components/ui/topbar"
 import type { TopbarAction } from "@/components/ui/topbar"
 import { Sidebar } from "@/components/ui/sidebar"
-import type { SidebarItem } from "@/components/ui/sidebar"
+import type { SidebarEntry } from "@/components/ui/sidebar"
 import { AppBackground } from "@/components/ui/app-background"
 import type { AppBgVariant } from "@/components/ui/app-background"
 import { NotificationCenter, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
@@ -95,7 +95,8 @@ export interface ScreenLayoutProps {
   notificationsContent?: ReactNode
   /** AppBackground color variant — defaults to "default" */
   bgVariant?: AppBgVariant
-  /** Left sidebar navigation items */
+  /** Left sidebar navigation items — accepts nav items and section headers */
+  sidebarItems: SidebarEntry[]
   /**
    * The screen renders its own sticky bar at the foot of the content — a
    * StepperNavFooter in a wizard, say — instead of a floating Pagination.
@@ -112,7 +113,6 @@ export interface ScreenLayoutProps {
    * would occupy.
    */
   stickyFooter?: boolean
-  sidebarItems: SidebarItem[]
   /** ID of the active sidebar item */
   activeSidebarId?: string
   /** Called when a sidebar item is clicked — use to implement inter-screen navigation */
@@ -132,7 +132,7 @@ export interface ScreenLayoutProps {
    * The Header lives outside the scrollable area so it stays visible when the
    * list scrolls. This matches the canonical AIMS OS List View pattern.
    */
-  header: (isScrolled: boolean) => ReactNode
+  header?: (isScrolled: boolean) => ReactNode
   /**
    * Scrollable content: Filters + entity cards. No Pagination here.
    * Rendered with DS-spec L-desktop padding: 8px top · 32px sides · 64px bottom.
@@ -210,7 +210,7 @@ export function ScreenLayout({
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Header zone — outside the scroll container, stays visible on scroll */}
           <div className="shrink-0 relative">
-            {header(isScrolled)}
+            {header?.(isScrolled)}
             {/* Gradient fade below compressed header — appears on scroll to signal content scrolling behind */}
             {isScrolled && (
               <div

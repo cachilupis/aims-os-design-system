@@ -71,11 +71,8 @@ export function ReleaseNumberModal({ number, open, onClose, onConfirm }: Release
       ctaPrimary={{
         label:       "Release Number",
         destructive: true,
-        // DS-GAP: ModalDialog.ctaPrimary has no `disabled?: boolean`. The
-        // last-4-digit confirmation gate has to be enforced in the onClick
-        // handler; the destructive CTA visually stays enabled while the
-        // user types the wrong digits, which weakens the guard.
-        onClick:     () => { if (canRelease) onConfirm() },
+        disabled:    !canRelease,
+        onClick:     onConfirm,
       }}
     />
   )

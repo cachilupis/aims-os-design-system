@@ -217,13 +217,8 @@ export function AcquireNumberModal({ open, onClose, onAcquire }: AcquireNumberMo
       }}
       ctaPrimary={{
         label:    primaryLabel,
-        // DS-GAP: ModalDialog.ctaPrimary type lacks `disabled?: boolean`.
-        // Multi-step wizards need to disable "Continue" until a step's
-        // requirements are met. Workaround: early-return in onClick so the
-        // button is a no-op when !canAdvance. The button visually stays
-        // enabled, which is misleading; a disabled variant is the fix.
+        disabled: !canAdvance,
         onClick:  () => {
-          if (!canAdvance) return
           if (step === 3) { complete(); setStep(4) }
           else if (step === 4) onClose()
           else setStep((step + 1) as Step)

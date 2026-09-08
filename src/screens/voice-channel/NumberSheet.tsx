@@ -1,4 +1,4 @@
-import { Settings, ArrowRight, Users, Shield, PhoneCall, Zap } from "lucide-react"
+import { Settings, ArrowRight, Users, Shield, PhoneCall, Zap, ArrowDownLeft, ArrowUpRight } from "lucide-react"
 import { SlideOut } from "@/components/ui/slide-out"
 import { Tag } from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
@@ -25,19 +25,19 @@ interface NumberPreviewProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// NumberSheet is now a LIGHTWEIGHT preview.
-// It surfaces the essentials (identity + stats + agents summary + HiL +
-// recent call snapshot) and hands off to the full detail page for
-// deep configuration (Overview / Agents & Routing / Business Hours /
-// Call History sub-tabs).
+// NumberSheet is a LIGHTWEIGHT preview using the DS SlideOut
+// (right-anchored). It surfaces the essentials (identity + stats +
+// agents summary + HiL + recent call snapshot) and hands off to the
+// full detail page for deep configuration (Overview / Agents & Routing
+// / Business Hours / Call History sub-tabs).
 //
-// DS-GAP: DS SlideOut is always right-anchored. The source prototype
-// uses a bottom-anchored sheet with a drag handle — the "phone number
-// configuration" pattern is a well-known mobile-first shape.
-// An `anchor?: "right" | "bottom"` prop on SlideOut (or a sibling
-// `BottomSheet` component) would let this port match the prototype's
-// vertical orientation. Right-anchored is functionally equivalent for
-// desktop, so this is polish, not a blocker.
+// Note: the source prototype uses a bottom sheet for this preview, and
+// SlideOut supports anchor="bottom", but at desktop width the
+// bottom-sheet layout stretches the narrow-column preview content
+// across the whole viewport with a lot of wasted horizontal space.
+// The right-anchor keeps the preview a tight 350px column beside the
+// list. anchor="bottom" is still available for callers whose content
+// genuinely spans full width.
 // ─────────────────────────────────────────────────────────────────────
 
 export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allCalls }: NumberPreviewProps) {
@@ -47,7 +47,19 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
     .map(id => AGENTS.find(a => a.id === id))
     .filter((a): a is NonNullable<typeof a> => !!a)
 
-  const recentCall = allCalls.filter(c => c.numberId === number.id)[0] ?? null
+  const numberCalls = allCalls.filter(c => c.numberId === number.id)
+  const recentCall = numberCalls[0] ?? null
+  const avgDuration = numberCalls.length === 0
+    ? "—"
+    : (() => {
+        const totalSecs = numberCalls.reduce((sum, c) => {
+          const [m, s] = c.duration.split(":").map(Number)
+          return sum + (m || 0) * 60 + (s || 0)
+        }, 0) / numberCalls.length
+        const m = Math.floor(totalSecs / 60)
+        const s = Math.round(totalSecs - m * 60)
+        return `${m}:${s.toString().padStart(2, "0")}`
+      })()
 
   return (
     <SlideOut
@@ -55,8 +67,12 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
       onClose={onClose}
       type="with-variants"
       size="m"
-      title={number.number}
-      subtitle={`${number.label || "No label"} · ${number.type}`}
+      // Title stays extremely short — the DS SlideOut header column is
+      // narrow enough that anything longer than ~10 chars truncates.
+      // The full number + label live prominently in the body's first
+      // block instead.
+      title="Preview"
+      subtitle={number.label || "No label"}
       iconContent={<Settings size={18}/>}
       showStatus={true}
       statusLabel={number.status === "active" ? "Active" : "Suspended"}
@@ -71,6 +87,24 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
     >
       <div className="flex flex-col gap-4 px-6 py-4">
 
+        {/* Full phone number — lives in the body so it never truncates
+            in the SlideOut header. Uses tabular-nums + white-space:nowrap
+            so it never wraps mid-hyphen either. */}
+        <div
+          className="font-mono"
+          style={{
+            fontSize: 18, fontWeight: 700,
+            color: "var(--color-text-title)",
+            fontVariantNumeric: "tabular-nums",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {number.number}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--color-text-caption)", marginTop: -8 }}>
+          {number.type}
+        </div>
+
         {/* Identity badges */}
         <div className="flex flex-wrap gap-2">
           <NumberStatusTag status={number.status}/>
@@ -78,16 +112,17 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
           {number.hil && <HilBadge hil={true}/>}
         </div>
 
-        {/* Stats strip */}
+        {/* Stats strip — Avg Duration derived from the number's calls
+            so a suspended / unused number honestly shows "—". */}
         <div className="grid grid-cols-3 gap-2">
           <StatTile value={number.calls.toLocaleString()} label="Total Calls"/>
-          <StatTile value="3:42"                          label="Avg Duration"/>
+          <StatTile value={avgDuration}                   label="Avg Duration"/>
           <StatTile value={`$${number.cost.toFixed(2)}`}  label="Cost MTD"/>
         </div>
 
         {/* Agents summary */}
         <CardContainer variant="default" size="sm">
-          <SectionLabel icon={<Users size={12}/>}>Assigned Agents ({assigned.length})</SectionLabel>
+          <SectionLabel icon={<Users size={12}/>}>Assigned operators ({assigned.length})</SectionLabel>
           {assigned.length === 0 ? (
             <div style={{ fontSize: 12, color: "var(--color-text-caption)", fontStyle: "italic" }}>
               None — calls will go unanswered.
@@ -137,12 +172,13 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
                   display: "inline-flex", alignItems: "center", justifyContent: "center",
                   background: recentCall.direction === "inbound" ? "var(--color-surface-primary-more-subtle)" : "var(--color-surface-neutral-more-subtle)",
                   color: recentCall.direction === "inbound" ? "var(--primary)" : "var(--color-text-caption)",
-                  fontSize: 13, fontWeight: 700,
                 }}>
-                  {recentCall.direction === "inbound" ? "↙" : "↗"}
+                  {recentCall.direction === "inbound"
+                    ? <ArrowDownLeft size={13} strokeWidth={2.5}/>
+                    : <ArrowUpRight  size={13} strokeWidth={2.5}/>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="font-mono" style={{ fontSize: 12, color: "var(--color-text-title)" }}>{recentCall.caller}</div>
+                  <div className="font-mono" style={{ fontSize: 12, color: "var(--color-text-title)", whiteSpace: "nowrap" }}>{recentCall.caller}</div>
                   <div className="flex items-center gap-1" style={{ fontSize: 11, color: "var(--color-text-caption)" }}>
                     {agent && <AgentAvatar color={agent.color} initials={agent.initials} size={14}/>}
                     <span>{agent?.name}</span>
@@ -165,7 +201,7 @@ export function NumberSheet({ number, open, onClose, onOpenFull, onRelease, allC
           style={{ fontSize: 11, color: "var(--color-text-caption)" }}
         >
           <ArrowRight size={12}/>
-          <span>Overview, Agents & Routing, Business Hours and Call History live in the full view.</span>
+          <span>Overview, Operators & Routing, Business Hours and Call History live in the full view.</span>
         </div>
       </div>
     </SlideOut>
