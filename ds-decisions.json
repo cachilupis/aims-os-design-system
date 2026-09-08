@@ -1,0 +1,32 @@
+{
+  "_readme": [
+    "Decisions about DS Health findings. This is the ONE file here you edit by hand —",
+    "everything else on the DS Health page is generated from the audit.",
+    "",
+    "Its job is to stop the same finding being re-litigated every week. The Stepper case:",
+    "the audit flagged a local `Stepper` as shadowing the DS one, but they were unrelated",
+    "components that happened to share a word. Without a record of that call, the next",
+    "person to see it asks the same question again.",
+    "",
+    "Key format — type:file:name, never a line number, because lines move:",
+    "  shadow-component:src/screens/foo.tsx:Toggle",
+    "  possible-card-reimpl:src/screens/foo.tsx:SectionCard",
+    "  main-overuse:src/screens/foo.tsx",
+    "",
+    "verdict — one of:",
+    "  align    the DS already covers this; the screen should use the real component",
+    "  promote  a genuine gap; becomes a new DS component or a variant of an existing one",
+    "  accepted a false positive, or a deliberate exception. It stays as it is.",
+    "",
+    "Every entry needs a `why`. A verdict with no reasoning is how the next person ends up",
+    "reversing a decision that was right."
+  ],
+  "decisions": {
+    "possible-card-reimpl:src/screens/PeopleAccessMembers.tsx:StudioPermissionsView": {
+      "verdict": "accepted",
+      "date": "2026-09-08",
+      "by": "Michael",
+      "note": "False positive, and the cause is exact: the check looks for the word \"children\" in a function's first five lines to decide it takes a children prop. StudioPermissionsView's fifth line reads `granted.flatMap(n => [n, ...(n.children ?? [])])` — that is the permission tree's own data shape, not React children. The component takes { studioId, onBack } and renders a whole view: a back button, a header row, a stats strip and the permission tree. The two divs inside it that WERE card-shaped are CardContainer now."
+    }
+  }
+}

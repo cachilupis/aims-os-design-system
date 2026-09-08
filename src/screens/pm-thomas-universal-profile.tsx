@@ -3,6 +3,7 @@ import * as LucideIcons from "lucide-react"
 import { ScreenLayout }     from "@/components/layouts/screen-layout"
 import { WidgetCanvasView } from "@/components/layouts/widget-canvas-view"
 import type { CanvasSlot }  from "@/components/layouts/widget-canvas-view"
+import { WidgetPreview } from "@/components/experimental/widget-preview"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { Header }           from "@/components/ui/header"
 import { Button }           from "@/components/ui/button"
@@ -15,12 +16,13 @@ import { EmptyState }       from "@/components/ui/empty-state"
 import { HighlightIcon }    from "@/components/ui/highlight-icon"
 import { CardContainer }    from "@/components/ui/card-container"
 import { ModalDialog }      from "@/components/ui/modal-dialog"
-import { Menu, MenuItem }   from "@/components/ui/menu-item"
-import { RecordHeader }     from "@/components/ui/record-header"
-import type { CustomerRecord, EmployeeRecord, NextBestAction } from "@/components/ui/record-header"
+import { EntityHeader }     from "@/components/ui/record-header"
+import type { EntityVisual, EntityHeaderTag, EntityStateBadge, SecondaryMetadataItem } from "@/components/ui/record-header"
+import { NextBestActionCard, type NextBestAction } from "@/components/ui/next-best-action-card"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { Input }            from "@/components/ui/input"
 import type { LucideIcon }  from "lucide-react"
+import { MenuItem } from "@/components/ui/menu-item"
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -215,47 +217,57 @@ const ENTITY_TYPE_OPTIONS: Record<EntityType, { label: string; iconName: string;
   ],
 }
 
-const PROFILE_SIGNALS: Record<string, NextBestAction> = {
-  "EMP-00412": { severity: "alert",       label: "1 performance review pending approval",     dueContext: "Due in 3 days" },
-  "PER-0091":  { severity: "informative", label: "Compliance certification expiring soon",    dueContext: "Expires Sep 15" },
-  "ORG-0023":  { severity: "alert",       label: "Renewal in 12 days — health dropped to 61", dueContext: "Closes Sep 5"  },
+// Feeds NextBestActionCard, which renders BELOW the header in its own card —
+// the header no longer accepts recommendations at all.
+//
+// The card's `description` is the REASONING, not a subtitle: it wraps and it
+// explains why the recommendation exists. The old one-liners ("Due in 3 days")
+// were timing, which now belongs in `timeAgo`, so each record gets a real
+// sentence instead of a fragment stretched into a paragraph slot.
+const PROFILE_NBAS: Record<string, NextBestAction[]> = {
+  "EMP-00412": [{
+    id: "nba-emp-00412",
+    title: "Approve James's performance review",
+    timeAgo: "3h ago",
+    description: "The mid-year review has been sitting with you since Aug 12 and the cycle closes in 3 days. Approving it now keeps James's compensation change on schedule.",
+    onViewDetails: () => {},
+    onAccept: () => {},
+    onDismiss: () => {},
+  }],
+  "PER-0091":  [{
+    id: "nba-per-0091",
+    title: "Renew Sarah's compliance certification",
+    timeAgo: "1d ago",
+    description: "Her certification expires Sep 15 and she holds approval authority on 4 open governance items — letting it lapse would block every one of them.",
+    onViewDetails: () => {},
+    onAccept: () => {},
+    onDismiss: () => {},
+  }],
+  "ORG-0023":  [{
+    id: "nba-org-0023",
+    title: "Schedule a renewal call with Meridian",
+    timeAgo: "2h ago",
+    description: "Account health dropped from 78 to 61 this month and the renewal is 12 days out with no proposal sent. A call this week is the last comfortable window.",
+    onViewDetails: () => {},
+    onAccept: () => {},
+    onDismiss: () => {},
+  }],
 }
 
-function buildRecordHeaderData(profile: UniversalProfile): {
-  variant: "employee" | "customer" | "client"
-  data: CustomerRecord | EmployeeRecord
-} {
-  if (profile.type === "company") {
-    const data: CustomerRecord = {
-      accountName:    profile.name,
-      segment:        profile.subtitle.split(" · ")[0] ?? "—",
-      owner:          "Priya Nair",
-      tier:           "Enterprise",
-      renewalDate:    "Sep 5, 2026",
-      mrr:            "$480K",
-      lastContact:    "Aug 22, 2026",
-      openTickets:    3,
-      adoptionLevel:  "High",
-      industry:       "Financial Services",
-      primaryContact: "Sandra Torres",
-    }
-    return { variant: "customer", data }
-  }
-  // employee or person
-  const data: EmployeeRecord = {
-    name:       profile.name,
-    role:       profile.subtitle.split(" · ")[0] ?? "—",
-    department: profile.subtitle.split(" · ")[1] ?? "—",
-    manager:    "Lisa Park",
-    location:   "Remote",
-    email:      profile.name.toLowerCase().replace(" ", ".") + "@acme.com",
-    phone:      "+1 (602) 555-0100",
-    startDate:  "Jan 12, 2022",
-    team:       "Operations",
-    accessRole: "Standard",
-  }
-  return { variant: "employee", data }
-}
+// `recordFields` is deliberately NOT passed to EntityHeader here. In the
+// current component the RECORD zone renders nothing inline — the array's only
+// visible effect is enabling the ⓘ provenance trigger beside the name, and
+// that button is disabled unless `onProvenanceOpen` is wired. This screen has
+// no provenance panel yet, so passing fields would ship a permanently
+// disabled control (same reason the DS never shows a disabled Eye) and would
+// require inventing a source system for mock data that has none. The panel
+// gets wired with real provenance during the UCP header redesign; the fields
+// themselves are already visible in the Profile Summary widget below.
+//
+// The retired { variant, data } API's other fields (lastContact, openTickets,
+// adoptionLevel, industry, primaryContact, email, phone, team) are dropped
+// rather than translated: the current API has no slot for them, and they
+// belong on the detail tabs.
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -282,49 +294,87 @@ function StudyWidget({ title, status, children }: { title: string; status: Study
   if (status === "empty") return null
 
   if (status === "error") {
+    // EmptyState, not a hand-rolled div. CLAUDE.md is explicit that any view or
+    // section with no content to show uses it — a failed load is exactly that,
+    // and rolling one by hand is how the empty states in an app stop looking
+    // like each other.
     return (
-      <div style={{ padding: "12px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-text-error-default)" }}>
-          <LucideIcons.AlertCircle size={14} />
-          <span style={{ fontSize: 12, fontWeight: 500 }}>Failed to load</span>
-        </div>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{title} data couldn't be retrieved.</span>
-        <button
-          style={{
-            alignSelf: "flex-start", fontSize: 12, fontWeight: 500,
-            color: "var(--primary)", border: "none", background: "none",
-            cursor: "pointer", padding: 0,
-          }}
-          onClick={() => {}} // DS-GAP: wire to retry handler
-        >
-          Retry
-        </button>
-      </div>
+      <EmptyState
+        compact
+        icon={LucideIcons.AlertCircle}
+        title="Failed to load"
+        description={`${title} data couldn't be retrieved.`}
+        ctaLabel="Retry"
+        onCta={() => {}} // DS-GAP: wire to a real retry handler
+      />
     )
   }
 
   return <>{children}</>
 }
 
+// ── Metric row ────────────────────────────────────────────────────────────
+// Icon, then label, then value — reading left to right in the order you scan.
+// The earlier version put the icon next to the value on the right, which meant
+// the eye had to cross the row to find out what kind of thing the number was.
+//
+// No horizontal padding: WidgetFather already insets its card by 24px, and
+// adding 16 here landed the content at 40 while the widget title stayed at 24.
+// (CLAUDE.md's "KPI padding: 4px 16px 16px" predates that and double-pads —
+// corrected in the same change as this.)
+type MetricVariant = "success" | "alert" | "informative" | "neutral" | "error"
+
+// A metric row inside a study widget: icon, truncating label, value. Not the
+// MetricRow in CallDetailPage, which is a plain label/value pair — renamed so
+// the duplicate check stops pairing two unrelated components.
+function StudyMetricRow({
+  label, value, icon, variant, last = false,
+}: {
+  label: string
+  value: string
+  icon: string
+  variant: MetricVariant
+  last?: boolean
+}) {
+  return (
+    <div
+      style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "8px 0",
+        borderBottom: last ? "none" : "1px solid var(--color-border-neutral-subtle)",
+      }}
+    >
+      <HighlightIcon size="sm" variant={variant} iconName={icon} />
+      {/* One line, always. A wrapped label turns a 37px row into 55px, and four
+          of those overflow the widget's fixed height — the content silently
+          disappears instead of the label politely truncating. */}
+      <span
+        title={label}
+        style={{
+          fontSize: 12, color: "var(--field-supporting)", flex: 1, minWidth: 0,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}
+      >
+        {label}
+      </span>
+      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", whiteSpace: "nowrap" }}>{value}</span>
+    </div>
+  )
+}
+
 // ── Governance study widget content ──────────────────────────────────────────
 
 function GovernanceContent() {
   const items = [
-    { label: "Compliance Score",  value: "94 / 100",     icon: "ShieldCheck",   variant: "success"     as const },
-    { label: "Open Reviews",      value: "1",            icon: "ClipboardList", variant: "alert"       as const },
-    { label: "Policies Signed",   value: "12 of 12",     icon: "FileCheck2",    variant: "success"     as const },
-    { label: "Last Audit",        value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative" as const },
+    { label: "Compliance Score", value: "94 / 100",     icon: "ShieldCheck",   variant: "success"     as const },
+    { label: "Open Reviews",     value: "1",            icon: "ClipboardList", variant: "alert"       as const },
+    { label: "Policies Signed",  value: "12 of 12",     icon: "FileCheck2",    variant: "success"     as const },
+    { label: "Last Audit",       value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative" as const },
   ]
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-      {items.map(item => (
-        <div key={item.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{item.label}</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <HighlightIcon size="sm" variant={item.variant} iconName={item.icon} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{item.value}</span>
-          </div>
-        </div>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {items.map((item, i) => (
+        <StudyMetricRow key={item.label} {...item} last={i === items.length - 1} />
       ))}
     </div>
   )
@@ -333,36 +383,17 @@ function GovernanceContent() {
 // ── Risk study widget content ─────────────────────────────────────────────────
 
 function RiskContent() {
+  const items = [
+    { label: "Risk Score",  value: "18 / 100",    icon: "TrendingDown",   variant: "success"     as const },
+    { label: "Open Flags",  value: "0",           icon: "Flag",           variant: "neutral"     as const },
+    { label: "Last Scan",   value: "Jul 27, 2026", icon: "ScanLine",      variant: "informative" as const },
+    { label: "Trend",       value: "↓ 24 → 18",   icon: "ArrowDownRight", variant: "success"     as const },
+  ]
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Risk Score</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="success" iconName="TrendingDown" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>18 / 100</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Open Flags</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="neutral" iconName="Flag" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>0</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Last Scan</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="informative" iconName="ScanLine" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>Jul 27, 2026</span>
-        </div>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Trend</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <HighlightIcon size="sm" variant="success" iconName="ArrowDownRight" />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>↓ 24 → 18</span>
-        </div>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {items.map((item, i) => (
+        <StudyMetricRow key={item.label} {...item} last={i === items.length - 1} />
+      ))}
     </div>
   )
 }
@@ -376,7 +407,7 @@ function ConnectionsContent() {
     { name: "Operations Team", type: "Team",         icon: "Users"     },
   ]
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {connections.map(c => (
         <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <HighlightIcon size="sm" variant="neutral" iconName={c.icon} />
@@ -386,9 +417,7 @@ function ConnectionsContent() {
           </div>
         </div>
       ))}
-      <button style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 500, color: "var(--primary)", border: "none", background: "none", cursor: "pointer", padding: 0, marginTop: 2 }}>
-        View all connections
-      </button>
+      <Button variant="tertiary" size="sm" className="self-start">View all connections</Button>
     </div>
   )
 }
@@ -425,7 +454,6 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
   const [logsPage,     setLogsPage]     = useState(1)
   const [logsPageSize, setLogsPageSize] = useState(10)
   const [showArchive,  setShowArchive]  = useState(false)
-  const [menuOpen,     setMenuOpen]     = useState(false)
   const [userTabs,     setUserTabs]     = useState<string[]>([])
   const [tabPickerOpen, setTabPickerOpen] = useState(false)
   const [entityPreview, setEntityPreview] = useState<SecondaryEntity | null>(null)
@@ -455,9 +483,12 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     const slots: CanvasSlot[] = [
       // Summary KPI — always shown
       {
-        uid: "entity-summary", title: "Profile Summary", colSpan: 1,
+        // Compact-ish. The default rowSpan of 5 (304px) left half the card empty
+        // under the chips. 4 removes most of that and still holds when the
+        // subtitle wraps to three lines in a narrow column — 3 clipped the chips.
+        uid: "entity-summary", title: "Profile Summary", colSpan: 1, rowSpan: 4,
         content: (
-          <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <HighlightIcon size="lg" variant="informative" iconName={profile.avatarIcon} />
               <div>
@@ -477,7 +508,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Governance — hide if empty, show error if failed
     if (profile.governance !== "empty") {
       slots.push({
-        uid: "governance", title: "Governance", colSpan: 1,
+        uid: "governance", title: "Governance", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Governance" status={profile.governance}>
             <GovernanceContent />
@@ -489,7 +520,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Risk — hide if empty, show error if failed
     if (profile.risk !== "empty") {
       slots.push({
-        uid: "risk", title: "Risk", colSpan: 1,
+        uid: "risk", title: "Risk", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Risk" status={profile.risk}>
             <RiskContent />
@@ -501,7 +532,10 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
     // Connections — hide if empty, show error if failed
     if (profile.connections !== "empty") {
       slots.push({
-        uid: "connections", title: "Connections", colSpan: 1,
+        // Stays at the default 5. Its normal content is a list of related records,
+          // and a widget is sized for what it usually shows — the error state is the
+          // exception, not the thing to size for.
+          uid: "connections", title: "Connections", colSpan: 1,
         content: (
           <StudyWidget title="Connections" status={profile.connections}>
             <ConnectionsContent />
@@ -510,12 +544,66 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
       })
     }
 
+    // Two catalogued widgets, drawn by the same renderer the Widget Builder,
+    // the Library and the Marketplace use — so a Trend here is the same Trend
+    // there. The three study widgets above are deliberately NOT swapped for
+    // these: they carry this profile's own values, and replacing them with
+    // catalog fixtures would trade real information for consistency.
+    slots.push({
+      uid: "engagement-trend", title: "Engagement Trend", colSpan: 2, rowSpan: 4,
+      content: <WidgetPreview typeId="line" />,
+    })
+    slots.push({
+      uid: "activity-alerts", title: "Alerts", colSpan: 1, rowSpan: 4,
+      content: <WidgetPreview typeId="alerts" />,
+    })
+
     return slots
   }, [profile])
 
-  // RecordHeader data
-  const { variant: rhVariant, data: rhData } = buildRecordHeaderData(profile)
-  const signal = PROFILE_SIGNALS[profile.id] ?? { severity: "neutral" as const, label: "No active recommendations" }
+  // EntityHeader data
+  // Visual — avatar for companies, people and groups. All three profiles here
+  // are one of those, so all three are avatars; the icon path is for objects,
+  // assets, processes, transactions and documents.
+  const rhVisual: EntityVisual = { kind: "avatar" }
+  // Tags — the entity type is a CLASSIFICATION tag now, not a label beside the
+  // name, and it is present because the visual is an avatar (a highlight icon
+  // would already name the type). Plus one signal per profile, coloured only
+  // when somebody actually has to do something about it.
+  const rhTags: EntityHeaderTag[] = [
+    ...(profile.governance === "error" || profile.connections === "error"
+      ? [{ role: "signal" as const, label: "Sync failing", tone: "error" as const }]
+      : []),
+    { role: "classification", label: TYPE_LABEL[profile.type] },
+  ]
+  // State badge — its own slot on the right, full semantic range. Derived from
+  // the status this screen already tracks: Archived is blocking, so it reads
+  // error; Inactive needs review; Active is the healthy case.
+  const rhStateBadge: EntityStateBadge = {
+    Active:   { label: "Active",   variant: "success"     as const },
+    Inactive: { label: "Inactive", variant: "informative" as const },
+    Archived: { label: "Archived", variant: "error"       as const },
+  }[profile.status]
+  // Source — one item, the system this record came from. Uses the documented
+  // per-entity-type mapping (Employee/Person → Workday, Company →
+  // Salesforce), not a guess.
+  const rhSource = profile.type === "company" ? "Salesforce" : "Workday"
+  // Secondary metadata — max 6, aim for 4. Every value here is already shown
+  // by this screen's own study widgets below; nothing is invented for the
+  // header's sake.
+  const rhSecondaryMetadata: SecondaryMetadataItem[] = [
+    { icon: LucideIcons.ShieldCheck,    text: "94 / 100", tooltip: "Compliance score · 94 of 100, from the Governance study." },
+    { icon: LucideIcons.ClipboardList,  text: "1 open",   tooltip: "Open reviews · 1 governance review awaiting a decision." },
+    { icon: LucideIcons.Flag,           text: "0 flags",  tooltip: "Open flags · nothing raised by the Risk study." },
+    { icon: LucideIcons.ScanLine,       text: "Jul 27",   tooltip: "Last scan · Jul 27, 2026, from the Risk study." },
+  ]
+  // The recommendation, and a real dismiss. `undefined` is how the card
+  // expresses "nothing to recommend right now" — it disappears rather than
+  // rendering a placeholder, which is also what dismissing has to produce:
+  // the ✕ was wired to a no-op, so it looked broken. One recommendation at a
+  // time, so dismissing the current one clears the card.
+  const [nbaDismissed, setNbaDismissed] = useState(false)
+  const rhNextBestAction = nbaDismissed ? undefined : PROFILE_NBAS[profile.id]?.[0]
 
   // Available entity type options for the "+" picker (filter already-added tabs)
   const availableOptions = (ENTITY_TYPE_OPTIONS[profile.type] ?? []).filter(
@@ -539,71 +627,23 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
       activeSidebarId="data"
       header={(isScrolled) => (
         <div>
-          {!isScrolled && (
-            <button
-              onClick={onBack}
-              style={{
-                display: "flex", alignItems: "center", gap: 4,
-                border: "none", background: "none", cursor: "pointer",
-                padding: "0 0 6px 0", color: "var(--primary)",
-              }}
-            >
-              <LucideIcons.ChevronLeft size={13} />
-              <span style={{ fontSize: 12, fontWeight: 500 }}>Profiles</span>
-            </button>
-          )}
           <Header
             size={isScrolled ? "compress" : "size-l"}
+            // A profile is one step below the Profiles list, so L2 — the DS back
+            // button, not a hand-rolled chevron sitting above the Header.
+            backButton
+            onBack={onBack}
             title={profile.name}
             description={profile.subtitle}
             tag={<Tag variant={STATUS_TAG[profile.status]} size="sm">{profile.status}</Tag>}
-            primaryAction={
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Button variant="secondary" size="sm" onClick={() => {}}>
-                  <LucideIcons.Download size={13} /> Export
-                </Button>
-                <Button variant="main" size="sm" onClick={() => {}}>
-                  <LucideIcons.Pencil size={13} /> Edit Profile
-                </Button>
-                {/* Kebab — Archive only for person + employee, not company */}
-                {/* DS-GAP: RBAC — archive visibility should depend on user role */}
-                {profile.type !== "company" && (
-                  <div style={{ position: "relative" }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setMenuOpen(o => !o)}
-                    >
-                      <LucideIcons.MoreHorizontal size={14} />
-                    </Button>
-                    {menuOpen && (
-                      <div
-                        style={{
-                          position: "fixed",
-                          zIndex: 10001,
-                          minWidth: 180,
-                          background: "var(--surface)",
-                          border: "0.5px solid var(--field-border)",
-                          boxShadow: "var(--shadow-elevation-3)",
-                          borderRadius: 8,
-                          padding: "4px 0",
-                        }}
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        <Menu>
-                          <MenuItem
-                            leadingIcon={<LucideIcons.Archive size={14} />}
-                            label="Archive"
-                            size="sm"
-                            onClick={() => { setMenuOpen(false); setShowArchive(true) }}
-                          />
-                        </Menu>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            }
+            secondaryAction={{ label: "Export", icon: LucideIcons.Download, onClick: () => {} }}
+            primaryAction={{ label: "Edit Profile", icon: LucideIcons.Pencil, onClick: () => {} }}
+            // Header owns the "···" now, so the hand-rolled menu and its open
+            // state are gone. A company profile has nothing to archive.
+            // DS-GAP: RBAC — archive visibility should depend on user role
+            overflowActions={profile.type !== "company"
+              ? [{ label: "Archive", icon: LucideIcons.Archive, onClick: () => setShowArchive(true) }]
+              : undefined}
           />
         </div>
       )}
@@ -622,17 +662,31 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
           : undefined
       }
     >
-      {/* ── RecordHeader — lean identity card with NBA signal ── */}
-      <RecordHeader
-        variant={rhVariant}
-        data={rhData}
-        signal={signal}
-        actions={[
-          { label: "Export",  variant: "secondary", onClick: () => {} },
-          { label: profile.type === "company" ? "Contact account" : "Message", variant: "primary", onClick: () => {} },
+      {/* ── EntityHeader — identity only. The Next Best Action card is a
+             SIBLING below it, in its own Card Container, per section 11 of
+             the Entity Header change spec: two records, two containers. It
+             used to render inside the header; the header no longer accepts
+             it. ── */}
+      <EntityHeader
+        name={profile.name}
+        visual={rhVisual}
+        tags={rhTags}
+        stateBadge={rhStateBadge}
+        source={rhSource}
+        secondaryMetadata={rhSecondaryMetadata}
+        /* No contextual CTA: `Ask` is the primary action. "Export" was one of
+           two primary CTAs competing with it, and this page already carries
+           Export in its own page Header above. It moves to the overflow, where
+           secondary and destructive actions belong. */
+        menuActions={[
+          { label: "Export",  onClick: () => {} },
+          { label: "Archive", onClick: () => {} },
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
-        className="mb-[16px]"
+      />
+      <NextBestActionCard
+        item={rhNextBestAction && { ...rhNextBestAction, onDismiss: () => setNbaDismissed(true) }}
+        className="mt-[12px] mb-[16px]"
       />
 
       {/* ── Tabs row + "+" entity-type picker ── */}
@@ -674,28 +728,18 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
                 {availableOptions.map(opt => {
                   const Icon = (LucideIcons as Record<string, unknown>)[opt.iconName] as LucideIcon | undefined
                   return (
-                    <button
+                    <MenuItem
                       key={opt.label}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        width: "100%", padding: "8px 12px",
-                        background: "none", border: "none", cursor: "pointer",
-                        textAlign: "left",
-                      }}
+                      size="sm"
+                      label={opt.label}
+                      leadingIcon={Icon ? <Icon size={13} /> : undefined}
                       onClick={() => {
                         setUserTabs(t => [...t, opt.label])
                         setTab(opt.label)
                         setTabPickerOpen(false)
                       }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "var(--hover)")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "none")}
-                    >
-                      {Icon && <Icon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />}
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--foreground)" }}>{opt.label}</div>
-                        <div style={{ fontSize: 11, color: "var(--field-supporting)" }}>{opt.description}</div>
-                      </div>
-                    </button>
+                      subtext={opt.description}
+                    />
                   )
                 })}
               </div>
@@ -853,7 +897,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
             </div>
             <Tag variant={entityPreview.statusVariant} size="sm">{entityPreview.statusLabel}</Tag>
             <div style={{ marginTop: 8 }}>
-              <Button variant="main" size="sm" onClick={() => setEntityPreview(null)}>
+              <Button variant="primary" size="sm" onClick={() => setEntityPreview(null)}>
                 View full profile
               </Button>
             </div>
@@ -879,7 +923,15 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
 // ── Main screen — profile selector ───────────────────────────────────────────
 
 export default function PMThomasUniversalProfileScreen() {
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // `?profile=<id>` opens a record's detail directly, skipping the list. The
+  // Entity Header only exists on the detail view, so a link meant to show the
+  // header has to land there — arriving at the list and asking the reader to
+  // click a row first defeats the point.
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    const wanted = new URLSearchParams(window.location.search).get("profile")
+    return wanted && PROFILES.some(p => p.id === wanted) ? wanted : null
+  })
 
   const selected = PROFILES.find(p => p.id === selectedId)
 

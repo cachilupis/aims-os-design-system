@@ -28,8 +28,14 @@ One or more featured action items displayed with carousel navigation (dots + pre
 | Banner glow shadow | --card-primary-hover-shadow |  | 0 8px 24px rgba(33,115,255,0.20) | 8px 8px 16px 0 rgba(0,0,0,0.08), 0 0 4px 1px rgba(33,115,255,0.4), 0 0 14px 0 rgba(33,115,255,0.15) |
 | Inner card surface | --card-purple-bg |  | #f3e9fd | #120520 |
 | Inner card border | --card-purple-hover-bd |  | #7b27ed | #a855f7 |
+| Inner card glow shadow | --card-purple-hover-shadow |  | 0 8px 24px rgba(123,39,237,0.16), 0 2px 6px rgba(0,0,0,0.05) | 8px 8px 16px 0px rgba(0,0,0,0.08), 0 0 4px 1px rgba(173,69,255,0.4), 0 0 14px 0px rgba(173,69,255,0.15) |
 | Primary text | --foreground |  | #1a1a2e | #f0f4ff |
 | Secondary text | --field-supporting |  | #6b7280 | #8899aa |
+| Pagination dot (active) | --primary |  | #2173ff | #2b7fff |
+| Pagination dot (inactive) | --field-border |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Urgency dot — Due Now | --color-surface-error-default |  | #992222 | #e05252 |
+| Urgency dot — Critical | --color-surface-alert-default |  | #ed6c02 | #8f4201 |
+| Urgency dot — Action (reused) | --primary |  | #2173ff | #2b7fff |
 
 ### Empty
 

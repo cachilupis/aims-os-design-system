@@ -22,7 +22,7 @@
 | --radius-l | rounded-lg | 16px | Panels, modals |
 | --radius-xl | rounded-xl | 24px | Large cards, drawers |
 | --radius-xxl | rounded-2xl | 32px | Hero sections |
-| --radius-full | rounded-full | 9999px | Avatars, pills, toggles |
+| --radius-full | rounded-full | 100px | Avatars, pills, toggles |
 
 ## Variants / token groups
 
@@ -41,7 +41,7 @@ CSS prefix: `--radius-*`
 | L | --radius-l | — | 16px | 16px |
 | XL | --radius-xl | — | 24px | 24px |
 | XXL | --radius-xxl | — | 32px | 32px |
-| Full | --radius-full | — | 9999px | 9999px |
+| Full | --radius-full | — | 100px | 100px |
 
 ---
 

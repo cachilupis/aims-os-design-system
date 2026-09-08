@@ -42,12 +42,13 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Neutral/Default | 4465:4448 | #5c5c5c | #ffffff1a |
-| Label text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Input text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Placeholder | Text/Disabled | 4465:4472 | #bababa | #ffffff4d |
-| Supporting text | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
+| Background | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --field-border |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Label text | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Input text | --field-text |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Icon | --field-icon |  | #bababa | rgba(255,255,255,0.30) |
+| Placeholder | --field-placeholder |  | #bababa | rgba(255,255,255,0.30) |
+| Supporting text | --field-supporting |  | #5c5c5c | rgba(255,255,255,0.60) |
 
 ### Hover
 
@@ -55,11 +56,11 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Neutral/Black | 4465:4583 | #000000 | #ffffff4d |
-| Label text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Placeholder | Text/Disabled | 4465:4472 | #bababa | #ffffff4d |
-| Supporting text | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
+| Background (reused) | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --color-border-neutral-black |  | #000000 | rgba(255,255,255,0.30) |
+| Label text (reused) | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Placeholder (reused) | --field-placeholder |  | #bababa | rgba(255,255,255,0.30) |
+| Supporting text (reused) | --field-supporting |  | #5c5c5c | rgba(255,255,255,0.60) |
 
 ### Focus
 
@@ -67,11 +68,11 @@ Border width: `1px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Primary/Default | 4465:4452 | #2173ff | #2b7fff |
-| Label text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Input text | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
-| Supporting text | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
+| Background (reused) | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --field-border-focus |  | #2173ff | #2b7fff |
+| Label text (reused) | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Input text (reused) | --field-text |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Supporting text (reused) | --field-supporting |  | #5c5c5c | rgba(255,255,255,0.60) |
 
 ### Error
 
@@ -79,11 +80,11 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Error/Lighter | 4465:4457 | #d32f2f | #fb2c36 |
-| Label text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Placeholder | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
-| Supporting text | Text/Error | 4465:4473 | #5f2120 | #ff6467 |
+| Background (reused) | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --field-border-error |  | #d32f2f | #fb2c36 |
+| Label text (reused) | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Icon | --field-text-error |  | #5f2120 | #ff6467 |
+| Supporting text | --field-text-error |  | #5f2120 | #ff6467 |
 
 ### Success
 
@@ -91,11 +92,11 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Success/Default | 4465:4464 | #00a07e | #00c9504d |
-| Label text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Placeholder | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
-| Supporting text | Text/Success | 4465:4505 | #003328 | #6ee7b7 |
+| Background (reused) | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --field-border-success |  | #00a07e | rgba(0,201,80,0.3) |
+| Label text (reused) | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Icon | --field-text-success |  | #003328 | #6ee7b7 |
+| Supporting text | --field-text-success |  | #003328 | #6ee7b7 |
 
 ### Alert
 
@@ -103,11 +104,11 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Alert/Default | 4465:4460 | #ed6c02 | #fbbf24 |
-| Label text | Text/Subtitle | 4465:4468 | #2a2a2a | #ffffff99 |
-| Placeholder | Text/Body | 4465:4469 | #5c5c5c | #ffffff99 |
-| Supporting text | Text/Alert | 4465:4504 | #663c00 | #fcd34d |
+| Background (reused) | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border | --field-border-alert |  | #ed6c02 | #fbbf24 |
+| Label text (reused) | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Icon | --field-text-alert |  | #663c00 | #fcd34d |
+| Supporting text | --field-text-alert |  | #663c00 | #fcd34d |
 
 ### Disabled
 
@@ -115,11 +116,11 @@ Border width: `0.5px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Background | Surface/Neutral/White | 4465:4591 | #ffffff | #ffffff1a |
-| Border | Border/Neutral/Lighter | 4465:4449 | #bababa | #ffffff26 |
-| Label text | Text/Disabled | 4465:4472 | #bababa | #ffffff4d |
-| Input text | Text/Disabled | 4465:4472 | #bababa | #ffffff4d |
-| Supporting text | Text/Disabled | 4465:4472 | #bababa | #ffffff4d |
+| Background (reused) | --field-bg |  | #ffffff | rgba(255,255,255,0.10) |
+| Border (reused) | --field-border |  | #5c5c5c | rgba(255,255,255,0.10) |
+| Label text (reused) | --field-label |  | #2a2a2a | rgba(255,255,255,0.60) |
+| Supporting text (reused) | --field-supporting |  | #5c5c5c | rgba(255,255,255,0.60) |
+| Opacity | — |  | 40% | 40% |
 
 ---
 

@@ -1510,22 +1510,22 @@ function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack:
           <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>{meta?.label} — Permissions</span>
         </div>
       </div>
-      <div style={{
-        display: "flex", gap: 16, padding: "10px 16px", background: "var(--surface)",
-        border: "1px solid var(--border)", borderRadius: 8, marginBottom: 14,
-        fontSize: 12, color: "var(--muted-foreground)",
-      }}>
-        <span><strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct</span>
-        <span><strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role</span>
-      </div>
+      <CardContainer size="sm" className="flex gap-[16px] mb-[14px]">
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <strong style={{ color: "var(--foreground)" }}>{directCount}</strong> direct
+        </span>
+        <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+          <strong style={{ color: "var(--foreground)" }}>{inhCount}</strong> via role
+        </span>
+      </CardContainer>
       {granted.length === 0 ? (
         <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
           No permissions granted in this studio.
         </div>
       ) : (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+        <CardContainer className="!p-0 overflow-hidden">
           {granted.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)}
-        </div>
+        </CardContainer>
       )}
     </div>
   )
@@ -5111,7 +5111,7 @@ function RoleFormModal({ role, onSave, onClose }: {
             }}>
               <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
               <Button
-                variant="main" size="sm"
+                variant="primary" size="sm"
                 onClick={handleSave}
                 disabled={!name.trim()}
               >
@@ -5291,23 +5291,15 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             : mainTab === "roles"  ? `${roles.length} roles · ${roles.filter(r => !r.system).length} custom`
             : `${GROUPS.length} groups · manage shared access across the workspace`
           }
+          // primaryAction takes an action object since #85 — Header picks the
+          // variant itself, which is why no screen writes variant="main" any
+          // more. Same three actions, same handlers.
           primaryAction={
-            mainTab === "members" ? (
-              <Button variant="main" size="sm" onClick={() => setShowInvite(true)}>
-                <Icons.UserPlus size={14} style={{ marginRight: 4 }} />
-                Invite member
-              </Button>
-            ) : mainTab === "roles" ? (
-              <Button variant="primary" size="sm" onClick={() => setRoleForm({ role: null })}>
-                <Icons.ShieldPlus size={14} style={{ marginRight: 4 }} />
-                New role
-              </Button>
-            ) : (
-              <Button variant="primary" size="sm">
-                <Icons.FolderPlus size={14} style={{ marginRight: 4 }} />
-                New group
-              </Button>
-            )
+            mainTab === "members"
+              ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
+              : mainTab === "roles"
+              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setRoleForm({ role: null }) }
+              : { label: "New group",     icon: Icons.FolderPlus }
           }
         />
       )}

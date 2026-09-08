@@ -7,7 +7,6 @@ import { Header }           from "@/components/ui/header"
 import { SlideOut }         from "@/components/ui/slide-out"
 import { EntityList }       from "@/components/ui/entity-list"
 import { CardContainer }    from "@/components/ui/card-container"
-import { Button }           from "@/components/ui/button"
 import { Input }            from "@/components/ui/input"
 import { Select }           from "@/components/ui/select"
 import { Textarea }         from "@/components/ui/textarea"
@@ -62,9 +61,7 @@ export function SlideOutFormExampleScreen({ onClose: closePreview }: Props) {
             title="Automations"
             description="Monitoring and response automations for your customer accounts"
             size="size-l"
-            primaryAction={
-              <Button variant="main" size="sm" onClick={() => setSlideOutOpen(true)}>New Automation</Button>
-            }
+            primaryAction={{ label: "New Automation", onClick: () => setSlideOutOpen(true) }}
           />
 
           <div className="flex-1 overflow-y-auto px-[32px] py-[24px]">

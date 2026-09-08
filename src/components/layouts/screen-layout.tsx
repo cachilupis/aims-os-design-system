@@ -97,6 +97,22 @@ export interface ScreenLayoutProps {
   bgVariant?: AppBgVariant
   /** Left sidebar navigation items — accepts nav items and section headers */
   sidebarItems: SidebarEntry[]
+  /**
+   * The screen renders its own sticky bar at the foot of the content — a
+   * StepperNavFooter in a wizard, say — instead of a floating Pagination.
+   *
+   * The scroll area normally reserves 64px at the bottom so Pagination can float
+   * over the list without covering its last row. That reservation also caps how
+   * far a `position: sticky` child can travel: it cannot pass its containing
+   * block's content edge, so a sticky footer lands 64px short of the bottom and
+   * reads as misaligned. A negative margin on the footer does not help — margin
+   * moves the box, not the containing block's edge.
+   *
+   * Set this and the reservation goes away, so the sticky footer sits flush. A
+   * screen cannot need both: Pagination floats over the same 64px the footer
+   * would occupy.
+   */
+  stickyFooter?: boolean
   /** ID of the active sidebar item */
   activeSidebarId?: string
   /** Called when a sidebar item is clicked — use to implement inter-screen navigation */
@@ -148,6 +164,7 @@ export function ScreenLayout({
   topbarActions = DEFAULT_TOPBAR_ACTIONS,
   notificationsContent = <DefaultNotificationsDropdown />,
   bgVariant = "default",
+  stickyFooter = false,
   sidebarItems,
   activeSidebarId,
   onSidebarItemClick,
@@ -214,11 +231,12 @@ export function ScreenLayout({
           {/* Content area — relative so Pagination can float at the bottom */}
           <div className="flex-1 relative overflow-hidden">
 
-            {/* Scrollable list — 64px bottom padding leaves room for floating Pagination */}
+            {/* Scrollable list — 64px bottom padding leaves room for floating
+                Pagination, unless the screen brings its own sticky footer. */}
             <div
               ref={scrollRef}
               className="h-full overflow-y-auto"
-              style={{ padding: "8px 32px 64px" }}
+              style={{ padding: `8px 32px ${stickyFooter ? 0 : 64}px` }}
             >
               {children}
             </div>

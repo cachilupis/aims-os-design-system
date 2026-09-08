@@ -203,13 +203,29 @@ const STUDIOS: Studio[] = [
       { id: "r4", name: "Viewer",        access: "none"    },
       { id: "r5", name: "Billing Admin", access: "none"    },
     ],
-    settings: [
-      { id: "s1", label: "HITL required for high-risk decisions", description: "Workers flagged as high-risk must pause and request a human decision.", value: true  },
-      { id: "s2", label: "Audit all worker runs",                 description: "Log inputs, outputs, and token usage for every worker invocation.",    value: true  },
-      { id: "s3", label: "Auto-shutdown idle workers",            description: "Suspend workers with no runs in the last 7 days.",                     value: false },
-      { id: "s4", label: "Require governance binding",            description: "Workers must be bound to a Governance Studio domain before deploying.", value: false },
-      { id: "s5", label: "Allow scheduled runs",                  description: "Enable cron-triggered worker runs in addition to on-demand.",          value: true  },
-    ],
+    config: {
+      general: [
+        { type: "toggle",  id: "hitl-highrisk",    label: "HITL required for high-risk decisions", description: "Workers flagged as high-risk must pause and request a human decision before continuing.", value: true  },
+        { type: "toggle",  id: "auto-shutdown",    label: "Auto-shutdown idle workers",             description: "Suspend workers with no runs in the last 7 days to reduce resource usage.",              value: false },
+        { type: "toggle",  id: "scheduled-runs",   label: "Allow scheduled runs",                   description: "Enable cron-triggered worker runs in addition to on-demand invocations.",               value: true  },
+        { type: "toggle",  id: "governance-bind",  label: "Require governance binding",             description: "Workers must be bound to a Governance Studio domain before they can be deployed.",      value: false },
+      ],
+      policies: [
+        { type: "stepper", id: "run-timeout",      label: "Max run timeout (minutes)",     description: "Workers that exceed this time are automatically terminated and logged as failed.",           value: 30, min: 1, max: 240 },
+        { type: "stepper", id: "max-concurrent",   label: "Max concurrent runs per worker", description: "Limit the number of simultaneous invocations for a single worker.",                         value: 5, min: 1, max: 50 },
+        { type: "toggle",  id: "retry-on-fail",    label: "Auto-retry on failure",          description: "Automatically retry a failed run once before marking it as a hard failure.",                value: true  },
+        { type: "stepper", id: "hitl-timeout",     label: "HITL decision timeout (hours)",  description: "If a human review request is not resolved within this period, the run is escalated.",       value: 24, min: 1, max: 168 },
+      ],
+      compliance: {
+        items: [
+          { type: "toggle",  id: "audit-runs",     label: "Audit all worker runs",           description: "Log inputs, outputs, and token usage for every worker invocation.",                       value: true  },
+          { type: "toggle",  id: "pii-masking",    label: "PII input masking",               description: "Automatically detect and redact PII from worker inputs before logging.",                  value: false },
+          { type: "select",  id: "data-residency", label: "Data residency enforcement",      description: "Restrict worker run data to the selected region for compliance purposes.",                 value: "US East", options: ["US East", "US West", "EU (Frankfurt)", "AP (Singapore)", "No restriction"] },
+          { type: "toggle",  id: "pii-output",     label: "Scan outputs for PII",            description: "Flag and quarantine worker outputs containing detected PII before delivery.",              value: false },
+        ],
+        exportLabel: "Export compliance report",
+      },
+    },
   },
 ]
 
@@ -781,7 +797,21 @@ function StudiosListScreen({
       sidebarItems={SIDEBAR}
       activeSidebarId="studios"
       onSidebarItemClick={onNavigate}
-      header={(isScrolled) => (
+      header={(isScrolled) => detailView ? (
+        <Header
+          size={isScrolled ? "compress" : "size-m"}
+          title={detailView.name}
+          description="Studios"
+          onBack={() => setDetailView(null)}
+          secondaryAction={{ label: "Configure", icon: Icons.Settings }}
+          primaryAction={{
+            label: detailView.status === "active" ? "Disable studio" : "Enable studio",
+            onClick: () => toggleStatus(detailView.id),
+            // Disabling is not the action the page is for; enabling is.
+            priority: detailView.status === "active" ? "secondary" : "primary",
+          }}
+        />
+      ) : (
         <Header
           size={isScrolled ? "compress" : "size-l"}
           title="Studios"

@@ -1,6 +1,7 @@
 import { type LucideIcon, Inbox } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { CardContainer } from "@/components/ui/card-container"
 
 /**
  * EmptyState — AIMS OS Design System
@@ -8,6 +9,12 @@ import { Button } from "@/components/ui/button"
  *
  * Displayed when a section, list, table or view has no content.
  * Anatomy: [Icon Highlight] [Title] [Description] [CTA buttons]
+ *
+ * Sits inside a CardContainer variant="dashed" — confirmed by Michael
+ * (2026-09-02). The dashed border is what makes an empty region read as "a
+ * place where content goes" rather than as blank space, and it keeps every
+ * empty state in the product looking the same. `bare` opts out for the rare
+ * case where the caller already provides its own container.
  *
  * Tokens used (DS variables — no custom aliases):
  *   --card-primary-bg → Surface/Primary/More Subtle (light: #f6f9ff · dark: rgba(43,127,255,0.08))
@@ -21,6 +28,7 @@ import { Button } from "@/components/ui/button"
  *   Icon: 24×24px
  *   Container radius: Radius-L = 16px
  *   Default padding: 64px top/bottom · 24px sides
+ *   compact:         20px top/bottom · 24px sides — for fixed-height containers
  */
 
 export type EmptyStateProps = {
@@ -32,6 +40,12 @@ export type EmptyStateProps = {
   onCta?:        () => void
   cta2Label?:    string
   onCta2?:       () => void
+  /** Skip the dashed CardContainer — only when the caller already supplies one. */
+  bare?:         boolean
+  /** Tightens the vertical padding from 64px to 20px and the internal gap from
+   *  24 to 12. For an empty state inside a fixed-height container — a widget
+   *  slot, a small panel — where the default clips its own CTA. */
+  compact?:      boolean
   className?:    string
 }
 
@@ -44,15 +58,19 @@ export function EmptyState({
   onCta,
   cta2Label,
   onCta2,
+  bare = false,
+  compact = false,
   className,
 }: EmptyStateProps) {
-  return (
+  const body = (
     <div
       role="status"
       aria-live="polite"
       className={cn(
-        "flex flex-col items-center justify-center gap-[24px] text-center w-full py-[64px] px-[24px] rounded-[16px]",
-        className
+          "flex flex-col items-center justify-center text-center w-full px-[24px]",
+          compact ? "gap-[12px] py-[20px]" : "gap-[24px] py-[64px]",
+        bare && "rounded-[16px]",
+        bare && className
       )}
     >
       {/* Content: icon highlight + title + description */}
@@ -104,5 +122,13 @@ export function EmptyState({
         </div>
       )}
     </div>
+  )
+
+  if (bare) return body
+
+  return (
+    <CardContainer variant="dashed" size="default" className={cn("!p-0", className)}>
+      {body}
+    </CardContainer>
   )
 }

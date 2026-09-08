@@ -2,9 +2,8 @@ import { useState, useMemo } from "react"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header }       from "@/components/ui/header"
-import { Button }       from "@/components/ui/button"
 import { Input }        from "@/components/ui/input"
-import { SwitchTab }    from "@/components/ui/switch-tab"
+import { Chip }         from "@/components/ui/chip"
 import type { SidebarItem } from "@/components/ui/sidebar"
 
 const SIDEBAR: SidebarItem[] = [
@@ -334,32 +333,29 @@ export function WorkflowsListScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Workflows"
           description="Governed automated workflows · Helix Agentic Studio"
-          primaryAction={
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => { window.location.href = "?proto=proto-chat-workflow-config" }}
-            >
-              <Icons.Plus size={14} style={{ marginRight: 4 }} />
-              New workflow
-            </Button>
-          }
+          primaryAction={{ label: "New workflow", icon: Icons.Plus, onClick: () => { window.location.href = "?proto=proto-chat-workflow-config" } }}
         />
       )}
     >
       {/* Filter bar */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
-        <SwitchTab
-          items={[
+        <div style={{ display: "flex", gap: 6 }}>
+          {([
             { id: "all",    label: `All (${counts.all})`       },
             { id: "active", label: `Active (${counts.active})` },
             { id: "draft",  label: `Draft (${counts.draft})`   },
             { id: "paused", label: `Paused (${counts.paused})` },
-          ]}
-          value={statusFilter}
-          onChange={setStatusFilter}
-          size="s"
-        />
+          ] as const).map(f => (
+            <Chip
+              key={f.id}
+              size="s"
+              variant={statusFilter === f.id ? "primary" : "secondary"}
+              onClick={() => setStatusFilter(f.id)}
+            >
+              {f.label}
+            </Chip>
+          ))}
+        </div>
         <div style={{ marginLeft: "auto", width: 240 }}>
           <Input
             value={query}

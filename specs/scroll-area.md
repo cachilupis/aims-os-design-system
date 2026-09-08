@@ -34,7 +34,7 @@ Border width: `4px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Thumb | Surface/Neutral/Emphasis |  | #d9d9d9 | rgba(255,255,255,0.20) |
+| Thumb | --field-scrollbar-thumb |  | #d9d9d9 | rgba(255,255,255,0.20) |
 
 ### Thumb · Thumb hover
 
@@ -42,7 +42,7 @@ Border width: `4px`
 
 | Role | Token / Variable | Figma variable | Light | Dark |
 | --- | --- | --- | --- | --- |
-| Thumb | Surface/Neutral/Focus |  | #bababa | rgba(255,255,255,0.32) |
+| Thumb | --scrollbar-thumb-hover |  | #bababa | rgba(255,255,255,0.32) |
 
 ---
 

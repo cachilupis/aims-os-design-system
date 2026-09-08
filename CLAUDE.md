@@ -28,6 +28,21 @@ This applies everywhere a new file gets created — not just `src/screens/` (see
 
 If you ever find a component in `ui/` or `layouts/` with zero imports anywhere in the repo, that's a bug from a prior session — flag it for removal, don't leave it sitting.
 
+## Breaking changes to a DS component — no deprecation period
+
+While the DS has no external consumers, a breaking change to anything in `src/components/ui/` is applied **outright**: delete the old prop or export, and migrate every call site **in the same PR**. No compatibility shims, no props kept alive as deprecated, no two shapes for the same thing.
+
+The reason is arithmetic, not taste — a component here has one or two consumers and zero real users, so a compatibility layer costs maintenance and buys nobody anything. It also means `tsc` is the migration checklist: if the build is green, there are no stragglers.
+
+Consequences, all of them non-optional in the same PR:
+- Update the component's `[COMPONENT]_SPEC` in `App.tsx` — a spec documenting a prop that no longer exists is the same defect as stale code.
+- Update whatever CLAUDE.md says about it. This file instructing an API that was removed is worse than saying nothing.
+- Say plainly in the PR description that the change is breaking, and which call sites moved.
+
+This applies to PM prototypes in `src/screens/` too: normally they belong to their PM and aren't refactored unasked, but a screen that no longer compiles isn't a refactor — it's the other half of your own change, and it ships with it.
+
+When the DS does get external consumers, this policy is the first thing to revisit.
+
 ## Syncing a DS component with Figma (new component, new variant, new tokens)
 
 **Any time you're asked to add a component, add/update a variant, or bring a component's colors in line with the Figma DS file (`v6rmYKA2zmyXWOahlxLOeI`) — use the `/aims-ds-component [component] [Figma node ID]` skill (`.claude/commands/aims-ds-component.md`).** This applies even when the user doesn't type the slash command literally — phrases like "update the Chip with the new colors from Figma," "add the Error/Alert/Success variants," or "sync this component" all mean: follow that skill's 6-phase workflow (extract real token values from Figma via the plugin API → map to CSS variable names → write both the `:root/.dark` and `.light` blocks in `src/index.css` → implement the component with `cva` → update the `[COMPONENT]_SPEC` in `App.tsx` → visually verify against a Figma screenshot).
@@ -60,17 +75,37 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** hardcode `#hex` / `rgba()` in `.tsx` — always `var(--token-name)`.
 - **NEVER** build a custom version of a DS component that exists in `src/components/ui/` — import it.
 - **NEVER** add `borderBottom` on a `<Tabs>` wrapper — the component manages its own active indicator.
+- **NEVER add anything visual to a `CardContainer` that is not part of the component** — no accent stripes, no coloured top borders, no dividers bolted on. If the card needs to signal something, that is a `Tag`, a `Chip` or a colour variant, not a decoration drawn on top. Use `variant="default"` unless the design genuinely calls for a colour, `size="sm"` for small items (entity rows, selectable cards, items with a CTA inside a SlideOut or Modal), and `variant="dashed"` for empty regions.
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
-- **NEVER** show both `backButton` and breadcrumbs — pick based on depth (L2 → backButton, L3+ → breadcrumbs).
+- **NEVER** combine `Header.breadcrumb` and `backButton` — from L2 it is the breadcrumb; the first crumb IS the way back. `backButton` is only for pages with no hierarchy to express (a creation wizard).
 - **NEVER** use `WidgetCanvasSection` or a hand-rolled grid for Overview tabs — always `WidgetCanvasView`.
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
 ### Buttons & overlays
-- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`. One named exception: `RecordHeader`'s AI agent trigger — see the Button hierarchy rules below.
+- **NEVER** use `variant="main"` inside a widget, card, SlideOut, or modal — use `primary`. One named exception: `EntityHeader`'s AI agent trigger — see the Button hierarchy rules below.
 - **NEVER** open a `ModalDialog` for non-blocking or non-destructive content — use `SlideOut`.
 - **NEVER** show a filter chip before the user clicks Apply.
+
+### Header slots — where a control goes
+
+`Header` has four slots on its right side, rendered in this order: `aux`, the
+overflow menu, `secondaryAction`, `primaryAction`. Picking the wrong one is how
+five screens ended up rendering a loose row underneath the Header instead.
+
+| What it is | Slot |
+|---|---|
+| The page's one main action | `primaryAction` — an action object, never a `Button` |
+| A second action, same nature | `secondaryAction` — same shape |
+| Destructive or secondary actions that should not be one click away | `overflowActions` — an array; Header renders and anchors the `•••` menu |
+| A control that is not an action: a notification bell, an inline rename, a saved-at indicator, a split button | `aux` — a `ReactNode`, because the DS has no component for these and pretending otherwise would be worse |
+
+`aux` is not a loophole for a CTA. If it is the page's main action it belongs in
+`primaryAction`, which exists precisely so no screen writes `variant="main"`.
+
+Anything destructive goes in `overflowActions`, not `primaryAction` — an
+overflow menu is the one place a Delete is not a stray click away.
 
 ### 3-dot context menu (kebab `•••`)
 - Global default actions: **Archive** + **Duplicate** — always in that order, always present unless the entity type explicitly excludes them.
@@ -113,34 +148,116 @@ actions={[
 actions={[{ icon: "Eye", onClick: () => {} }]}
 ```
 
-### Record Header — entity profile header (Employee/Customer/Client)
-Use `RecordHeader` (`src/components/ui/record-header.tsx`) atop any dashboard view that summarizes a **single** Employee, Customer, or Client record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; RecordHeader sits inside the content area, typically the Overview tab).
+### Entity Header — entity profile header
+Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its old name on purpose; the change spec forbids renaming it) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
 
-**Picking the variant** — by which fields the record actually has, not by guessing:
-- Has manager/department/access role → `employee`
-- Has MRR/renewal date/tier (existing paying account) → `customer`
-- Has deal stage/value/expected close date (still in the pipeline) → `client`
-- None of the 3 shapes fit → don't force it; flag `// DS-GAP: RecordHeader has no variant for this record shape`
+**There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
-**Identity chips are stable attributes ONLY — never a dynamic state or metric.** Role/department/location, tier/segment/industry, company/deal value/lead source — yes. Adoption level, deal stage, health score — no, those change and belong in Signal (if urgent) or Details (if just reference). A chip you'd need to update when something *happens* to the record is in the wrong slot.
+**There is no `entityType` prop either.** What kind of thing this is arrives as a **classification tag**, and only when the visual is an avatar — a highlight icon already names the type.
 
-**Don't invent chips, Details fields, or action labels per screen** — pull them from the component's own exports so every instance stays predictable:
-- `getRecordFields(variant, data)` → which fields become the 3 identity chips vs. the Details grid (see record-header.tsx or the Reference tab for the exact per-variant list)
-- `RECORD_HEADER_RECOMMENDED_ACTIONS[variant]` → `actions[0]` is the one contextual CTA, `actions[1+]` land in the "···" overflow. Not always 2 — e.g. `employee` is just "Message," since RecordHeader always sits on that record's own profile page, so anything the page already shows below it (Overview/Activity/Log tabs) — like "View profile" or "Log activity" — is dead weight, not a valid action. Genuinely tab-duplicate actions (e.g. "Log call," which belongs to Activity) go in the overflow, not the header's one CTA slot.
+| Prop | Where | Shape |
+|---|---|---|
+| `name` | Identity | `string` — required |
+| `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
+| `source?` | Identity | `string` — which system the record came from. **One item, never two** |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **capped at 6 + `+N`** |
+| `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
+| `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
+| `secondaryAction?` | Identity, right | `RecordAction` — **off by default** |
+| `assignedAgent` | Identity, right | `AssignedAgent \| null` — required as a prop. This is `Ask` |
+| `menuActions?` | Identity, right | `RecordAction[]` — destructive and secondary only |
+| `description?` | below Identity | `string` — durable context, **off unless passed** |
+| `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
+| `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
+| `state?` | whole card | `"default" \| "loading" \| "restricted"` — Figma's `Property 1` axis |
 
-**`assignedAgent` is required, not optional** (`{ id, name, onOpenChat }`) — AIMS OS is agent-first, every record has one. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`) — never omit it. This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
+**`state` is Figma's `Property 1` axis, and it is independent of the reflow** — an entity can be loading on a tablet, which is why it is one enum and not three booleans.
+- **`loading`** renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does). Pass it while the entity's data is in flight — **never render an empty header, and never withhold the card until data arrives.** Figma's reason: saying "nothing here" while data is in flight states something untrue.
+- **`restricted`** renders the card at 50% opacity plus a neutral `Restricted` tag beside the title, with the reason in a tooltip on hover and on focus. The viewer lacks entitlement to the values; the entity exists and is governed, so **this must never read as an error.** The tag goes beyond Figma's own variant on purpose — opacity alone cannot be told apart from loading or failed. It is a separate thing from `locked` ("you cannot edit" vs "you cannot see") and both can be true at once. `RecordField.state === "masked"` is the same idea applied to one field.
+- **`Minimum`, Figma's fourth named state, needs no value** — "only visual, title and state" is what you get by passing only those props.
 
-**Signal is required, not optional decoration** — every RecordHeader needs a `NextBestAction` (`{ label, severity, dueContext?, aiGenerated?, actionLabel?, onAction? }`) — but **required-as-a-prop does not mean "always urgent."** Most records, most of the time, have nothing pressing; forcing an alert-colored Signal onto a record that's genuinely fine is as wrong as omitting Signal would be. Pick `severity` from what's actually true about THIS record right now, never from a fixed per-variant template — see the Record Header catalog page's "All 3 variants — nothing urgent to surface" (Overview) and the Playground's "Needs attention / All good" toggle for the concrete range:
-- `success`/`alert`/`error` — a real urgency or risk state (task counts, renewal risk, SLA breach) or a genuinely good milestone worth flagging. This is the exception, not the default.
-- `informative`/`neutral` — a calm, non-urgent status line ("No pending approvals," "Early discovery, no next step due yet"). This is the common case — reach for it whenever nothing warrants an alert color.
-- `aiGenerated: true` swaps to the purple/Sparkles treatment **only** for a genuine probabilistic recommendation (confidence-scored, inferred) — never for a plain count or a real risk state. Urgency should always win visually over "an AI produced this."
-- `actionLabel` — set it when the NBA engine names ONE specific action ("Send proposal," "Schedule renewal call"); it renders as a real inline button, not just an implicit click-through. Leave it unset when there are several distinct items to review (e.g. "2 tasks pending approval") rather than one thing to do, AND leave it unset for a calm/neutral status — there's nothing to act on.
+**Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.
 
-**Signal click destination** — same framework as Entity click behavior above, applied to `signal.onAction`:
-- Multiple items need reviewing one by one before deciding (e.g. several pending approvals) → `SlideOut`, no `actionLabel` (nothing single to name)
-- A risk/health state to investigate, with evidence to show before recommending a step → `SlideOut` + `actionLabel` (both the click-through and the named button lead here)
-- One immediate, reversible-by-Cancel decision ("do this specific thing now?") → `ModalDialog` + `actionLabel` (the named button is the only entry point — no separate click-through chevron)
-- Never Full Navigation from a Signal click — RecordHeader already lives on that record's own page.
+**Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. Six tags plus six metadata items as individual stops would be twenty-five Tab presses to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
+
+**The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
+
+**`visual` — avatar for companies, people and groups. Icon for everything else** (objects, assets, processes, transactions, documents). Exactly one renders, never both, never neither.
+- **Initials are never derived from a code.** `RO-48291` has no initials, so a code-titled record can only be an icon.
+- A site inherits its parent company's brand — it does not get its own mark.
+- The icon's colour is assigned per entity **type** and stays the same everywhere in the product.
+- The rule is about the entity, not about whether the asset exists: a company with no logo still uses an avatar, falling back to initials.
+
+**Three tag roles, two colour rules.** The vocabulary belongs to the tenant; the colour belongs to the platform.
+
+| Role | What it is | How many | Colour |
+|---|---|---|---|
+| **State** | The entity's overall status — `stateBadge`, its own slot on the right | Exactly one | **Full semantic range.** `Active` → success, `Degraded` → alert, `Blocked`/`Suspended` → **error** |
+| **Signal** | Needs attention, bounded in time or condition | Zero or many | **`error` or `alert` only** — or neutral |
+| **Classification** | What kind of thing this is. **Only when the visual is an avatar** | Zero or one | **Never coloured.** The component strips any tone you pass |
+
+- **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
+- **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
+- **Beyond six, a `+N` chip.** Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
+- **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
+
+**The title yields last.** `flex: 0 1 auto` with `min-width: 0` and a 540px ceiling — it takes whatever the row has left after visual, source, collapsed tags and actions, and truncates only there. **A title cut short with empty space beside it is a bug, not a rule.** Order of yielding: tags collapse to `+N` first, then source, and only then does the title truncate. Nothing wraps and nothing abbreviates — an ellipsis tells the reader there is more, an abbreviation looks like the real value and misleads.
+
+**`Ask` is one word, and it is the primary CTA.** There is no second one — the labelled CTA that used to sit beside it is gone. It keeps the same Sparkle glyph as the Next Best Action card: **that sharing is deliberate** (Michael, 2026-09-07). Both are AI surfaces and the shared mark is what says so; one converses, the other transacts. Figma's prose argues they should differ, but Figma's own component instances share the glyph — do not "fix" this.
+
+**There is no disclosure and there are no zones.** `agenticSystem`, `intervention` and the chevron that revealed them are **gone** — none of them exists in the Figma Entity Header, and that content belongs to Overview widgets. This card is a fixed arrangement of slots. If you find yourself wanting to hide something behind a chevron here, it belongs on the page, not in the header.
+
+**`recordFields` is a flat array the caller builds — there is no per-entity field list inside the component.** Each `RecordField` is `{ label, icon, provenance, state, value, maskedValue?, hasDestination? }`:
+- `provenance` is mandatory on every field (`{ system, systemAbbr, modelVersion, syncedAgo }`) — a field with no visible origin is not renderable by design.
+- `state: "hydrated" | "masked"` is the same field in two entitlement states, not two field types. The component renders whichever it is given; it never resolves permissions itself.
+- `hasDestination: false` for a plain descriptive fact with nothing further to show (a pure date, a pure figure) — it renders as static text, no chevron.
+
+**`assignedAgent` is required as a prop, but the value may be `null`** — AIMS OS is agent-first, so every caller must decide; `null` renders the same button, disabled, with a Tooltip explaining why. Never a silently missing button. Renders as an always-present, most-prominent (icon-only, `variant="main"`) button using the Topbar's own `Sparkle` glyph (the single 4-point one, not the 3-star `Sparkles`). This is the one confirmed exception to "never `main` inside a card" (see Button hierarchy rules below) — don't extend that exception to any other button in this file.
+
+**The Next Best Action card is NOT part of this component.** It is `NextBestActionCard` from `@/components/experimental/next-best-action-card`, rendered as a **sibling below** the header in its own `CardContainer`. Two records, two containers. Passing recommendations into the header is the single most common mistake with this card, so the prop does not exist to be misused.
+
+**NO INSIGHT SECTION.** System interpretation reaches this header only as a tag with a tooltip — never a descriptive sentence, never a score with drivers, never an expandable analysis. Anything larger lives in the Overview, where the NBA widget carries recommendations and reasoning.
+
+**`NextBestActionCard` takes ONE recommendation, not an array.** The prop is `item?: NextBestAction` — `{ id, title, timeAgo?, description, onViewDetails, onAccept?, onDismiss? }`. Figma's rule 2 is *one at a time, it never stacks*: the engine has already prioritised, unified and discarded, so showing several is not trusting the engine. The prop is singular precisely so that rule is structural rather than a convention someone has to remember — an array plus a `.map` is how this card rendered two recommendations in one container for three separate passes.
+
+- **No `severity`, no `dueContext`, no `aiGenerated`, no `actionLabel`, no colours.** Timing and urgency live in the copy (`description`), never in a token — the Entity Header's state badge and signal tags are the platform's urgency channel, and a card that colours itself competes with them.
+- **Omit `item` (or pass `undefined`) for an entity with nothing to recommend.** Nothing renders at all — not an empty card, not a placeholder, not a "nothing to recommend" message. Never synthesize a filler recommendation.
+- **`onViewDetails` is the default path and always present.** The card cannot guarantee it showed everything, so the safe route is always the one that opens the record.
+- **`onAccept` is a reserved variant — leave it off.** Which actions qualify is not decided in Figma yet. When it is used: accepting **assigns to the agent, it never executes** (the agent executes, the human governs — never "Call now") and it still opens the detail first. There is no inline accept anywhere in this component.
+- **`onDismiss` resolves in place** — it hides the card for this session only, returns on reload, stores nothing and feeds nothing back to the engine. Wire it unless there is a reason not to; a card with no dismiss is one the user cannot get out of their way.
+
+Full rules, character limits and the four detail-panel action families: the Next Best Action Card spec (Entity Header page → Reference tab → *View DS spec*), sourced from Figma node `20206:316306`.
+
+**`source` answers one question: which system this record came from.** Workday, Salesforce, NetSuite, DMS, Helix Data Studio. **One item, never two** — a source is a single fact, and concatenating a second value breaks it: "Enterprise Account · Midwest Region" is a category next to a location, and neither is a source. A job title, a location, a region, a category or a parent company *describe* or *place* the entity; they do not say where the data came from, so they go in tags or `secondaryMetadata`, or nowhere. An entity created inside the platform itself reads "Helix Data Studio". An entity with no source **omits the prop** — the slot is removed, never filled with something else.
+
+**`description` is off unless you pass it, and it is the last resort.** Ask in this order and stop at the first yes:
+
+1. Needs attention right now → signal tag
+2. What kind of thing this is → classification tag
+3. The current status → `stateBadge`
+4. A fact someone might act on → `secondaryMetadata`
+5. Durable context none of the above captured → `description`
+
+The one case that justifies it is **an opaque code as the title**: `RO-48291` alone means nothing, so the description says what the record concerns. **Durability test** — if the sentence could change next week it is an activity note and belongs in the Overview, not here. It says what the entity IS, never what is happening to it. One line, truncated with a Tooltip, never wrapped.
+
+**`secondaryMetadata` caps at 6 — enforced by the component, not by trusting the caller.** Six is the maximum, not the goal: **aim for four.** Past six it stops being a row and becomes a section.
+- **Anything beyond six goes to the Overview, never to a `+N` chip.** An item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place.
+- **The icon never appears alone.** `EntityList` allows icon-only under space pressure; this header does not — it has the width, and a bare symbol forces the reader to interpret it.
+- **The tooltip is required and always shows** — on hover and on focus, even when the text is not truncated. It carries the field label plus context: `"Assigned agent · Manager Agent. Handling this account since Mar 3."`
+- **What qualifies:** something a person could act on, or something governance requires be visible — counts of Truth Plane facts and Canon Plane documents (counted *separately*: a document is not a fact, and TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits.
+- **What does not:** anything true of every entity of the same type — that is a label, not information — and anything describing a conversation rather than the entity.
+- **`secondaryMetadata` is not `recordFields`.** RECORD fields carry provenance and a masking state and are reached through the "About this record" trigger; secondary metadata is display-only and always visible. Both exist at once — never fold one into the other.
+
+**Never repeat a value across slots.** If it appears in `source`, it does not also appear in `description` or as a tag.
+
+**Fallback copy comes from `RECORD_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
+
+**Zone click destinations** — same framework as Entity click behavior above:
+- Several items to review one by one before deciding → `SlideOut`
+- A risk/health state to investigate, with evidence to show first → `SlideOut`
+- One immediate, reversible-by-Cancel decision → `ModalDialog`
+- Never Full Navigation from inside the card — EntityHeader already lives on that record's own page.
 
 ### Empty states
 **ALWAYS** use `EmptyState` from `src/components/ui/empty-state.tsx` when a view, section, or search has no content to display. **NEVER** hardcode a custom div, illustration, or message — custom empty states break visual consistency and are invisible to the DS.
@@ -176,7 +293,7 @@ Stack in this exact order:
 2. `Sidebar` — left nav (use `AppBackground` as page wrapper)
 3. Content area:
    - `Tabs` — "Where am I?" (e.g. All Workers / Teams)
-   - `SwitchTab` — "How am I viewing?" (e.g. List / Grid) — only when needed
+   - `SwitchTab` — secondary navigation, one level below Tabs — only when Tabs alone is not enough
    - `Filters` — "What do I see?" (always present when there's a filterable dataset)
    - `EntityList` inside `CardContainer` — one card per item, 12px gap
    - `Pagination` — only when `total_results > rows_per_page`
@@ -202,18 +319,18 @@ Every entity detail page follows this structure — tabs always in this order:
 3. **Logs** → always the `Table` component following the Logs Table pattern. (See PatternLogsPage.)
 
 Header rules on detail pages:
-- `backButton={true}` if L2 depth (arrived from a list). Breadcrumbs if L3+.
+- `breadcrumb` with parent + current page — a detail page is L2 or deeper. Never `backButton` alongside it.
 - Always show status `tag` — detail view = one entity, one state.
-- Primary action in `Header.primaryAction` (`variant="main"`).
+- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one.
 
 ```tsx
 // ✅ Standard detail page structure
 <Header
   title="Meridian"
   tag={<Tag variant="success" size="s">Active</Tag>}
-  backButton={true}
+  breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />}
   size={isScrolled ? "compress" : "size-l"}
-  primaryAction={<Button variant="main" size="sm">Edit</Button>}
+  primaryAction={{ label: "Edit", icon: Pencil }}
 />
 <Tabs items={[
   { id: "overview", label: "Overview" },   // always first
@@ -240,6 +357,8 @@ Three layers — always compose in this order:
 2. **All Filters button** → opens `FiltersSlideout`
 3. **Applied chips** (`Tag` or `Chip`) — appear below filters after Apply, show active state
 
+**The `Filters` bar owns its own menus.** Both the filter chips and the sort label render and position their dropdown themselves — pass `slots[].options` + `onSelect` for a chip, and `sortOptions` + `onSortSelect` + `sortDirection`/`onSortDirectionChange` for sort. **Never hand-roll a `Menu` + `dropdown-anchor` next to a `Filters` bar, and never fall back to a raw `<select>`.** The `onOpen` / `onSortClick` props remain only as the escape hatch for a genuinely custom menu.
+
 Rules:
 - Closing `FiltersSlideout` without Apply discards draft state; list does not change.
 - Apply → sync draft to applied → reset pagination to page 1 → close slideout.
@@ -248,35 +367,57 @@ Rules:
 ### Navigation depth (multiple layers)
 Maximum 2 navigation layers:
 - `Tabs` — primary navigation (Where am I?)
-- `SwitchTab` — secondary view toggle (How am I viewing?)
+- `SwitchTab` — secondary navigation, one level below Tabs
 - `Filters` — dataset control (What do I see?)
 
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
 24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
-### Back navigation and breadcrumbs — which to use
+### Navigation depth — the breadcrumb pattern
 
-The platform can have up to 5 levels of depth. Use back arrow vs. breadcrumbs based on depth level:
+**From L2 onwards, a page states where it sits with a breadcrumb inside the `Header`. Not a back arrow.**
 
-| Depth level | Pattern | When |
-|---|---|---|
-| Level 2 (one step below a list) | `backButton={true}` on `Header` | User is inside a single item detail — one tap gets them back |
-| Level 3+ (e.g. item → sub-section → detail) | Breadcrumb trail | User needs to see and jump to any ancestor level, not just "back one" |
+Confirmed by Michael (2026-09-02) after checking how Carbon and Atlassian handle it. Back and breadcrumb answer different questions — back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I") — and that distinction only earns its keep from L3, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place**: the first crumb IS the way back, so an arrow beside it is two affordances pointing at one target, in a 62px header.
 
-**Never show both** — if breadcrumbs are present, omit `backButton`. If it's L2, omit breadcrumbs.
-
-**Breadcrumb component status: DS-GAP** — not yet in `src/components/ui/`. When a screen requires L3+ navigation, add a `// DS-GAP: Breadcrumbs` comment and use a placeholder text trail until the component ships. Do NOT improvise a custom breadcrumb without flagging the gap.
+| Depth | Pattern |
+|---|---|
+| L1 (a list, a home) | No breadcrumb, no back. `Breadcrumb` renders nothing below `depth={2}` anyway |
+| **L2+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
 
 ```tsx
-// ✅ Level 2 — single item detail, use back button
-<Header title="Meridian" backButton={true} size={isScrolled ? "compress" : "size-l"} />
+import { Breadcrumb } from "@/components/ui/breadcrumb"
 
-// ✅ Level 3+ — nested detail, use breadcrumbs (component pending)
-// DS-GAP: Breadcrumbs — needed for L3+ navigation. Waiting on DS component.
-
-// ❌ Never both at once
-<Header title="Meridian" backButton={true} breadcrumbs={[...]} />
+<Header
+  size={isScrolled ? "compress" : "size-l"}
+  title="Meridian"
+  tag={<Tag variant="success" size="sm">Active</Tag>}
+  breadcrumb={
+    <Breadcrumb
+      depth={2}
+      items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]}
+      onNavigate={go}
+    />
+  }
+  primaryAction={{ label: "Run now", onClick: run }}
+/>
 ```
+
+`Breadcrumb` lives at `src/components/ui/breadcrumb.tsx` — **import it, never hand-roll one.** Ancestors carry `href`; the current page does not.
+
+**What happens on scroll.** The breadcrumb and the tag both survive compress, stacked above the title:
+
+```
+size-l    Workers › Meridian          ← breadcrumb
+          Meridian  [Active]          ← title + tag
+          Manages … (description)     ← hidden in compress
+
+compress  Workers › Meridian          ← still there
+          Meridian  [Active]          ← still there
+```
+
+Compress is **content-driven, not a fixed 60px** — about 48px normally, about 62px with a breadcrumb. That is deliberate: scrolling should never cost you your place in the hierarchy or the record's status. The 4px between the two rows is what keeps them reading as *path + page* instead of one wrapped title.
+
+**Never combine `breadcrumb` and `backButton`.** `backButton` remains for pages with no hierarchy to express — a creation wizard, a standalone flow — where there is a "back" but no "up".
 
 ### Overlays
 - **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
@@ -492,7 +633,7 @@ import { HighlightIcon }    from "@/components/ui/highlight-icon"
 // KpiContent helper — use for every KPI widget slot:
 function KpiContent({ value, feedback, iconName, iconVariant }) {
   return (
-    <div style={{ padding: "4px 16px 16px" }}>
+    <div>
       <div className="flex items-center justify-between">
         <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: "var(--color-text-title)" }}>{value}</span>
         <HighlightIcon size="lg" variant={iconVariant} iconName={iconName} />
@@ -512,7 +653,7 @@ function KpiContent({ value, feedback, iconName, iconVariant }) {
     {
       uid: "recent-activity", title: "Recent Activity", colSpan: 2, widthClass: "wide",
       content: (
-        <div style={{ padding: "0 16px 16px" }}>
+        <div>
           <Table columns={...} data={...} size="sm" />
         </div>
       ),
@@ -530,7 +671,8 @@ Rules:
 - `colSpan` drives the initial column span. `widthClass` defaults automatically from `colSpan` if omitted.
 - `content` is rendered INSIDE `WidgetFather`. Pass only the inner content — `WidgetFather` chrome (title, drag handle, resize handles) is added by `WidgetCanvasView`.
 - Do NOT wrap `content` in another `WidgetFather` — that would double the card shell.
-- KPI padding: `"4px 16px 16px"`. Table/feed padding: `"0 16px 16px"`.
+- **Do NOT add horizontal padding to widget `content`.** `WidgetFather` already insets its card by 24px; adding 16 here lands the content at 40 while the widget title stays at 24. The two halves each look fine alone, so the misalignment only shows with both on screen — which is how it survived until 2026-09-04. This guide used to prescribe `"4px 16px 16px"`, and that is where the double padding came from.
+- A little vertical breathing room is fine — a `gap` between rows, or `paddingBottom` on a dense list. Horizontal, never.
 - HighlightIcon variants: `informative` (blue), `success` (green), `neutral` (grey), `alert` (yellow), `error` (red).
 - Reactive values (counts, live rows) in `content` update automatically — the slot array is rebuilt on each render.
 
@@ -628,19 +770,28 @@ Rules:
 
 ## Dropdown menus (filter slots)
 
-Dropdowns must appear **centered below the clicked slot button**, not at the mouse position.
-Pattern:
+A dropdown's **left edge aligns with its trigger's left edge, 4px below** — never centred on the trigger, never at the mouse position. If the panel would run off the right of the viewport it **flips**: right edges align instead. The flip is automatic, measured before paint, not a per-screen decision.
+
+Do not reimplement this. `src/lib/dropdown-anchor.ts` is the one implementation:
+
 ```tsx
-onClickCapture={(e: React.MouseEvent) => {
-  const btn = (e.target as HTMLElement).closest('button')
-  const left = btn
-    ? btn.getBoundingClientRect().left + btn.getBoundingClientRect().width / 2
-    : e.clientX
-  setAnchor({ left, top: (e.currentTarget as HTMLElement).getBoundingClientRect().bottom })
-}}
-// Dropdown div:
-style={{ position: "fixed", left: anchor.left, top: anchor.top + 4, transform: "translateX(-50%)", zIndex: 10001 }}
+import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
+
+const [anchor, setAnchor] = useState<DropdownAnchor | null>(null)
+const dropdown = useDropdownPosition(anchor)
+
+<div onClickCapture={(e) => setAnchor(anchorFromEvent(e))}>
+  <Filters … />
+</div>
+
+{anchor && (
+  <div ref={dropdown.ref} style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}>
+    <Menu>…</Menu>
+  </div>
+)}
 ```
+
+Applies to every dropdown — filter slots, `Select` panels, kebab menus. **Tooltips and the Slider thumb are the exception**: those centre on their anchor, which is correct for them.
 
 ---
 
@@ -667,12 +818,12 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 
 ## Button hierarchy rules
 
-- `variant="main"` — **header-level CTA only** (the one action in the `Header` component's `primaryAction` prop). Maximum 1 per screen. Examples: "Export", "New Worker", "Create".
+- `variant="main"` — **header-level CTA only**, and screens no longer write it: `Header` applies it itself from `primaryAction`, which takes an action object (`{ label, icon?, onClick?, disabled?, priority? }`), never a `Button`. Maximum 1 per screen. If you find yourself typing `variant="main"` in a screen file, the action is in the wrong place.
 - `variant="primary"` — content-area actions inside cards, widgets, SlideOuts, or table rows. Use when an action is the clear recommended next step within a contained context.
 - **Never repeat `main` more than once per view.** If a widget or card needs a call-to-action, use `primary`, not `main`.
 - **No more than 2 `primary` buttons visible at the same time** in a single scrolled viewport. If more actions compete, demote lower-priority ones to `secondary`.
 - Action order is always: `main` (header) → `primary` → `secondary` → `tertiary`.
-- **One confirmed exception:** `RecordHeader`'s AI agent trigger uses `variant="main"` even though it renders inside a `CardContainer`. Confirmed directly by Michael — the agent button is the platform's one persistent, always-present entry point (same role as Topbar's own IA-icon), not a regular card CTA, so it earns the top-of-hierarchy treatment. Do not treat this as precedent for any other card/widget/SlideOut button — it's a named, single-purpose exception, not a loophole.
+- **One confirmed exception:** `EntityHeader`'s AI agent trigger uses `variant="main"` even though it renders inside a `CardContainer`. Confirmed directly by Michael — the agent button is the platform's one persistent, always-present entry point (same role as Topbar's own IA-icon), not a regular card CTA, so it earns the top-of-hierarchy treatment. Do not treat this as precedent for any other card/widget/SlideOut button — it's a named, single-purpose exception, not a loophole.
 
 ---
 
@@ -683,7 +834,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Rendering dropdowns inside `overflow: hidden` parents — use fixed positioning to escape.
 - Creating a new button/input/card component when `src/components/ui/` has one.
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
-- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `RecordHeader`'s AI agent trigger — see Button hierarchy rules).
+- Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `EntityHeader`'s AI agent trigger — see Button hierarchy rules).
 - Adding a filter chip before Apply is clicked.
 - Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
 - Showing a loading indicator for operations under 300ms.
@@ -726,7 +877,7 @@ export default function MyScreen() {
           size={isScrolled ? "compress" : "size-l"}
           title="Page Title"
           description="Page description."
-          primaryAction={<Button variant="main" size="sm">New Item</Button>}
+          primaryAction={{ label: "New Item", icon: Plus }}
         />
       )}
       pagination={

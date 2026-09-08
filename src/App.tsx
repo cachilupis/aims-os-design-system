@@ -7,7 +7,13 @@ import PMLexHTLWorkQueueScreen    from "./screens/pm-lex-htl-work-queue"
 import PMHomeCanvasScreen         from "./screens/pm-home-canvas"
 import PMMichaelAttentionRoomScreen from "./screens/pm-michael-attention-room"
 import PMMichaelLoginScreen         from "./screens/pm-michael-login"
-import PMThomasUniversalProfileScreen from "./screens/pm-thomas-universal-profile"
+import PMThomasUniversalProfileScreen  from "./screens/pm-thomas-universal-profile"
+import PMThomasDashboardListScreen     from "./screens/pm-thomas-dashboard-list"
+import PMThomasWidgetLibraryScreen     from "./screens/pm-thomas-widget-library"
+import PMThomasWidgetMarketplaceScreen from "./screens/pm-thomas-widget-marketplace"
+import PMThomasNewDashboardScreen      from "./screens/pm-thomas-new-dashboard"
+import PMThomasWidgetBuilderScreen     from "./screens/pm-thomas-widget-builder"
+import PMThomasComposableDashboardsScreen from "./screens/pm-thomas-composable-dashboards"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, type AvatarSizeKey, type AvatarColorKey } from "@/components/ui/avatar"
@@ -26,6 +32,7 @@ import { HighlightCard, type HighlightCardStyle, type HighlightCardFeedback } fr
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import { Select, type SelectState } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Radio, RadioGroup } from "@/components/ui/radio"
 import { Toggle } from "@/components/ui/toggle"
 import { AppBackground, type AppBgVariant } from "@/components/ui/app-background"
 import {
@@ -44,11 +51,14 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { RecordHeader, RECORD_HEADER_RECOMMENDED_ACTIONS, type RecordHeaderVariant, type EmployeeRecord, type CustomerRecord, type ClientRecord, type NextBestAction } from "@/components/ui/record-header"
+import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
+import { NextBestActionCard, type NextBestAction } from "@/components/ui/next-best-action-card"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
 import { FiltersSlideout } from "@/components/ui/filters-slideout"
 import { AlertBanner, type AlertBannerState } from "@/components/ui/alert-banner"
+import { ToastProvider, useToast } from "@/components/ui/toast"
+import { DsHealthPage } from "@/components/ds-health-page"
 import { EmptyState } from "@/components/ui/empty-state"
 import { Tabs, type TabItem } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -63,8 +73,25 @@ import { Spinner, type SpinnerStyle, type SpinnerSize } from "@/components/ui/sp
 import { Stepper, type StepItem, type StepState } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { WidgetFather, type WidgetWidthClass } from "@/components/ui/widget-father"
-import { WidgetCanvasView as CanvasLayout, useWidgetSize } from "@/components/layouts/widget-canvas-view"
+import { WidgetCanvasView as CanvasLayout } from "@/components/layouts/widget-canvas-view"
 import { Breadcrumb, type BreadcrumbItem } from "@/components/ui/breadcrumb"
+// The catalog's live widget previews, moved to their own module so the Widget
+// Builder renders the same widgets from the same code.
+import {
+  ActNowSummaryWidgetContent,
+  ActivityWidgetContent,
+  ChartsWidgetContent,
+  FolderNavWidgetContent,
+  KpiWidgetContent,
+  MyTeamWidgetContent,
+  MyWorkWidgetContent,
+  NotesWidgetContent,
+  PendingOutputsWidgetContent,
+  StatusWarningWidgetContent,
+  TimelineWidgetContent,
+  WidgetContent,
+  WorkflowsWidgetContent,
+} from "@/components/experimental/widget-content"
 import { ProcessItem, ProcessList, type ProcessStatus } from "@/components/ui/process-item"
 import { Slider } from "@/components/ui/slider"
 import { TagInput } from "@/components/ui/tag-input"
@@ -85,8 +112,8 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toggle" | "tooltip" | "topbar" | "typography" | null
+type SectionId = "home" | "ds-health" | "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -135,30 +162,59 @@ const ExternalIcon = () => (
 )
 
 // ── Prototype registry ────────────────────────────────────────────────────
+// The feature area a prototype belongs to. Declared here and nowhere else —
+// the gallery's Category filter reads this list, so renaming or regrouping an
+// area is an edit here plus the entries that named it, and tsc finds every one.
+// This is the tag shown on each gallery card; it used to be derived by splitting
+// the title on its em-dash, which produced a near-unique label per screen —
+// something that looked like a category but could not group anything.
+const PROTOTYPE_CATEGORIES = [
+  "Dashboards & Widgets",
+  "Workflows & Agents",
+  "Admin & Access",
+  "Channels",
+  "Work Queues",
+  "Records",
+] as const
+type PrototypeCategory = (typeof PROTOTYPE_CATEGORIES)[number]
+
 // PM prototypes are registered here by Claude. One entry per screen.
 // The screen component lives in src/screens/ — only this entry touches App.tsx.
 //
 // To add a prototype:
 //   1. Import the component:  import { MyScreen } from "./screens/my-screen"
-//   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", component: MyScreen }
+//   2. Add an entry below:    { id: "proto-my-screen", label: "My Screen", description: "...", author: "PM Name", category: "Workflows & Agents", addedOn: "YYYY-MM-DD", component: MyScreen }
+//      `category` must be one of PROTOTYPE_CATEGORIES above — pick the closest
+//      existing area rather than inventing a seventh for a single screen.
 //
-const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; component: React.FC }[] = [
-  { id: "proto-michael-test-v1",       label: "AI Workers — Test v1",          description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", component: PMMichaelTestV1Screen },
-  { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", component: PMLexHTLWorkQueueScreen },
-  { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", component: PMMichaelAttentionRoomScreen },
-  { id: "proto-michael-login",         label: "Login View",                    description: "Sign-in screen — email/password with inline validation and show/hide toggle, Google one-click sign-in, Remember me, Forgot password SlideOut, and a signed-in confirmation state for both auth paths", author: "Michael", component: PMMichaelLoginScreen },
-  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas", description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", component: PMThomasUniversalProfileScreen },
-  { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", component: ChatWorkflowConfigScreen },
-  { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", component: WorkflowsListScreen },
-  { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", component: PeopleAccessMembersScreen },
-  { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", component: AdminConsoleScreen },
-  { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", component: PMChatWidgetScreen },
-  { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", component: VoiceChannelScreen },
+// `addedOn` is the date the screen was created — it drives "Newest first" in
+// the gallery, which is the default sort. Array order does not: the gallery
+// sorts, so a new entry can go anywhere in the array.
+//
+const PROTOTYPE_PAGES: { id: string; label: string; description: string; author: string; category: PrototypeCategory; addedOn: string; component: React.FC }[] = [
+  { id: "proto-michael-test-v1",       label: "AI Workers — Test v1",          description: "Initial DS prototype test: Status/Category filters, Publish/Edit actions, Eye → SlideOut (Overview · Users · Logs), context menu, detail view, pagination", author: "Michael", category: "Workflows & Agents", addedOn: "2026-07-15", component: PMMichaelTestV1Screen },
+  { id: "proto-lex-htl-work-queue",    label: "HTL Work Queue",                description: "Human Touch Layer Work Queue — Act Now / Critical / Action / Heads-up severity tiers, multi-studio filter, event detail SlideOut with blast radius, Studio Health overview, activity log", author: "Lex", category: "Work Queues", addedOn: "2026-07-15", component: PMLexHTLWorkQueueScreen },
+  { id: "proto-michael-attention-room",label: "Attention Room",                description: "Master-detail attention queue — Overdue/Today/Next groups, Approvals/Work/Tasks/Messages filter, search, EntityList queue (left) + decision detail panel (right) with blast radius, comment composer and Approve/Decline actions", author: "Michael", category: "Work Queues", addedOn: "2026-07-28", component: PMMichaelAttentionRoomScreen },
+  { id: "proto-michael-login",         label: "Login View",                    description: "Sign-in screen — email/password with inline validation and show/hide toggle, Google one-click sign-in, Remember me, Forgot password SlideOut, and a signed-in confirmation state for both auth paths", author: "Michael", category: "Admin & Access", addedOn: "2026-08-14", component: PMMichaelLoginScreen },
+  { id: "proto-thomas-composable-dashboards", label: "Composable Dashboards — Thomas", description: "Unified studio combining Dashboard List, Widget Library, Marketplace, New Dashboard wizard, and Widget Builder into one screen with internal routing. Sidebar toggles between Dashboards and Widgets views; overlays replace content for wizard and builder flows.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-07", component: PMThomasComposableDashboardsScreen },
+  { id: "proto-thomas-dashboard-list",     label: "Dashboard List — Thomas",      description: "Dashboard catalog — filterable by status, entity type, and owner; staggered card grid with per-card ⋯ menu (Open/Edit/Duplicate/Delete); detail SlideOut; Delete confirm modal; Duplicate with rename; load-more pagination", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasDashboardListScreen },
+  { id: "proto-thomas-widget-library",    label: "Widget Library — Thomas",      description: "Widget catalog — filterable by category, profile type, skeleton type, freshness; grid with WidgetGlyph + mini preview + freshness badge + health badge; detail SlideOut; Delete modal with cascade warning", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetLibraryScreen },
+  { id: "proto-thomas-widget-marketplace",label: "Widget Marketplace — Thomas",  description: "Two-panel marketplace: left CategoryRail with business-function color dots, right FilterToolbar + widget card grid with category stripe, MiniPreview, View/Use actions, detail SlideOut, and Add-to-dashboard modal.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetMarketplaceScreen },
+  { id: "proto-thomas-new-dashboard",     label: "New Dashboard — Thomas",       description: "Two-step wizard for creating a dashboard: Step 0 placement form (kind, profile type, surface, audience, name) + destination summary; Step 1 start-point picker (blank canvas or pre-built template). DS-GAP components: StepIndicator, SectionChip, OptionCard, FormSection, FieldLabel.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasNewDashboardScreen },
+  { id: "proto-thomas-widget-builder",    label: "Widget Builder — Thomas",      description: "Two-step builder (Data → Widget) with a sticky live preview that is a real widget — same WidgetFather shell, title style and menu the dashboard draws. Data step: entity and dataset cards in two columns, repeatable calculations, group-by and filters. Widget step: 22 authorable types from the shared widget catalog, each previewing with real content rather than a generic shape. There is no appearance step — a widget looks how the design system says it looks. DS-GAP: StepLabel, EntitySourceCard, DatasetCard, TypeTile, WidgetPreviewPanel.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetBuilderScreen },
+  { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas",   description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", category: "Records", addedOn: "2026-08-14", component: PMThomasUniversalProfileScreen },
+  { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", category: "Workflows & Agents", addedOn: "2026-08-27", component: ChatWorkflowConfigScreen },
+  { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", category: "Workflows & Agents", addedOn: "2026-08-27", component: WorkflowsListScreen },
+  { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", category: "Admin & Access", addedOn: "2026-08-27", component: PeopleAccessMembersScreen },
+  { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", category: "Admin & Access", addedOn: "2026-08-27", component: AdminConsoleScreen },
+  { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", category: "Channels", addedOn: "2026-08-31", component: PMChatWidgetScreen },
+  { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", category: "Channels", addedOn: "2026-08-31", component: VoiceChannelScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
 
 const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: string }[] = [
+  { id: "ds-health",       label: "DS Health",          group: "Overview",    description: "Consistency inventory — every place a screen rebuilds something the DS already covers, and what we decided about each one. Generated from the same audit that runs in CI and before every push." },
   { id: "home",            label: "DS Strategy",        group: "Overview",    description: "Alignment doc: why a component repository is the foundation for consistent AI prototypes" },
   // Components — alphabetical by label
   // Components — keep sorted A→Z by label so new entries stay predictable in the sidebar
@@ -171,6 +227,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 11 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
+  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "header",          label: "Header",            group: "Components",  description: "Page header · title + description + status tag + CTAs + optional back button · 3 sizes: Size L (24px), Size M (18px), Compress (scroll state)" },
@@ -180,11 +237,13 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "input",           label: "Input",             group: "Components",  description: "Single-line text field · 2 sizes · 5 validation states · icon slots" },
   { id: "menu-item",       label: "Menu / Dropdown",   group: "Components",  description: "Dropdown list panel · 2 sizes · 4 states · leading icon, subtext, dividers, section headers" },
   { id: "modal-dialog",    label: "Modal Dialog",      group: "Components",  description: "2 variants: Confirmation (centered, max 900px) and Content (left-aligned, max 900px). Icon, title, description, slot, informative card, CTA pair." },
+  { id: "next-best-action", label: "Next Best Action Card", group: "Components",  description: "The proactive AI recommendation. Its own Card Container directly BELOW the Entity Header, never inside it — the header identifies the entity, this proposes what to do about it. ONE AT A TIME, never stacked, and no recommendation means no card at all rather than an empty state. The title is the action, not the engine's name; it always declares when and why. Accept assigns the work to the agent and still opens the detail first — there is no inline accept." },
   { id: "notification-center", label: "Notification Center", group: "Components", description: "420px floating panel · header with count + Mark all read + overflow · filter chips · date-grouped Notification Item list · footer View all · 5 states: Default, Empty, Loading, Error, Offline" },
   { id: "notification-item",   label: "Notification Item",   group: "Components", description: "Single-row notification · lead icon + title/timestamp + description + tags/actions · unread indicator dot · 5 states × Read/Unread: Default, Hover, Pressed, Focus, Disabled" },
   { id: "pagination",      label: "Pagination",        group: "Components",  description: "Bottom strip for paged datasets · rows-per-page selector (5/25/50/100/200) · range text (1–25 of 120) · prev/next nav · auto-hides when all results fit on one page" },
+  { id: "process-item",    label: "Process Item",      group: "Components",  description: "One step of a running process, with its state · 5 statuses (done/loading/error/pending/warning) · number-badge and expand variants · ProcessList wrapper adds the title, View all CTA, and empty/loading states" },
   { id: "progress-bar",    label: "Progress Bar",      group: "Components",  description: "Linear determinate loading bar · 7 semantic styles · S (4px) / M (8px) · ARIA progressbar · animated fill · --pb-* tokens" },
-  { id: "record-header",   label: "Record Header",     group: "Components",  description: "Entity profile header for Employee/Customer/Client records · avatar + name + context chips + up to 3 actions · Next Best Action signal bar · expandable Details grid · one shared layout across all 3 variants" },
+  { id: "radio",           label: "Radio",             group: "Components",  description: "Single choice from a mutually exclusive set · 3 sizes (S/M/L) · unselect / select / disabled · RadioGroup owns the fieldset, legend and arrow-key navigation — a radio is never used alone" },
   { id: "scroll-area",     label: "Scroll Area",       group: "Components",  description: "Scrollable container · DS-branded 4px scrollbar (Size S) · thumb hidden until hover · vertical / horizontal / both axes · 8px gap from content (Spacing/2x)" },
   { id: "select",          label: "Select",            group: "Components",  description: "Dropdown trigger field · 4 states · label, supporting text, leading icon · opens a Menu panel" },
   { id: "side-panel",      label: "Side Panel",        group: "Components",  description: "Inline layout panel · not an overlay · shifts main content when open · right or left · 350px default, 450px + dynamic half-screen snap points · header + scrollable body + optional footer" },
@@ -199,6 +258,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "tabs",            label: "Tabs",              group: "Components",  description: "Horizontal tab navigation · inside card or standalone · active indicator · icon · 2 sizes (M/S) · disabled state · use for in-context view switching, not page navigation" },
   { id: "tag",             label: "Tag",               group: "Components",  description: "11 semantic variants · 2 sizes · status, category and label badges" },
   { id: "textarea",        label: "Text Description",  group: "Components",  description: "Multi-line field · Expand Content · ScrollBar · Feedback Characters" },
+  { id: "toast",           label: "Toast",             group: "Components",  description: "Transient confirmation feedback · 3 states (Success · Info · Error) · portals bottom-right · auto-dismiss 3500ms · imperative useToast() API · z-index 10050." },
   { id: "toggle",          label: "Toggle",            group: "Components",  description: "On/Off switch · 3 sizes · sliding thumb animation · optional label and description" },
   { id: "tooltip",         label: "Tooltip",           group: "Components",  description: "Informational overlay on hover/focus · always dark · plain or arrow variant · 4 sides · max 300px width · 2 lines max" },
   { id: "topbar",          label: "Topbar",            group: "Components",  description: "App header · global navigation bar · 2 variants (Default/Tablet) · workspace selector, search, action buttons, profile avatar" },
@@ -559,7 +619,7 @@ const CARD_SPEC = {
   name: "Card Container",
   figmaNodeId: "5388:23473",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5388-23473",
-  description: "Semantic container for grouping related content. 11 color styles communicate intent at a glance — neutral, primary, status, or categorical. Use S for compact metadata, M for general content, L for featured sections.",
+  description: "Semantic container for grouping related content — the DS default for any bordered, filled box. If a screen needs a container with a border and a background, this is it, never a hand-rolled div. 11 colour styles communicate intent at a glance, but Default is the right answer in the overwhelming majority of cases; reach for a colour only when the design genuinely calls for one. S for compact items — entity rows, selectable cards, and items with a CTA inside a SlideOut or Modal. M for general content, L for featured sections. Nothing visual that is not part of the component belongs inside it: no accent stripes, no coloured top borders, no dividers bolted on. EmptyState renders inside the dashed variant.",
   properties: [
     { name: "Style",    type: "Variant",  values: ["Default","White Opacity","Primary","Green","Reed","Orange","Yellow","Purple","Light Blue","Lime Green","Dashed"], default: "Default" },
     { name: "Size",     type: "Variant",  values: ["S","M","L"], default: "M" },
@@ -1013,7 +1073,7 @@ const MENU_SPEC = {
   name: "Menu / Dropdown",
   figmaNodeId: "4762:7152",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4762-7152",
-  description: "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers.",
+  description: "Floating list of selectable options. Used inside dropdowns, context menus, command palettes, and select fields. Supports icons, subtext, dividers, and section headers. Placement is not the caller's decision: the panel's left edge aligns with its trigger's left edge, 4px below, flipping to right-aligned only when it would cross the viewport edge — use src/lib/dropdown-anchor.ts, never centre it on the trigger and never open it away from the element that was clicked. In the 3-dot kebab menu, always the icon + text variant at size S.",
   properties: [
     { name: "State",          type: "Variant",  values: ["Default","Hover","Focus","Disabled","Skeleton"], default: "Default" },
     { name: "Size",           type: "Variant",  values: ["M","S"],                                         default: "M", note: "M/S: height auto (py-8px) · 40px single-line · 56px with subtext" },
@@ -1358,6 +1418,52 @@ const CHIP_SPEC = {
   ],
 }
 
+const RADIO_SPEC = {
+  name: "Radio",
+  figmaNodeId: "5045:52590",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=5045-52590",
+  description: "Selects exactly one option from a set of two or more mutually exclusive choices — picking one deselects the rest. Never used alone: reach for RadioGroup, which renders the radios and owns the fieldset, the legend and arrow-key navigation. Use Checkbox when more than one option can be selected at once, and Select when there are more than about six.",
+  properties: [
+    { name: "legend",      type: "String",   values: ["any string"],                  default: "—",         note: "RadioGroup. Required — names what the set is choosing between. Use hideLegend to keep it for screen readers only." },
+    { name: "options",     type: "Array",    values: ["{ value, label, description?, disabled? }[]"], default: "[]", note: "RadioGroup." },
+    { name: "value",       type: "String",   values: ["any option value"],            default: "undefined", note: "The selected option." },
+    { name: "onChange",    type: "Function", values: ["(value: string) => void"],     default: "undefined" },
+    { name: "size",        type: "Variant",  values: ["sm (S)","md (M)","lg (L)"],    default: "md" },
+    { name: "orientation", type: "Variant",  values: ["vertical","horizontal"],       default: "vertical",  note: "Horizontal only suits two or three short options." },
+    { name: "disabled",    type: "Boolean",  values: ["true","false"],                default: "false",     note: "On the group, disables every option." },
+    { name: "label",       type: "String",   values: ["any string"],                  default: "—",         note: "Radio. Required — a radio without a label is not a radio." },
+    { name: "description", type: "String",   values: ["any string"],                  default: "undefined", note: "Radio. Secondary line under the label." },
+  ],
+  sizes: [
+    { size: "L (lg)",      ring: "24×24px", dot: "10px", padding: "4px", note: "Spacing/1x on all sides" },
+    { size: "M (md)",      ring: "20×20px", dot: "8px",  padding: "4px", note: "Default" },
+    { size: "S (sm)",      ring: "16×16px", dot: "6px",  padding: "4px", note: "Dense forms and filter panels" },
+  ],
+  typography: [
+    { element: "Label",       family: "Inter", size: "14px", weight: "Medium (500)",  lineHeight: "28px", variable: "--color-text-body" },
+    { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)", lineHeight: "1.4",  variable: "--color-text-caption" },
+  ],
+  states: [
+    { name: "unselected", borderWidth: "2px", tokens: [
+      { role: "Ring", variable: "--color-icon-neutral-dark", varId: "Icon/Neutral/Dark", light: "rgba(92,92,92,1)", dark: "rgba(255,255,255,0.50)" },
+    ] },
+    { name: "selected", borderWidth: "2px", tokens: [
+      { role: "Ring and dot", variable: "--primary", varId: "Icon/Primary/Default", light: "#2173ff", dark: "#2b7fff" },
+    ] },
+    { name: "disabled", borderWidth: "2px", tokens: [
+      { role: "Ring and dot", variable: "--color-text-disabled", varId: "Icon/Neutral/Disable-Dark", light: "#bababa", dark: "rgba(255,255,255,0.30)" },
+    ] },
+    { name: "hover / focus", borderWidth: "2px", tokens: [
+      { role: "Container background", variable: "--color-surface-primary-subtle", varId: "Surface/Primary/Subtle", light: "#E9F1FF", dark: "rgba(33,115,255,0.15)" },
+    ] },
+  ],
+  variants: [
+    { name: "Unselect",  description: "Empty ring. The default.", cssPrefix: "radio", tokens: [] },
+    { name: "Select",    description: "Filled dot inside the ring.", cssPrefix: "radio", tokens: [] },
+    { name: "Disabled",  description: "Muted ring, and dot if selected. Leaves the tab order.", cssPrefix: "radio", tokens: [] },
+  ],
+}
+
 const CHECKBOX_SPEC = {
   name: "Checkbox",
   figmaNodeId: "4753:19229",
@@ -1505,7 +1611,9 @@ const TOPBAR_SPEC = {
     { name: "onWorkspaceClick",   type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens workspace/Left Menu dropdown" },
     { name: "searchPlaceholder",  type: "string",   values: ["any string"],              default: '"Search…"',       note: "Center zone trigger label" },
     { name: "onSearchFocus",      type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens Global Search overlay (700×592px)" },
-    { name: "actions",            type: "Array",    values: ["TopbarAction[]"],          default: "[]",              note: "Max 3 shown. { icon, label, badge?, onClick? }" },
+    { name: "actions",          type: "REMOVED",  values: ["— split into secondaryAction + menuActions —"], default: "—", note: "REMOVED. actions[0] was a labelled primary CTA (Message, Export, Contact account) competing with the agent trigger for the same job. In Figma Ask IS the primary CTA; there is no second one. What is left is one optional secondary action and the overflow." },
+    { name: "secondaryAction",  type: "object",   values: ["RecordAction"], default: "undefined", note: "The one optional secondary action, OFF by default — the vast majority of records do not have one. It exists for the edge case where a contextual CTA genuinely belongs in the header. Figma's documentation calls this slot icon-only; its built instance is a labelled secondary button with no icon (Icon=No). Michael chose the instance (2026-09-07), because that is what renders and what the team sees when they inspect the file." },
+    { name: "menuActions",      type: "Array",    values: ["RecordAction[]"], default: "[]", note: "The overflow menu. Destructive and secondary actions ONLY — never a visible button. The header does not define which actions exist; that is configured per entity in Helix Data Studio. The header owns exactly one rule: destructive actions live here." },
     { name: "logo",               type: "ReactNode",values: ["any"],                     default: "4-dot placeholder",note: "Replace with actual isotipo/brand mark" },
     { name: "companyName",        type: "string",   values: ["any string"],              default: '"Company"',       note: "Shown in Sub-group B, truncates" },
     { name: "onCompanyClick",     type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens company selector/Left Menu" },
@@ -1819,22 +1927,25 @@ const HEADER_SPEC = {
   name: "Header",
   figmaNodeId: "7995:4268",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7995-4268",
-  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — only title + CTAs visible).",
+  description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + tag + CTAs, plus the breadcrumb row above the title when one is set; the breadcrumb and tag both survive compress so scrolling never costs you your place or the record's status).",
   properties: [
     { name: "title",           type: "string",  values: ["any string"],                                                                       default: "—",             note: "Required. Always visible in all sizes." },
     { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
     { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
-    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after title. Hidden in compress." },
-    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. Hidden in compress. Use only in drill-down pages." },
+    { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after the title. Survives compress — a detail page's status is exactly what you still want to see once you have scrolled." },
+    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. From L2 onwards this is how a page states where it sits: parent plus current page (Workers › Meridian), not the whole path. Survives compress. Never combine with backButton — at L2 the first crumb IS the way back." },
+    { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages." },
+    { name: "onBack",          type: "function", values: ["() => void"],                                                                      default: "undefined",     note: "Click handler for the back button. Never affects visibility — use backButton for that." },
+    { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
     { name: "icon",            type: "node",    values: ["LucideIcon"],                                                                       default: "undefined",     note: "Rendered inside a HighlightIcon (sm). Hidden in compress." },
     { name: "iconVariant",     type: "Variant", values: ["informative","success","alert","error","neutral","yellow","lime","purple","light-blue"], default: "informative", note: "HighlightIcon color variant. Only applies when icon is set." },
-    { name: "primaryAction",   type: "node",    values: ["<Button variant=\"main\" size=\"sm\" />"],                                          default: "undefined" },
-    { name: "secondaryAction", type: "node",    values: ["<Button variant=\"secondary\" size=\"sm\" />"],                                     default: "undefined" },
+    { name: "primaryAction",   type: "HeaderAction", values: ["{ label, icon?, onClick?, disabled?, priority? }"],                            default: "undefined",     note: "An action object, not JSX — Header picks the Button variant so no screen names one. Defaults to priority \"primary\" (variant=\"main\")." },
+    { name: "secondaryAction", type: "HeaderAction", values: ["{ label, icon?, onClick?, disabled?, priority? }"],                            default: "undefined",     note: "Same shape, rendered before primary. Defaults to priority \"secondary\". Two actions is the maximum — a third belongs in an overflow menu." },
   ],
   sizes: [
     { size: "Size L",   padding: "12px 24px", titleSize: "24px", height: "auto (~48px)", notes: "Default. Full slots visible." },
     { size: "Size M",   padding: "10px 24px", titleSize: "18px", height: "auto (~38px)", notes: "Compact. Full slots visible." },
-    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "60px (fixed)", notes: "Scroll state. Only title + CTAs." },
+    { size: "Compress", padding: "8px 24px",  titleSize: "18px", height: "auto — ~48px, ~62px with a breadcrumb", notes: "Scroll state. Title + tag + CTAs, plus the breadcrumb row when one is set. Height is content-driven, not fixed." },
   ],
   typography: [
     { element: "Title — Size L",          family: "Inter", size: "24px", weight: "600 SemiBold", lineHeight: "tight (1.2)" },
@@ -1885,18 +1996,23 @@ const FILTERS_SPEC = {
   name: "Filters",
   figmaNodeId: "7996:4655",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7996-4655",
-  description: "Horizontal 40px filter bar for narrowing large datasets. 8 state variants, up to 5 filter chips, sorting control, grid/list view toggle. Chip label truncated at 14 characters with tooltip on hover. Search/All-Filters button/chip base use the shared --field-* tokens; chip and control accents use --fi-*. The All-Filters button opens FiltersSlideout (a separate component, tokens documented in its own group below).",
+  description: "Horizontal 40px filter bar for narrowing large datasets. 8 state variants, up to 5 filter chips, sorting control, grid/list view toggle. Filter chips and the sort label both open their own menu when given options — pass slots[].options / sortOptions and the screen only supplies the choices. Chip label truncated at 14 characters with tooltip on hover. Search/All-Filters button/chip base use the shared --field-* tokens; chip and control accents use --fi-*. The All-Filters button opens FiltersSlideout (a separate component, tokens documented in its own group below).",
   properties: [
     { name: "compact",          type: "Boolean",  values: ["true","false"],                              default: "false",      note: "S Variant — shows only Search + All Filters button" },
     { name: "compactCount",     type: "number",   values: ["0","1","2+"],                                default: "0",          note: "> 0 → S Variant Filters Apply: shows Filters badge with count" },
     { name: "showSearch",       type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Renders the 140px search input on the left" },
     { name: "searchPlaceholder",type: "string",   values: ["any string"],                                default: '"Search"' },
-    { name: "slots",            type: "FilterSlot[]", values: ["{ placeholder, value?, onRemove?, onOpen? }[]"], default: "[]", note: "Up to 5 filter chips. value set → active chip with × dismiss" },
+    { name: "slots",            type: "FilterSlot[]", values: ["{ placeholder, value?, options?, onSelect?, onRemove?, onOpen? }[]"], default: "[]", note: "Up to 5 filter chips. value set → active chip with × dismiss. Pass options + onSelect and Filters renders and positions the menu itself; onOpen is the custom-menu escape hatch" },
     { name: "showClearFilters", type: "Boolean",  values: ["true","false"],                              default: "false",      note: "Shows 'Clear Filters' text link after the chips" },
     { name: "onClearFilters",   type: "function", values: ["() => void"],                                default: "undefined" },
     { name: "showAllFilters",   type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Shows 'All filters' pill button in the right controls" },
     { name: "showSort",         type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Sort direction arrow + sort label dropdown" },
-    { name: "sortLabel",        type: "string",   values: ["any string"],                                default: '"Name"' },
+    { name: "sortLabel",        type: "string",   values: ["any string"],                                default: '"Name"',     note: "The active sort field. Shown on the label button and check-marked in the menu" },
+    { name: "sortOptions",      type: "string[]", values: ["any string[]"],                              default: "undefined",  note: "Same deal as FilterSlot.options — when set, Filters renders and positions the sort menu itself. Unset → onSortClick fires and the screen owns the menu" },
+    { name: "onSortSelect",     type: "function", values: ["(option: string) => void"],                  default: "undefined",  note: "Chosen sort field. Only used alongside sortOptions" },
+    { name: "sortDirection",    type: "Variant",  values: ["asc","desc"],                                default: '"desc"',     note: "Drives the arrow glyph only — ArrowUp for asc, ArrowDown for desc. Filters never sorts anything itself" },
+    { name: "onSortDirectionChange", type: "function", values: ["(direction: 'asc' | 'desc') => void"],  default: "undefined",  note: "Fired by the arrow button with the flipped value. Unset → the arrow falls back to onSortClick" },
+    { name: "onSortClick",      type: "function", values: ["() => void"],                                default: "undefined",  note: "Custom-menu escape hatch on both sort controls" },
     { name: "showViewToggle",   type: "Boolean",  values: ["true","false"],                              default: "true",       note: "Grid/List icon toggle buttons" },
     { name: "viewMode",         type: "Variant",  values: ["grid","list"],                               default: '"grid"' },
     { name: "onViewModeChange", type: "function", values: ["(mode: 'grid' | 'list') => void"],           default: "undefined" },
@@ -2119,56 +2235,122 @@ const NOTIFICATION_CENTER_SPEC = {
 // synced from a Figma node. See record-header.tsx's own header comment for the
 // 3 industry patterns (Salesforce Highlights Panel, HubSpot conditional
 // sections, Next Best Action engine) it's modeled on instead.
-const RECORD_HEADER_SPEC = {
-  name: "Record Header",
-  figmaNodeId: "—",
-  figmaUrl: "",
-  description: "Entity profile header used atop Employee/Customer/Client dashboard views. 3-layer architecture: Identity row (always visible — avatar, name, type, up to 3 stable-attribute Tags, a 3-tier action row), Signal (always visible — a single NextBestAction, semantically colored, optionally actionable inline), Details (disclosure — secondary fields grid). One shared layout for all 3 variants; only which fields land in chips vs. Details vs. actions changes per variant.",
+const ENTITY_HEADER_SPEC = {
+  name: "Entity Header",
+  figmaNodeId: "19815:101548",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=19815-101548",
+  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/record-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
   properties: [
-    { name: "variant",        type: "Variant",  values: ["employee","customer","client"], default: "required", note: "Selects which of the 3 record shapes `data` must match, and which fields populate the context chips vs. the Details grid — see getRecordFields in record-header.tsx." },
-    { name: "data",           type: "object",   values: ["EmployeeRecord | CustomerRecord | ClientRecord"], default: "required" },
-    { name: "signal",         type: "object",   values: ["NextBestAction — { label, severity, dueContext?, aiGenerated?, actionLabel?, onAction?, dismissible?, onDismiss? }"], default: "required", note: "Fed by the AIMS OS Next Best Action engine. Same shape for all 3 variants. actionLabel renders a real inline button (calls onAction) when the recommendation names one specific action. dismissible adds a close (X) — reserve it for signals with no actionLabel/onAction, so dismissing never buries a real next step." },
-    { name: "assignedAgent",  type: "object",   values: ["AssignedAgent — { id, name, onOpenChat }"], default: "required", note: "AIMS OS is agent-first — every record has one. Renders as an always-present icon-only button (Sparkle, variant=\"main\" — a named exception to the usual no-main-in-a-card rule) that opens a chat scoped to this record. RecordHeader never renders the chat UI itself." },
-    { name: "actions",        type: "Array",    values: ["RecordAction[] — { label, variant?, onClick? }"], default: "[]", note: "actions[0] renders as the one contextual CTA button; actions[1+] land in the \"···\" overflow Menu. Same RecordAction shape as EntityList's ELAction." },
-    { name: "defaultExpanded",type: "Boolean",  values: ["true","false"], default: "false", note: "Uncontrolled initial state for the Details disclosure. Chevron only renders when there's at least one Details field." },
+    { name: "name",           type: "string",   values: ["The entity's display name"], default: "required", note: "A person's name, an account name, or a code. There is NO variant prop and no closed set of entity types — what kind of thing this is arrives as a classification tag instead (see tags)." },
+    { name: "visual",         type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product. WATCH OUT: this is the one required object with no fallback, and the card throws if it arrives undefined — which type-checking does not catch here, because this repo runs without strictNullChecks, so a lookup like MY_VISUALS[key] type-checks even for a key that is missing. Build the map exhaustively." },
+    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and caps the visible set at ENTITY_HEADER_TAGS_MAX (6) with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
+    { name: "stateBadge",     type: "object",   values: ["{ label, variant: \"success\" | \"informative\" | \"alert\" | \"error\" | \"neutral\", icon? }"], default: "undefined", note: "The entity's overall status — its own slot on the right, before the actions. COLOUR RULE 1 OF 2: full semantic range. There is exactly one, so colour costs nothing and carries real meaning — Active reads success, Degraded reads alert, Blocked and Suspended read error. Max ~19 characters. If several statuses are true at once THE MOST BLOCKING ONE WINS and the rest become signal tags; the component renders the one badge it is given. Never dropped at any width, and never a focus stop: it is status, not a control." },
+    { name: "source",         type: "string",   values: ["\"Workday\" | \"Salesforce\" | \"NetSuite\" | \"DMS\" | \"Helix Data Studio\" | ..."], default: "undefined", note: "Which system this record came from. Renders after the title — a Database icon plus the value at 12px Medium, preceded by a bullet separator. ONE ITEM, NEVER TWO: a source is a single fact. Concatenating a second value breaks it — \"Enterprise Account · Midwest Region\" is a category next to a location and neither is a source. A job title, a location, a region, a category or a parent company DESCRIBE or PLACE the entity; they do not say where the data came from, so they belong in tags or secondaryMetadata, or nowhere. An entity created inside the platform itself reads \"Helix Data Studio\"; one with no source omits the prop — the slot is removed, never filled with something else." },
+    { name: "description",    type: "string",   values: ["One line of durable context"], default: "undefined (OFF)", note: "OFF by default — most headers do not carry one, and it is an edge case rather than a slot to fill. Ask in this order and stop at the first yes: needs attention now → signal tag; what kind of thing this is → classification tag; current status → stateBadge; a fact someone might act on → secondaryMetadata; durable context none of those captured → this. The one case that justifies it is an opaque code as the title: \"RO-48291\" alone means nothing, so the description says what the record concerns. DURABILITY TEST — if the sentence could change next week it is an activity note and belongs in the Overview. It says what the entity IS, never what is happening to it. One line at 14px Medium, truncated with a Tooltip; it never wraps." },
+    { name: "secondaryMetadata", type: "Array", values: ["SecondaryMetadataItem[] — { icon, text, tooltip }"], default: "[]", note: "The compact attribute row under the title. Icon says what KIND of information this is, text is the value, tooltip carries the field label plus context (\"Assigned agent · Manager Agent. Handling this account since Mar 3.\") and shows on hover AND focus, always — even when the text is not truncated. CAPPED AT 6 by the component (SECONDARY_METADATA_MAX), not by trusting the caller: past six it stops being a row and becomes a section. Six is the maximum, not the goal — aim for four. Anything beyond six goes to the Overview, NEVER to a +N chip: an item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place. THE ICON NEVER APPEARS ALONE — Entity List allows icon-only under space pressure, this header does not. What qualifies: counts of Truth Plane facts and Canon Plane documents (counted separately — TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits. What does not: anything true of every entity of the same type (a label, not information), and anything describing a conversation rather than the entity. This is NOT recordFields — those carry provenance and a masking state; both exist at once." },
+    { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "This is the `Ask` button, and it is the card's only primary CTA. AIMS OS is agent-first — required as a PROP so every caller has to decide, but the value can be null for an entity that genuinely has none yet: null renders the SAME button, disabled, with a Tooltip explaining why, never a silently missing button. Icon-only, Sparkle glyph, variant=\"main\" — the one confirmed exception to \"never main inside a card\" in the whole design system. It keeps the same Sparkle as the Next Best Action card deliberately (Michael, 2026-09-07): both are AI surfaces, one converses and one transacts. The component never renders the chat UI itself." },
+    { name: "secondaryAction", type: "object",  values: ["RecordAction — { label, variant?, onClick?, disabled?, disabledTooltip?, disableWhenLocked? }"], default: "undefined (OFF)", note: "One optional labelled action beside `Ask`, off by default — most entities do not have one, and a second labelled CTA competes with `Ask`. Boolean in practice: either the entity type has a contextual action or it does not. Anything the page already offers below the header (a tab, a widget CTA) is dead weight here, not a valid action. Disabled by `locked` unless disableWhenLocked is false." },
+    { name: "menuActions",    type: "Array",    values: ["RecordAction[]"], default: "[]", note: "The \"···\" overflow. Secondary and destructive actions only — never the entity's main action, which is either `Ask` or secondaryAction. Empty or omitted removes the trigger. Write actions disable when `locked` is true, each with a Tooltip." },
+    { name: "showInformation", type: "Boolean", values: ["true","false"], default: "false", note: "Shows the ⓘ Information trigger. A boolean the caller owns, NOT derived from whether recordFields has anything in it — whether the panel is worth offering is a per-case decision, and the old behaviour made the control vanish whenever the field array happened to be empty. With showInformation but no onInformationOpen the trigger renders disabled with a Tooltip." },
+    { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
+    { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
+    { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "\"You cannot act on or edit this entity.\" Shows a \"Locked\" Tag beside the title and disables secondaryAction plus the overflow's write actions, each with a Tooltip explaining why. `Ask` and the Information panel stay fully interactive — locked does not mean you cannot consult it. NOT the same thing as Figma's `Restricted`, which is \"you cannot see this value\" and lives on the field as RecordField.state === \"masked\". Both coexist." },
+    { name: "state",          type: "Variant",  values: ["default", "loading", "restricted"], default: '"default"', note: "Figma's `Property 1` axis. INDEPENDENT of the reflow — an entity can be loading on a tablet — and an enum rather than three booleans because the options are mutually exclusive. `loading` renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does), never an empty state: saying \"nothing here\" while data is in flight states something untrue. `restricted` renders the card at 50% opacity — Figma's own variant — plus a neutral `Restricted` Tag beside the title with the reason in a Tooltip. The Tag goes BEYOND Figma's instance on purpose (Michael, 2026-09-07): the prose asks this state to be \"calm and explanatory\" and the instance carries nothing explanatory, and opacity on its own cannot be told apart from loading or failed. Never error — the viewer lacks entitlement to the values, the entity exists and is governed, so this is a state and not a failure. Figma's fourth named state, `Minimum`, needs no value here: \"only visual, title and state\" is what you get by passing only those props." },
+    { name: "className",      type: "string",   values: ["any string"], default: "undefined", note: "Merged onto the CardContainer." },
+    { name: "entityType",     type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. In Figma the entity type is a classification TAG, not an icon-plus-label beside the name, and it only appears when the visual is an avatar. Figma's own icon examples (RO-48291, Customer Master) carry signals and no classification at all." },
+    { name: "variant",        type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. There were three (employee/customer/client) and Figma has none: one skeleton serves every entity type, including ones the DS has never heard of. An entity shape this file does not model is the normal case, not a gap — never flag a missing variant as a DS-GAP." },
+    { name: "statusTag",      type: "REMOVED",  values: ["— replaced by stateBadge —"], default: "—", note: "REMOVED, replaced by stateBadge. It sat on the LEFT and its own doc said 'never error' — both contradicted Figma, where the state badge is a right-hand slot with the full semantic range, and where Blocked and Suspended are precisely the cases that read error." },
+    { name: "actions",        type: "REMOVED",  values: ["— split into secondaryAction + menuActions —"], default: "—", note: "REMOVED. One array whose first item silently became a CTA and whose rest silently became an overflow is not an API — the two slots have different rules, so they are two props now." },
+    { name: "nextBestActions", type: "REMOVED", values: ["— no longer a prop —"], default: "—", note: "REMOVED from this component. Section 11 of the Entity Header change spec: \"The card that appears under the header is a separate component in its own Card Container, not a second slot in the same one. Two records, two containers.\" Figma states the same rule from this side: NO INSIGHT SECTION. Render NextBestActionCard from @/components/ui/next-best-action-card as a SIBLING below this card instead." },
+    { name: "agenticSystem",  type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED with the disclosure. The AGENTIC SYSTEM zone does not exist in the Figma Entity Header; running workflows belong to an Overview widget." },
+    { name: "intervention",   type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED with the disclosure. The YOUR INTERVENTION zone does not exist in the Figma Entity Header; a pending HTL decision belongs to the HTL surface, reached from an Overview widget." },
+    { name: "defaultExpanded", type: "REMOVED", values: ["— no longer a prop —"], default: "—", note: "REMOVED. There is nothing to expand: the chevron and both zones are gone, so the card has one fixed height per content." },
   ],
   sizes: [
-    { size: "Card",     dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between layers" },
-    { size: "Avatar",   dimensions: "32×32px (AvatarCircle lg)", padding: "—", gap: "—" },
-    { size: "Signal",   dimensions: "100% width × auto", padding: "12px H / 10px V", gap: "8px" },
+    { size: "Card",       dimensions: "100% width, auto height", padding: "16px H / 24px V (CardContainer default)", gap: "16px between rows" },
+    { size: "Avatar / highlight icon", dimensions: "32×32px (AvatarCircle / HighlightIcon lg)", padding: "—", gap: "—" },
+    { size: "Identity row — wide",    dimensions: "≥ 720px of card width", padding: "—", gap: "12px between title, source and tags" },
+    { size: "Identity row — stacked", dimensions: "< 720px of card width", padding: "—", gap: "6px between the two rows — Figma's Size = Responsive. Title on row 1, source + tags on row 2, right cluster unchanged. Measured on the CARD with a ResizeObserver, not the viewport, because this header sits in panels and split views. 720 is a calibrated estimate — Figma models Responsive as a discrete variant with no px value." },
+    { size: "Drop thresholds", dimensions: "description below 420px of card width · secondary metadata row below 320px", padding: "—", gap: "The last resort, after reflow and yielding. Order reversed from Figma on Michael's call — metadata survives longer than the description. Visual identity, title and state badge are never dropped at any width. Both numbers are calibrated estimates; Figma states the order but no breakpoint" },
+    { size: "Truncation ceilings", dimensions: "title 540px (protected) · source 160px · secondary metadata 24ch, short form 8 · description container width, one line", padding: "—", gap: "Figma's own numbers. Tag chip 160px and state badge 140px belong to the Tag component, and the action label's 180px to Button — setting them here would fix only this header" },
+    { size: "Loading skeleton — wide",    dimensions: "circle 32 · title 180×24 · source+tags 120×20 · actions 80×20 and 120×28 · description 420×16 · metadata 90/70/110/60/70 ×16", padding: "—", gap: "Read from Figma node 20134:314522" },
+    { size: "Loading skeleton — stacked", dimensions: "circle 32 · title 150×24 · actions 96/120/28 ×28 · source 110×16 · tags 92/72/36 ×20 · description 380×16 · metadata 86/62/100/58 ×16", padding: "—", gap: "Read from Figma node 20152:6818, with one deviation: source and tags share a row here, matching the stacked layout the skeleton is standing in for rather than Figma's own five-row skeleton" },
   ],
   typography: [
-    { element: "Name",        family: "Inter", size: "18px", weight: "Semi Bold (600)", lineHeight: "1.3", variable: "--color-text-title" },
-    { element: "Type label",  family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1",   variable: "--field-supporting" },
-    { element: "Signal text", family: "Inter", size: "13px", weight: "Semi Bold (600)", lineHeight: "1.4", variable: "per-severity — see states below" },
-    { element: "Detail label",family: "Inter", size: "10px", weight: "Semi Bold (600)", lineHeight: "1",   variable: "--field-supporting" },
-    { element: "Detail value",family: "Inter", size: "13px", weight: "Regular",         lineHeight: "1.4", variable: "--foreground" },
+    { element: "Name",              family: "Inter", size: "18px", weight: "Semi Bold (600)", lineHeight: "1.3", variable: "--color-text-title" },
+    { element: "Source value",      family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1",   variable: "--color-text-body" },
+    { element: "Description",       family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "1.4", variable: "--color-text-body" },
+    { element: "Secondary metadata",family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "1",   variable: "--color-text-body" },
   ],
   states: [
-    { name: "Signal — success",     borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--ab-success-bg", varId: "", light: "#e5fdf8", dark: "#0a1f1a" },
-      { role: "Border",     variable: "--ab-success-bd", varId: "", light: "rgba(0,153,120,0.25)", dark: "rgba(0,153,120,0.25)" },
-      { role: "Icon + text",variable: "--ab-success-text", varId: "", light: "#003328", dark: "#6ee7b7" },
+    // Source / Description / Secondary metadata — values extracted from the
+    // Entity Header component set in Figma (node 19895:11728), Light + Dark
+    // modes, not derived from each other. Tags and the state badge use Tag's
+    // own tokens; the avatar and highlight icon use theirs — see those specs
+    // rather than duplicating them here, where they would drift.
+    { name: "Source — value + icon", borderWidth: "—", tokens: [
+      { role: "Text",      variable: "--color-text-body",              varId: "Text/Body",               light: "#5C5C5C", dark: "#94A3B8" },
+      { role: "Icon",      variable: "--color-icon-neutral-dark",      varId: "Icon/Neutral/Dark",       light: "#5c5c5c", dark: "rgba(255,255,255,0.5)" },
+      { role: "Separator", variable: "--color-surface-neutral-emphasis", varId: "Surface/Neutral/Emphasis", light: "#d9d9d9", dark: "rgba(255,255,255,0.12)" },
     ]},
-    { name: "Signal — alert",       borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--ab-alert-bg", varId: "", light: "#fff4e5", dark: "#281e00" },
-      { role: "Border",     variable: "--ab-alert-bd", varId: "", light: "rgba(180,83,9,0.25)", dark: "rgba(180,83,9,0.25)" },
-      { role: "Icon + text",variable: "--ab-alert-text", varId: "", light: "#663c00", dark: "#fcd34d" },
+    { name: "Divider — identity · tags", borderWidth: "—", tokens: [
+      { role: "Fill", variable: "--color-border-neutral-lighter", varId: "Border/Neutral/Lighter", light: "#BABABA", dark: "rgba(255,255,255,0.15)" },
     ]},
-    { name: "Signal — error",       borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--ab-error-bg", varId: "", light: "#fdeded", dark: "#2d1515" },
-      { role: "Border",     variable: "--ab-error-bd", varId: "", light: "rgba(153,34,34,0.25)", dark: "rgba(153,34,34,0.25)" },
-      { role: "Icon + text",variable: "--ab-error-text", varId: "", light: "#5f2120", dark: "#ff6467" },
+    { name: "Description (off by default)", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-body", varId: "Text/Body", light: "#5C5C5C", dark: "#94A3B8" },
     ]},
-    { name: "Signal — informative (fallback, see file header)", borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--tag-informative-bg", varId: "", light: "#e9f1ff", dark: "rgba(21,93,252,0.15)" },
-      { role: "Border",     variable: "--tag-informative-bd", varId: "", light: "#2173ff", dark: "#2b7fff" },
-      { role: "Icon + text",variable: "--tag-informative-fg", varId: "", light: "#001740", dark: "rgba(255,255,255,0.80)" },
+    { name: "Secondary metadata — max 6", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-body",         varId: "Text/Body",         light: "#5C5C5C", dark: "#94A3B8" },
+      { role: "Icon", variable: "--color-icon-neutral-dark", varId: "Icon/Neutral/Dark", light: "#5c5c5c", dark: "rgba(255,255,255,0.5)" },
     ]},
-    { name: "Signal — neutral (fallback, see file header)", borderWidth: "0.5px", tokens: [
-      { role: "Background", variable: "--tag-neutral-bg", varId: "", light: "#f2f2f2", dark: "rgba(255,255,255,0.08)" },
-      { role: "Border",     variable: "--tag-neutral-bd", varId: "", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
-      { role: "Icon + text",variable: "--tag-neutral-fg", varId: "", light: "#2a2a2a", dark: "rgba(255,255,255,0.60)" },
+  ],
+}
+
+const NEXT_BEST_ACTION_SPEC = {
+  name: "Next Best Action Card",
+  figmaNodeId: "20206:316306",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=20206-316306",
+  description: "The proactive recommendation card. It sits in its own Card Container DIRECTLY BELOW the Entity Header — never inside it: the header identifies the entity, this proposes what to do about it. Two records, two containers. Sixteen products were reviewed for the Figma study and none puts the recommendation in the record header. ONE AT A TIME, never stacked: the engine has already prioritised, unified and discarded, so showing five is not trusting the engine — and stacked cards push the real content below the fold. NO RECOMMENDATION, NO CARD: the container does not render, and this is not an empty state — there is nothing to say when there is nothing to do. The title is the ACTION, never the engine's name. It always declares when (a timestamp) and why (the rationale); without a rationale it is an order, not a proposal. It carries no accuracy disclaimer, because a recommendation reaching this surface has passed the Council — it declares its source instead of hedging. IMPLEMENTATION: NextBestActionCard in src/components/ui/next-best-action-card.tsx. Promoted out of experimental/ by Michael (2026-09-07) because it will grow more variants and appear differently in different parts of the platform.",
+  properties: [
+    { name: "item",     type: "object",  values: ["NextBestAction — { id, title, timeAgo?, description, onViewDetails, onAccept?, onDismiss? }"], default: "undefined", note: "SINGULAR ON PURPOSE. Figma rule 2: one at a time, it never stacks. An array plus a `.map` is how this card rendered two recommendations in one container for three separate passes — making the prop singular is what makes the rule structural instead of a convention someone has to remember. Undefined or omitted renders NOTHING AT ALL: not an empty card, not a placeholder, not a \"nothing to recommend\" message. If more recommendations exist, a counter leads to the list — never a second card." },
+    { name: "item.title",       type: "string",  values: ["\"Assign a proactive check-in call\""], default: "required", note: "WHAT TO DO, not what produced it. \"Next Best Action\" is the engine's name and it already appears as the card's own label — repeating it in the title wastes the one line that carries the instruction. Limits: min 20 · target 40 · max 60 characters. The minimum is real: under 20 it stops being an instruction and becomes a label — \"Call client\" does not say which call or why, \"Assign a renewal check-in call\" does." },
+    { name: "item.timeAgo",     type: "string",  values: ["\"2h ago\""], default: "undefined", note: "WHEN the recommendation was produced. Renders after the title behind a purple bullet. Figma rule 5: the card always declares when and why. Omit only when the host genuinely has no timestamp." },
+    { name: "item.description", type: "string",  values: ["The reasoning"], default: "required", note: "WHY — the reason to act. Without it this is an order, not a proposal. Limits: min 60 · target 90 · max 150 characters. The minimum exists because a rationale needs a FACT and a CONSEQUENCE: \"their certificate expires in 45 days\" is the fact, \"requesting it now avoids a compliance gap\" is why it matters; with only the fact the user cannot decide, and 60 characters is roughly where both fit. The target is 90 rather than the ~180 a full-width line could hold because comfortable reading sits at 45–75 characters per line and comprehension drops past 90 — a line that fits is not the same as a line that gets read. OPEN WITH ENGINEERING: what the card does when the engine returns less than the minimum. It cannot invent the consequence." },
+    { name: "item.onViewDetails", type: "Function", values: ["() => void"], default: "required", note: "THE DEFAULT PATH, always present. Figma rule 7: the card cannot guarantee it showed everything, so the safe route is always the one that opens the record. Every example in the Figma file uses it. Opens the detail panel — see the four action families in the Reference tab." },
+    { name: "item.onAccept",    type: "Function", values: ["() => void"], default: "undefined", note: "The reserved second variant. Figma rule 10: ACCEPT ASSIGNS TO THE AGENT, IT DOES NOT EXECUTE — the agent executes, the human governs, so never \"Call now\". Figma rule 8: accepting ALWAYS OPENS THE DETAIL; it does not resolve in place, because committing without seeing the record is accepting blind. There is no inline accept anywhere in this component. Which actions qualify for this variant is NOT DECIDED YET in Figma — until it is, omit this prop and use the default. The variant exists so the pattern is ready when a real case appears, not so it can be picked by preference." },
+    { name: "item.onDismiss",   type: "Function", values: ["() => void"], default: "undefined", note: "The × in the top-right corner. Figma rule 9: DISMISS RESOLVES IN PLACE — dismissing commits the user to nothing, so it needs no detail. It hides the card FOR THIS SESSION ONLY and it returns on reload; nothing is stored and nothing is fed back to the engine. Omit to hide the control entirely — but a card with no dismiss is a card the user cannot get out of their way, so wire it unless there is a reason not to." },
+    { name: "variant",  type: "Variant", values: ["purple", "default"], default: "purple", note: "The Card Container variant it composes. Purple is the recommendation surface." },
+    { name: "size",     type: "Variant", values: ["default", "sm"], default: "default", note: "Passed through to Card Container." },
+    { name: "className", type: "string", values: ["any string"], default: "undefined", note: "Spacing from the header above it lives here — the card does not assume a margin." },
+    { name: "Actions = View details", type: "Variant", values: ["the default"], default: "the default", note: "Figma's `Actions` axis, option 1 — THE DEFAULT. Use it unless there is a reason not to. One path: open the record. Every example in the Figma file uses this variant. In code it is not a prop: pass `onViewDetails` and omit `onAccept`." },
+    { name: "Actions = Accept / View details", type: "Variant", values: ["reserved"], default: "—", note: "Figma's `Actions` axis, option 2 — RESERVED. For actions that are neither destructive nor complex, where offering Accept saves a step without risking a careless commitment. WHICH ACTIONS QUALIFY IS NOT DECIDED YET in Figma, so until it is, use the default; the variant exists so the pattern is ready when a real case appears, not so it can be picked by preference. Even here accepting opens the detail — there is no inline accept. In code: pass both `onAccept` and `onViewDetails`." },
+    { name: "items",    type: "REMOVED", values: ["— replaced by the singular `item` —"], default: "—", note: "REMOVED. It was NextBestAction[] with a `.map`, which is how two recommendations rendered inside one container. Figma rule 2 says one at a time; the singular prop is that rule expressed in the type." },
+    { name: "severity", type: "NEVER EXISTED", values: ["—"], default: "—", note: "There is no severity, no dueContext, no aiGenerated and no actionLabel. Timing and urgency live in the COPY — the rationale — not in a token. A card that colours itself by urgency competes with the Entity Header's state badge and its signal tags, which are the platform's actual urgency channel." },
+  ],
+  sizes: [
+    { size: "Card",      dimensions: "100% width (fill), auto height", padding: "Card Container default", gap: "Label → title → rationale → actions" },
+    { size: "Content",   dimensions: "1163 × 108px at the documented desktop width", padding: "—", gap: "—" },
+    { size: "Rationale", dimensions: "container width, height auto", padding: "—", gap: "Wraps. Figma's prose says one line with a tooltip; its built instance sets the text to auto-HEIGHT, which wraps. The instance is what renders, so the instance wins — the same way it settles source-and-tags on the Entity Header's stacked row." },
+  ],
+  typography: [
+    { element: "Label — \"Next Best Action\"", family: "Inter", size: "14px", weight: "Semi Bold (600)", lineHeight: "auto", variable: "--color-text-purple" },
+    { element: "Title",     family: "Inter", size: "14px", weight: "Semi Bold (600)", lineHeight: "auto",  variable: "--color-text-subtitle" },
+    { element: "Bullet",    family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "20px",  variable: "--color-text-purple" },
+    { element: "Timestamp", family: "Inter", size: "12px", weight: "Medium (500)",    lineHeight: "20px",  variable: "--color-text-body" },
+    { element: "Rationale", family: "Inter", size: "14px", weight: "Medium (500)",    lineHeight: "20px",  variable: "--color-text-body" },
+  ],
+  states: [
+    // Read from the Figma component set, Light and Dark independently — not
+    // derived from one another. The buttons use the DS Button component's own
+    // tokens; they are not restated here, where they would drift.
+    { name: "Label + bullet — the only colour on the card", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-purple", varId: "Text/Purple", light: "#2c075c", dark: "#d8b4fe" },
+    ]},
+    { name: "Title", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-subtitle", varId: "Text/Subtitle", light: "#2a2a2a", dark: "rgba(255,255,255,0.6)" },
+    ]},
+    { name: "Timestamp + rationale", borderWidth: "—", tokens: [
+      { role: "Text", variable: "--color-text-body", varId: "Text/Body", light: "#5c5c5c", dark: "rgba(255,255,255,0.6)" },
     ]},
   ],
 }
@@ -2292,9 +2474,9 @@ const ALERT_BANNER_SPEC = {
   name: "Alert Banner",
   figmaNodeId: "119:5867",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=119-5867",
-  description: "Full-width contextual notice for system-level feedback. 3 semantic states — Error, Success, Alert — with optional CTA text button and dismiss (×) button.",
+  description: "Contextual notice for system-level feedback. 4 semantic states — Error, Success, Alert, Info — with optional CTA text button and dismiss (×) button.",
   properties: [
-    { name: "state",       type: "Variant", values: ["error","success","alert"],            default: "error",     note: "Sets background, icon, and text tokens" },
+    { name: "state",       type: "Variant", values: ["error","success","alert","info"],     default: "error",     note: "Sets background, icon, and text tokens" },
     { name: "title",       type: "Prop",    values: ["string"],                             default: "required",  note: "14px SemiBold — always required" },
     { name: "description", type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "14px Medium, same state color as title" },
     { name: "cta",         type: "Prop",    values: ["string","undefined"],                 default: "undefined", note: "CTA button label — shown when provided" },
@@ -2353,6 +2535,69 @@ const ALERT_BANNER_SPEC = {
       cssPrefix: "--ab-cta-*",
       tokens: [
         { role: "Text",       variable: "--ab-cta-text",  light: "rgba(0,0,0,0.55)",      dark: "rgba(255,255,255,0.60)" },
+      ],
+    },
+  ],
+}
+
+const TOAST_SPEC = {
+  name: "Toast (floating AlertBanner)",
+  figmaNodeId: "—",
+  figmaUrl: "",
+  description: "Not a separate component — a placement layer over AlertBanner. Each tile is a real &lt;AlertBanner&gt;, portalled to &lt;body&gt;, floated top-right with a 24px inset, auto-dismissed after 3500ms. One feedback language, two placements: in flow when the message should persist, floating when it confirms an action just taken. Stack grows downward, newest last, at z-index 10050 — above SlideOut (10010) and ModalDialog (10020).",
+  properties: [
+    { name: "ToastProvider",      type: "Component", values: ["wraps a subtree"],                   default: "required", note: "Renders the portal stack; descendants can call useToast()" },
+    { name: "useToast()",         type: "Hook",      values: ["{ success, info, error, dismiss }"], default: "—",        note: "Imperative push handlers; no-op fallback outside a provider" },
+    { name: "success/info/error", type: "Method",    values: ["(title, options?) => void"],         default: "—",        note: "Push a toast of that variant" },
+    { name: "dismiss",            type: "Method",    values: ["(id: number) => void"],              default: "—",        note: "Remove a specific toast before it auto-dismisses" },
+    { name: "variant",            type: "Variant",   values: ["success","info","error"],            default: "—",        note: "Maps 1:1 onto AlertBanner state — no separate visual vocabulary. Sets the icon + left accent stripe" },
+    { name: "duration",           type: "Option",    values: ["number (ms)"],                       default: "3500",     note: "Auto-dismiss delay; pass 0 to persist until dismissed" },
+  ],
+  sizes: [
+    { element: "Tile",          padding: "12×14px", gap: "12px", radius: "10px", note: "min-w 280px · max-w 380px" },
+    { element: "Accent border", padding: "—",       gap: "—",    radius: "—",    note: "4px left border · per-state color" },
+    { element: "Icon",          padding: "—",       gap: "—",    radius: "—",    note: "18px · state-colored" },
+    { element: "Close button",  padding: "—",       gap: "—",    radius: "—",    note: "14px × icon · Text/Caption" },
+    { element: "Stack",         padding: "24px",    gap: "8px",  radius: "—",    note: "Fixed bottom-right · grows upward · z-index 10050" },
+  ],
+  typography: [
+    { element: "Message", family: "Inter", size: "14px", weight: "Medium (500)", lineHeight: "1.43" },
+  ],
+  variants: [
+    {
+      name: "Success",
+      description: "Completed saves · confirmed non-blocking actions (CheckCircle2 icon)",
+      cssPrefix: "--color-text-success",
+      tokens: [
+        { role: "Accent + Icon", variable: "--color-text-success", light: "#003328", dark: "#6ee7b7" },
+      ],
+    },
+    {
+      name: "Info",
+      description: "Neutral status · background progress · undo affordance (Info icon)",
+      cssPrefix: "--primary",
+      tokens: [
+        { role: "Accent + Icon", variable: "--primary", light: "#2b7fff", dark: "#2173ff" },
+      ],
+    },
+    {
+      name: "Error",
+      description: "Non-blocking failure feedback (XCircle icon) — errors needing a decision use Modal instead",
+      cssPrefix: "--color-text-error",
+      tokens: [
+        { role: "Accent + Icon", variable: "--color-text-error", light: "#5f2120", dark: "#ff6467" },
+      ],
+    },
+    {
+      name: "Shared chrome",
+      description: "Surface, border, message and elevation shared across all 3 states",
+      cssPrefix: "tile",
+      tokens: [
+        { role: "Background", variable: "--color-surface-neutral-white",  light: "#FFFFFF", dark: "#FFFFFF"                },
+        { role: "Border",     variable: "--color-border-neutral-default", light: "#5c5c5c", dark: "rgba(255,255,255,0.10)" },
+        { role: "Message",    variable: "--color-text-title",             light: "#000000", dark: "rgba(255,255,255,0.80)" },
+        { role: "Close",      variable: "--color-text-caption",           light: "#5c5c5c", dark: "rgba(255,255,255,0.50)" },
+        { role: "Elevation",  variable: "--shadow-elevation-3",           light: "4px 4px 12px 2px rgba(0,0,0,0.12)", dark: "4px 4px 12px 2px rgba(0,0,0,0.12)" },
       ],
     },
   ],
@@ -2896,7 +3141,7 @@ const TABS_SPEC = {
   name: "Tabs",
   figmaNodeId: "856:11281",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=856-11281",
-  description: "Horizontal tab bar for switching between related views within the same context. Sits directly on any surface — no CardContainer needed. Active state: primary-blue 2px indicator + label. Supports leading icon, disabled state, and two sizes (M/S).",
+  description: "Primary navigation inside a screen — answers \"where am I?\". Horizontal bar with a 2px indicator under the active tab only. It manages its own indicator, so never add a borderBottom to the wrapper: that draws a line under ALL tabs, which the DS spec forbids. Sits directly on the surface, no CardContainer needed. Top of the navigation hierarchy — when a second level is needed below it, that is SwitchTab. Size M only on L screens; S everywhere else, to save space and stay consistent.",
   properties: [
     { name: "items",     type: "Array",    values: ["TabItem[]"],       default: "required",   note: "id · label · icon? · disabled?" },
     { name: "activeId",  type: "String",   values: ["string"],          default: "required",   note: "ID of the currently selected tab" },
@@ -2964,7 +3209,7 @@ const PROGRESS_BAR_SPEC = {
   name: "Progress Bar",
   figmaNodeId: "7091:37109",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=7091-37109",
-  description: "Linear determinate loading bar that communicates known progress. Full-width track with a filled indicator that animates as value changes. 7 semantic styles, 2 track sizes, and full ARIA progressbar semantics.",
+  description: "Linear determinate bar for progress that is known and short — a file upload, a \"processing\" step. Also used purely informatively to show how far along something is: inside widgets, or as the visual state of an item in a SlideOut or SidePanel. Not for loading a view (that is Skeleton) and not for work of unknown duration (that is Spinner).",
   properties: [
     { name: "value",     type: "number",           values: ["0–100"],                                                                      default: "required", note: "Current progress percentage. Clamped to [0, 100] automatically." },
     { name: "style",     type: "ProgressBarStyle", values: ["primary", "success", "alert", "error", "yellow", "light-blue", "purple"],     default: "primary",  note: "Determines fill and track colors via Surface/* DS tokens." },
@@ -3017,7 +3262,7 @@ const SWITCH_TAB_SPEC = {
   name: "Switch Tab",
   figmaNodeId: "4591:349",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=4591-349",
-  description: "Segmented tab switcher for top-level navigation within a contained view. White pill container (Elevation-5 shadow) with 2–7 equal-width tab items. Active tab shows a blue tinted fill and SemiBold label; inactive tabs are transparent with a Medium label.",
+  description: "Secondary navigation, one level below Tabs — for when Tabs alone is not enough. White pill container with 2-7 equal-width items. Two placements: in a main list view it sits to the LEFT of Filters (see the Navigation Depth pattern); on a detail page that already has Tabs above, it navigates the content below them when there are fewer than 4 options, so a single view never stacks two rows of Tabs. Not a List/Table view toggle — List View has its own section for that.",
   properties: [
     { name: "items",        type: "SwitchTabItem[]", values: ["{ id, label, icon? }[]"],           default: "required",  note: "Tab definitions. Each item needs a unique id and a label. Icon is optional." },
     { name: "value",        type: "string",          values: ["string"],                            default: "—",         note: "Controlled active tab id. Pair with onChange." },
@@ -3231,6 +3476,8 @@ const SLIDE_OUT_SPEC = {
 // ── Unified Spec Panel ─────────────────────────────────────────────────────
 
 function getSpec(id: NonNullable<SpecModal>): AnySpec {
+  if (id === "process-item")     return PROCESS_ITEM_SPEC     as AnySpec
+  if (id === "radio")            return RADIO_SPEC            as AnySpec
   if (id === "breadcrumb")       return BREADCRUMB_SPEC       as AnySpec
   if (id === "button")           return BUTTON_SPEC           as AnySpec
   if (id === "input")            return INPUT_SPEC            as AnySpec
@@ -3250,12 +3497,14 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "topbar")           return TOPBAR_SPEC           as AnySpec
   if (id === "sidebar")          return SIDEBAR_SPEC          as AnySpec
   if (id === "alert-banner")     return ALERT_BANNER_SPEC     as AnySpec
+  if (id === "toast")            return TOAST_SPEC            as AnySpec
   if (id === "app-background")   return APP_BACKGROUND_SPEC   as AnySpec
   if (id === "entity-list")      return ENTITY_LIST_SPEC      as AnySpec
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
   if (id === "notification-item")   return NOTIFICATION_ITEM_SPEC   as AnySpec
   if (id === "notification-center") return NOTIFICATION_CENTER_SPEC as AnySpec
-  if (id === "record-header")       return RECORD_HEADER_SPEC       as AnySpec
+  if (id === "record-header")       return ENTITY_HEADER_SPEC       as AnySpec
+  if (id === "next-best-action")    return NEXT_BEST_ACTION_SPEC    as unknown as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
   if (id === "empty-state")      return EMPTY_STATE_SPEC      as AnySpec
@@ -7723,6 +7972,48 @@ function MenuItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
 // the real @/components/ui/avatar atom (imported above) — this section is
 // just the doc/playground page below.
 
+// ── ToastPage ────────────────────────────────────────────────────────────────
+
+function ToastDemo() {
+  const toast = useToast()
+  return (
+    <div className="flex flex-wrap gap-[8px]">
+      <Button variant="secondary" size="sm" onClick={() => toast.success("Changes saved successfully")}>Success toast</Button>
+      <Button variant="secondary" size="sm" onClick={() => toast.info("Export started — running in the background")}>Info toast</Button>
+      <Button variant="secondary" size="sm" onClick={() => toast.error("Couldn't reach the server — changes not saved")}>Error toast</Button>
+      <Button variant="tertiary" size="sm" onClick={() => { toast.success("Saved"); toast.info("Syncing…"); toast.error("Retrying…") }}>Push all three</Button>
+    </div>
+  )
+}
+
+function ToastPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  return (
+    <ToastProvider>
+      <div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+          <div>
+            <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Toast (floating AlertBanner)</h1>
+            <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
+              Not a second component — a placement layer. Each tile is a real <strong>AlertBanner</strong>, floated top-right, auto-dismissed after 3500ms. One feedback language, two placements: in flow when it should persist, floating when it confirms an action just taken.
+            </p>
+          </div>
+          <SpecButton onClick={() => openSpec("toast")} />
+        </div>
+
+        {/* Live states */}
+        <section className="flex flex-col gap-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">Live states — click to push one (top-right)</p>
+          <ToastDemo />
+          <p className="text-[13px] text-[var(--field-supporting)] leading-[1.5] max-w-[560px]">
+            Auto-dismisses after 3500ms, or click × to dismiss early. Pass <code>duration: 0</code> to keep one until dismissed, and <code>cta</code> for an inline action such as Undo or Retry. The stack sits top-right above SlideOut and ModalDialog (z-index 10050) and grows downward, newest last.
+          </p>
+        </section>
+      </div>
+    </ToastProvider>
+  )
+}
+
 // ── AlertBannerPage ───────────────────────────────────────────────────────────
 
 function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
@@ -7732,24 +8023,27 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [pgDesc, setPgDesc]   = useState(true)
   const [dismissed, setDismissed] = useState(false)
 
-  const STATES: AlertBannerState[] = ["error", "success", "alert"]
+  const STATES: AlertBannerState[] = ["error", "success", "alert", "info"]
 
   const OVERVIEW_ROWS: { state: AlertBannerState; title: string; description: string }[] = [
     { state: "error",   title: "Unable to save changes",       description: "Your session may have expired. Please try again or refresh the page." },
     { state: "success", title: "Changes saved successfully",   description: "All your updates have been applied and are now live." },
     { state: "alert",   title: "Action required before July 8", description: "Your subscription expires soon. Renew now to avoid service interruption." },
+    { state: "info",    title: "Syncing with Salesforce",        description: "Neutral feedback — neither a success nor a problem. Nothing for the user to fix." },
   ]
 
   const pgTitle = {
     error:   "Unable to save changes",
     success: "Changes saved successfully",
     alert:   "Action required before July 8",
+    info:    "Syncing with Salesforce",
   }[pgState]
 
   const pgDescription = {
     error:   "Your session may have expired. Please try again or refresh the page.",
     success: "All your updates have been applied and are now live.",
     alert:   "Your subscription expires soon. Renew now to avoid service interruption.",
+    info:    "Neutral feedback — neither a success nor a problem. Nothing for the user to fix.",
   }[pgState]
 
   return (
@@ -7759,7 +8053,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Alert Banner</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[560px]">
-            Full-width contextual notice for system-level feedback. Three semantic states — Error, Success, Alert — with an optional CTA action and dismiss button.
+            Contextual notice for system-level feedback. Four semantic states — Error, Success, Alert, Info — with an optional CTA action and dismiss button. Two placements: in flow when the message should persist, or floating top-right when it confirms an action just taken (see Toast).
           </p>
         </div>
         <SpecButton onClick={() => openSpec("alert-banner")} />
@@ -7866,7 +8160,7 @@ function AlertBannerPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   state={pgState}
                   title={pgTitle}
                   description={pgDesc ? pgDescription : undefined}
-                  cta={pgCta ? (pgState === "success" ? "Review" : pgState === "error" ? "Retry" : "Renew") : undefined}
+                  cta={pgCta ? ({ success: "Review", error: "Retry", alert: "Renew", info: "View log" }[pgState]) : undefined}
                   onCta={() => {}}
                   onClose={() => setDismissed(true)}
                 />
@@ -10900,12 +11194,8 @@ function PatternListViewPage() {
                       title="AI Workers"
                       description="Manage and monitor your AI workers across all categories."
                       tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                      primaryAction={
-                        <Button variant="main" size="sm">
-                          <LucideIcons.Plus size={13} /> New Worker
-                        </Button>
-                      }
-                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                      secondaryAction={{ label: "Export" }}
                       style={{ transition: "padding 200ms ease-in-out" }}
                     />
 
@@ -11449,12 +11739,8 @@ function PatternFilterPage() {
                         title="AI Workers"
                         description="Manage and monitor your AI workers across all categories."
                         tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                        primaryAction={
-                          <Button variant="main" size="sm">
-                            <LucideIcons.Plus size={13} /> New Worker
-                          </Button>
-                        }
-                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                        secondaryAction={{ label: "Export" }}
                         style={{ transition: "padding 200ms ease-in-out" }}
                       />
 
@@ -12245,12 +12531,8 @@ function PatternHeaderPage() {
                         title="AI Workers"
                         description="Manage and monitor your AI workers across all categories."
                         tag={<Tag variant="success" size="sm">24 Published</Tag>}
-                        primaryAction={
-                          <Button variant="main" size="sm">
-                            <LucideIcons.Plus size={13} /> New Worker
-                          </Button>
-                        }
-                        secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                        primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                        secondaryAction={{ label: "Export" }}
                         style={{ transition: "padding 200ms ease-in-out" }}
                       />
 
@@ -12754,12 +13036,8 @@ function PatternNavDepthPage() {
                     title="AI Workers"
                     description="Manage and monitor your AI workers across all categories."
                     tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                    primaryAction={
-                      <Button variant="main" size="sm">
-                        <LucideIcons.Plus size={13} /> New Worker
-                      </Button>
-                    }
-                    secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                    primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                    secondaryAction={{ label: "Export" }}
                     style={{ transition: "padding 200ms ease-in-out" }}
                   />
 
@@ -13278,7 +13556,7 @@ function PatternFeedbackPage() {
                     ["Action resulted in error (non-blocking)", "Inline banner", "AlertBanner (Error)"],
                     ["Action succeeded (non-blocking)", "Inline banner", "AlertBanner (Success)"],
                     ["Form field validation failed", "Inline error under field", "Input / Textarea (error state)"],
-                    ["Ephemeral success / info after action", "Toast (when available)", "AlertBanner (auto-dismiss)"],
+                    ["Ephemeral success / info after action", "Transient toast", "Toast (auto-dismiss)"],
                   ].map(([sit, pat, comp]) => (
                     <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
                       <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
@@ -13390,19 +13668,38 @@ function PatternFeedbackPage() {
 
 PRIORITY_HIERARCHY
   CRITICAL (blocking)     → Modal (ModalDialog)
-  PERSISTENT (contextual) → AlertBanner
   FIELD_VALIDATION        → Inline error under field
-  EPHEMERAL (transient)   → Toast (use AlertBanner until Toast built)
+  EVERYTHING ELSE         → AlertBanner, in one of two placements
+
+ALERT_BANNER — ONE COMPONENT, TWO PLACEMENTS
+  This is the whole decision. Same component, same states, same tokens.
+  What changes is where it sits and how long it lives.
+
+  IN FLOW    <AlertBanner … />
+    persistent · occupies layout · user dismisses it
+    for: a state of the page or section that stays true until something changes
+    e.g. "Salesforce sync failed", "10 members have not enrolled in MFA"
+
+  FLOATING   useToast().success(…)   ← the "toast"
+    transient · top-right, 24px inset · auto-dismisses after 3500ms
+    for: confirming an action the user just took
+    e.g. "Changes saved", "Export queued", "Invitation sent"
+
+  the test: would this still be worth showing in 10 minutes?
+    yes → in flow     no → floating
 
 ALERT_BANNER_USAGE
-  state=informative → general info, tips, non-critical system notices
-  state=success     → action completed successfully
-  state=alert       → warning requiring attention (not yet critical)
-  state=error       → action failed OR error threshold reached
+  state=success → action completed successfully
+  state=error   → action failed OR error threshold reached
+  state=alert   → warning requiring attention (not yet critical)
+  state=info    → neutral feedback, neither success nor problem
+                  e.g. "Syncing…", "Queued", "Will send in 5 minutes"
+                  NOTE: info is a STATE of AlertBanner. InformativeCard is a
+                  different component — do not confuse the two.
 
-  placement rules:
-    page-level   → top of main content area
-    section-level → inside a card or section that caused the event
+  in-flow placement rules:
+    page-level    → top of main content area
+    section-level → inside the card or section that caused the event
     never global for field-level errors
 
 FIELD_ERRORS
@@ -13420,11 +13717,15 @@ STACKING_RULES
   IF multiple events → use most specific/critical message only
   never stack overlapping feedback for the same trigger
 
-TOAST (when available)
-  use for: transient success after non-blocking action
-  auto-dismiss: 3–5 seconds
-  do NOT use for errors that require user action
-  current workaround: AlertBanner with auto-dismiss behavior`} />
+FLOATING ALERT_BANNER ("TOAST")
+  not a separate component — AlertBanner, portalled and positioned
+  use for: confirming an action the user just took
+  states: success · error · info (AlertBanner's own, 1:1)
+  placement: top-right, 24px inset · stack grows downward, newest last
+  auto-dismiss: 3500ms default (pass duration:0 to keep until dismissed)
+  optional cta: for an inline Undo / Retry
+  do NOT use for errors that require a user decision → use Modal
+  do NOT use for a state that stays true → use the in-flow placement`} />
           </PatternCard>
         </div>
       )}
@@ -13819,11 +14120,7 @@ function PatternLogsPage() {
                     title="Logs"
                     description="System events, errors, and execution history across all workers."
                     tag={<Tag variant="neutral" size="sm">{filteredLogs.length} events</Tag>}
-                    primaryAction={
-                      <Button variant="main" size="sm">
-                        <LucideIcons.Download size={13} /> Export
-                      </Button>
-                    }
+                    primaryAction={{ label: "Export", icon: LucideIcons.Download }}
                     style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
                   />
 
@@ -14649,8 +14946,8 @@ function showTip(e: React.MouseEvent, text: string) {
                 title="Dashboard"
                 description="Real-time overview of your AI workforce performance."
                 tag={<Tag variant="success" size="sm">24 Active</Tag>}
-                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> Add Widget</Button>}
-                secondaryAction={<Button variant="secondary" size="sm">Edit Layout</Button>}
+                primaryAction={{ label: "Add Widget", icon: LucideIcons.Plus }}
+                secondaryAction={{ label: "Edit Layout" }}
                 style={{ transition: "padding 200ms ease-in-out", flexShrink: 0 }}
               />
 
@@ -16057,7 +16354,6 @@ function PatternPanelContentPage() {
   const [showSpecAi, setShowSpecAi]   = useState(false)
   const [showSpecIns, setShowSpecIns] = useState(false)
   const [showSpecLs, setShowSpecLs]   = useState(false)
-  const [showSpecPi, setShowSpecPi]   = useState(false)
   const [showSpecBl, setShowSpecBl]   = useState(false)
   const [showSpecDt, setShowSpecDt]   = useState(false)
   const [showSpecTi, setShowSpecTi]   = useState(false)
@@ -17234,8 +17530,8 @@ function PatternPanelContentPage() {
                 description="Workflow builder — SidePanel playground preview"
                 backButton
                 size="size-l"
-                primaryAction={<Button variant="main" size="sm">Save workflow</Button>}
-                secondaryAction={<Button variant="secondary" size="sm" onClick={() => setGpSidePanelOpen(false)}>Close preview</Button>}
+                primaryAction={{ label: "Save workflow" }}
+                secondaryAction={{ label: "Close preview", onClick: () => setGpSidePanelOpen(false) }}
               />
               <div className="flex flex-1 overflow-hidden">
                 {/* Canvas */}
@@ -18561,165 +18857,7 @@ function PatternPanelContentPage() {
               Shows the step-by-step status of a workflow or pipeline run. Each item represents a single stage with a status icon, title, optional tag, description, timestamp, and an expand slot. Use a vertical connector line between consecutive items.
             </p>
 
-            {/* ── Statuses — Default state ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                {([
-                  { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
-                  { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
-                  { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
-                  { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
-                  { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
-                ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
-                  <ProcessItem
-                    key={item.status}
-                    status={item.status}
-                    title={item.title}
-                    description={item.description}
-                    timestamp={item.timestamp}
-                    tag={item.tag}
-                    showLine={i < arr.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ── Selected state ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
-              <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                <ProcessItem
-                  status="done"
-                  state="selected"
-                  title="Data enrichment"
-                  description="Fetched from Clearbit — 4 fields added"
-                  timestamp="2 min ago"
-                  tag="Completed"
-                  showLine={false}
-                />
-              </div>
-            </div>
-
-            {/* ── Number badge variant ── */}
-            <div className="mb-[16px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                {([
-                  { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
-                  { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
-                  { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
-                  { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
-                ]).map((item, i, arr) => (
-                  <ProcessItem
-                    key={item.number}
-                    status={item.status}
-                    number={item.number}
-                    title={item.title}
-                    description={item.description}
-                    showLine={i < arr.length - 1}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* ── With expand slot ── */}
-            <div className="mb-[20px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
-              <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                <ProcessItemExpandDemo />
-              </div>
-            </div>
-
-            {/* ── ProcessList states ── */}
-            <div className="mb-[4px]">
-              <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
-              <div className="grid grid-cols-3 gap-[12px]">
-                {/* Empty */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
-                  <ProcessList
-                    title="Process"
-                    state="empty"
-                    emptyTitle="No activity yet"
-                    emptyDescription="Steps appear when the workflow runs."
-                  />
-                </div>
-                {/* Loading */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
-                  <ProcessList title="Process" state="loading" />
-                </div>
-                {/* Populated */}
-                <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
-                  <ProcessList
-                    title="Process"
-                    state="populated"
-                    onViewAll={() => {}}
-                    items={[
-                      { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
-                      { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
-                      { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ── Usage rules ── */}
-            <div className="mt-[20px] flex flex-col gap-[12px]">
-              {[
-                { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
-                { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
-                { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
-                { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
-                { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
-              ].map((rule, i) => (
-                <div key={i} className="flex items-start gap-[8px]">
-                  <span
-                    className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
-                    style={{
-                      background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
-                      color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
-                    }}
-                  >
-                    {rule.type === "do" ? "Do" : "Don't"}
-                  </span>
-                  <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
-                </div>
-              ))}
-            </div>
-              <div className="mt-[16px]">
-                <button onClick={() => setShowSpecPi(v => !v)}
-                  className="flex items-center gap-[6px] text-[11px] font-semibold"
-                  style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
-                  <LucideIcons.ChevronRight size={12} style={{ transform: showSpecPi ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
-                  Design Spec
-                </button>
-                {showSpecPi && (
-                  <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
-                    style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
-                    {[
-                        { token: "--color-surface-success-default", usage: "done icon bg" },
-                        { token: "--color-surface-error-default", usage: "error icon bg" },
-                        { token: "--color-border-neutral-lighter", usage: "connector line" },
-                    ].map(row => (
-                      <div key={row.token} className="flex items-start gap-[8px]">
-                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
-                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
-                          {row.token}
-                        </code>
-                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
-                      <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
-                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+            <ProcessItemShowcase />
           </PatternCard>}
 
           {activeSlideoutItem === "by-layers" && <PatternCard>
@@ -22610,1448 +22748,6 @@ function WidgetFatherPage() {
 
 // ── WidgetsPage ───────────────────────────────────────────────────────────────
 
-// ── Widget content components ─────────────────────────────────────────────────
-
-function KpiWidgetContent({ variant = 2 }: { variant?: 0 | 1 | 2 | 3 }) {
-  // HighlightIcon lg (40×40) with TrendingUp — right-aligned per Figma 12661:63019
-  const KpiHighlight = () => (
-    <HighlightIcon size="lg" variant="informative" iconName="TrendingUp" />
-  )
-  const FeedbackText = () => (
-    <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>Feedback text</span>
-  )
-
-  if (variant === 0) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
-      <KpiHighlight />
-    </div>
-  )
-  if (variant === 1) return (
-    <div className="flex flex-col gap-[6px]">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
-        <KpiHighlight />
-      </div>
-      <FeedbackText />
-    </div>
-  )
-  if (variant === 2) return (
-    <div className="flex flex-col gap-[6px]">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
-          <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>/ 2,800</span>
-        </div>
-        <KpiHighlight />
-      </div>
-      <FeedbackText />
-    </div>
-  )
-  // Variant 3 — with progress bar
-  return (
-    <div className="flex flex-col gap-[6px]">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-          <span style={{ fontSize: 20, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>2,401</span>
-          <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>/ 2,800</span>
-        </div>
-        <KpiHighlight />
-      </div>
-      <div style={{ height: 4, background: "var(--color-surface-neutral-emphasis)", borderRadius: 100, overflow: "hidden" }}>
-        <div style={{ width: "85%", height: "100%", background: "var(--primary)", borderRadius: 100 }} />
-      </div>
-      <FeedbackText />
-    </div>
-  )
-}
-
-const TIMELINE_CARDS = [
-  {
-    value: "127", label: "Contracts", icon: "FileText",
-    bg: "var(--color-surface-primary-subtle)",
-    border: "var(--color-border-primary-default)",
-    textColor: "var(--color-border-primary-default)",
-  },
-  {
-    value: "43",  label: "Meetings", icon: "FileText",
-    bg: "var(--color-surface-yellow-subtle)",
-    border: "var(--color-surface-yellow-default)",
-    textColor: "var(--color-surface-yellow-default)",
-  },
-  {
-    value: "12",  label: "Calls", icon: "FileText",
-    bg: "var(--color-surface-success-subtle)",
-    border: "var(--color-border-success-default)",
-    textColor: "var(--color-border-success-default)",
-  },
-  {
-    value: "28",  label: "Proposals", icon: "FileText",
-    bg: "var(--color-surface-purple-subtle)",
-    border: "var(--color-border-purple-default)",
-    textColor: "var(--color-border-purple-default)",
-  },
-  {
-    value: "7",   label: "Closed", icon: "FileText",
-    bg: "var(--color-surface-lime-subtle)",
-    border: "var(--color-border-lime-green-default)",
-    textColor: "var(--color-border-lime-green-default)",
-  },
-  {
-    value: "19",  label: "Pipeline", icon: "FileText",
-    bg: "var(--color-surface-light-blue-subtle)",
-    border: "var(--color-border-light-blue-default)",
-    textColor: "var(--color-border-light-blue-default)",
-  },
-]
-
-const TIMELINE_META = [
-  { icon: "Cpu",        label: "AI Routing" },
-  { icon: "Workflow",   label: "Automation" },
-  { icon: "LayoutGrid", label: "Pipeline" },
-]
-
-// Weekly breakdown data for Timeline bar chart (Contracts, Meetings, Calls, Proposals, Closed)
-function TimelineWidgetContent({ showMeta = true, count = 5 }: { showMeta?: boolean; count?: 2|3|4|5|6 }) {
-  type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
-
-  return (
-    <div className="flex flex-col w-full" style={{ alignSelf: "flex-start" }}>
-      {/* Cards row — natural height, horizontal scroll when narrow */}
-      <div className="flex items-stretch w-full" style={{ overflowX: "auto", gap: 0 }}>
-        {TIMELINE_CARDS.slice(0, count).map((card, i) => (
-          <Fragment key={i}>
-            {i > 0 && (
-              <div style={{ width: 12, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ width: "100%", height: 1, background: "var(--field-border)" }} />
-              </div>
-            )}
-            <div
-              style={{
-                flex: "1 0 114px",
-                padding: "8px 12px",
-                background: card.bg,
-                border: `1px solid ${card.border}`,
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: 8,
-              }}
-            >
-              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 600, color: card.textColor, lineHeight: 1.2 }}>
-                  {card.value}
-                </span>
-                <span style={{ fontSize: 14, color: "var(--color-text-body)", lineHeight: "20px" }}>
-                  {card.label}
-                </span>
-              </div>
-              {/* Icon — 16×16 with card color */}
-              <div style={{ width: 24, height: 24, flexShrink: 0, opacity: 0.7, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <LucideIcons.FileText size={16} style={{ color: card.textColor }} />
-              </div>
-            </div>
-          </Fragment>
-        ))}
-      </div>
-
-      {/* MetaData row */}
-      {showMeta && (
-        <div className="flex items-center gap-[12px]" style={{ marginTop: 8 }}>
-          {TIMELINE_META.map((m, i) => {
-            const Icon = (LucideIcons as unknown as Record<string, LIcon>)[m.icon]
-            return (
-              <div key={i} className="flex items-center gap-[4px]">
-                {Icon && <Icon size={14} style={{ color: "var(--color-text-body)" }} />}
-                <span style={{ fontSize: 12, color: "var(--color-text-body)", whiteSpace: "nowrap" }}>
-                  {m.label}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-    </div>
-  )
-}
-
-
-// Lineal performance widget — matches Figma spec exactly
-const PERF_SERIES = [
-  { label: "Performance", color: "var(--color-border-lime-green-default)",  data: [38, 58, 65, 63] },
-  { label: "Engagement",  color: "var(--color-border-light-blue-default)",  data: [30, 30, 47, 38] },
-  { label: "Retention",   color: "var(--color-border-purple-default)",      data: [18, 18, 26, 24] },
-]
-
-function smoothPath(pts: [number, number][]): string {
-  if (pts.length < 2) return ""
-  let d = `M ${pts[0][0]} ${pts[0][1]}`
-  for (let i = 1; i < pts.length; i++) {
-    const cp1x = pts[i-1][0] + (pts[i][0] - pts[i-1][0]) / 3
-    const cp1y = pts[i-1][1]
-    const cp2x = pts[i][0] - (pts[i][0] - pts[i-1][0]) / 3
-    const cp2y = pts[i][1]
-    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${pts[i][0]} ${pts[i][1]}`
-  }
-  return d
-}
-
-function ChartsWidgetContent() {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
-
-  // Fixed viewBox: 400×140. Chart area: x 36–392, y 10–130
-  const yScale = (v: number) => 130 - (v / 80) * 120
-  const xAt    = (i: number) => 36 + i * (356 / 3)
-  const yLabels = [0, 20, 40, 60, 80]
-  const xLabels = ["W1", "W2", "W3", "W4"]
-
-  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    // Map rendered pixel X to viewBox X (0–400)
-    const svgX = ((e.clientX - rect.left) / rect.width) * 400
-    // Find nearest column
-    let best = 0, bestDist = Infinity
-    for (let i = 0; i < 4; i++) {
-      const dist = Math.abs(xAt(i) - svgX)
-      if (dist < bestDist) { bestDist = dist; best = i }
-    }
-    setHoveredIdx(best)
-  }
-
-  // Tooltip side: right when idx ≤ 1, left when idx ≥ 2
-  // Percentage across the SVG width for the crosshair position
-  const crosshairPct = hoveredIdx !== null ? (xAt(hoveredIdx) / 400) * 100 : 0
-
-  return (
-    <div className="flex flex-col gap-[8px]" style={{ flex: 1, minHeight: 0 }}>
-      {/* Legend */}
-      <div className="flex gap-[10px] flex-wrap" style={{ flexShrink: 0 }}>
-        {PERF_SERIES.map(s => (
-          <div key={s.label} className="flex items-center gap-[4px]">
-            <div style={{ width: 12, height: 2, background: s.color, borderRadius: 1 }} />
-            <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{s.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Chart wrapper — flex:1 to fill remaining height; minHeight:120 prevents SVG from collapsing */}
-      <div style={{ position: "relative", flex: 1, minHeight: 120, paddingBottom: 20 }}>
-
-        {/* Floating insight card tooltip */}
-        {hoveredIdx !== null && (
-          <div
-            style={{
-              position: "absolute",
-              top: 30,
-              ...(hoveredIdx <= 1
-                ? { left: `calc(${crosshairPct}% + 8px)` }
-                : { right: `calc(${100 - crosshairPct}% + 8px)` }),
-              background: "var(--widget-bg)",
-              border: "1px solid var(--field-border)",
-              borderRadius: 8,
-              padding: "10px 12px",
-              boxShadow: "0 4px 16px rgba(0,0,0,0.18)", // audit-ignore: Charts widget crosshair tooltip shadow, pending Figma effect-name mapping (2026-08 audit)
-              pointerEvents: "none",
-              zIndex: 10,
-              minWidth: 140,
-              whiteSpace: "nowrap",
-            }}
-          >
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 6 }}>
-              Week {xLabels[hoveredIdx]}
-            </div>
-            {PERF_SERIES.map(s => (
-              <div key={s.label} className="flex items-center gap-[6px]" style={{ marginBottom: 3 }}>
-                <span style={{ fontSize: 12, color: s.color, fontWeight: 500 }}>{s.label}:</span>
-                <span style={{ fontSize: 12, color: "var(--color-text-title)", fontWeight: 500 }}>
-                  {s.data[hoveredIdx]}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <svg
-          width="100%"
-          viewBox="0 0 400 140"
-          preserveAspectRatio="none"
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoveredIdx(null)}
-          style={{ display: "block", cursor: "crosshair", position: "absolute", inset: 0, height: "100%" }}
-        >
-          {/* Horizontal grid lines */}
-          {yLabels.map(yv => (
-            <line
-              key={yv}
-              x1="36" x2="392"
-              y1={yScale(yv)} y2={yScale(yv)}
-              stroke="var(--field-border)"
-              strokeWidth="0.5"
-              strokeDasharray="2,4"
-            />
-          ))}
-
-          {/* Crosshair vertical line */}
-          {hoveredIdx !== null && (
-            <line
-              x1={xAt(hoveredIdx)} x2={xAt(hoveredIdx)}
-              y1={10} y2={130}
-              stroke="var(--field-border)"
-              strokeWidth="1"
-            />
-          )}
-
-          {/* Series smooth lines */}
-          {PERF_SERIES.map(s => {
-            const pts: [number, number][] = s.data.map((v, i) => [xAt(i), yScale(v)])
-            return (
-              <path
-                key={s.label}
-                d={smoothPath(pts)}
-                fill="none"
-                stroke={s.color}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            )
-          })}
-
-          {/* Data point dots — only on hover */}
-          {hoveredIdx !== null && PERF_SERIES.map(s => (
-            <circle
-              key={s.label}
-              cx={xAt(hoveredIdx)}
-              cy={yScale(s.data[hoveredIdx])}
-              r={3}
-              fill={s.color}
-            />
-          ))}
-        </svg>
-
-        {/* Y-axis labels — fixed HTML, don't scale with SVG */}
-        <div style={{
-          position: "absolute", top: 0, left: 0, bottom: 16,
-          display: "flex", flexDirection: "column", justifyContent: "space-between",
-          pointerEvents: "none",
-        }}>
-          {[80, 60, 40, 20, 0].map(yv => (
-            <span key={yv} style={{ fontSize: 9, color: "var(--color-text-subtitle)", lineHeight: 1 }}>
-              {yv}
-            </span>
-          ))}
-        </div>
-
-        {/* X-axis labels — fixed HTML, positioned at percentage */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 36, right: 8,
-          display: "flex", justifyContent: "space-between",
-          pointerEvents: "none",
-        }}>
-          {["W1","W2","W3","W4"].map(lbl => (
-            <span key={lbl} style={{ fontSize: 9, color: "var(--color-text-subtitle)", textAlign: "center", lineHeight: 1 }}>
-              {lbl}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const TABLE_ROWS = [
-  { name: "Alice Johnson", status: "Active",   statusColor: "var(--color-surface-success-default)", value: "$12,400" },
-  { name: "Bob Smith",     status: "Inactive", statusColor: "var(--field-supporting)",              value: "$8,200"  },
-  { name: "Carol Davis",   status: "Pending",  statusColor: "var(--color-surface-alert-default)",   value: "$5,600"  },
-  { name: "Dave Wilson",   status: "Active",   statusColor: "var(--color-surface-success-default)", value: "$9,100"  },
-]
-
-function TableWidgetContent() {
-  return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid var(--field-border)" }}>
-            {["Name","Status","Value"].map(h => (
-              <th key={h} style={{ padding: "4px 8px", textAlign: "left", fontSize: 10, fontWeight: 600, color: "var(--field-label)", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {TABLE_ROWS.map((row, i) => (
-            <tr key={i} style={{ borderBottom: "0.5px solid var(--field-border)" }}>
-              <td style={{ padding: "7px 8px", fontSize: 12, color: "var(--foreground)" }}>{row.name}</td>
-              <td style={{ padding: "7px 8px" }}>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: row.statusColor, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{row.status}</span>
-                </span>
-              </td>
-              <td style={{ padding: "7px 8px", fontSize: 12, color: "var(--foreground)", fontWeight: 600 }}>{row.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-const ACTIVITY_DATA = [
-  { type: "call",    title: "Inbound call from Sarah Johnson",  time: "2m ago",  status: "alert" as const,
-    desc: "Sarah Johnson | Confirmed demo, asked for pricing. Available Thursday 3pm.", metaCount: 4 },
-  { type: "email",   title: "Email from David Kim",             time: "15m ago", status: "default" as const,
-    desc: "David Kim | Re: Q3 proposal — schedule a quick sync to review numbers?",    metaCount: 2 },
-  { type: "meeting", title: "Meeting — Quarterly Review",       time: "1h ago",  status: "default" as const,
-    desc: "Team | QBR completed. Action items assigned to Sarah and Mike for follow-up.", metaCount: 3 },
-  { type: "sms",     title: "SMS — Maria Torres",               time: "2h ago",  status: "default" as const,
-    desc: "Maria Torres | Thanks for follow-up. Loop in manager before Friday.",       metaCount: 1 },
-  { type: "task",    title: "Task — Contract renewal due",      time: "3h ago",  status: "alert" as const,
-    desc: "System | Contract renewal deadline approaching. Priority: High.",           metaCount: 2 },
-  { type: "call",    title: "Missed call from James Carter",    time: "4h ago",  status: "error" as const,
-    desc: "James Carter | Called twice — likely about contract renewal.",              metaCount: 3 },
-]
-
-const ACTIVITY_TYPE_CONFIG: Record<string, { icon: string; color: string; bg: string; accentBorder: string }> = {
-  call:    { icon: "Phone",         color: "var(--primary)",                          bg: "var(--color-surface-primary-subtle)",    accentBorder: "var(--color-border-primary-default)" },
-  email:   { icon: "Mail",          color: "var(--color-border-light-blue-default)",  bg: "var(--color-surface-light-blue-subtle)", accentBorder: "var(--color-border-light-blue-default)" },
-  sms:     { icon: "MessageSquare", color: "var(--color-border-success-default)",     bg: "var(--color-surface-success-subtle)",    accentBorder: "var(--color-border-success-default)" },
-  meeting: { icon: "CalendarDays",  color: "var(--color-border-purple-default)",      bg: "var(--color-surface-purple-subtle)",     accentBorder: "var(--color-border-purple-default)" },
-  task:    { icon: "CheckSquare",   color: "var(--color-surface-yellow-default)",     bg: "var(--color-surface-yellow-subtle)",     accentBorder: "var(--color-surface-yellow-default)" },
-}
-
-function ActivityWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
-  type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
-  const [hoveredIdx,  setHoveredIdx]  = useState<number | null>(null)
-  const [slideoutOpen, setSlideoutOpen] = useState(false)
-  const [slideoutTab, setSlideoutTab] = useState(0)
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
-  const iconStyle: React.CSSProperties = { color: "var(--color-text-subtitle)" }
-  const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
-
-  function showTip(e: React.MouseEvent, text: string) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setTooltip({ text, x: r.left + r.width / 2, y: r.top })
-  }
-
-  const META_GROUPS = (onTip: (e: React.MouseEvent, t: string) => void): React.ReactNode[][] => [
-    [<span key="uid" style={{ fontSize: 10, color: "var(--color-text-subtitle)", fontFamily: "monospace",
-        background: "var(--color-surface-neutral-default)", borderRadius: 3, padding: "1px 4px" }}>{`{User-ID}`}</span>],
-    [dot("d1"), <span key="smile" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Sentiment")} onMouseLeave={() => setTooltip(null)}><LucideIcons.Smile size={10} style={iconStyle} /></span>],
-    [dot("d2"), <span key="chk" style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }} onMouseEnter={e => onTip(e, "Tasks completed")} onMouseLeave={() => setTooltip(null)}>
-        <LucideIcons.CheckSquare size={10} style={iconStyle} />
-        <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>2</span></span>],
-    [dot("d3"), <span key="wave" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Recording available")} onMouseLeave={() => setTooltip(null)}><LucideIcons.AudioWaveform size={10} style={iconStyle} /></span>],
-    [dot("d4"), <span key="arrow" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Outbound")} onMouseLeave={() => setTooltip(null)}><LucideIcons.ArrowUpRight size={10} style={iconStyle} /></span>],
-    [dot("d5"), <span key="clk" style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }} onMouseEnter={e => onTip(e, "Call duration")} onMouseLeave={() => setTooltip(null)}>
-        <LucideIcons.Clock size={10} style={iconStyle} />
-        <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>4 mins</span></span>],
-    [dot("d6"), <span key="cdl" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Ended by agent")} onMouseLeave={() => setTooltip(null)}><LucideIcons.CornerDownLeft size={10} style={iconStyle} /></span>],
-    [dot("d7"), <span key="flag" style={{ cursor: "default" }} onMouseEnter={e => onTip(e, "Priority flag")} onMouseLeave={() => setTooltip(null)}><LucideIcons.Flag size={10} style={iconStyle} /></span>],
-  ]
-
-  return (
-    <>
-      {/* Tooltip — portaled to body so transform:scale on canvas doesn't offset position:fixed */}
-      {tooltip && typeof document !== "undefined" && createPortal(
-        <div style={{
-          position: "fixed",
-          left: tooltip.x,
-          top: tooltip.y - 4,
-          transform: "translateX(-50%) translateY(-100%)",
-          background: "var(--color-surface-neutral-darker)",
-          color: "var(--color-text-negative)",
-          borderRadius: 4,
-          padding: "3px 7px",
-          fontSize: 10,
-          pointerEvents: "none",
-          zIndex: 99999,
-          whiteSpace: "nowrap",
-        }}>
-          {tooltip.text}
-        </div>,
-        document.body
-      )}
-      {/* SlideOut — opens when an activity item is clicked */}
-      {slideoutOpen && selectedIdx !== null && (() => {
-        const act = ACTIVITY_DATA[selectedIdx]
-        const cfg = ACTIVITY_TYPE_CONFIG[act.type] ?? ACTIVITY_TYPE_CONFIG["call"]
-        const CfgIcon = (LucideIcons as unknown as Record<string, LIcon>)[cfg.icon]
-        const statusVariants: Record<string, string> = {
-          alert: "Alert",
-          error:   "Error",
-          default: "Completed",
-        }
-        return (
-          <SlideOut
-            open={slideoutOpen}
-            onClose={() => { setSlideoutOpen(false); setSelectedIdx(null) }}
-            type="with-variants"
-            size="m"
-            title={act.title}
-            subtitle={`${act.type.charAt(0).toUpperCase() + act.type.slice(1)} · ${act.time}`}
-            showStatus={true}
-            statusLabel={statusVariants[act.status] ?? "Completed"}
-            showIcon={true}
-            iconContent={CfgIcon ? <CfgIcon size={20} style={{ color: cfg.color }} /> : undefined}
-            showTopButton={false}
-            showTabs={true}
-            tabLabels={["Overview", "Context", "Related"]}
-            activeTab={slideoutTab}
-            onTabChange={setSlideoutTab}
-          >
-            {slideoutTab === 0 && (
-              <div className="flex flex-col gap-[20px]">
-                <div className="flex flex-col gap-[8px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Description</p>
-                  <p className="text-[14px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{act.desc}</p>
-                </div>
-                <div className="flex flex-col gap-[8px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Details</p>
-                  <div className="flex flex-col gap-[6px]">
-                    {[
-                      { icon: "Clock",       label: "Time",   value: act.time },
-                      { icon: "Activity",    label: "Type",   value: act.type.charAt(0).toUpperCase() + act.type.slice(1) },
-                      { icon: "AlertCircle", label: "Status", value: statusVariants[act.status] ?? "Completed" },
-                    ].map(row => (
-                      <div key={row.label} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
-                        style={{ border: "0.5px solid var(--color-border-neutral-lighter)", background: "var(--color-surface-neutral-subtle)" }}>
-                        {(() => { const I = (LucideIcons as unknown as Record<string, LIcon>)[row.icon]; return I ? <I size={13} style={{ color: "var(--field-supporting)" }} /> : null })()}
-                        <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)", width: 60 }}>{row.label}</span>
-                        <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{row.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            {slideoutTab === 1 && (
-              <div className="flex flex-col gap-[16px]">
-                <div className="flex flex-col gap-[8px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Entity</p>
-                  <div className="flex items-center gap-[10px] h-[40px] px-[12px] rounded-[8px]"
-                    style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                    <div style={{ width: 24, height: 24, borderRadius: 6, background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {CfgIcon && <CfgIcon size={11} style={{ color: cfg.color }} />}
-                    </div>
-                    <span className="text-[13px] font-medium font-mono" style={{ color: "var(--foreground)" }}>{`{User-ID}`}</span>
-                  </div>
-                </div>
-                <div className="p-[12px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>Full entity context will be linked here in the product — name, company, health score, contract stage, and open tasks.</p>
-                </div>
-              </div>
-            )}
-            {slideoutTab === 2 && (
-              <div className="flex flex-col gap-[8px]">
-                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Recent activity</p>
-                {ACTIVITY_DATA.filter((_, j) => j !== selectedIdx).slice(0, 3).map((other, j) => {
-                  const oc = ACTIVITY_TYPE_CONFIG[other.type] ?? ACTIVITY_TYPE_CONFIG["call"]
-                  const OI = (LucideIcons as unknown as Record<string, LIcon>)[oc.icon]
-                  return (
-                    <div key={j} className="flex items-center gap-[10px] h-[40px] px-[12px] rounded-[8px]"
-                      style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                      <div style={{ width: 24, height: 24, borderRadius: 6, background: oc.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        {OI && <OI size={11} style={{ color: oc.color }} />}
-                      </div>
-                      <span className="text-[12px] font-medium flex-1" style={{ color: "var(--foreground)" }}>{other.title}</span>
-                      <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{other.time}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </SlideOut>
-        )
-      })()}
-      <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
-        {ACTIVITY_DATA.map((activity, i) => {
-          const cfg = ACTIVITY_TYPE_CONFIG[activity.type] ?? ACTIVITY_TYPE_CONFIG["call"]
-          const CfgIcon = (LucideIcons as unknown as Record<string, LIcon>)[cfg.icon]
-          const showMetaRow = showMeta || (selectedIdx === i) || (hoveredIdx === i)
-
-          return (
-            <div key={i}
-              onClick={() => { setSelectedIdx(i); setSlideoutOpen(true); setSlideoutTab(0) }}
-              onMouseEnter={() => setHoveredIdx(i)}
-              onMouseLeave={() => setHoveredIdx(null)}
-              className={`group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] flex-shrink-0 hover:bg-[var(--color-surface-neutral-subtle)]${selectedIdx === i ? " bg-[var(--color-surface-neutral-subtle)] !border-[var(--card-default-selected-bd)]" : ""}`}
-              style={{ border: "0.5px solid var(--field-border)" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
-                    background: cfg.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {CfgIcon && <CfgIcon size={12} style={{ color: cfg.color }} />}
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)",
-                    flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {activity.title}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                  {activity.status === "alert" && (
-                    <LucideIcons.AlertTriangle size={11} style={{ color: "var(--color-surface-alert-default)" }} />
-                  )}
-                  {activity.status === "error" && (
-                    <LucideIcons.XCircle size={11} style={{ color: "var(--color-text-error)" }} />
-                  )}
-                  <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{activity.time}</span>
-                  <LucideIcons.ChevronRight size={11} style={{ color: "var(--color-text-subtitle)" }} />
-                </div>
-              </div>
-              <p title={activity.desc} style={{ fontSize: 12, color: "var(--color-text-body)", lineHeight: "1.4",
-                  margin: 0, paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {activity.desc}
-              </p>
-              {/* Metadata row — smooth reveal on select */}
-              <div style={{
-                paddingLeft: 34,
-                maxHeight: showMetaRow ? 36 : 0,
-                opacity: showMetaRow ? 1 : 0,
-                overflow: "visible",
-                transition: "max-height 200ms ease, opacity 180ms ease",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-                  {META_GROUPS(showTip).slice(0, Math.min(activity.metaCount, META_GROUPS(showTip).length)).flat()}
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </ScrollArea>
-    </>
-  )
-}
-
-const NOTES_ITEMS_DATA = [
-  { title: "Alice Johnson — Renewal",   time: "2h ago",    initial: "A",
-    color: "var(--primary)", bg: "var(--color-surface-primary-subtle)", accentBorder: "var(--color-border-primary-default)",
-    text: "Follow up with Alice re: renewal contract. Q3 budget reviews — custom pricing needed.", taskCount: 3, fileCount: 2 },
-  { title: "Team Sync — July Campaign", time: "Yesterday", initial: "T",
-    color: "var(--color-border-purple-default)", bg: "var(--color-surface-purple-subtle)", accentBorder: "var(--color-border-purple-default)",
-    text: "Prioritize warm leads in the Northeast for July. Assign Sarah for Northeast, Mike for Southeast.", taskCount: 1, fileCount: 0 },
-  { title: "Maria Torres — Proposal",   time: "3h ago",    initial: "M",
-    color: "var(--color-border-success-default)", bg: "var(--color-surface-success-subtle)", accentBorder: "var(--color-border-success-default)",
-    text: "Budget constraints flagged. Offer alternative pricing tier before Thursday meeting.", taskCount: 2, fileCount: 1 },
-  { title: "Carlos Mejía — Escalation", time: "1h ago",    initial: "C",
-    color: "var(--color-surface-error-default)", bg: "var(--color-surface-error-subtle)", accentBorder: "var(--color-surface-error-default)",
-    text: "Escalation from support queue re: integration failure. Needs urgent follow-up before EOD.", taskCount: 1, fileCount: 0 },
-  { title: "Q3 Pipeline Review",        time: "5h ago",    initial: "Q",
-    color: "var(--color-surface-yellow-default)", bg: "var(--color-surface-yellow-subtle)", accentBorder: "var(--color-surface-yellow-default)",
-    text: "Review Q3 forecast data. Several deals at risk — connect with regional managers by EOD.", taskCount: 4, fileCount: 3 },
-  { title: "Client Onboarding — Dec",   time: "4d ago",    initial: "D",
-    color: "var(--color-border-light-blue-default)", bg: "var(--color-surface-light-blue-subtle)", accentBorder: "var(--color-border-light-blue-default)",
-    text: "New enterprise client starting December. Coordinate legal, technical setup and training.", taskCount: 2, fileCount: 1 },
-]
-
-function NotesWidgetContent({ showMeta = false }: { showMeta?: boolean }) {
-  const [selectedNote, setSelectedNote] = useState<number | null>(null)
-  const [hoveredIdx,   setHoveredIdx]   = useState<number | null>(null)
-  const [slideoutTab,  setSlideoutTab]  = useState(0)
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
-  const iconSt: React.CSSProperties = { color: "var(--color-text-subtitle)" }
-  const dot = (key: string) => <span key={key} style={{ fontSize: 10, color: "var(--field-supporting)" }}>·</span>
-
-  function showTip(e: React.MouseEvent, text: string) {
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setTooltip({ text, x: r.left + r.width / 2, y: r.top })
-  }
-
-  return (
-    <>
-    {/* Tooltip — portaled to body so transform:scale on canvas doesn't offset position:fixed */}
-    {tooltip && typeof document !== "undefined" && createPortal(
-      <div style={{
-        position: "fixed",
-        left: tooltip.x,
-        top: tooltip.y - 4,
-        transform: "translateX(-50%) translateY(-100%)",
-        background: "var(--color-surface-neutral-darker)",
-        color: "var(--color-text-negative)",
-        borderRadius: 4,
-        padding: "3px 7px",
-        fontSize: 10,
-        pointerEvents: "none",
-        zIndex: 99999,
-        whiteSpace: "nowrap",
-      }}>
-        {tooltip.text}
-      </div>,
-      document.body
-    )}
-    {/* SlideOut — opens when a note item is clicked */}
-    {selectedNote !== null && (() => {
-      const note = NOTES_ITEMS_DATA[selectedNote]
-      return (
-        <SlideOut
-          open={true}
-          onClose={() => { setSelectedNote(null); setSlideoutTab(0) }}
-          type="with-variants"
-          size="m"
-          title={note.title}
-          subtitle={`Note · ${note.time}`}
-          showStatus={true}
-          statusLabel="Note"
-          showIcon={true}
-          iconContent={
-            <div style={{ width: 24, height: 24, borderRadius: 6, background: note.bg,
-                display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: note.color }}>{note.initial}</span>
-            </div>
-          }
-          showTopButton={false}
-          showTabs={true}
-          tabLabels={["Content", "Tasks & Files", "Related"]}
-          activeTab={slideoutTab}
-          onTabChange={setSlideoutTab}
-        >
-          {slideoutTab === 0 && (
-            <div className="flex flex-col gap-[20px]">
-              <div className="flex flex-col gap-[8px]">
-                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Note</p>
-                <div className="p-[14px] rounded-[10px] leading-[1.6]" style={{ background: note.bg, border: `1px solid ${note.accentBorder}`, fontSize: 14, color: "var(--foreground)" }}>
-                  {note.text}
-                </div>
-              </div>
-              <div className="flex flex-col gap-[6px]">
-                {[
-                  { icon: "User",     label: "Author",  value: note.initial === "A" ? "Alice Johnson" : note.initial === "T" ? "Team" : "Maria Torres" },
-                  { icon: "Clock",    label: "Created", value: note.time },
-                  { icon: "Link",     label: "Linked",  value: "1 entity linked" },
-                ].map(row => (
-                  <div key={row.label} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
-                    style={{ border: "0.5px solid var(--color-border-neutral-lighter)", background: "var(--color-surface-neutral-subtle)" }}>
-                    {(() => { const I = (LucideIcons as unknown as Record<string, React.FC<{ size?: number; style?: React.CSSProperties }>>)[row.icon]; return I ? <I size={13} style={{ color: "var(--field-supporting)" }} /> : null })()}
-                    <span className="text-[12px] font-medium" style={{ color: "var(--field-supporting)", width: 60 }}>{row.label}</span>
-                    <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {slideoutTab === 1 && (
-            <div className="flex flex-col gap-[16px]">
-              {note.taskCount > 0 && (
-                <div className="flex flex-col gap-[8px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Tasks ({note.taskCount})</p>
-                  {Array.from({ length: note.taskCount }).map((_, j) => (
-                    <div key={j} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
-                      style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                      <LucideIcons.CheckSquare size={13} style={{ color: j === 0 ? "var(--color-text-success)" : "var(--field-supporting)" }} />
-                      <span className="text-[13px]" style={{ color: "var(--foreground)", textDecoration: j === 0 ? "line-through" : "none", opacity: j === 0 ? 0.5 : 1 }}>
-                        {["Follow up before Thursday", "Send pricing proposal", "CC account manager"][j] ?? `Task ${j + 1}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {note.fileCount > 0 && (
-                <div className="flex flex-col gap-[8px]">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Files ({note.fileCount})</p>
-                  {Array.from({ length: note.fileCount }).map((_, j) => (
-                    <div key={j} className="flex items-center gap-[10px] h-[36px] px-[12px] rounded-[8px]"
-                      style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                      <LucideIcons.FileText size={13} style={{ color: "var(--field-supporting)" }} />
-                      <span className="text-[13px]" style={{ color: "var(--foreground)" }}>
-                        {["Renewal_Proposal_Q3.pdf", "Pricing_Tier_Options.xlsx"][j] ?? `File ${j + 1}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {note.taskCount === 0 && note.fileCount === 0 && (
-                <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>No tasks or files attached to this note.</p>
-              )}
-            </div>
-          )}
-          {slideoutTab === 2 && (
-            <div className="flex flex-col gap-[8px]">
-              <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-supporting)" }}>Other notes</p>
-              {NOTES_ITEMS_DATA.filter((_, j) => j !== selectedNote).map((other, j) => (
-                <div key={j} className="flex items-start gap-[10px] p-[10px] rounded-[8px]"
-                  style={{ border: "0.5px solid var(--color-border-neutral-lighter)" }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 6, background: other.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: other.color }}>{other.initial}</span>
-                  </div>
-                  <div className="flex flex-col gap-[2px] flex-1 min-w-0">
-                    <span className="text-[13px] font-medium truncate" style={{ color: "var(--foreground)" }}>{other.title}</span>
-                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{other.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </SlideOut>
-      )
-    })()}
-    <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
-      {NOTES_ITEMS_DATA.map((note, i) => {
-        const showExpanded = showMeta || selectedNote === i || hoveredIdx === i
-        return (
-          <div
-            key={i}
-            onClick={() => { setSelectedNote(i); setSlideoutTab(0) }}
-            onMouseEnter={() => setHoveredIdx(i)}
-            onMouseLeave={() => setHoveredIdx(null)}
-            className={`group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] flex-shrink-0 hover:bg-[var(--color-surface-neutral-subtle)]${selectedNote === i ? " bg-[var(--color-surface-neutral-subtle)] !border-[var(--card-default-selected-bd)]" : ""}`}
-            style={{ border: "0.5px solid var(--field-border)" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 26, height: 26, borderRadius: 6, flexShrink: 0,
-                  background: note.bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: note.color }}>{note.initial}</span>
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-title)",
-                  flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {note.title}
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{note.time}</span>
-                <LucideIcons.ChevronRight size={11} style={{ color: "var(--color-text-subtitle)" }} />
-              </div>
-            </div>
-            <p style={{ fontSize: 12, color: "var(--color-text-body)", lineHeight: "1.4",
-                margin: 0, paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {note.text}
-            </p>
-            {/* Metadata row — reveals on hover or selection */}
-            <div style={{
-              overflow: "hidden", paddingLeft: 34,
-              maxHeight: showExpanded ? 36 : 0,
-              opacity: showExpanded ? 1 : 0,
-              transition: "max-height 200ms ease, opacity 180ms ease",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 10, color: "var(--color-text-subtitle)", fontFamily: "monospace",
-                    background: "var(--color-surface-neutral-default)", borderRadius: 3, padding: "1px 4px",
-                    cursor: "default" }}
-                  onMouseEnter={e => showTip(e, "User ID")}
-                  onMouseLeave={() => setTooltip(null)}
-                >{`{User-ID}`}</span>
-                {note.taskCount > 0 && <>
-                  {dot("dt")}
-                  <span style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}
-                    onMouseEnter={e => showTip(e, "Tasks")}
-                    onMouseLeave={() => setTooltip(null)}
-                  >
-                    <LucideIcons.CheckSquare size={10} style={iconSt} />
-                    <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.taskCount}</span>
-                  </span>
-                </>}
-                {note.fileCount > 0 && <>
-                  {dot("df")}
-                  <span style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}
-                    onMouseEnter={e => showTip(e, "Attachments")}
-                    onMouseLeave={() => setTooltip(null)}
-                  >
-                    <LucideIcons.Paperclip size={10} style={iconSt} />
-                    <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.fileCount}</span>
-                  </span>
-                </>}
-                {dot("dl")}
-                <span style={{ cursor: "default" }}
-                  onMouseEnter={e => showTip(e, "Linked items")}
-                  onMouseLeave={() => setTooltip(null)}
-                >
-                  <LucideIcons.Link size={10} style={iconSt} />
-                </span>
-                {dot("dc")}
-                <span style={{ display: "flex", alignItems: "center", gap: 2, cursor: "default" }}
-                  onMouseEnter={e => showTip(e, "Date")}
-                  onMouseLeave={() => setTooltip(null)}
-                >
-                  <LucideIcons.Calendar size={10} style={iconSt} />
-                  <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>{note.time}</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        )
-      })}
-    </ScrollArea>
-    </>
-  )
-}
-
-const FOLDER_FILES_DATA = [
-  { name: "Q2 Campaign Pack",  icon: "Package"  },
-  { name: "Marketing Assets",  icon: "Folder"   },
-  { name: "Customer Personas", icon: "FileText" },
-  { name: "Sales Scripts",     icon: "FileText" },
-]
-
-function FolderNavWidgetContent() {
-  const [folderTab, setFolderTab] = useState("packs")
-  type LIcon = React.FC<{ size?: number; style?: React.CSSProperties }>
-  return (
-    <div className="flex flex-col gap-[8px]" style={{ flex: 1, minHeight: 0 }}>
-      <div style={{ flexShrink: 0 }}>
-        <Tabs
-          size="s"
-          items={[
-            { id: "packs",     label: "Packs"     },
-            { id: "drives",    label: "Drives"    },
-            { id: "knowledge", label: "Knowledge" },
-          ]}
-          activeId={folderTab}
-          onChange={setFolderTab}
-        />
-      </div>
-      <div style={{ flexShrink: 0 }}>
-        <Input size="sm" placeholder="Search..." leftIcon={<LucideIcons.Search size={11} />} readOnly />
-      </div>
-      <ScrollArea className="flex flex-col" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
-        {FOLDER_FILES_DATA.map((f, i) => {
-          const FIcon = (LucideIcons as unknown as Record<string, LIcon>)[f.icon]
-          return (
-            <div key={i} className="cursor-pointer flex items-center gap-[8px] rounded-[8px] px-[10px] py-[6px] transition-colors duration-150 mb-[2px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
-              {FIcon && <FIcon size={13} style={{ color: "var(--field-supporting)", flexShrink: 0 }} />}
-              <span style={{ fontSize: 12, color: "var(--foreground)", flex: 1 }}>{f.name}</span>
-            </div>
-          )
-        })}
-      </ScrollArea>
-    </div>
-  )
-}
-
-function StatusWarningWidgetContent() {
-  const STATUS_COLS: { label: string; value: number; iconName: string; variant: HighlightIconVariant; labelColor: string }[] = [
-    { label: "Normal",   value: 1284, iconName: "Check",         variant: "success", labelColor: "var(--color-text-success)"           },
-    { label: "Warnings", value: 47,   iconName: "AlertTriangle",  variant: "alert",   labelColor: "var(--color-surface-alert-default)"  },
-    { label: "Critical", value: 3,    iconName: "XCircle",        variant: "error",   labelColor: "var(--color-text-error)"             },
-  ]
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      {STATUS_COLS.map((col, i) => (
-        <div key={i} style={{
-          flex: 1, display: "flex", alignItems: "flex-start", gap: 12,
-          padding: "12px 16px", borderRadius: 8,
-          border: "1px solid var(--field-border)",
-          background: "var(--widget-bg)",
-        }}>
-          <HighlightIcon size="md" variant={col.variant} iconName={col.iconName} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <span style={{ fontSize: 10, fontWeight: 500, color: col.labelColor, lineHeight: 1.2 }}>
-              {col.label}
-            </span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1 }}>
-              {col.value.toLocaleString()}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Act Now Summary ───────────────────────────────────────────────────────────
-
-
-const ACT_NOW_CARD_DATA: Record<string, { title: string; studio: string[]; status: string; remaining: number; borderColor: string; tagVariant: "error" | "alert" | "informative" }> = {
-  "Act Now":  { title: "Financial Policy PDF — DIAN approval required",    studio: ["GOV"],  status: "Blocking 14 workflows · 3 agents", remaining: 3,  borderColor: "var(--color-surface-error-default)",       tagVariant: "error"       },
-  "Critical": { title: "SalesForecastPA about to send external email",     studio: ["AGNT"], status: "Paused · awaiting review",        remaining: 6,  borderColor: "var(--color-surface-alert-default)",       tagVariant: "alert"       },
-  "Action":   { title: "Q3 Forecast Schema needs field remap",             studio: ["DATA"], status: "Action needed · this week",       remaining: 11, borderColor: "var(--primary)",                           tagVariant: "informative" },
-}
-
-function ActNowSummaryWidgetContent() {
-  const card = ACT_NOW_CARD_DATA["Act Now"]
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [isNarrow, setIsNarrow] = useState(false)
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    const ro = new ResizeObserver(([entry]) => {
-      setIsNarrow(entry.contentRect.width < 340)
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  const trunc = (s: string, n: number) => s.length > n ? s.slice(0, n) + "…" : s
-
-  const bannerTitle = isNarrow ? trunc(card.status, 18) : card.status
-
-  return (
-    <div ref={containerRef} className="flex flex-col gap-[8px]">
-      {/* Summary banner — fills full width */}
-      {isNarrow ? (
-        <Tooltip content={card.status} side="top">
-          <div className="w-full">
-            <InformativeCard state="error" size="sm" title={bannerTitle} className="w-full" />
-          </div>
-        </Tooltip>
-      ) : (
-        <InformativeCard state="error" size="sm" title={bannerTitle} className="w-full" />
-      )}
-
-      {/* Event card */}
-      <div style={{
-        background: "var(--color-surface-neutral-default)",
-        border: "0.5px solid var(--field-border)",
-        borderRadius: 8, padding: "10px 12px",
-        display: "flex", flexDirection: "column", gap: 8,
-      }}>
-        <div className="flex items-center gap-[4px] flex-wrap">
-          {card.studio.map(s => (
-            <div key={s} style={{ display: "inline-flex" }}>
-              <Tag variant="neutral" size="sm">{s}</Tag>
-            </div>
-          ))}
-          <div style={{ display: "inline-flex" }}>
-            <Tag variant={card.tagVariant} size="sm">Act Now</Tag>
-          </div>
-        </div>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.35 }}>
-          {isNarrow ? trunc(card.title, 28) : card.title}
-        </p>
-        {/* Actions — horizontal row, hug content, 8px gap */}
-        <div className="flex items-center flex-wrap gap-[8px]">
-          <Button variant="primary" size="sm">Take action</Button>
-          <Button variant="secondary" size="sm">Skip for now</Button>
-          <Button variant="tertiary" size="sm">{card.remaining} more in this tier →</Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── My Work ───────────────────────────────────────────────────────────────────
-
-const MY_WORK_GROUPS_DATA = [
-  {
-    id: "act-now",  label: "Act Now",  sublabel: "blocking",
-    badgeVariant: "error"      as BadgeVariant,
-    tagVariant:   "error"      as const,
-    items: [
-      { studio: "GOV",  type: "Approval", crit: true,  title: "Financial Policy PDF — DIAN approval required",  status: "Blocking · 14 workflows", time: "~10m" },
-      { studio: "AGNT", type: "Review",   crit: false, title: "SalesForecastPA about to send external email",   status: "Paused · awaiting review", time: "~5m"  },
-    ],
-  },
-  {
-    id: "critical", label: "Critical", sublabel: "within 7 days",
-    badgeVariant: "alert"      as BadgeVariant,
-    tagVariant:   "alert"      as const,
-    items: [
-      { studio: "DATA", type: "Remap",   crit: false, title: "Q3 Forecast Schema needs field remap",         status: "Action needed · schema mismatch", time: "~15m" },
-      { studio: "GOV",  type: "Approve", crit: false, title: "Vendor NDA batch — legal sign-off pending",    status: "Waiting on legal",               time: "~8m"  },
-    ],
-  },
-  {
-    id: "action",   label: "Action",   sublabel: "this week",
-    badgeVariant: "inProgress" as BadgeVariant,
-    tagVariant:   "informative" as const,
-    items: [
-      { studio: "TASK", type: "Respond",     crit: false, title: "Renewal contract draft v2 awaiting sign-off",    status: "Ready for review",        time: "~8m"  },
-      { studio: "GOV",  type: "Acknowledge", crit: false, title: "DIAN intake package #48 compliance check",       status: "Pending acknowledgement", time: "~5m"  },
-      { studio: "AGNT", type: "Review",      crit: false, title: "Agent output flagged for hallucination check",   status: "Queued · low priority",   time: "~6m"  },
-    ],
-  },
-]
-
-function MyWorkWidgetContent() {
-  const { isNarrow } = useWidgetSize()
-  const [studioFilter, setStudioFilter] = useState<string | null>(null)
-  const [typeFilter,   setTypeFilter]   = useState<string | null>(null)
-  const [search,       setSearch]       = useState("")
-
-  const allTypes    = Array.from(new Set(MY_WORK_GROUPS_DATA.flatMap(g => g.items.map(i => i.type))))
-  const maxPerGroup = isNarrow ? 2 : undefined
-
-  return (
-    <ScrollArea style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 8, paddingBottom: 12 }}>
-      {/* Search bar — DS Input atom, not a hand-rolled <input> */}
-      <Input
-        size="sm"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search events..."
-        leftIcon={<LucideIcons.Search size={12} />}
-      />
-      {/* Filters — hidden on narrow to save space; search still available */}
-      {!isNarrow && (
-        <div className="[&::-webkit-scrollbar]:hidden" style={{ overflowX: "auto", scrollbarWidth: "none" as React.CSSProperties["scrollbarWidth"] }}>
-          <div className="flex items-center gap-[4px]" style={{ flexWrap: "nowrap", minWidth: "max-content" }}>
-            {["GOV","AGNT","DATA","TASK"].map(s => (
-              <Chip key={s} variant={studioFilter === s ? "primary" : "secondary"} size="s" onClick={() => setStudioFilter(p => p === s ? null : s)}>{s}</Chip>
-            ))}
-            <span style={{ width: 1, height: 14, background: "var(--field-border)", flexShrink: 0, margin: "0 2px" }} />
-            {allTypes.map(t => (
-              <Chip key={t} variant={typeFilter === t ? "primary" : "secondary"} size="s" onClick={() => setTypeFilter(p => p === t ? null : t)}>{t}</Chip>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Groups */}
-      {MY_WORK_GROUPS_DATA.map(group => {
-        const q = search.toLowerCase()
-        const visible = group.items.filter(it =>
-          (!studioFilter || it.studio === studioFilter) &&
-          (!typeFilter   || it.type   === typeFilter) &&
-          (!q || it.title.toLowerCase().includes(q) || it.type.toLowerCase().includes(q) || it.studio.toLowerCase().includes(q))
-        ).slice(0, maxPerGroup)
-        if (visible.length === 0) return null
-        return (
-          <div key={group.id}>
-            <div className="flex items-center justify-between" style={{ padding: "4px 0", marginBottom: 4 }}>
-              <div className="flex items-center gap-[6px]">
-                <Badge variant={group.badgeVariant} />
-                <span style={{ fontSize: 12, fontWeight: 400, color: "var(--color-text-subtitle)" }}>{group.label}</span>
-                <span style={{ fontSize: 12, color: "var(--color-text-placeholder)" }}>· {group.sublabel}</span>
-              </div>
-              <Tag variant={group.tagVariant} size="sm">{visible.length}</Tag>
-            </div>
-            {visible.map((item, idx) => {
-              const key = `${group.id}-${idx}`
-              return (
-                <div key={key} className="group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[2px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
-                  <div className="flex items-center justify-between mb-[3px]">
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.35, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 8 }}>{item.title}</p>
-                    <span style={{ fontSize: 10, color: "var(--field-supporting)", whiteSpace: "nowrap", flexShrink: 0 }}>{item.time}</span>
-                  </div>
-                  <div className="flex items-center gap-[4px] flex-wrap mb-[2px]">
-                    <Tag variant="neutral" size="sm">{item.studio}</Tag>
-                    <Tag variant="neutral" size="sm">{item.type}</Tag>
-                    {item.crit && <Tag variant="error" size="sm">⚡ Critical</Tag>}
-                  </div>
-                  <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{item.status}</span>
-                  <div className="hidden group-hover:flex items-center gap-[6px] mt-[8px]"><Button variant="primary" size="sm">Take</Button><Button variant="secondary" size="sm">Escalate</Button><Button variant="tertiary" size="sm">Defer</Button></div>
-                </div>
-              )
-            })}
-          </div>
-        )
-      })}
-      <Button variant="tertiary" size="sm">See all in Attention Room →</Button>
-    </ScrollArea>
-  )
-}
-
-// ── My Team ───────────────────────────────────────────────────────────────────
-
-const MY_TEAM_DATA = [
-  { initials: "AR", name: "Ana Restrepo", role: "Revenue Ops",  ooo: null,    dots: [{ count: 2 }, { count: 3 }, { count: 5 }, { count: 1 }] },
-  { initials: "CM", name: "Carlos Mejía", role: "Governance",   ooo: null,    dots: [{ count: 1 }, { count: 3 }, { count: 4 }, { count: 0 }] },
-  { initials: "DT", name: "Diana Torres", role: "Agent Ops",    ooo: "Aug 1", dots: [{ count: 1 }, { count: 2 }, { count: 1 }, { count: 2 }] },
-  { initials: "FK", name: "Felipe Kim",   role: "Data Studio",  ooo: null,    dots: [{ count: 0 }, { count: 1 }, { count: 3 }, { count: 0 }] },
-]
-const MY_TEAM_DOT_COLORS = [
-  "var(--color-surface-error-default)",
-  "var(--color-surface-alert-default)",
-  "var(--primary)",
-  "var(--color-icon-neutral-default)",
-]
-const MY_TEAM_DOT_TIPS = ["Act Now · blocking", "Critical · within 7 days", "Action · this week", "Heads-up"]
-
-function MyTeamWidgetContent() {
-  const [bannerDismissed, setBannerDismissed] = useState(false)
-  const teamContainerRef = useRef<HTMLDivElement>(null)
-  const [isNarrowTeam, setIsNarrowTeam] = useState(false)
-
-  useEffect(() => {
-    const el = teamContainerRef.current
-    if (!el) return
-    const ro = new ResizeObserver(([entry]) => {
-      setIsNarrowTeam(entry.contentRect.width < 340)
-    })
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
-  const trunc = (s: string, n: number) => s.length > n ? s.slice(0, n) + "…" : s
-  const fullAlert  = "5 blocking events across your team require immediate attention."
-  const alertTitle = "5 blocking events need attention"
-
-  return (
-    <div ref={teamContainerRef} className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0 }}>
-      {!bannerDismissed && (
-        <div style={{ marginBottom: 8 }}>
-          {isNarrowTeam ? (
-            <Tooltip content={fullAlert} side="top">
-              <div>
-                <InformativeCard state="error" size="sm"
-                  title={trunc(alertTitle, 22)}
-                  cta={{ label: "Dismiss", onClick: () => setBannerDismissed(true) }}
-                />
-              </div>
-            </Tooltip>
-          ) : (
-            <InformativeCard state="error" size="sm"
-              title={alertTitle}
-              cta={{ label: "Dismiss", onClick: () => setBannerDismissed(true) }}
-            />
-          )}
-        </div>
-      )}
-      <ScrollArea style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
-        {MY_TEAM_DATA.map((member, i) => (
-          <div key={i} className="group cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
-            <div className="flex items-start gap-[8px]">
-              <AvatarCircle name={member.name} sizeKey="md" />
-              <div className="flex flex-col flex-1 min-w-0" style={{ gap: 1 }}>
-                <div className="flex items-center gap-[6px] w-full">
-                  <Tooltip content={member.name} side="top">
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>{member.name}</span>
-                  </Tooltip>
-                  {member.ooo && <span style={{ flexShrink: 0 }}><Tag variant="alert" size="sm">{`OOO · returns ${member.ooo}`}</Tag></span>}
-                </div>
-                <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{member.role}</span>
-                <div className="flex items-center gap-[8px]" style={{ marginTop: 4 }}>
-                  {member.dots.map((dot, j) => {
-                    if (dot.count === 0) return null
-                    return (
-                      <Tooltip key={j} content={MY_TEAM_DOT_TIPS[j] ?? "Status"} side="top">
-                        <div className="flex items-center gap-[4px]" style={{ cursor: "default" }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: MY_TEAM_DOT_COLORS[j], display: "inline-block", flexShrink: 0 }} />
-                          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>{dot.count}</span>
-                        </div>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="hidden group-hover:flex items-center gap-[4px] mt-[6px] ml-[36px]">
-              <Button variant="secondary" size="sm">Take</Button>
-              <Button variant="secondary" size="sm">Nudge</Button>
-              <Button variant="secondary" size="sm">Reassign</Button>
-            </div>
-          </div>
-        ))}
-      </ScrollArea>
-    </div>
-  )
-}
-
-// ── Workflows ─────────────────────────────────────────────────────────────────
-
-const WORKFLOWS_DATA: { name: string; status: "running"|"done"|"failed"|"paused"; trigger: string; timeAgo: string; runsToday: number; progress?: number }[] = [
-  { name: "Lead Enrichment — Inbound",   status: "running", trigger: "New form submission",         timeAgo: "4 min ago",   runsToday: 24, progress: 68 },
-  { name: "Deal Stage Notifications",    status: "running", trigger: "CRM stage change",            timeAgo: "Just now",    runsToday: 17, progress: 90 },
-  { name: "Nightly ETL — Salesforce",    status: "done",    trigger: "Scheduled · 02:00",           timeAgo: "6 hours ago", runsToday: 1                },
-  { name: "Churn Risk Scoring",          status: "failed",  trigger: "NPS field missing",           timeAgo: "1 hour ago",  runsToday: 0                },
-  { name: "CS Escalation Router",        status: "paused",  trigger: "HTL queue threshold reached", timeAgo: "2 days ago",  runsToday: 0                },
-]
-
-const WF_TAG_VARIANT: Record<string, "success"|"error"|"neutral"|"informative"> = {
-  running: "success", done: "informative", failed: "error", paused: "neutral",
-}
-const WF_TAG_LABEL: Record<string, string> = {
-  running: "Running", done: "Done", failed: "Failed", paused: "Paused",
-}
-
-function WorkflowsWidgetContent() {
-  const { isNarrow } = useWidgetSize()
-  return (
-    <ScrollArea className="flex flex-col gap-[0px]" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
-      {WORKFLOWS_DATA.map((wf, i) => (
-        <div key={i} className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }}>
-          <div className="flex items-start gap-[8px]">
-            <div className="flex flex-col flex-1 min-w-0" style={{ gap: 3 }}>
-              <div className="flex items-center gap-[6px]">
-                {wf.status === "running" && (
-                  <span className="animate-pulse" style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: "var(--color-surface-success-default)", display: "inline-block" }} />
-                )}
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{wf.name}</span>
-                <span style={{ flexShrink: 0 }}><Tag variant={WF_TAG_VARIANT[wf.status]} size="sm">{WF_TAG_LABEL[wf.status]}</Tag></span>
-              </div>
-              {!isNarrow && <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{wf.trigger}</span>}
-              {!isNarrow && wf.status === "running" && wf.progress !== undefined && (
-                <div style={{ height: 4, background: "var(--color-surface-neutral-default)", borderRadius: 2, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${wf.progress}%`, background: "var(--primary)", borderRadius: 2, transition: "width 500ms ease" }} />
-                </div>
-              )}
-              {!isNarrow && <span style={{ fontSize: 10, color: "var(--field-supporting)" }}>{wf.timeAgo}{wf.runsToday > 0 ? ` · ${wf.runsToday} runs today` : ""}</span>}
-            </div>
-            {wf.status === "failed" && (
-              <div className="flex items-center gap-[4px]" style={{ flexShrink: 0 }}>
-                <Button variant="secondary" size="sm">Retry</Button>
-                {!isNarrow && <Button variant="tertiary" size="sm">Logs</Button>}
-              </div>
-            )}
-            {wf.status === "paused" && <Button variant="secondary" size="sm" style={{ flexShrink: 0 }}>Resume</Button>}
-          </div>
-        </div>
-      ))}
-    </ScrollArea>
-  )
-}
-
-// ── Pending Outputs ───────────────────────────────────────────────────────────
-
-const PENDING_OUTPUTS_DATA = [
-  { name: "Q3 Pipeline Forecast — July Revision",  source: "Monthly Forecast Roll-up", timeAgo: "12m ago",   tagVariant: "success"     as const, statusLabel: "Ready for review"   },
-  { name: "Acme Corp Renewal Contract Draft v2",   source: "Renewals Outreach",        timeAgo: "1h ago",    tagVariant: "alert"       as const, statusLabel: "Adjusted — pending" },
-  { name: "DIAN Intake Package #48",               source: "DIAN Compliance Intake",   timeAgo: "2h ago",    tagVariant: "error"       as const, statusLabel: "Requires approval"  },
-  { name: "Support Queue Summary — Jul 22",        source: "Support Summary PA",       timeAgo: "Yesterday", tagVariant: "informative" as const, statusLabel: "Advanced"          },
-]
-
-function PendingOutputsWidgetContent() {
-  const [selected, setSelected] = useState<typeof PENDING_OUTPUTS_DATA[0] | null>(null)
-
-  return (
-    <>
-      <ScrollArea className="flex flex-col gap-[6px]" style={{ flex: 1, minHeight: 0, paddingBottom: 12 }}>
-        {PENDING_OUTPUTS_DATA.map((item, i) => (
-          <div key={i} className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)" }} onClick={() => setSelected(item)}>
-            <div className="flex items-start gap-[8px]">
-              <div className="flex flex-col flex-1 min-w-0" style={{ gap: 2 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</span>
-                <span style={{ fontSize: 11, color: "var(--field-supporting)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.source} · {item.timeAgo}</span>
-              </div>
-              <div style={{ flexShrink: 0 }}>
-                <Tag variant={item.tagVariant} size="sm">{item.statusLabel}</Tag>
-              </div>
-            </div>
-          </div>
-        ))}
-      </ScrollArea>
-      {selected && (
-        <SlideOut open onClose={() => setSelected(null)} title={selected.name} subtitle={selected.source}
-          showTabs={false} showChips={false} showSearchBar={false}
-          showCta ctaPrimaryLabel="Advance" ctaSecondaryLabel="Close" onCtaSecondary={() => setSelected(null)}>
-          <div className="flex flex-col gap-[20px] pb-[12px]">
-
-            {/* Section: Status */}
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Status</span>
-              <div className="self-start">
-                <Tag variant={selected.tagVariant} size="sm">{selected.statusLabel}</Tag>
-              </div>
-              <p className="text-[12px] leading-[1.5]" style={{ margin: 0, color: "var(--foreground)" }}>
-                This output was generated by your PA and is ready for your review. Verify the authority data below before advancing.
-              </p>
-            </div>
-
-            {/* Section: Authority Data (detail table) */}
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Authority Data</span>
-              <div className="flex flex-col rounded-[8px] overflow-hidden" style={{ border: "1px solid var(--field-border)" }}>
-                {([
-                  ["Source",      selected.source            ],
-                  ["Generated",   selected.timeAgo           ],
-                  ["Status",      selected.statusLabel       ],
-                  ["Verified by", "AIMS Knowledge Graph · v2"],
-                ] as [string, string][]).map(([label, value], i, arr) => (
-                  <div key={label}>
-                    <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
-                      <span className="w-[100px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
-                      <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
-                    </div>
-                    {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </SlideOut>
-      )}
-    </>
-  )
-}
-
-// ── Agent Catalog ─────────────────────────────────────────────────────────────
-
-const AGENT_CATALOG_DATA = [
-  { name: "Revenue Insight PA",       desc: "Pipeline health, quota attainment, deal forecasting.",  available: true,  isWorkflow: false, prompts: ["Summarize Q3 pipeline", "Show quota gaps", "Flag at-risk deals"]                              },
-  { name: "People Ops PA",            desc: "HR policies, compliance, people communications.",        available: true,  isWorkflow: false, prompts: ["Summarize open headcount", "Draft PIP letter", "Check compliance status"]                    },
-  { name: "Support Summary PA",       desc: "Ticket queue summary, escalation risk, triage notes.",   available: true,  isWorkflow: false, prompts: ["Show open P1 tickets", "Summarize yesterday's queue", "Flag escalation risk"]                },
-  { name: "Lead Enrichment Workflow", desc: "Enriches inbound leads before routing to CRM.",          available: true,  isWorkflow: true,  prompts: ["Enrich new form submission", "Preview enrichment for Acme", "Show enrichment error log"]    },
-  { name: "Market Intel PA",          desc: "Competitive intelligence from public sources.",           available: false, isWorkflow: false, prompts: ["Benchmark vs competitor", "Summarize recent coverage", "Flag new product launches"]          },
-  { name: "Churn Risk Workflow",      desc: "Scores accounts for churn risk on a daily schedule.",     available: true,  isWorkflow: true,  prompts: ["Run churn score now", "Show accounts at risk", "Export risk report"]                        },
-  { name: "DIAN Compliance PA",       desc: "Regulatory filings, intake packages, compliance checks.", available: true,  isWorkflow: false, prompts: ["Check DIAN intake #48", "Summarize pending filings", "Draft compliance memo"]               },
-  { name: "CS Escalation Workflow",   desc: "Routes escalations from support queue to senior agents.", available: true,  isWorkflow: true,  prompts: ["Show escalation queue", "Route open P0 tickets", "View escalation log"]                    },
-]
-
-const AGENT_TYPE_FILTERS = [
-  { label: "All",      fn: (_: typeof AGENT_CATALOG_DATA[0]) => true             },
-  { label: "Single",   fn: (a: typeof AGENT_CATALOG_DATA[0]) => !a.isWorkflow    },
-  { label: "Workflow", fn: (a: typeof AGENT_CATALOG_DATA[0]) => a.isWorkflow     },
-]
-
-function AgentCatalogWidgetContent() {
-  const [typeIdx,       setTypeIdx]       = useState(0)
-  const [selectedAgent, setSelectedAgent] = useState<typeof AGENT_CATALOG_DATA[0] | null>(null)
-
-  const visible = AGENT_CATALOG_DATA.filter(AGENT_TYPE_FILTERS[typeIdx].fn)
-
-  return (
-    <>
-      <div className="flex flex-col gap-[0px]">
-        <div className="flex items-center gap-[4px] flex-wrap mb-[10px]">
-          {AGENT_TYPE_FILTERS.map((f, i) => (
-            <Chip key={f.label} variant={typeIdx === i ? "primary" : "secondary"} size="s" onClick={() => setTypeIdx(i)}>
-              {f.label} · {AGENT_CATALOG_DATA.filter(f.fn).length}
-            </Chip>
-          ))}
-        </div>
-        <ScrollArea style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, maxHeight: 260, paddingBottom: 12 }}>
-          {visible.map((agent, i) => (
-            <div key={i} className={`cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[4px] hover:bg-[var(--color-surface-neutral-subtle)]${!agent.available ? " opacity-60" : ""}`} style={{ border: "0.5px solid var(--field-border)" }} onClick={() => setSelectedAgent(agent)}>
-              <div className="flex items-start justify-between gap-[6px]">
-                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", lineHeight: 1.3 }}>{agent.name}</span>
-                {agent.isWorkflow && <span style={{ flexShrink: 0 }}><Tag variant="informative" size="sm">Workflow</Tag></span>}
-              </div>
-              <span style={{ fontSize: 11, color: "var(--field-supporting)", lineHeight: 1.4 }}>{agent.desc}</span>
-              <div style={{ display: "flex" }}>
-                <Tag variant={agent.available ? "success" : "neutral"} size="sm">{agent.available ? "Grounded" : "Unavailable"}</Tag>
-              </div>
-            </div>
-          ))}
-        </ScrollArea>
-      </div>
-      {selectedAgent && (
-        <SlideOut open onClose={() => setSelectedAgent(null)} title={selectedAgent.name} subtitle={selectedAgent.isWorkflow ? "Workflow Agent" : "Single Agent"}
-          showTabs={false} showChips={false} showSearchBar={false}
-          showCta={selectedAgent.available} ctaPrimaryLabel="Run" ctaSecondaryLabel="Close" onCtaSecondary={() => setSelectedAgent(null)}>
-          <div className="flex flex-col gap-[16px]" style={{ padding: "4px 0" }}>
-            <div className="flex items-center gap-[6px]">
-              <Tag variant={selectedAgent.available ? "success" : "neutral"} size="sm">{selectedAgent.available ? "Grounded" : "Unavailable"}</Tag>
-              {selectedAgent.isWorkflow && <Tag variant="informative" size="sm">Workflow</Tag>}
-            </div>
-            <p style={{ margin: 0, fontSize: 13, color: "var(--foreground)", lineHeight: 1.6 }}>{selectedAgent.desc}</p>
-            <div>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--field-supporting)", display: "block", marginBottom: 8 }}>Example Prompts</span>
-              {selectedAgent.prompts.map((prompt, j) => (
-                <div key={j} className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 mb-[6px] hover:bg-[var(--color-surface-neutral-subtle)]" style={{ border: "0.5px solid var(--field-border)", fontSize: 12, color: "var(--foreground)" }}>"{prompt}"</div>
-              ))}
-            </div>
-          </div>
-        </SlideOut>
-      )}
-    </>
-  )
-}
-
-function WidgetContent({ id, kpiVariant = 2 }: { id: string; kpiVariant?: 0|1|2|3 }) {
-  switch (id) {
-    case "kpi":        return <KpiWidgetContent variant={kpiVariant} />
-    case "timeline":   return <TimelineWidgetContent />
-
-    case "charts":     return <ChartsWidgetContent />
-    case "table":      return <TableWidgetContent />
-    case "activity":   return <ActivityWidgetContent />
-    case "notes":      return <NotesWidgetContent />
-    case "folder-nav":      return <FolderNavWidgetContent />
-    case "status-warning":  return <StatusWarningWidgetContent />
-    case "act-now-summary": return <ActNowSummaryWidgetContent />
-    case "my-work":         return <MyWorkWidgetContent />
-    case "my-team":         return <MyTeamWidgetContent />
-    case "workflows":       return <WorkflowsWidgetContent />
-    case "pending-outputs": return <PendingOutputsWidgetContent />
-    case "agent-catalog":   return <AgentCatalogWidgetContent />
-    default:
-      return (
-        <div className="flex items-center justify-center rounded-[6px] py-[16px]"
-          style={{ background: "var(--color-surface-neutral-default)", border: "1px dashed var(--field-border)" }}>
-          <span style={{ fontSize: 11, color: "var(--field-supporting)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>Coming soon</span>
-        </div>
-      )
-  }
-}
 
 // ── Widget definitions ────────────────────────────────────────────────────────
 
@@ -32382,140 +31078,1190 @@ function NotificationCenterPage({ openSpec }: { openSpec: (s: SpecModal) => void
   )
 }
 
-// Mock data for the 3 variants — realistic values, not "Lorem ipsum" placeholders,
-// per this repo's own screen-generation guardrails (CLAUDE.md's prototyping rules
-// apply just as much to the catalog's own demo data as to a PM screen).
+// Mock data for the 3 Work Surface variants (UEP/UCP/UVP) — realistic
+// values marked as EXAMPLES, not confirmed AIMS OS data, per this repo's
+// own screen-generation guardrails (CLAUDE.md's prototyping rules apply
+// just as much to the catalog's own demo data as to a PM screen).
 
-const RH_EMPLOYEE: EmployeeRecord = {
-  name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering",
-  manager: "David Kim", location: "Remote — Austin, TX", email: "sarah.chen@aimsos.ai",
-  phone: "+1 (512) 555-0142", startDate: "March 3, 2023", team: "Platform Infra",
-  accessRole: "Admin",
-}
-// No onAction here — these are the static "what the NBA engine returned" data.
-// The real handlers (which destination each Signal opens) are wired inside
-// RecordHeaderPage below, since that's presentation-layer routing, not
-// something the engine or the data shape should know about.
-const RH_EMPLOYEE_SIGNAL: NextBestAction = {
-  label: "2 tasks pending your approval", severity: "alert", dueContext: "Oldest due today",
+// Provenance builders — not exported, just so every mock field below cites
+// a real system + model version + freshness instead of a bare value with
+// no traceable source (Law 1).
+//
+// Closing pass — the first 5 builders used to cite this DEMO PAGE's own
+// internal shorthand as the modelVersion ("UEP v2.3", "UCP v1.8", "UVP
+// v1.2") — those 3 letters mean nothing outside this file, so they leaked
+// straight into "About this record" and read as an unexplained internal
+// code, not a real source-system model name. Every other vertical already
+// got a real one (Epic's "Chart v4.1", Guidewire's "ClaimsCenter v9.0",
+// ...) — these 5 now match that same realistic style, each citing the
+// source system's own actual object/module name.
+const wdProv = (syncedAgo: string): FieldProvenance => ({ system: "Workday", systemAbbr: "WD", modelVersion: "Worker v2.3", syncedAgo })
+const oktaProv = (syncedAgo: string): FieldProvenance => ({ system: "Okta", systemAbbr: "OK", modelVersion: "Identity v3.1", syncedAgo })
+const sfProv = (syncedAgo: string): FieldProvenance => ({ system: "Salesforce", systemAbbr: "SF", modelVersion: "Account v1.8", syncedAgo })
+const nsProv = (syncedAgo: string): FieldProvenance => ({ system: "NetSuite", systemAbbr: "NS", modelVersion: "Customer v4.0", syncedAgo })
+const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba", systemAbbr: "AR", modelVersion: "Supplier v1.2", syncedAgo })
+// Epic (EHR) — the healthcare-vertical proof example (Block 3, this pass).
+// Deliberately a DIFFERENT source system + model name than UEP/UCP/UVP: if
+// this still renders through the exact same component with zero changes to
+// record-header.tsx, that's the agnosticism claim demonstrated, not asserted.
+const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", systemAbbr: "EP", modelVersion: "Chart v4.1", syncedAgo })
+// Insurance vertical (this correction pass) — a claim genuinely spans 2
+// systems of record at once: the claims core (Guidewire) and the policy
+// admin system (Duck Creek). Modeling both, on the SAME record, is the
+// multi-source provenance proof this pass asks for — not just "a new
+// vertical" but "a vertical where Data Provenance has to hold up across
+// more than one source."
+const gwProv = (syncedAgo: string): FieldProvenance => ({ system: "Guidewire", systemAbbr: "GW", modelVersion: "ClaimsCenter v9.0", syncedAgo })
+const dcProv = (syncedAgo: string): FieldProvenance => ({ system: "Duck Creek", systemAbbr: "DC", modelVersion: "Policy v7.2", syncedAgo })
+// Banking vertical (this correction pass) — 3 systems on one borrower: the
+// credit bureau (Experian), the loan origination system (nCino), and core
+// banking (FIS). This is the audit-trail case the brief calls for: every
+// figure a risk exception decision leans on has to be traceable back to
+// which system actually produced it.
+const experianProv = (syncedAgo: string): FieldProvenance => ({ system: "Experian", systemAbbr: "EXP", modelVersion: "Credit v5.0", syncedAgo })
+const ncinoProv = (syncedAgo: string): FieldProvenance => ({ system: "nCino", systemAbbr: "NC", modelVersion: "LOS v3.4", syncedAgo })
+const fisProv = (syncedAgo: string): FieldProvenance => ({ system: "FIS", systemAbbr: "FIS", modelVersion: "Core v2.1", syncedAgo })
+// Automotive vertical (this correction pass) — AIMS OS's own central
+// vertical, per the brief ("raíces en plataformas automotrices, clientes
+// reales del sector"). A repair order draws from the dealer's DMS (CDK
+// Global), a vehicle-history service (Carfax), and the manufacturer's own
+// warranty system — 3 distinct sources on one record, same as Insurance
+// and Banking above.
+const cdkProv = (syncedAgo: string): FieldProvenance => ({ system: "CDK Global", systemAbbr: "CDK", modelVersion: "DMS v11.2", syncedAgo })
+const carfaxProv = (syncedAgo: string): FieldProvenance => ({ system: "Carfax", systemAbbr: "CFX", modelVersion: "History v4.0", syncedAgo })
+const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty Portal", systemAbbr: "OEM", modelVersion: "Warranty v2.0", syncedAgo })
+
+// This demo page's own scope note (not a component doc — RecordHeader
+// itself never enumerates entity types): UEP/UCP/UVP are the 3 native
+// Work Surfaces entity shapes this card actually ships for. Patient,
+// Claim, Borrower, and Repair Order exist ONLY to prove agnosticism across
+// genuinely different verticals — all 4 chosen for the same profile AIMS
+// OS actually targets: entity + workflow + human intervention + governed
+// multi-source data (healthcare, insurance, banking, and automotive,
+// AIMS OS's own central vertical) — they are demonstration examples, not
+// additional native types, which is why the Playground groups them
+// separately (see the "Work Surfaces" vs. "Other Markets" CtrlGroups).
+// `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
+// not a prop the component reads — RecordHeader only ever sees `name` +
+// `entityType` + `recordFields`, built from these mocks below.
+type RhDemoKey =
+  // People — an avatar, from a photo or initials
+  | "uep" | "patient" | "claim" | "borrower"
+  // Companies and sites — an avatar, from a brand
+  | "ucp" | "uvp"
+  // Processes, assets and data — a highlight icon, because there is no face
+  // and no brand to show
+  | "repairOrder" | "dataEntity"
+
+// ── Visual identity ───────────────────────────────────────────────────────
+// Avatar for companies, people and groups. Highlight icon for everything
+// else — objects, assets, processes, transactions, documents.
+//
+// All 7 Work-Surface demos are people or companies, so all 7 are avatars.
+// The icon path is exercised by the Preview tab's 8th option, a Helix Data
+// Studio entity taken verbatim from Figma's edge case 5 — without it, no
+// example in this catalog would show a highlight icon at all.
+const RH_VISUAL: Record<RhDemoKey, EntityVisual> = {
+  // Figma's edge case 5 — "the header is not a CRM header". A platform data
+  // entity: no face, no brand, so a highlight icon by definition.
+  dataEntity:  { kind: "icon", icon: LucideIcons.Database, variant: "light-blue" },
+  uep:         { kind: "avatar" },
+  ucp:         { kind: "avatar" },
+  uvp:         { kind: "avatar" },
+  patient:     { kind: "avatar" },
+  claim:       { kind: "avatar" },
+  borrower:    { kind: "avatar" },
+  // A repair order is a PROCESS, not a person. Figma's own example, and the
+  // reason the icon path exists: RO-48291 has no initials, so an avatar was
+  // never available to it.
+  repairOrder: { kind: "icon", icon: LucideIcons.Wrench, variant: "alert" },
 }
 
-const RH_CUSTOMER: CustomerRecord = {
-  accountName: "Acme Corp", segment: "Enterprise", owner: "Jamie Rivera", tier: "Tier 1",
-  industry: "Retail", renewalDate: "Sep 2, 2026", mrr: "$18,400", lastContact: "3 days ago",
-  openTickets: 2, adoptionLevel: "Low", primaryContact: "Jane Doe — VP Operations",
-}
-// actionLabel: "Schedule renewal call" — nameable AND there's still more worth
-// reviewing (why the score dropped) before acting, so the bar keeps both the
-// inline button and the click-through (see SignalBar's actionLabel doc).
-const RH_CUSTOMER_SIGNAL: NextBestAction = {
-  label: "Health score dropped to 61 — renews in 19 days", severity: "error", dueContext: "Renewal at risk",
-  actionLabel: "Schedule renewal call",
-}
-
-const RH_CLIENT: ClientRecord = {
-  name: "Marcus Webb", company: "Initech", dealStage: "Negotiation", dealValue: "$42,000",
-  owner: "Priya Nair", email: "marcus.webb@initech.com", phone: "+1 (415) 555-0188",
-  leadSource: "Referral", lastInteraction: "Yesterday", expectedCloseDate: "Aug 29, 2026",
-}
-// aiGenerated: true — unlike the other 2 (deterministic counts/metrics), this
-// is a genuine probabilistic recommendation (note the confidence score), so it
-// gets the purple/Sparkles "AI produced this" treatment instead of a severity
-// color — see the aiGenerated doc comment in record-header.tsx for why.
-// actionLabel: "Send proposal" — the action IS the only thing here (a single
-// yes/no decision, nothing further to review), so this replaces "Send
-// proposal" as a loose Identity-row CTA entirely rather than duplicating it.
-const RH_CLIENT_SIGNAL: NextBestAction = {
-  label: "Ready to send final proposal", severity: "success", dueContext: "NBA engine · confidence 82%", aiGenerated: true,
-  actionLabel: "Send proposal",
+// ── State badge — one per entity, full semantic range ─────────────────────
+// Vocabulary and colour mapping read from Figma's own example instances, not
+// chosen here: Blocked and Suspended resolve to `error`, Degraded to `alert`,
+// On leave / Awaiting parts / Under review to `informative`, Active to
+// `success`. The most blocking status wins; anything else it displaces
+// becomes a signal tag.
+const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
+  dataEntity:  { label: "Degraded",      variant: "alert"       },
+  // Was the old `statusTag` ("On Leave · Returns Mar 15", neutral, on the
+  // left). Figma puts it on the right and colours it `informative`.
+  uep:         { label: "On leave",       variant: "informative" },
+  ucp:         { label: "Under review",   variant: "informative" },
+  uvp:         { label: "Active",         variant: "success"     },
+  patient:     { label: "Under review",   variant: "informative" },
+  claim:       { label: "Under review",   variant: "informative" },
+  borrower:    { label: "Active",         variant: "success"     },
+  repairOrder: { label: "Awaiting parts", variant: "informative" },
 }
 
-// "Nothing urgent" Signals — the other 3 mocks above all happen to need
-// attention, which risks reading as "Signal = always an alert." It doesn't:
-// most records, most of the time, have nothing pressing. No actionLabel and
-// no onAction here on purpose — there's genuinely nothing to click through
-// to. Deliberately spread across 3 different severities (neutral/success/
-// informative) rather than reusing one, so it's visually obvious severity
-// tracks the record's real state, not a fixed template per variant.
-// dismissible: true — these are exactly the case that field's doc comment
-// calls out: nothing actionable here, so keeping the bar pinned forever adds
-// no value. A Signal with actionLabel/onAction (the other 3 mocks above)
-// should NOT set this — dismissing those would bury the real next step.
-const RH_EMPLOYEE_SIGNAL_CALM: NextBestAction = {
-  label: "No pending approvals", severity: "neutral", dueContext: "All caught up", dismissible: true,
+// ── Tags — signals then classification ────────────────────────────────────
+// Classification is the label the old `entityType` carried, and it is present
+// ONLY because every demo here is an avatar: a highlight icon already names
+// the type, which is why Figma's own icon examples (RO-48291, Customer
+// Master) carry signals and no classification at all.
+//
+// Signal colour follows the test from TAG ROLES — not "is it a signal" but
+// "does someone have to do something about it". `Renews in 52d` is a signal
+// and stays neutral: 52 days out, nobody has to act yet.
+const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
+  // No classification tag: the highlight icon already names the type.
+  dataEntity: [
+    { role: "signal",         label: "Sync failing",         tone: "error" },
+  ],
+  uep: [
+    { role: "signal",         label: "Access review",       tone: "alert" },
+    { role: "classification", label: "Employee"                           },
+  ],
+  ucp: [
+    { role: "signal",         label: "Renewal at risk",     tone: "alert" },
+    { role: "classification", label: "Customer"                           },
+  ],
+  uvp: [
+    { role: "signal",         label: "Renews in 52d"                      },
+    { role: "classification", label: "Vendor"                             },
+  ],
+  patient: [
+    { role: "signal",         label: "Lab result pending",  tone: "alert" },
+    { role: "classification", label: "Patient"                            },
+  ],
+  claim: [
+    { role: "signal",         label: "Claim denied",        tone: "error" },
+    { role: "classification", label: "Policyholder"                       },
+  ],
+  borrower: [
+    { role: "classification", label: "Borrower"                           },
+  ],
+  // No classification tag, same as dataEntity: the wrench already names the
+  // type. `Service customer` used to sit here, left over from when this case
+  // was a person (Devon Marsh) rather than the repair order itself — it broke
+  // the rule this very file documents. The signal is Figma's own copy from
+  // its repair-order example: time pressure, not a restatement of the state
+  // badge, which already reads `Awaiting parts`.
+  repairOrder: [
+    { role: "signal",         label: "6d overdue",          tone: "alert" },
+  ],
 }
-const RH_CUSTOMER_SIGNAL_CALM: NextBestAction = {
-  label: "Health steady at 92", severity: "success", dueContext: "On track — renews in 140 days", dismissible: true,
+
+
+// UEP — the reference variant (brief's own words: "la card de referencia").
+// RECORD fields deliberately follow the brief's literal list (Manager/Access
+// Role/Department/Job Title/Start Date) even though Department and Job
+// Title overlap with the identity chips below — that's an accepted,
+// flagged redundancy (glance-level chip vs. governed/sourced record field
+// answering the same fact), not an oversight.
+// hasDestination: false — a plain descriptive fact (a pure date or a pure
+// figure), nothing further to open beyond its own provenance. Omitted
+// (defaults true) on Manager/Access Role/Department/Owner/Procurement
+// Owner — those stay clickable, opening Data Provenance. See
+// RecordField.hasDestination's own doc comment in record-header.tsx.
+const RH_UEP = {
+  name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering", location: "Remote — Austin, TX",
+  manager:          { label: "Manager",        icon: LucideIcons.User,        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") } satisfies RecordField,
+  accessRole:       { label: "Access Role",     icon: LucideIcons.ShieldCheck, value: "Admin",                    state: "hydrated", provenance: oktaProv("15m ago") } satisfies RecordField,
+  departmentDetail: { label: "Department",      icon: LucideIcons.Building2,   value: "Engineering",              state: "hydrated", provenance: wdProv("2h ago") } satisfies RecordField,
+  jobTitle:         { label: "Job Title",       icon: LucideIcons.Briefcase,   value: "Senior Software Engineer", state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false } satisfies RecordField,
+  startDate:        { label: "Start Date",      icon: LucideIcons.CalendarDays,value: "March 3, 2023",            state: "hydrated", provenance: wdProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
-const RH_CLIENT_SIGNAL_CALM: NextBestAction = {
-  label: "Early discovery — no next step due yet", severity: "informative", dueContext: "Last touched 2 days ago", dismissible: true,
+
+// UCP (Customer) — EXAMPLE data, not confirmed AIMS OS content. Closing
+// pass — renamed from the generic placeholder "Acme Corp" to a more
+// realistic-sounding customer name.
+const RH_UCP = {
+  name: "Kestrel Systems", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
+  owner:       { label: "Owner",        icon: LucideIcons.User,          value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") } satisfies RecordField,
+  renewalDate: { label: "Renewal Date", icon: LucideIcons.CalendarClock, value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago"), hasDestination: false } satisfies RecordField,
+  arr:         { label: "ARR",          icon: LucideIcons.DollarSign,    value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago"), hasDestination: false } satisfies RecordField,
 }
 
-// Assigned AI agent — one per variant, same shape (see AssignedAgent in
-// record-header.tsx). onOpenChat is wired inside RecordHeaderPage below,
-// same delegation pattern as the Signal/action handlers.
-const RH_AGENTS: Record<RecordHeaderVariant, { id: string; name: string }> = {
-  employee: { id: "agent-hr",       name: "HR Copilot" },
-  customer: { id: "agent-success",  name: "Success Copilot" },
-  client:   { id: "agent-sales",    name: "Sales Copilot" },
+// UVP (Vendor) — EXAMPLE data, not confirmed AIMS OS content.
+const RH_UVP = {
+  name: "Meridian Logistics", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
+  procurementOwner: { label: "Procurement Owner", icon: LucideIcons.User,         value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") } satisfies RecordField,
+  contractEndDate:  { label: "Contract End",      icon: LucideIcons.CalendarDays, value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
+  spendYtd:         { label: "Spend YTD",         icon: LucideIcons.DollarSign,   value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
 }
 
-function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
-  const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
-  const [pgVariant, setPgVariant] = useState<RecordHeaderVariant>("employee")
-  // "Needs attention" vs. "All good" — demonstrates that Signal's severity
-  // and content follow the record's REAL state; it isn't always an alert.
-  const [pgSignalState, setPgSignalState] = useState<"attention" | "calm">("attention")
+// Patient (Healthcare) — Block 3 agnosticism proof, EXAMPLE data, not
+// confirmed AIMS OS content. Physician/Insurance are governed facts with a
+// destination (Data Provenance); Blood Type/Admission Date are plain
+// descriptive facts, same "hasDestination: false" rule as any other
+// vertical — nothing about that rule is HR-specific either.
+const RH_PATIENT = {
+  name: "Elena Vasquez", room: "4B-112", careTeam: "Internal Medicine",
+  primaryPhysician: { label: "Primary Physician", icon: LucideIcons.Stethoscope, value: "Dr. Amara Osei", state: "hydrated", provenance: epicProv("20m ago") } satisfies RecordField,
+  insurancePlan:    { label: "Insurance Plan",     icon: LucideIcons.ShieldCheck, value: "BlueCross PPO",  state: "hydrated", provenance: epicProv("1h ago") } satisfies RecordField,
+  bloodType:        { label: "Blood Type",         icon: LucideIcons.Droplet,    value: "O+",             state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
+  admissionDate:    { label: "Admission Date",     icon: LucideIcons.CalendarClock, value: "Aug 14, 2026", state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
+}
 
-  // Click destinations for Signal.onAction — one real overlay per variant,
-  // chosen the same way Notification Item's Reference tab picks Full
-  // Navigation vs. Slideout vs. Modal (see that page's decision table):
-  //   Employee — several items need reviewing one by one → Slideout (content
-  //   exceeds one paragraph, needs review before deciding).
-  //   Customer — a risk state to investigate, not a single click-to-fix →
-  //   Slideout (evidence: the score trend + suggested next steps).
-  //   Client — one immediate, reversible-by-cancel decision ("send it or
-  //   not") → Modal (fits the "1-click binary confirmation" rule exactly).
-  const [rhApprovalsOpen, setRhApprovalsOpen] = useState(false)
-  const [rhHealthOpen,    setRhHealthOpen]    = useState(false)
-  const [rhProposalOpen,  setRhProposalOpen]  = useState(false)
+// Policyholder (Insurance) — second agnosticism proof example, EXAMPLE
+// data, not confirmed AIMS OS content. CONTACT rule (this correction
+// pass) — the entity is the PERSON who holds the policy, never the claim
+// itself. Record fields describe the policyholder's own standing
+// relationship with the carrier (policy, coverage, agent, claims
+// history), never the currently-active claim's own transient facts
+// (those — adjuster, payout amount, date of loss — now live on the
+// Claims Adjudication workflow, see RH_WORKFLOWS.claim /
+// RH_INTERVENTIONS.claim). Still 2 distinct source systems on one
+// record: Duck Creek (policy admin) and Guidewire (claims core, for the
+// person's claims HISTORY, not their one open claim).
+const RH_CLAIM = {
+  name: "Diane Ostrowski", policyType: "Auto — Comprehensive",
+  policyNumber:   { label: "Policy Number",   icon: LucideIcons.FileText,      value: "POL-77-4821",                   state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
+  insuranceAgent: { label: "Insurance Agent", icon: LucideIcons.User,          value: "Marcus Feldman",                state: "hydrated", provenance: dcProv("1h ago") } satisfies RecordField,
+  coverageType:   { label: "Coverage Type",   icon: LucideIcons.ShieldCheck,   value: "Comprehensive",                 state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
+  claimsHistory:  { label: "Claims History",  icon: LucideIcons.History,       value: "1 claim in the past 12 months", state: "hydrated", provenance: gwProv("25m ago"), hasDestination: false } satisfies RecordField,
+}
 
-  const rhEmployeeSignal: NextBestAction = { ...RH_EMPLOYEE_SIGNAL, onAction: () => setRhApprovalsOpen(true) }
-  const rhCustomerSignal: NextBestAction = { ...RH_CUSTOMER_SIGNAL, onAction: () => setRhHealthOpen(true) }
-  const rhClientSignal:   NextBestAction = { ...RH_CLIENT_SIGNAL,   onAction: () => setRhProposalOpen(true) }
+// Borrower / Account (Banking) — third agnosticism proof example, EXAMPLE
+// data, not confirmed AIMS OS content. 3 distinct source systems on one
+// record: Experian (credit bureau), nCino (loan origination), FIS (core
+// banking) — the audit-trail case the brief calls for explicitly.
+const RH_BORROWER = {
+  name: "Jordan Ellis", accountType: "Personal Loan Applicant",
+  creditScore:     { label: "Credit Score",      icon: LucideIcons.Gauge,      value: "712",      state: "hydrated", provenance: experianProv("1d ago"), hasDestination: false } satisfies RecordField,
+  loanOfficer:     { label: "Loan Officer",      icon: LucideIcons.User,       value: "Morgan Blake", state: "hydrated", provenance: ncinoProv("2h ago") } satisfies RecordField,
+  accountNumber:   { label: "Account Number",    icon: LucideIcons.CreditCard, value: "····4821", state: "hydrated", provenance: fisProv("30m ago"), hasDestination: false } satisfies RecordField,
+  requestedAmount: { label: "Requested Amount",  icon: LucideIcons.DollarSign, value: "$45,000",  state: "hydrated", provenance: ncinoProv("2h ago"), hasDestination: false } satisfies RecordField,
+}
 
-  // Assigned agent chat (task 5) — no dedicated "agent chat" component exists
-  // anywhere in src/components/ui/ yet (checked directly), so this demo reuses
-  // the generic SidePanel — the same "reuse what exists, don't invent a new
-  // overlay mechanism" rule the Signal overlays above already follow. Any
-  // consumer screen wires assignedAgent.onOpenChat to whatever chat surface it
-  // already has; this is one example of what that can look like.
+// Repair order (Automotive) — Figma's own process-entity example, EXAMPLE
+// data, not confirmed AIMS OS content. AIMS OS's central vertical.
+//
+// THE ENTITY IS THE ORDER, NOT THE CUSTOMER. An earlier pass had this as
+// "Devon Marsh, the person who owns the vehicle", on a rule that a record's
+// entity is always a person or an account and never a process. Figma
+// reversed that rule — its OPEN frame records Thom confirming it: "an
+// entity may be a process, which overrides the earlier rule that a contact
+// is never a process" — and its own example is the order: RO-48291, wrench
+// icon, code as title. The person version also left this page rendering two
+// different entities for one case, since the Preview already used RO-48291.
+//
+// `name` is the only place the title comes from now; RH_NAME reads it
+// instead of hard-coding a second copy. Record fields describe the ORDER
+// (who is working it, on what vehicle, under what warranty, for whom),
+// still across 3 distinct sources: CDK Global (DMS), Carfax (vehicle
+// history), and the manufacturer's own warranty system.
+const RH_REPAIR_ORDER = {
+  name: "RO-48291", vehicle: "2022 Ford F-150",
+  serviceAdvisor:  { label: "Service Advisor",   icon: LucideIcons.User,          value: "Tyler Brooks",         state: "hydrated", provenance: cdkProv("15m ago") } satisfies RecordField,
+  vehicleField:    { label: "Vehicle",           icon: LucideIcons.Car,           value: "2022 Ford F-150",      state: "hydrated", provenance: carfaxProv("1d ago"), hasDestination: false } satisfies RecordField,
+  warrantyStatus:  { label: "Warranty Status",   icon: LucideIcons.ShieldCheck,   value: "Powertrain — Active",  state: "hydrated", provenance: oemProv("6h ago") } satisfies RecordField,
+  lastServiceDate: { label: "Last Service Date", icon: LucideIcons.CalendarClock, value: "Feb 3, 2026",          state: "hydrated", provenance: cdkProv("6h ago"), hasDestination: false } satisfies RecordField,
+}
+
+// Helix Data Studio entity — Figma's edge case 5, "the header is not a CRM
+// header". The same skeleton serving a platform data entity: no face, no
+// brand, so a highlight icon; and a source that is the platform itself rather
+// than a system of record.
+const hdsProv = (syncedAgo: string): FieldProvenance => ({ system: "Helix Data Studio", systemAbbr: "HDS", modelVersion: "Entity v2.0", syncedAgo })
+const RH_DATA_ENTITY = {
+  name: "Customer Master",
+  steward:  { label: "Data Steward", icon: LucideIcons.User,          value: "Priya Nair",   state: "hydrated", provenance: hdsProv("25m ago") } satisfies RecordField,
+  lastSync: { label: "Last Sync",    icon: LucideIcons.CalendarClock, value: "Failed 2h ago", state: "hydrated", provenance: hdsProv("2h ago"), hasDestination: false } satisfies RecordField,
+  rowCount: { label: "Rows",         icon: LucideIcons.Table,         value: "1.24M",        state: "hydrated", provenance: hdsProv("25m ago"), hasDestination: false } satisfies RecordField,
+}
+
+// Record zone — the RECORD grid is a plain RecordField[] the host builds
+// directly (Block 4: no fixed "employee field" structure inside the
+// component anymore).
+const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
+  dataEntity: [RH_DATA_ENTITY.steward, RH_DATA_ENTITY.lastSync, RH_DATA_ENTITY.rowCount],
+  uep: [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate],
+  ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
+  uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
+  patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
+  claim: [RH_CLAIM.policyNumber, RH_CLAIM.insuranceAgent, RH_CLAIM.coverageType, RH_CLAIM.claimsHistory],
+  borrower: [RH_BORROWER.creditScore, RH_BORROWER.loanOfficer, RH_BORROWER.accountNumber, RH_BORROWER.requestedAmount],
+  repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.lastServiceDate],
+}
+
+// Source — which system the record came from. ONE item per entity, never a
+// concatenation. Values are the source systems each example's RECORD fields
+// are already attributed to above (Workday, Salesforce, NetSuite, Epic,
+// Guidewire, nCino), plus DMS for the automotive example, matching the
+// reference design's own mapping. An entity created inside the platform
+// itself would read "Helix Data Studio"; one with no source at all omits the
+// prop rather than filling the slot with a category or a location.
+const RH_SOURCE: Record<RhDemoKey, string> = {
+  dataEntity:  "Helix Data Studio",
+  uep:         "Workday",
+  ucp:         "Salesforce",
+  uvp:         "NetSuite",
+  patient:     "Epic",
+  claim:       "Guidewire",
+  borrower:    "nCino",
+  repairOrder: "DMS",
+}
+
+// Secondary metadata — the compact attribute row, max 6 (aim for 4). Every
+// item is something a person could act on or something governance requires be
+// visible: counts of Truth Plane facts and Canon Plane documents (counted
+// separately — TR outranks CR), open workflows, the assigned agent tier from
+// ORI's hierarchy (User PA → Manager Agent → Director Agent → Council), the
+// access role, and tenure. Nothing here is true of every entity of the same
+// type — that would be a label, not information.
+const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
+  dataEntity: [
+    { icon: LucideIcons.Table,          text: "38 tables", tooltip: "Normalized tables · 38 tables feeding this entity." },
+    { icon: LucideIcons.CircleCheckBig, text: "12 facts",  tooltip: "Truth Plane facts · 12 attested facts derived from this entity." },
+    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 ingestion workflows currently running." },
+  ],
+  uep: [
+    { icon: LucideIcons.CircleCheckBig, text: "9 facts",   tooltip: "Truth Plane facts · 9 attested facts on this record." },
+    { icon: LucideIcons.FileText,       text: "3 docs",    tooltip: "Canon Plane documents · 3 long-form references. Counted separately from facts: TR outranks CR." },
+    { icon: LucideIcons.Workflow,       text: "3 open",    tooltip: "Open workflows · 3 agentic workflows currently touching this record." },
+    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent when Council confidence drops below 0.65." },
+    { icon: LucideIcons.ShieldCheck,    text: "Admin",     tooltip: "Access role · Admin. Granted through Okta, last reviewed Mar 2026." },
+  ],
+  ucp: [
+    { icon: LucideIcons.CircleCheckBig, text: "14 facts",  tooltip: "Truth Plane facts · 14 attested facts on this account." },
+    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this account." },
+    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Handling this account since Mar 3." },
+    { icon: LucideIcons.CalendarClock,  text: "Since 2021", tooltip: "Customer since · March 2021." },
+  ],
+  uvp: [
+    { icon: LucideIcons.CircleCheckBig, text: "6 facts",   tooltip: "Truth Plane facts · 6 attested facts on this supplier." },
+    { icon: LucideIcons.FileText,       text: "5 docs",    tooltip: "Canon Plane documents · 5 contracts and policies on file." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 agentic workflow currently touching this supplier." },
+    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Owns procurement escalations for this supplier." },
+  ],
+  patient: [
+    { icon: LucideIcons.CircleCheckBig, text: "22 facts",  tooltip: "Truth Plane facts · 22 attested facts on this chart." },
+    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this chart." },
+    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent for anything clinical." },
+    { icon: LucideIcons.ShieldCheck,    text: "Restricted", tooltip: "Access role · Restricted. PHI fields resolve per viewer entitlement at display time." },
+  ],
+  claim: [
+    { icon: LucideIcons.CircleCheckBig, text: "11 facts",  tooltip: "Truth Plane facts · 11 attested facts on this policyholder." },
+    { icon: LucideIcons.FileText,       text: "8 docs",    tooltip: "Canon Plane documents · 8 policy documents and endorsements on file." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 claim workflow currently touching this policyholder." },
+    { icon: LucideIcons.CalendarClock,  text: "Since 2019", tooltip: "Policyholder since · June 2019." },
+  ],
+  borrower: [
+    { icon: LucideIcons.CircleCheckBig, text: "7 facts",   tooltip: "Truth Plane facts · 7 attested facts on this applicant." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 credit application currently in progress." },
+    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Credit decisions route to the Council." },
+    { icon: LucideIcons.Link2,          text: "BR-4471",   tooltip: "Bridge ID · BR-4471. The immutable link between this record's Truth facts and their source documents." },
+  ],
+  repairOrder: [
+    { icon: LucideIcons.CircleCheckBig, text: "5 facts",   tooltip: "Truth Plane facts · 5 attested facts on this repair order." },
+    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 parts-procurement workflow currently touching this order." },
+    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent on warranty disputes." },
+    { icon: LucideIcons.DollarSign,     text: "$4,180",   tooltip: "Authorized amount · $4,180, insurance-approved. Figma's own value for this example." },
+  ],
+}
+
+// Preview tab only — what each type's `description` would legitimately say IF
+// it qualified. Figma allows the slot only when the title is an opaque code,
+// and `RO-48291` is the ONE title here that is one — every other entity in
+// this demo is named, so its description is shown only because the Preview
+// toggle exists to demonstrate the slot, never because the case earns it.
+// Each string still passes the durability test: it says what the entity IS,
+// never what is happening to it.
+const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
+  dataEntity:  "Normalized customer entity, resolved from CRM, DMS and the enrichment provider.",
+  uep:         "Decision maker for infrastructure purchases across all sites.",
+  ucp:         "Multi-site financial services account, contracted at the parent level.",
+  uvp:         "Sole supplier for direct materials on the Midwest assembly lines.",
+  patient:     "Long-term cardiology patient, managed jointly with an outside specialist.",
+  claim:       "Commercial policyholder covering a fleet of 40 vehicles.",
+  borrower:    "First-time commercial borrower, no prior facility with the bank.",
+  // The one case Figma says JUSTIFIES a description: the title is an opaque
+  // code. "RO-48291" alone means nothing, so the description says what the
+  // record concerns. Copy is Figma's own.
+  repairOrder: "Front collision, insurance-approved, parts on backorder from the manufacturer.",
+}
+
+// Preview tab only — there is NO contextual CTA any more: `Ask` is the primary
+// action. What is left is the one optional secondary (off by default, because
+// most records do not have one) and the overflow, where destructive lives.
+const RH_PREVIEW_SECONDARY_ACTION: RecordAction = { label: "Log a call", onClick: () => {} }
+const RH_PREVIEW_MENU_ACTIONS: RecordAction[] = [
+  { label: "Archive",   onClick: () => {} },
+  { label: "Duplicate", onClick: () => {} },
+]
+
+// Display name per demo key — a lookup instead of a growing ternary chain
+// now that there are 8 cases across 3 groups (people · companies and sites ·
+// processes, assets and data). Every entry reads from the case's own mock, so
+// a title cannot drift between the Preview and Overview tabs the way the
+// repair order's did.
+const RH_NAME: Record<RhDemoKey, string> = {
+  dataEntity: "Customer Master",
+  uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
+  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: RH_REPAIR_ORDER.name,
+}
+
+// Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
+// field is masked, to demonstrate the "same field, 2 entitlement states"
+// rule concretely without redesigning the reference example itself. The
+// masking decision itself is never made here — this mock simply represents
+// what a lower-permission viewer would already have been handed.
+const RH_UEP_MASKED_ACCESS_ROLE: RecordField = { label: "Access Role", icon: LucideIcons.ShieldCheck, value: "Admin", state: "masked", maskedValue: "•••• (restricted)", provenance: oktaProv("15m ago") }
+const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCESS_ROLE, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate]
+
+// Assigned AI agent — one per demo entity, same shape (see AssignedAgent in
+// record-header.tsx). onOpenChat is wired inside EntityHeaderPage below.
+//
+// Closing pass — every entry is now the SAME generic "AI Assistant" persona,
+// not a per-vertical fictional name ("Renewal Copilot," "Claims Copilot AI",
+// ...). A prior pass had 4 of the 7 named after their own Agentic System
+// workflow's owner, so the identity-row Tag + "Ask about {name}" button
+// visibly re-showed the exact persona a since-removed Agentic System "Last
+// Agent" card and the Workflow SlideOut's own subtitle used to name — the
+// bug wasn't the button itself (that's a real, required-but-nullable
+// component feature, see AssignedAgent's own doc comment in
+// record-header.tsx, and it must stay ACTIVE — disabling it was itself a
+// bug from an earlier pass), it was reusing a workflow's own persona for a
+// separate feature. A flat, generic name here is fully decoupled from
+// RH_WORKFLOWS' own `owner` field, so the two can never collide again.
+const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
+  dataEntity:  { id: "agent-assistant-dataEntity", name: "AI Assistant" },
+  uep: { id: "agent-assistant-uep", name: "AI Assistant" },
+  ucp: { id: "agent-assistant-ucp", name: "AI Assistant" },
+  uvp: { id: "agent-assistant-uvp", name: "AI Assistant" },
+  patient: { id: "agent-assistant-patient", name: "AI Assistant" },
+  claim: { id: "agent-assistant-claim", name: "AI Assistant" },
+  borrower: { id: "agent-assistant-borrower", name: "AI Assistant" },
+  repairOrder: { id: "agent-assistant-repairOrder", name: "AI Assistant" },
+}
+
+// ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
+// Not exported, not part of the DS component itself — RecordHeader only
+// exposes onOpen/onAction callbacks (see its own file-header Composition
+// note); every SlideOut instance below is owned by this demo page, same
+// delegation pattern this catalog has used for every prior overlay demo.
+
+// Correction pass — refined for what's actually useful when a workflow is
+// impacting THIS contact: status/progress/blockers/next milestone/owner.
+// Deliberately NOT node config or any internal-to-the-workflow detail —
+// that's Agentic Studio's job, not this card's. `status` is authored
+// directly (not inferred from `steps`) since a "loading" step can mean
+// either "actively running" or "stuck on a human" and only the workflow
+// itself knows which.
+// Closing pass — a contact can be impacted by N workflows at once, not just
+// 1 (RH_WORKFLOWS[v] is now an array — see RecordHeader's own WorkflowSummary/
+// AgenticSystemInfo doc comment for the N-item disclosure pattern this
+// feeds). `id` is unique per workflow (not per vertical) so the SlideOut
+
+
+// AgentDetail / RH_AGENT_DETAILS — REMOVED (closing pass). Backed the "Last
+// Agent" SlideOut (session summary/finding/recommendation), which is gone
+// along with the Agentic System agent card it opened from — see
+// AgenticSystemInfo's own doc comment in record-header.tsx for why.
+// Recoverable from git history if a future case needs this content model
+// back. // TODO: descartado — valor absorbido en NBA.
+
+// Your Intervention can carry N items per record (see InterventionItem in
+// record-header.tsx). `onReview` isn't wired per-item at the mock-data
+// level since it needs the item's own id in scope (see rhIntervention
+// below, which builds the real InterventionItem[] and attaches onReview
+// per item — always rhOpenHtlNewTab, HTL never opens a slideout).
+// detail/requestedBy/impact/history used to feed a "Pending Decisions"
+// SlideOut that lived on THIS page; that SlideOut is gone (closing pass —
+// HTL always opens in a new tab, no exceptions), so these 4 fields are
+// currently unused by any UI here. Left in place as realistic context for
+// whatever the real HTL destination ends up rendering — not dead in the
+
+
+// Next Best Action (redesign pass) — a proactive AI recommendation,
+// deliberately NOT a restatement of the pending intervention above: HTL is
+// "a decision needs your approval right now"; NBA is "here's something
+// worth doing, unprompted." `onOpen` isn't wired at the mock-data level
+// (same reasoning as InterventionMock) — it needs the SlideOut state in
+// scope, see rhNextBestActions below. UEP carries 2, to demonstrate the N
+// case (the reference brief explicitly calls for supporting more than 1).
+//
+// An NBA is a TASK with a 3-layer structure (call with Edgardo, infra),
+// and the task's own detail SlideOut converges with HTL's — same
+// Section-Title/Details-grid primitives, not reinvented:
+//   Layer 1 — base: common to every task regardless of type. Always
+//     present: title/description (rendered above, in the SlideOut header
+//     and "Why this"), a system-origin signal (this was suggested, not
+//     created manually), who it's assigned to (agent or person), due
+//     date, status, and periodicity when the task recurs.
+//   Layer 2 — type-specific: renders differently per NbaTask["kind"].
+//     Only 3 types are modeled so far (approval / call / email) — this is
+//     a GROWING list as new actions get built (Edgardo), not a fixed set;
+//     `task` is optional and entries without one fall back to a generic
+//     placeholder rather than guessing a 4th type that hasn't been
+//     specified. See "Next Best Action — the task model" under the
+//     Reference tab's Panel content section.
+//   Layer 3 — dynamic: the runtime inputs the action needs. Meant to
+//     reuse the Workflow Builder node input pattern (date/text/
+//     confirmation) — // TODO: reciclar input de nodos — no such
+//     component exists yet in this repo to import (searched directly;
+//     "Workflow Builder UI" is only named in an estimation table, never
+//     implemented), so this reuses Input styled the same way a node
+//     input would be. Less protagonist than HTL's own dynamic layer per
+//     the brief — one representative example per typed task, not a full
+//     input set.
+type NbaTaskKind = "approval" | "call" | "email"
+
+// `outcome` on Call/Email — the 2 closures Edgardo defined for an executed
+// task: "immediate" resolves right away (no further gate); "governed"
+// still routes through a sign-off before it actually takes effect, same
+// spirit as an HTL item, just scoped to this one task instead of the
+// whole record. Approval doesn't need this field — Confirm/Reject IS the
+// governance step, there's no further gate after it.
+type NbaTask =
+  | { kind: "approval"; whatChanges: string; context: string }
+  | { kind: "call"; contactName: string; contactRole: string; suggestedNote: string; outcome: "immediate" | "governed" }
+  | { kind: "email"; subject: string; bodyPreview: string; outcome: "immediate" | "governed" }
+
+// Correction pass — 3 distinct input kinds, proving the dynamic layer
+// genuinely adapts per case rather than always being a text field: date
+// (approval/claim), text (call/email follow-ups), select (a bounded
+// choice — clinical priority, best time to reach). `options` only applies
+// to "select".
+type NbaDynamicInput = { label: string; kind: "text" | "date" | "select"; placeholder: string; options?: string[] }
+
+type NbaMock = {
+  id: string
+  title: string
+  description: string
+  // Layer 1 — base, always present
+  assignedTo: string
+  assignedToKind: "agent" | "person"
+  dueDate: string
+  status: "Not started" | "In progress" | "Scheduled"
+  recurrence?: string
+  // Layer 2 — omitted where the type hasn't been modeled yet (see above)
+  task?: NbaTask
+  // Layer 3 — omitted where no runtime input applies
+  dynamicInputs?: NbaDynamicInput[]
+  /** Passed straight through to NextBestAction.contextTag — what area this
+   *  action is about, at a glance ("Access", "Renewal", ...). Kept on the mock
+   *  for the detail SlideOut's own header; the card itself no longer renders a
+   *  context Tag (the Figma NBA card has none). */
+  contextTag?: string
+  /** When the recommendation was produced — renders after the title behind a
+   *  purple bullet, per the Figma card. */
+  timeAgo?: string
+}
+
+const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
+  dataEntity: [
+    {
+      id: "dataEntity-nba-1", title: "Re-run the failed CRM sync",
+      description: "The nightly CRM sync failed twice in a row, so 4 downstream workflows are reading yesterday's data. Re-running it now clears them.",
+      assignedTo: "Data Steward", assignedToKind: "person", dueDate: "Sep 8, 2026", status: "Not started",
+      task: { kind: "approval", whatChanges: "Re-run the CRM ingestion for Customer Master", context: "Two consecutive failures; 4 workflows are downstream of this entity." },
+      contextTag: "Sync",
+      timeAgo: "25m ago",
+    },
+  ],
+  uep: [
+    {
+      id: "uep-nba-1", title: "Scope down Sarah's Admin access",
+      description: "Sarah still holds Admin access to 2 repos outside Platform Infra's ownership boundary, granted under her prior team — trimming it now brings her access back in line with her current role.",
+      assignedTo: "David Kim", assignedToKind: "person", dueDate: "Aug 22, 2026", status: "Not started",
+      task: { kind: "approval", whatChanges: "Scope down Sarah Chen's Admin access", context: "2 repos sit outside Platform Infra's ownership boundary, inherited from her prior team — removing them brings her access back in line with her current role." },
+      dynamicInputs: [{ label: "Effective date", kind: "date", placeholder: "When the scoped-down access takes effect" }],
+      contextTag: "Access",
+      timeAgo: "2h ago",
+    },
+    {
+      id: "uep-nba-2", title: "Suggest the Platform Infra security module",
+      description: "Sarah's role changed 2 weeks ago; the standard onboarding path for her new team includes a security training she hasn't started.",
+      assignedTo: "David Kim", assignedToKind: "person", dueDate: "Sep 1, 2026", status: "Scheduled",
+      recurrence: "Runs with every 30-day access check",
+      task: { kind: "email", subject: "Complete your Platform Infra security training", bodyPreview: "Hi Sarah,\n\nWelcome to Platform Infra! As part of the team's standard onboarding, there's a security training module that isn't showing as started yet — it takes about 45 minutes and covers the access patterns specific to this team.\n\nCould you get to it in the next couple weeks?\n\nThanks,", outcome: "immediate" },
+      dynamicInputs: [{ label: "CC (optional)", kind: "text", placeholder: "e.g. Sarah's manager or HR Business Partner" }],
+      contextTag: "Compliance",
+      timeAgo: "4h ago",
+    },
+  ],
+  ucp: [
+    {
+      id: "ucp-nba-1", title: "Assign a proactive check-in call to the agent",
+      description: "Usage dipped 12% this month with no support tickets filed — the agent can place a check-in call before renewal season to catch friction early.",
+      assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
+      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Kestrel Systems", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
+      dynamicInputs: [
+        { label: "Call date & time", kind: "text", placeholder: "e.g. Thu, Aug 28 at 10am" },
+        { label: "Notes for the agent", kind: "text", placeholder: "e.g. Also mention the upcoming product launch" },
+      ],
+      contextTag: "Renewal",
+      timeAgo: "1d ago",
+    },
+  ],
+  uvp: [
+    {
+      id: "uvp-nba-1", title: "Flag the insurance renewal 30 days out",
+      description: "Meridian's current certificate expires in 45 days — starting the renewal conversation now avoids a compliance gap at requalification.",
+      assignedTo: "Procurement Copilot", assignedToKind: "agent", dueDate: "Aug 24, 2026", status: "Not started",
+      task: { kind: "email", subject: "Insurance certificate renewal — 45 days out", bodyPreview: "Hi Meridian team,\n\nYour current certificate of insurance expires in 45 days. Starting the renewal conversation now avoids a compliance gap when requalification comes up — could you confirm your timeline for the updated certificate?\n\nThanks,", outcome: "immediate" },
+      dynamicInputs: [
+        { label: "CC (optional)", kind: "text", placeholder: "e.g. compliance@meridianlogistics.com" },
+        { label: "Scheduled send date", kind: "date", placeholder: "When this email goes out" },
+      ],
+      contextTag: "Coverage",
+      timeAgo: "6h ago",
+    },
+  ],
+  patient: [
+    {
+      id: "patient-nba-1", title: "Schedule a follow-up coagulation panel",
+      description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge.",
+      assignedTo: "Care Coordinator AI", assignedToKind: "agent", dueDate: "Aug 16, 2026", status: "In progress",
+      task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible.", outcome: "immediate" },
+      dynamicInputs: [{ label: "Priority", kind: "select", placeholder: "Select a priority", options: ["Routine", "Urgent", "STAT"] }],
+      contextTag: "Clinical",
+      timeAgo: "30m ago",
+    },
+  ],
+  claim: [
+    {
+      id: "claim-nba-1", title: "Request the missing parts invoice now",
+      description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears.",
+      assignedTo: "Claims Copilot AI", assignedToKind: "agent", dueDate: "Aug 6, 2026", status: "Not started",
+      task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks,", outcome: "governed" },
+      dynamicInputs: [{ label: "Follow-up reminder", kind: "date", placeholder: "If no response by this date" }],
+      contextTag: "Claims",
+      timeAgo: "2d ago",
+    },
+  ],
+  borrower: [
+    {
+      id: "borrower-nba-1", title: "Assign a co-signer conversation to the agent",
+      description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30% — the agent can raise it with Jordan directly.",
+      assignedTo: "Underwriting Copilot", assignedToKind: "agent", dueDate: "Aug 14, 2026", status: "Not started",
+      task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review.", outcome: "immediate" },
+      dynamicInputs: [{ label: "Best time to reach", kind: "select", placeholder: "Select a time of day", options: ["Morning", "Afternoon", "Evening"] }],
+      contextTag: "Credit",
+      timeAgo: "3h ago",
+    },
+  ],
+  repairOrder: [
+    // Correction pass — deliberately the ONE remaining "type not yet
+    // modeled" example (every other NBA now has a real type: approval,
+    // call, or email) — a service upsell offer doesn't cleanly map to any
+    // of the 3 built so far, which is exactly the case this fallback
+    // exists to demonstrate: valid to show, just not the common case.
+    {
+      id: "repairOrder-nba-1", title: "Bundle the cabin air filter while it's in the bay",
+      description: "This vehicle is due for that service within 500 miles — bundling it now saves the customer a second visit.",
+      assignedTo: "Service Advisor Copilot", assignedToKind: "agent", dueDate: "Aug 18, 2026", status: "In progress",
+      contextTag: "Service",
+      timeAgo: "1h ago",
+    },
+  ],
+}
+
+// Data Provenance (Law 2) — reuses the SAME FieldProvenance objects already
+// attached to each RecordField. This is now the ONLY place these values are
+// displayed at all (this correction pass — RECORD fields no longer render
+// inline in the card itself), not a fuller view of something the card
+// already showed. Rows sit inside ONE shared border (see the caller below),
+// separated by dividers, not one CardContainer per field — the repo's own
+// "table" convention (see the Reference tab's own tables) unifying a list
+// of like items instead of stacking N separate cards.
+function ProvenanceRow({ field }: { field: RecordField }) {
+  const FieldIcon = field.icon
+  return (
+    <div className="p-[12px] border-b border-[var(--table-border)] last:border-0">
+      <div className="flex items-center gap-[6px] mb-[8px]">
+        <FieldIcon size={14} strokeWidth={1.75} style={{ color: "var(--field-supporting)" }} />
+        <span className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{field.label}</span>
+      </div>
+      <div className="grid grid-cols-[70px_1fr] gap-y-[6px] text-[12px]">
+        <span style={{ color: "var(--field-supporting)" }}>Source</span>
+        <span style={{ color: "var(--foreground)" }}>{field.provenance.system} · synced {field.provenance.syncedAgo}</span>
+        <span style={{ color: "var(--field-supporting)" }}>Model</span>
+        <span style={{ color: "var(--foreground)" }}>{field.provenance.modelVersion}</span>
+        <span style={{ color: "var(--field-supporting)" }}>Value</span>
+        <span style={{ color: "var(--foreground)" }}>{field.state === "masked" ? (field.maskedValue ?? "•••• (restricted)") : field.value}</span>
+      </div>
+    </div>
+  )
+}
+
+// HeaderContextMenu — REMOVED (closing pass). Backed the "···" menus on
+// Active Workflow (now a direct footer CTA) and Last Agent (now gone
+// entirely — see AgenticSystemInfo's doc comment in record-header.tsx).
+// No SlideOut on this page needs a header overflow menu anymore.
+// Recoverable from git history if a future case needs this pattern back.
+
+// ── Block 3 — full edge-case states gallery ─────────────────────────────────
+// Dev-facing coverage: every state RecordHeader can render, each labeled, so
+// dev doesn't have to guess what "loading" or "no permission" looks like.
+// Every instance below is collapsed (not defaultExpanded) except where a
+// caption specifically calls out the collapsed-tags look — expanding is
+// always still available via the disclosure chevron, same as production.
+// EntityHeaderStatesGallery lived here — 8 numbered examples, 5 of which
+// documented the two expandable zones. It went with them; Figma's own
+// example set carries the Overview tab now.
+
+// ── End-to-end flows (this pass) — 2 complete walkthroughs, not loose
+// states. Each step is a real, rendered piece of this same page (a focused
+// RecordHeader instance showing only the zone the step is about — zones
+// are conditional, so recordFields={[]}/agenticSystem={undefined} simply
+// omit the other zones, no special-casing needed — or a button that opens
+// the SAME real SlideOut/ModalDialog used everywhere else on this page).
+// Steps use ProcessItem (process-item.tsx) — the repo's own "sequence of
+// labeled steps" atom — instead of a hand-rolled stepper. Deliberately NOT
+// a multi-step interactive wizard (Block 2's own instruction): every step
+// renders simultaneously, stacked, so the whole walkthrough is visible at
+// a glance.
+// EntityHeaderFlowsSection lived here — two HTL walkthroughs built out of
+// ProcessItem steps. It documented Your Intervention end to end, so it
+// went with the zone.
+
+// Block 5 (this pass) — ONE shared definition for every SlideOut/SidePanel
+// body's horizontal spacing, applied everywhere instead of patched panel by
+// panel. The panel primitives themselves already provide the correct 24px
+// horizontal inset (SlideOut's own `aside` = padding: "32px 24px"; SidePanel's
+// own body = p-[24px] — confirmed directly in both source files), and the
+// canonical "SlideOut/SidePanel — Content" pattern page's own live content
+// (`gpPanelSlotContent`) renders with ZERO extra horizontal padding of its
+// own for exactly that reason. Every content div below previously added its
+// own `p-[16px]` on top of that, pushing body content out of alignment with
+// the header/footer instead of matching their margin — this constant is the
+// one-time fix, so no individual panel can drift out of sync again.
+const PANEL_CONTENT_CLASS = "flex flex-col gap-[16px]"
+
+// NBA status Tag color, plus the type-specific section's own label — both
+// content-facing names ("Approval"/"Call"/"Email"), never the internal
+// "Layer N"/"Capa N" model vocabulary from the doc comments above. That
+// vocabulary is how this file's comments and the Reference tab talk about
+// the structure to a dev; the rendered SlideOut never says "Layer" at all.
+const NBA_STATUS_TAG: Record<NbaMock["status"], TagVariant> = {
+  "Not started": "secondary",
+  "In progress": "informative",
+  "Scheduled": "lightBlue",
+}
+const NBA_TASK_LABEL: Record<NbaTaskKind, string> = {
+  approval: "Approval",
+  call: "Call",
+  email: "Email",
+}
+// Playground's NBA-type selector points at one real, already-authored NBA
+// Closing pass — the closure banner shown once a Call/Email task's action
+// is taken, keyed by the task's own `outcome`. "executed" needs no further
+// gate; "in-review" still routes through governance before it actually
+// happens — the 2 outcomes Edgardo defined, applied per-task rather than
+// per-record (an HTL item works the same way at the record level).
+const NBA_RESULT_COPY: Record<"executed" | "in-review", { title: string; state: "success" | "informative" }> = {
+  executed: { title: "Done — the agent will carry this out", state: "success" },
+  "in-review": { title: "Submitted — held for sign-off before it takes effect", state: "informative" },
+}
+// Active Workflow detail (correction pass) — status Tag color + label,
+// A thin rule between sections — deliberately plainer than a Section Title
+// row, since it separates the base/type/dynamic groupings without naming
+// them as such in the UI.
+const NbaSectionDivider = () => <div className="h-px" style={{ background: "var(--table-border)" }} />
+
+// ── Next Best Action Card ───────────────────────────────────────────────────
+// Promoted out of experimental/ on 2026-09-07. Everything on this page comes
+// from the Figma section (20206:316306 for the component, 20257:7761 and
+// 20258:7787 for the rules, 20009:12610 for the detail panel), read through
+// the plugin API rather than from memory.
+const NBA_DEMO: NextBestAction = {
+  id: "nba-demo",
+  title: "Assign a proactive check-in call",
+  timeAgo: "2h ago",
+  description: "Usage dropped 12% this month with no support tickets. An early check-in protects the renewal, which is 52 days out with no proposal sent.",
+  onViewDetails: () => {},
+}
+
+function NextBestActionCardPage({ openSpec, onNavigate }: { openSpec: (s: SpecModal) => void; onNavigate: (id: string) => void }) {
+  const [tab, setTab] = usePageTab<"overview" | "reference">("overview", ["overview", "reference"])
+  const [dismissed, setDismissed] = useState(false)
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-[16px] mb-[24px]">
+        <div>
+          <h1 className="text-[28px] font-semibold text-[var(--foreground)] mb-[6px]">Next Best Action Card</h1>
+          <p className="text-[13px] leading-[1.6] text-[var(--field-supporting)] max-w-[760px]">
+            The proactive recommendation. It sits in its own Card Container <strong>directly below the Entity Header, never inside it</strong> — the header identifies the entity, this proposes what to do about it. Two records, two containers. <strong>One at a time</strong>, and no recommendation means no card at all rather than an empty state.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("next-best-action")} />
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {(["overview", "reference"] as const).map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-[14px] py-[9px] text-[13px] font-medium capitalize transition-colors border-b-2 -mb-[1px] ${
+              tab === t
+                ? "border-[var(--primary)] text-[var(--foreground)]"
+                : "border-transparent text-[var(--field-supporting)] hover:text-[var(--foreground)]"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div className="flex flex-col gap-[40px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">View details — the default variant</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Use this unless there is a reason not to. One path: open the record. <strong>Every example in the Figma file uses this variant</strong>, because the card cannot guarantee it showed everything, so the safe route is always the one that opens the record.
+            </p>
+            <NextBestActionCard item={NBA_DEMO} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Accept / View details — reserved</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              For actions that are neither destructive nor complex, where offering Accept saves a step without risking a careless commitment. <strong>Which actions qualify is not decided yet in Figma</strong> — until it is, use the default. The variant exists so the pattern is ready when a real case appears, not so it can be picked by preference. Even here, <strong>Accept assigns the work to the agent and opens the detail first</strong>: the agent executes, the human governs, and there is no inline accept anywhere in this component.
+            </p>
+            <NextBestActionCard item={{ ...NBA_DEMO, onAccept: () => {} }} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Dismiss — resolves in place</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Dismissing commits the user to nothing, so it needs no detail. The <code>×</code> hides the card <strong>for this session only</strong> — it returns on reload, nothing is stored, and nothing is fed back to the engine. Click it below; the card disappears entirely rather than collapsing to a message, which is the same thing that happens when the engine has nothing to propose.
+            </p>
+            {dismissed ? (
+              <div className="flex items-center gap-[12px]">
+                <p className="text-[12px] italic" style={{ color: "var(--field-supporting)" }}>Nothing renders — this is the correct &ldquo;all good&rdquo; state, not an empty state.</p>
+                <Button variant="tertiary" size="sm" onClick={() => setDismissed(false)}>Bring it back</Button>
+              </div>
+            ) : (
+              <NextBestActionCard item={{ ...NBA_DEMO, onDismiss: () => setDismissed(true) }} />
+            )}
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Where it belongs</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Always as the next sibling below <code>EntityHeader</code>, in its own container. See it in place on the Entity Header page, and in a real screen through that page&rsquo;s <em>View screen example</em>.
+            </p>
+            <Button variant="secondary" size="sm" onClick={() => onNavigate("record-header")}>Open the Entity Header page</Button>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
+            <div className="grid grid-cols-2 gap-[16px]">
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-success)" }}>Use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["The engine has exactly one thing to propose about the entity you are looking at", "You can state both a fact and a consequence in the rationale — without the consequence the user cannot decide", "The action names something the AGENT will do once assigned, never something the viewer does right now"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="shrink-0" style={{ color: "var(--badge-success)" }}>✓</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-error)" }}>Don't use when</p>
+                <ul className="flex flex-col gap-[6px]">
+                  {["There are several recommendations. It never stacks and it has no carousel — a counter leads to the list instead", "There is nothing to recommend. Omit `item` and nothing renders; never synthesize a filler recommendation to keep the layout even", "You want it inside the Entity Header. It is a separate component in a separate container, and passing it into the header is the single most common mistake with that card", "You want colour to carry the urgency. Timing and urgency live in the rationale; the header's state badge and signal tags are the urgency channel"].map(t => (
+                    <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
+                      <span className="shrink-0" style={{ color: "var(--badge-error)" }}>✕</span>{t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {tab === "reference" && (
+        <div className="flex flex-col gap-[32px]">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Figma&rsquo;s ten rules</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[40px_230px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Rule", "Why"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Under the header, never inside it", "Full width, directly below. The header identifies the entity; the card proposes. Sixteen products were reviewed and none puts the recommendation in the record header."],
+                ["2", "One at a time", "The engine already prioritised, unified and discarded. Showing five is not trusting the engine — and stacked cards push the real content below the fold. If more exist, a counter leads to the list. It never stacks."],
+                ["3", "No recommendation, no card", "The container does not render. This is not an empty state: there is nothing to say when there is nothing to do."],
+                ["4", "The title is the action, not the engine name", "The card says what to do. \"Next Best Action\" names the engine — and it is already the card's own label."],
+                ["5", "It always declares when and why", "Timestamp plus rationale. Without a rationale it is an order, not a proposal."],
+                ["6", "Source replaces the accuracy disclaimer", "Other products hedge generated content with \"may be inaccurate\". A recommendation here passed the Council before reaching the surface, so it explains itself instead of apologising."],
+                ["7", "View details is the default", "Every example uses it. The card cannot guarantee it showed everything, so the safe path is always the one that opens the record."],
+                ["8", "Accepting always opens the detail", "Even in the variant that offers Accept, accepting does not resolve in place — it routes to the detail so the user sees the record before committing. There is no inline accept anywhere in this component."],
+                ["9", "Dismiss resolves in place", "Dismissing commits the user to nothing, so it needs no detail. The × hides the card for this session only and it returns on reload; nothing is stored and nothing is fed back to the engine."],
+                ["10", "Accept assigns to the agent, it does not execute", "The agent executes, the human governs. Never \"Call now\"."],
+              ].map(([n, rule, why], i) => (
+                <div key={n} className="grid grid-cols-[40px_230px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{rule}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              <strong>And one NEVER.</strong> Figma: the card must not share the glyph or colour used by <code>Ask</code> — that button produces summaries, this one asks for a decision. <strong>The repo deliberately does the opposite:</strong> Michael confirmed (2026-09-07) that both are AI surfaces and the shared Sparkle is what says so — one converses, the other transacts — and Figma&rsquo;s own component instances share it too. Do not &ldquo;fix&rdquo; this.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Character limits, and the reasoning behind each bound</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[140px_90px_90px_90px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Field", "Min", "Target", "Max", "Why"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Title", "20", "40", "60", "Under 20 it stops being an instruction and becomes a label. \"Call client\" does not say which call or why; \"Assign a renewal check-in call\" does."],
+                ["Rationale", "60", "90", "150", "The minimum is a FACT plus a CONSEQUENCE — with only the fact the user cannot decide, and 60 is roughly where both fit. The target is 90 rather than the ~180 a full-width line holds because comfortable reading sits at 45–75 per line and comprehension drops past 90: a line that fits is not the same as a line that gets read."],
+                ["Action label", "—", "—", "25", "It competes for the same row as the default path."],
+              ].map(([f, mn, tg, mx, why], i) => (
+                <div key={f} className="grid grid-cols-[140px_90px_90px_90px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{f}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{mn}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{tg}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{mx}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              <strong>Documented, not enforced.</strong> The component does not reject a short string, because Figma leaves the important half open: what the card does when the engine returns less than the minimum is an unresolved question with Engineering. It cannot invent the consequence, and losing the action to a short string is worse than showing it incomplete.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The detail panel — four families, by what the user has to do</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Everything above the divider is the same in every family — why, when, who executes, status. Only the block below it changes, and it is built entirely from Node Config components that already exist in the Workflow Builder.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[180px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Family", "What the user has to do", "Inputs it composes"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Nothing to edit", "Confirm a defined change. Before and after, read-only. Approval, permission change, attestation.", "None. A Textarea appears only when rejecting, to record the reason"],
+                ["Content to review", "Read a draft the agent wrote. Prefilled and editable. Email, message.", "Text Input for recipient and subject, Textarea for the body"],
+                ["Parameters to set", "Fill in fields. Empty or suggested. Call, meeting, task.", "Text Input, Date Picker, Select, Textarea"],
+                ["A sequence to inspect", "Read a multi-step plan. Read-only steps plus a couple of run parameters. Workflow run.", "Process for the steps, Select for how it runs, Toggle for notifications"],
+              ].map(([fam, what, inputs], i) => (
+                <div key={fam} className="grid grid-cols-[180px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{fam}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{inputs}</div>
+                </div>
+              ))}
+            </div>
+            <ul className="text-[12px] leading-[1.7] list-disc pl-[18px]" style={{ color: "var(--field-supporting)" }}>
+              <li><strong>There is no input catalogue here on purpose.</strong> The Workflow Builder&rsquo;s Nodes Configuration section documents fifteen input types with their own USE WHEN / DON&rsquo;T USE WHEN / FIELD LOGIC / DEV NOTES. A second copy drifts the first time either is edited, so what belongs here is the mapping above and a pointer.</li>
+              <li><strong>The steps block must always say what each step touches and whether it writes.</strong> &ldquo;Read only · 2 records&rdquo; and &ldquo;Writes to Salesforce&rdquo; are not decoration — they are what makes accepting an informed decision rather than a blind one. A step that needs a human says so, and says which step it blocks.</li>
+              <li>The Entity Header page&rsquo;s demo panel models three of the four families. <em>A sequence to inspect</em> is not built.</li>
+            </ul>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Where each rule comes from</p>
+            <div className="grid gap-[12px] md:grid-cols-2">
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-[6px]" style={{ color: "var(--field-label)" }}>Industry</p>
+                <ul className="text-[12px] leading-[1.7] list-disc pl-[16px]" style={{ color: "var(--field-supporting)" }}>
+                  <li>Auto-hide when there is nothing to recommend — Salesforce</li>
+                  <li>Card below the header with a why — Lightfield</li>
+                  <li>Accept and reject are what make it a proposal — Salesforce, Peec AI</li>
+                  <li>The card shows the action, not the engine name — Salesforce</li>
+                </ul>
+              </div>
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-[6px]" style={{ color: "var(--field-label)" }}>AIMS OS canon</p>
+                <ul className="text-[12px] leading-[1.7] list-disc pl-[16px]" style={{ color: "var(--field-supporting)" }}>
+                  <li>One at a time — the engine already unifies and discards</li>
+                  <li>Accept assigns to the agent — the agent executes, the human governs</li>
+                  <li>Accepting always opens the detail — committing without the record is accepting blind</li>
+                  <li>Source instead of an accuracy disclaimer — it passed the Council</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecModal) => void; openProtoExample: (protoId: string, from: string, params?: Record<string, string>) => void }) {
+  const [tab, setTab] = useState<"preview" | "overview" | "reference">("preview")
+  // Preview tab — the component alone on a stage, with one control per
+  // optional slot. Mirrors the Figma component set's own property panel (2
+  // variant axes + 8 booleans) so "what can this card turn on and off" is
+  // answerable without reading the props table.
+  const [pvKey,         setPvKey]         = useState<RhDemoKey>("uep")
+  const [pvDescription, setPvDescription] = useState(false)
+  const [pvSource,      setPvSource]      = useState(true)
+  const [pvMetadata,    setPvMetadata]    = useState(true)
+  const [pvTags,        setPvTags]        = useState(true)
+  const [pvState,       setPvState]       = useState(true)
+  const [pvSecondary,   setPvSecondary]   = useState(false)
+  const [pvMenu,        setPvMenu]        = useState(true)
+  const [pvInformation, setPvInformation] = useState(true)
+  // Visual identity toggle — the 7 Work-Surface demos are all people or
+  // companies, so all 7 are avatars. This flips the current one to a highlight
+  // icon so the other half of the rule is visible at all. It also drops the
+  // classification tag, because that is the rule: classification only when the
+  // visual is an avatar — a highlight icon already names the type.
+  const [pvIconVisual, setPvIconVisual] = useState(false)
+  const [pvAgent,       setPvAgent]       = useState(true)
+  const [pvLocked,      setPvLocked]      = useState(false)
+  const [pvNba,         setPvNba]         = useState(true)
+  // Closing pass — Playground's own NBA-type selector, decoupled from
+  // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
+  // modeled" example) shows on the live card below, by pointing at one
+  // real NBA already authored in RH_NBA rather than inventing new content
+  // just for this control.
+
+  // Governed SlideOut state — one boolean per flow, reused across demo
+  // entities (content keyed by whichever one was actually clicked).
+  // Last Agent and Pending Decisions are both gone (closing pass) —
+  // Agentic System's own agent card was removed (see AgenticSystemInfo's
+  // doc comment in record-header.tsx) and HTL never opens a slideout,
+  // full stop (see rhOpenHtlNewTab below) — so neither has state here
+  // anymore.
+  const [rhOpenVariant, setRhOpenVariant] = useState<RhDemoKey | null>(null)
+  // Which specific workflow within that vertical's array was clicked (a
+  // record can have N — closing pass) — not just which vertical.
+  const [rhProvenanceOpen, setRhProvenanceOpen] = useState(false)
+  // NBA detail — "which one" id pattern, since a record can have N NBAs.
+  const [rhNbaOpen, setRhNbaOpen] = useState(false)
+  const [rhNbaItemId, setRhNbaItemId] = useState<string | null>(null)
+  // NBA Layer 2 — the outcome of taking the task's action, whatever type it
+  // is (Confirm/Reject for Approval; Assign/Schedule for Call; Approve
+  // send for Email). Modeled as the 2 outcomes Edgardo defined: "executed"
+  // resolves immediately (no further gate), "in-review" means it still
+  // goes through governance before it actually takes effect — see
+  // NBA_OUTCOME_COPY below for the exact copy per case.
+  const [rhNbaResult, setRhNbaResult] = useState<{ kind: "confirmed" | "rejected" | "executed" | "in-review" } | null>(null)
+  // NBA Layer 3 (dynamic inputs) — the "select" kind's own open/value
+  // state, same Select+Menu pattern the repo's own Select Playground
+  // already uses. At most 1 select input per task, so one shared pair
+  // (keyed by input index, in case that ever changes) is enough.
+  const [rhNbaSelectOpenIdx, setRhNbaSelectOpenIdx] = useState<number | null>(null)
+  const [rhNbaSelectValues, setRhNbaSelectValues] = useState<Record<number, string>>({})
+
+  const rhOpenProvenance = (v: RhDemoKey) => { setRhOpenVariant(v); setRhProvenanceOpen(true) }
+
+  // HTL ALWAYS opens in a new tab — never a slideout, never a same-page
+  // redirect, no exceptions (closing pass fixed a real contradiction: an
+  // earlier "Pending Decisions" SlideOut + ModalDialog approve/dismiss
+  // flow used to be reachable from the End-to-end Flows walkthrough,
+  // which contradicted this rule even though no live card ever opened it
+  // that way). No dedicated HTL/Agentic Studio page exists anywhere in
+  // this repo yet (checked directly), so this demo opens a new tab to
+  // this SAME page — truthfully satisfying "new tab, current tab
+  // untouched" without pretending a deep link exists that isn't real.
+  // // TODO: once a real HTL/Agentic Studio destination exists, point
+  // this at it.
+  // rhAgenticSystem, rhIntervention and rhOpenWorkflowsList lived here.
+  // They built the two zones' props out of RH_WORKFLOWS / RH_INTERVENTIONS;
+  // both zones are gone, so the builders and their mock data went too.
+
+  const rhOpenNba = (v: RhDemoKey, itemId: string) => {
+    setRhOpenVariant(v); setRhNbaItemId(itemId); setRhNbaOpen(true); setRhNbaResult(null)
+    setRhNbaSelectOpenIdx(null); setRhNbaSelectValues({})
+  }
+  // Redesign pass — the protagonist block. Real, per-item onOpen (not a
+  // shared callback for the whole record), same reasoning as Your
+  // Intervention above: each NBA needs its own id in scope for the detail
+  // SlideOut below to show the right one.
+  const rhNextBestActions = (v: RhDemoKey): NextBestAction[] =>
+    (RH_NBA[v] ?? []).map(nba => ({
+      id: nba.id,
+      title: nba.title,
+      timeAgo: nba.timeAgo,
+      description: nba.description,
+      onViewDetails: () => rhOpenNba(v, nba.id),
+      // Accept only where the action is actually modeled (Layer 2 present).
+      // A recommendation the platform cannot yet execute gets the
+      // View-details-only variant — which is the second Figma variant, not a
+      // degraded state.
+      onAccept: nba.task ? () => rhOpenNba(v, nba.id) : undefined,
+      // Demo-only: the card is documentation, so dismissing it would hide the
+      // thing being documented. A real host removes the item from `items`.
+      onDismiss: () => {},
+    }))
+
+  // Assigned agent chat — no dedicated "agent chat" component exists yet
+  // anywhere in src/components/ui/ (checked directly), so this demo reuses
+  // the generic SidePanel — same "reuse what exists" rule every overlay
+  // demo on this page already follows.
   const [rhChatWith, setRhChatWith] = useState<{ id: string; name: string; recordName: string } | null>(null)
-  const rhAssignedAgent = (v: RecordHeaderVariant, recordName: string) => ({
-    ...RH_AGENTS[v],
-    onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
-  })
+  // Always a real agent (closing pass — the disabled-by-default state was
+  // itself a bug, see RH_AGENTS's own comment). The 2 states-gallery items
+  // that specifically demonstrate the null/disabled case (#3's freshly
+  // imported record, #10's explicit "No agent assigned") pass a literal
+  // `null` directly instead of going through this helper.
+  const rhAssignedAgent = (v: RhDemoKey, recordName: string): AssignedAgent | null => {
+    return {
+      ...RH_AGENTS[v],
+      onOpenChat: () => setRhChatWith({ ...RH_AGENTS[v], recordName }),
+    }
+  }
 
-  const pgData = pgVariant === "employee" ? RH_EMPLOYEE : pgVariant === "customer" ? RH_CUSTOMER : RH_CLIENT
-  const pgSignal =
-    pgSignalState === "calm"
-      ? (pgVariant === "employee" ? RH_EMPLOYEE_SIGNAL_CALM : pgVariant === "customer" ? RH_CUSTOMER_SIGNAL_CALM : RH_CLIENT_SIGNAL_CALM)
-      : (pgVariant === "employee" ? rhEmployeeSignal : pgVariant === "customer" ? rhCustomerSignal : rhClientSignal)
+  // Playground's NBA-type selector — decoupled from pgVariant on purpose,
+  // so switching types doesn't require also switching to whichever
+  // vertical happens to carry that type.
+  const openVariant = rhOpenVariant ?? "uep"
+  const openRecordFields = RH_RECORD_FIELDS[openVariant]
+  // Closing pass — "About this record"'s subtitle used to be one hardcoded
+  // string ("Manager, access, department, and more") that only actually
+  // described UEP's own fields, and read as wrong/confusing for every other
+  // vertical (Insurance's policy/coverage fields, UCP's Owner/ARR, ...).
+  // Now derived from whichever fields this open record actually has.
+  const openRecordFieldLabels = openRecordFields.filter((f): f is RecordField => Boolean(f)).map(f => f.label)
+  const openRecordSubtitle = openRecordFieldLabels.length > 2
+    ? `${openRecordFieldLabels.slice(0, 2).join(", ")}, and more — traced`
+    : `${openRecordFieldLabels.join(" and ")} — traced`
+  // The specific NBA within openVariant's array the viewer clicked — a
+  // record can have N NBAs, this shows exactly the one chosen.
+  const openNba = RH_NBA[openVariant]?.find(nba => nba.id === rhNbaItemId)
+  // The NBA SlideOut's primary action, WHATEVER it is for this task's
+  // type, lives in the SlideOut's own fixed footer (see SlideOut's
+  // showCta/showCtaSecondary props), never as a button loose in the
+  // content body. Computed once here instead of 3 near-duplicate showCta
+  // blocks inline on the SlideOut below. Call/Email resolve straight to
+  // the task's own `outcome` (executed vs. in-review — see
+  // NBA_RESULT_COPY); Approval keeps its own Confirm/Reject, since a
+  // human decision IS the governance step, not a further gate after it.
+  const openTask = openNba?.task
+  const nbaFooterCta = !openTask
+    ? { show: false as const }
+    : openTask.kind === "approval"
+    ? { show: !rhNbaResult, primary: "Confirm", secondary: "Reject", onPrimary: () => setRhNbaResult({ kind: "confirmed" }), onSecondary: () => setRhNbaResult({ kind: "rejected" }) }
+    : openTask.kind === "call"
+    ? { show: !rhNbaResult, primary: "Assign call to agent", secondary: "Schedule call", onPrimary: () => setRhNbaResult({ kind: openTask.outcome === "governed" ? "in-review" : "executed" }), onSecondary: () => setRhNbaResult({ kind: "executed" }) }
+    : { show: !rhNbaResult, primary: "Approve send", secondary: "Edit", onPrimary: () => setRhNbaResult({ kind: openTask.outcome === "governed" ? "in-review" : "executed" }), onSecondary: undefined }
+  // A clear closure once the action is taken, whatever type the task is —
+  // Confirmed/Rejected for Approval (its own decision language), or the
+  // executed/in-review outcome copy for Call and Email (NBA_RESULT_COPY).
+  const nbaResultDisplay = !rhNbaResult ? null
+    : rhNbaResult.kind === "confirmed" ? { title: "Confirmed", state: "success" as const }
+    : rhNbaResult.kind === "rejected" ? { title: "Rejected", state: "neutral" as const }
+    : NBA_RESULT_COPY[rhNbaResult.kind]
 
   return (
     <div>
       <div className="flex items-start justify-between gap-[16px] mb-[28px]">
         <div>
-          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Record Header</h1>
-          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[640px]">
-            Entity profile header for Employee/Customer/Client dashboard views. Identity row + Signal always visible; Details expands on demand. One shared layout — only the content per variant changes.
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Entity Header</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[680px]">
+            Identity card for a Unified Entity Profile. It identifies the entity you are looking at and surfaces what needs attention — it carries no detail, which lives in the tabs below. Title, source, tags and actions in the first row; secondary metadata (max 6) in the second. One shared skeleton for every entity type — there is no variant prop, and no disclosure: this is a fixed arrangement of slots, not a collapsible card. The Next Best Action card below is a <strong>separate component in its own container</strong>, not part of this one.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("record-header")} />
       </div>
 
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
-        {(["overview", "playground", "reference"] as const).map(t => (
+        {(["preview", "overview", "reference"] as const).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -32531,89 +32277,319 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         ))}
       </div>
 
+      {/* ── PREVIEW — the component alone on a stage ──────────────────────
+          One control per optional slot, mirroring the Figma component set's
+          own property panel: 2 variant axes (entity type here; Size lives in
+          the responsive pass) plus its 8 booleans. Nothing here is a mock —
+          every toggle drives the real prop. */}
+      {tab === "preview" && (
+        <div className="flex flex-col gap-[24px]">
+          <div
+            className="rounded-[12px] p-[40px]"
+            style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}
+          >
+            <EntityHeader
+              name={RH_NAME[pvKey]}
+              visual={pvIconVisual ? { kind: "icon", icon: LucideIcons.Boxes, variant: "light-blue" } : RH_VISUAL[pvKey]}
+              tags={pvTags ? (pvIconVisual ? RH_TAGS[pvKey].filter(t => t.role !== "classification") : RH_TAGS[pvKey]) : []}
+              stateBadge={pvState ? RH_STATE_BADGE[pvKey] : undefined}
+              source={pvSource ? RH_SOURCE[pvKey] : undefined}
+              secondaryMetadata={pvMetadata ? RH_SECONDARY_METADATA[pvKey] : []}
+              description={pvDescription ? RH_PREVIEW_DESCRIPTION[pvKey] : undefined}
+              recordFields={RH_RECORD_FIELDS[pvKey]}
+              assignedAgent={pvAgent ? rhAssignedAgent(pvKey, RH_NAME[pvKey]) : null}
+              secondaryAction={pvSecondary ? RH_PREVIEW_SECONDARY_ACTION : undefined}
+              menuActions={pvMenu ? RH_PREVIEW_MENU_ACTIONS : []}
+              locked={pvLocked}
+              showInformation={pvInformation}
+              onInformationOpen={() => rhOpenProvenance(pvKey)}
+            />
+            {pvNba && <NextBestActionCard item={rhNextBestActions(pvKey)[0]} className="mt-[12px]" />}
+          </div>
+
+          <div className="flex flex-col gap-[12px]">
+            {/* Grouped by the question that actually decides the rendering —
+                does this entity have a real-world visual identity? — rather
+                than by market. "Work Surfaces / Other Markets" grouped by
+                which product line an example came from, which tells a reader
+                nothing about how the component behaves. These three groups
+                are the rule itself: a face, a brand, or neither. */}
+            <CtrlGroup<RhDemoKey>
+              label="People — avatar from a photo or initials"
+              value={pvKey}
+              onChange={setPvKey}
+              options={[
+                { value: "uep", label: "Employee" },
+                { value: "patient", label: "Patient" },
+                { value: "claim", label: "Policyholder" },
+                { value: "borrower", label: "Borrower" },
+              ]}
+            />
+            <CtrlGroup<RhDemoKey>
+              label="Companies and sites — avatar from a brand"
+              value={pvKey}
+              onChange={setPvKey}
+              options={[
+                { value: "ucp", label: "Customer account" },
+                { value: "uvp", label: "Vendor" },
+              ]}
+            />
+            <CtrlGroup<RhDemoKey>
+              label="Processes, assets and data — a highlight icon, no face and no brand"
+              value={pvKey}
+              onChange={setPvKey}
+              options={[
+                { value: "repairOrder", label: "Repair order" },
+                { value: "dataEntity", label: "Platform data entity" },
+              ]}
+            />
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">
+                Slots — every one of these is optional, and omitting it removes the slot rather than emptying it
+              </p>
+              <div className="flex flex-wrap gap-[8px]">
+                {([
+                  ["Icon instead of avatar", pvIconVisual, setPvIconVisual],
+                  ["Source",             pvSource,      setPvSource],
+                  ["Tags",               pvTags,        setPvTags],
+                  ["State badge",        pvState,       setPvState],
+                  ["Secondary metadata", pvMetadata,    setPvMetadata],
+                  ["Description",        pvDescription, setPvDescription],
+                  ["Information",        pvInformation, setPvInformation],
+                  ["Secondary action",   pvSecondary,   setPvSecondary],
+                  ["Menu",               pvMenu,        setPvMenu],
+                  ["Assigned agent",     pvAgent,       setPvAgent],
+                  ["Locked",             pvLocked,      setPvLocked],
+                  ["Next Best Action",   pvNba,         setPvNba],
+                ] as const).map(([label, on, set]) => (
+                  <Chip
+                    key={label}
+                    variant={on ? "primary" : "secondary"}
+                    size="s"
+                    onClick={() => set(v => !v)}
+                  >
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[760px]">
+              <strong>Description is off by default</strong> and stays off for every entity here except the repair order —
+              Figma allows it only when the title is an opaque code, and <code>RO-48291</code> is the one that qualifies.
+              Turn it on elsewhere to see the slot; the copy you get is what that type would legitimately carry.{" "}
+              <strong>Assigned agent off</strong> is not a missing button: it renders disabled with a Tooltip, because the prop
+              is required and its value may be <code>null</code>.{" "}
+              <strong>Locked</strong> is "you cannot edit this record" — not Figma's <code>Restricted</code>, which is "you
+              cannot see this value" and lives on the field, not the card.{" "}
+              <code>Loading</code>, Figma's third state on the Property&nbsp;1 axis, is a skeleton this component does not
+              implement yet.
+            </p>
+
+            {/* See it applied. Everything above is the component on a stage;
+                this is the component in a real page — Thomas's UCP prototype,
+                opened straight onto a record's detail view (the list has no
+                header on it), where the card sits with tabs, widgets and the
+                Next Best Action as its own sibling, and where dismissing the
+                recommendation actually removes it. Same tab, and the ← chip
+                in the prototype comes back HERE rather than to the gallery:
+                this is a worked example of this component, not a detour into
+                someone else's prototype list. */}
+            <div
+              className="rounded-[8px] p-[16px] flex items-center justify-between gap-[16px] flex-wrap"
+              style={{ background: "var(--surface)", border: "0.5px solid var(--field-border)" }}
+            >
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+                  See it in a real screen
+                </p>
+                <p className="text-[12px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>
+                  The Unified Customer Profile prototype, on a record's detail view.
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
+                onClick={() => openProtoExample("proto-thomas-universal-profile", "record-header", { profile: "ORG-0023" })}
+                className="shrink-0"
+              >
+                View screen example
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {tab === "overview" && (
         <div className="flex flex-col gap-[40px]">
-          {/* Each variant shown twice — collapsed (default) and expanded (defaultExpanded) —
-              per the brief's "3 variants × both states, mock realistic data" requirement. */}
+          {/* Every instance below is the component in its REAL default state
+              — no docs-only overrides. An earlier pass forced `defaultExpanded`
+              here as a convenience, which made Overview and the interactive tab
+              look like two different components. There is nothing to expand any
+              more: the zones and the chevron are gone. */}
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — collapsed (Identity + Signal only)</p>
-            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal}
-              assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">UEP — Employee (reference variant)</p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep} recordFields={RH_RECORD_FIELDS.uep}
+              source={RH_SOURCE.uep}
+              secondaryMetadata={RH_SECONDARY_METADATA.uep}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
+            <NextBestActionCard item={rhNextBestActions("uep")[0]} className="mt-[12px]" />
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Employee — expanded (Details grid revealed)</p>
-            <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={rhEmployeeSignal} defaultExpanded
-              assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — collapsed</p>
-            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal}
-              assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Customer — expanded</p>
-            <RecordHeader variant="customer" data={RH_CUSTOMER} signal={rhCustomerSignal} defaultExpanded
-              assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — collapsed</p>
-            <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal}
-              assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Client — expanded</p>
-            <RecordHeader variant="client" data={RH_CLIENT} signal={rhClientSignal} defaultExpanded
-              assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
-              actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">All 3 variants — nothing urgent to surface</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Reflow — the same record in a 560px container</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              The examples above all happen to need attention — that's not the rule, it's a coincidence of realistic demo data. Most records, most of the time, have nothing pressing. No <code>actionLabel</code>, no <code>onAction</code> here — there's genuinely nothing to click through to. Note the severities are 3 different colors (neutral/success/informative), not one reused template — severity tracks the record's actual state.
+              Figma&rsquo;s <code>Size = Responsive</code>. Below 720px of <strong>card</strong> width the identity row stacks: title on its own row, source and tags together on the next, right cluster untouched. Nothing is hidden and nothing is dropped &mdash; reflowing comes before yielding, and yielding (tags to <code>+N</code>, then source, then the title truncating) only starts once stacking has run out of room too. The trigger is the card&rsquo;s own measured width, not the viewport: this header sits in panels and split views, where a wide screen tells you nothing about how much room it actually has.
             </p>
-            <div className="flex flex-col gap-[16px]">
-              <RecordHeader variant="employee" data={RH_EMPLOYEE} signal={RH_EMPLOYEE_SIGNAL_CALM}
-                assignedAgent={rhAssignedAgent("employee", RH_EMPLOYEE.name)}
-                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.employee} />
-              <RecordHeader variant="customer" data={RH_CUSTOMER} signal={RH_CUSTOMER_SIGNAL_CALM}
-                assignedAgent={rhAssignedAgent("customer", RH_CUSTOMER.accountName)}
-                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.customer} />
-              <RecordHeader variant="client" data={RH_CLIENT} signal={RH_CLIENT_SIGNAL_CALM}
-                assignedAgent={rhAssignedAgent("client", RH_CLIENT.name)}
-                actions={RECORD_HEADER_RECOMMENDED_ACTIONS.client} />
+            <div className="max-w-[560px]">
+              <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
+                source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
+                assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+                showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
             </div>
           </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Loading — a skeleton, never an empty state</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s <code>Property 1 = Loading</code>, as <code>state=&quot;loading&quot;</code>. Every width and height comes from Figma&rsquo;s own Loading variants, and the skeleton follows the CURRENT layout &mdash; it stacks below 720px exactly as the loaded card does, because a skeleton exists to hold the shape of the thing that replaces it. Figma&rsquo;s reason for a skeleton rather than an empty state: saying &ldquo;nothing here&rdquo; while data is in flight states something untrue. The right-hand cluster is skeletoned too; leaving it blank would make the card visibly reflow on arrival.
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} assignedAgent={null} state="loading" />
+            <div className="max-w-[560px] mt-[12px]">
+              <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} assignedAgent={null} state="loading" />
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Restricted — a governed state, not a failure</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s <code>Property 1 = Restricted</code>, as <code>state=&quot;restricted&quot;</code>: the viewer lacks entitlement to the values. The 50% opacity comes straight from the Figma variant, which is all that variant is. The <strong><code>Restricted</code> tag is deliberately beyond it</strong> (Michael, 2026-09-07): Figma&rsquo;s prose asks this state to be &ldquo;calm and explanatory&rdquo; and its instance carries nothing explanatory, so a reader had no way to tell a restricted card from a loading or a failed one. Hover the tag for the reason &mdash; and it opens on focus too. Neutral, never error: the entity exists and is governed, so this is a state, not a failure.
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
+              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_RECORD_FIELDS.uep}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)} state="restricted"
+              showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              <strong><code>restricted</code> and <code>locked</code> are different things and can both be true.</strong> Locked is &ldquo;you cannot act on or edit this&rdquo;; restricted is &ldquo;you cannot see these values&rdquo;. And <code>RecordField.state === &quot;masked&quot;</code> is the same idea as restricted applied to one field instead of the whole card.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Minimum — nothing to implement</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma names <code>Minimum</code> as a state the header owns: <em>&ldquo;only visual, title and state. No description, no tags, no metadata. The header stays valid.&rdquo;</em> That is what you already get by passing only those props &mdash; there is no switch, and there is nothing to build. It is the proof of visibility priorities 1 to 3, which are never dropped at any width.
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} stateBadge={RH_STATE_BADGE.uep}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
+            <EntityHeader name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
+              source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp}
+              assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+            <NextBestActionCard item={rhNextBestActions("ucp")[0]} className="mt-[12px]" />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor · a signal that stays neutral</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. This is the case for the colour rule: <code>Renews in 52d</code> is a <strong>signal</strong> and it is still <strong>neutral</strong>, because the test for a left tag is not its role — it is whether someone has to do something about it. Fifty-two days out, nobody does. Colour it alert and a healthy header starts shouting; do that six times and colour stops meaning anything.
+            </p>
+            <EntityHeader name={RH_UVP.name} visual={RH_VISUAL.uvp} tags={RH_TAGS.uvp} stateBadge={RH_STATE_BADGE.uvp}
+              source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp}
+              assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("uvp")} />
+            <NextBestActionCard item={rhNextBestActions("uvp")[0]} className="mt-[12px]" />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient · an entity type the DS has never heard of</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. Picked to be as unlike the three above as possible: a different source (Epic), a different record shape entirely, and a classification the component has no knowledge of. <strong>Nothing changed in <code>record-header.tsx</code> to support it</strong> — that is the point of one skeleton with no <code>variant</code> prop, and an entity type this file has never heard of is the normal case, not a gap. It also carries Law 4: the <code>Restricted</code> access role in the metadata row is a value that resolves per viewer entitlement at display time, and this component renders whichever state it is handed without ever resolving one itself.
+            </p>
+            <EntityHeader name={RH_PATIENT.name} visual={RH_VISUAL.patient} tags={RH_TAGS.patient} stateBadge={RH_STATE_BADGE.patient}
+              source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
+              assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("patient")} />
+            <NextBestActionCard item={rhNextBestActions("patient")[0]} className="mt-[12px]" />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Insurance — Policyholder · the one tag that earns a colour</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. Two left tags, one coloured: <code>Claim denied</code> is blocking, so it reads <strong>error</strong>; <code>Policyholder</code> is a classification and stays neutral no matter what tone the caller passes — the component strips it. Note the state badge is <code>Under review</code> and not a second copy of the signal: the badge answers &ldquo;what is its current status&rdquo;, the signal answers &ldquo;what needs attention&rdquo;, and restating one in the other wastes the row.
+            </p>
+            <EntityHeader name={RH_CLAIM.name} visual={RH_VISUAL.claim} tags={RH_TAGS.claim} stateBadge={RH_STATE_BADGE.claim}
+              source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim}
+              assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("claim")} />
+            <NextBestActionCard item={rhNextBestActions("claim")[0]} className="mt-[12px]" />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Banking — Borrower · nothing needs attention, and that is the common case</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Mock data — not confirmed AIMS OS content. <strong>No signal at all</strong> — one classification tag and a healthy state badge. Most entities, most of the time, have nothing pressing, and inventing a signal to fill the slot is as wrong as omitting one that matters. It also shows the metadata row carrying a Bridge ID, which qualifies because governance requires it be visible, not because it is interesting.
+            </p>
+            <EntityHeader name={RH_BORROWER.name} visual={RH_VISUAL.borrower} tags={RH_TAGS.borrower} stateBadge={RH_STATE_BADGE.borrower}
+              source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower}
+              assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("borrower")} />
+            <NextBestActionCard item={rhNextBestActions("borrower")[0]} className="mt-[12px]" />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Automotive — Repair order · a process, and the only case that earns a description</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s own repair-order example. An entity does not have to be a person or an account: this one is a process, and three rules fall out of that. <strong>It can only be a highlight icon</strong> — initials are never derived from a code, so <code>RO-48291</code> has none. <strong>It carries no classification tag</strong> — the wrench already names the type, which is why classification is avatar-only. And <strong>it is the one case in this whole page where <code>description</code> is on</strong>: <code>RO-48291</code> alone means nothing, so the description says what the record concerns. Run the five-step ladder before reaching for it anywhere else. The signal is time pressure (<code>6d overdue</code>), not a second reading of the <code>Awaiting parts</code> badge.
+            </p>
+            <EntityHeader name={RH_REPAIR_ORDER.name} visual={RH_VISUAL.repairOrder} tags={RH_TAGS.repairOrder} stateBadge={RH_STATE_BADGE.repairOrder}
+              description={RH_PREVIEW_DESCRIPTION.repairOrder}
+              source={RH_SOURCE.repairOrder} secondaryMetadata={RH_SECONDARY_METADATA.repairOrder} recordFields={RH_RECORD_FIELDS.repairOrder}
+              assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
+            <NextBestActionCard item={rhNextBestActions("repairOrder")[0]} className="mt-[12px]" />
+          </section>
+
+          {/* Law 4 — PII masking. The States gallery item that used to
+              demonstrate this went with the zones, so it gets its own example
+              here: the SAME employee as the reference variant above, with one
+              RECORD field masked. A hydrated field and a masked field are the
+              same field in two entitlement states, not two field types. */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">
+              Law 4 — the same field, two entitlement states
+            </p>
+            <EntityHeader name={RH_UEP.name} visual={RH_VISUAL.uep} tags={RH_TAGS.uep} stateBadge={RH_STATE_BADGE.uep}
+              source={RH_SOURCE.uep} secondaryMetadata={RH_SECONDARY_METADATA.uep} recordFields={RH_UEP_MASKED_FIELDS}
+              assignedAgent={rhAssignedAgent("uep", RH_UEP.name)}
+              showInformation onInformationOpen={() => rhOpenProvenance("uep")} />
+          </section>
+
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[16px]">Usage guidelines</p>
             <div className="grid grid-cols-2 gap-[16px]">
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
-                <p className="text-[11px] font-semibold text-[#059669] uppercase tracking-widest">Use when</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-success)" }}>Use when</p>
                 <ul className="flex flex-col gap-[6px]">
-                  {["Atop a dashboard view for a single Employee, Customer, or Client record", "A Next Best Action recommendation exists (or a sensible neutral fallback) for that record", "Secondary contact/metadata fields exist but shouldn't compete with the primary identity at a glance"].map(t => (
+                  {["At the top of a Unified Entity Profile, for ANY entity type — Figma's own wording. A person, an account, a site, a repair order, a platform data entity, or a type this design system has never heard of", "The entity is fed by AIMS OS's governed data model, so every field has a real, citable source", "You are on that entity's own page. The header says where you are; it never navigates"].map(t => (
                     <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
-                      <span className="text-[#059669] shrink-0">✓</span>{t}
+                      <span className="shrink-0" style={{ color: "var(--badge-success)" }}>✓</span>{t}
                     </li>
                   ))}
                 </ul>
               </div>
               <div className="rounded-[8px] border border-[var(--table-border)] p-[16px] flex flex-col gap-[8px]">
-                <p className="text-[11px] font-semibold text-[#dc2626] uppercase tracking-widest">Don't use when</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--badge-error)" }}>Don't use when</p>
                 <ul className="flex flex-col gap-[6px]">
-                  {["Listing multiple records at once (use EntityList)", "There's no single actionable signal to show — don't force a fake NextBestAction", "More than 3 chips or 3 actions are needed — trim to the 3 that matter most instead of overflowing the row"].map(t => (
+                  {["Listing several entities at once, or summarising a nested entity inside a tab — both are EntityList. Figma names both cases", "You need it to be clickable. A list row navigates to the detail; this cannot, because you are already there", "A field has no real system of record to cite — that is a data-model gap, not a reason to fake provenance", "You want to wrap it in your own CardContainer. It already is one; a second produces the box-within-a-box Figma forbids"].map(t => (
                     <li key={t} className="text-[13px] text-[var(--field-supporting)] leading-[1.5] flex gap-[8px]">
-                      <span className="text-[#dc2626] shrink-0">✕</span>{t}
+                      <span className="shrink-0" style={{ color: "var(--badge-error)" }}>✕</span>{t}
                     </li>
                   ))}
                 </ul>
@@ -32623,285 +32599,496 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       )}
 
-      {tab === "playground" && (
-        <div className="flex flex-col gap-[32px]">
-          <RecordHeader
-            variant={pgVariant}
-            data={pgData}
-            signal={pgSignal}
-            assignedAgent={rhAssignedAgent(pgVariant, pgVariant === "customer" ? (pgData as CustomerRecord).accountName : (pgData as EmployeeRecord | ClientRecord).name)}
-            actions={RECORD_HEADER_RECOMMENDED_ACTIONS[pgVariant]}
-          />
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Variant — same layout, only data/content changes</p>
-            <div className="flex flex-wrap gap-[4px]">
-              {(["employee", "customer", "client"] as const).map(v => (
-                <button
-                  key={v}
-                  onClick={() => setPgVariant(v)}
-                  className="px-[10px] py-[5px] rounded text-[11px] font-medium capitalize transition-colors"
-                  style={{
-                    background: pgVariant === v ? "#2173ff" : "var(--ctrl-inactive-bg)",
-                    color: pgVariant === v ? "#fff" : "var(--field-label)",
-                    border: pgVariant === v ? "none" : "1px solid var(--field-border)",
-                  }}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Click the chevron on the Identity row to expand/collapse Details — real disclosure state, not a mock.
-            </p>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Signal state — not every record needs an urgent-looking Signal</p>
-            <div className="flex flex-wrap gap-[4px]">
-              {([
-                { key: "attention", label: "Needs attention" },
-                { key: "calm",      label: "All good" },
-              ] as const).map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setPgSignalState(s.key)}
-                  className="px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors"
-                  style={{
-                    background: pgSignalState === s.key ? "#2173ff" : "var(--ctrl-inactive-bg)",
-                    color: pgSignalState === s.key ? "#fff" : "var(--field-label)",
-                    border: pgSignalState === s.key ? "none" : "1px solid var(--field-border)",
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-[var(--field-supporting)] mt-[8px]">
-              Same variant, same layout — only <code>signal</code>'s content and severity change. Most records, most of the time, are "All good"; reach for an urgent color only when the state genuinely warrants it.
-            </p>
-          </div>
-        </div>
-      )}
+      {/* The Playground tab lived here. It duplicated the Preview tab —
+          same live card, same entity selector — so it went and Preview
+          kept the job. One interactive surface, not two showing the same
+          thing with different controls. */}
 
       {tab === "reference" && (
         <div className="flex flex-col gap-[32px]">
+          {/* Everything in this tab comes from the Entity Header section of
+              the Figma DS file (node 19815:101548) — its ENTITY HEADER,
+              ANATOMY, AVATAR OR HIGHLIGHT ICON, COMPONENT PROPERTIES, RULES
+              THAT ARE EASY TO MISS, TAG ROLES, METADATA, TRUNCATION,
+              BEHAVIOUR, THE THREE ACTIONS, FOCUS AND KEYBOARD, STATES, DO /
+              DON'T, RELATIONSHIP TO ENTITY LIST and OPEN frames — plus the
+              built component set (19895:11728) wherever the prose and the
+              instance disagree. Where they disagree, the instance wins and
+              the disagreement is recorded in "Where this repo diverges from
+              Figma" below rather than quietly resolved. */}
+
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The NextBestAction shape — transversal to all 3 variants</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              This is the one thing AIMS OS's Next Best Action engine needs to return. The component never branches on <code className="text-[var(--primary)]">variant</code> to interpret it — Employee, Customer, and Client Signals are rendered by the exact same code path.
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">It always sits in a Card Container — do not add a second one</p>
+            <div className="rounded-md px-[14px] py-[12px] flex flex-col gap-[8px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                Figma: <em>&ldquo;The Entity Header is never placed directly on a page. It renders inside the Card Component&rsquo;s slot&hellip; The header itself has no container of its own, and it must not grow one — a header with its own background inside a card produces a box within a box.&rdquo;</em>
+              </p>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                <strong>In this repo the Card Container is INSIDE <code>EntityHeader</code>.</strong> So the rule points the other way for a caller: render <code>&lt;EntityHeader /&gt;</code> on its own. Wrapping it in your own <code>&lt;CardContainer&gt;</code> is exactly the box-within-a-box Figma forbids.
+              </p>
+              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                Two consequences Figma calls out because they are easy to miss: the header is <strong>fill width</strong> inside the slot and never sets its own width, and <strong>the breakpoint it responds to is the card&rsquo;s, not the viewport&rsquo;s</strong> — which is why the reflow below is measured with a ResizeObserver. And the Next Best Action card is a separate Card Container below it, not a second slot in the same one.
+              </p>
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The four questions it answers — in this order</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Figma states the order, and the order is the reading order of the card. It does not answer <strong>why</strong> — that is the Overview&rsquo;s job.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[40px_200px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Question", "Answered by"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "What is this?", "The avatar or highlight icon, plus the title"],
+                ["2", "Where does it sit?", "The source — which system the record came from"],
+                ["3", "What is its current status?", "The state badge, on the right. Exactly one"],
+                ["4", "What needs attention?", "The signal tags, on the left"],
+                ["—", "Why?", "NOT HERE. The Overview below carries the recommendation and its reasoning"],
+              ].map(([n, q, a], i) => (
+                <div key={q} className="grid grid-cols-[40px_200px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{q}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{a}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              <strong>Use it</strong> at the top of any Unified Entity Profile, for any entity type. <strong>Do not use it</strong> for lists of entities, or for nested entity summaries inside a tab — both are <code>EntityList</code>.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Governance canon — AIMS OS law, not preference</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              These four are not a style choice for this component — they are AIMS OS design law, and the component is built so they cannot be violated by accident.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[70px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Law", "Rule · where it is enforced"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "The authority and origin of every field is ALWAYS visible. Every RecordField carries a mandatory FieldProvenance — there is no way to construct one without an origin, so no code path can render a value that has none."],
+                ["2", "Every governed answer carries provenance reachable WITHOUT leaving the view. The ⓘ trigger sits in the right-hand cluster and opens the Information panel from right here — the source of the title, the source and the state, not the Overview and not the Knowledge tab."],
+                ["3", "HTL items are first-class states with calm, explanatory language — never red errors. In this component that law now lands on `Restricted`: the user lacking entitlement is a governed state, visually distinct from an error, because the field exists and is governed. (Until this alignment the law was carried by a YOUR INTERVENTION zone that Figma does not have.)"],
+                ["4", "PII resolves only at display time, per viewer entitlement. A hydrated field and a masked field are the SAME RecordField in two states. This component renders whichever it is handed and never resolves entitlements itself."],
+              ].map(([law, rule], i) => (
+                <div key={law} className="grid grid-cols-[70px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{law}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{rule}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Visual identity — one question decides it</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Does this entity have a real-world visual identity — a face or a brand? Exactly one renders. Never both, never neither, which is why <code>visual</code> is required and has no default.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Field", "Meaning"].map(h => (
+              <div className="grid grid-cols-[150px_220px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Renders", "For", "Falls back to"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["label",       "The recommendation itself, e.g. \"2 tasks pending your approval\""],
-                ["severity",    "success | alert | error | informative | neutral — drives the Signal bar's color"],
-                ["dueContext?", "Short supporting text, e.g. \"Oldest due today\", \"SLA breached 2h ago\""],
-                ["aiGenerated?", "True → overrides severity color with the purple/Sparkles \"AI produced this\" treatment (--tag-purple-*, same trio as EntityList's own aiInsight). Use only for a probabilistic suggestion, not a deterministic fact or urgency state."],
-                ["actionLabel?", "Names one specific action, e.g. \"Send proposal\" → renders a real inline button (calls onAction) instead of a plain click-through chevron. Omit when there are several distinct things to review, not one action."],
-                ["onAction?",   "Fires on the actionLabel button (if set) and on a click anywhere else on the bar — same row-and-primary-action-share-a-destination rule as NotificationItem"],
-                ["dismissible?", "True → adds a small close (X), same treatment as AlertBanner's onClose. Reserve for signals with no actionLabel/onAction — a real next step should never be dismissable away."],
-                ["onDismiss?",  "Optional — fires when the close (X) is clicked, so the host can persist that choice. Dismissal itself is local UI state either way."],
-              ].map(([field, desc], i) => (
-                <div key={field} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono font-semibold text-[var(--primary)]">{field}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{desc}</div>
+                ["Avatar", "Natural persons", "A photo, falling back to initials. Sarah Chen → SC"],
+                ["Avatar", "Branded entities — companies, sites, tenants, suppliers, partners", "The brand logo, falling back to initials. Kestrel Dynamics → KD"],
+                ["Highlight icon", "Everything else — objects, assets, processes, transactions, documents", "Nothing. The icon IS the identity, and its colour is assigned per entity type"],
+              ].map(([r, f, fb], i) => (
+                <div key={r + f} className="grid grid-cols-[150px_220px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{r}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{f}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{fb}</div>
                 </div>
               ))}
             </div>
+            <ul className="text-[12px] leading-[1.7] list-disc pl-[18px]" style={{ color: "var(--field-supporting)" }}>
+              <li><strong>Rules that prevent drift.</strong> A site inherits its parent company&rsquo;s brand — it is not a separate mark.</li>
+              <li><strong>Initials are never derived from a code.</strong> <code>RO-48291</code> has no initials, so a code-titled record uses a highlight icon by definition.</li>
+              <li><strong>The highlight icon colour is assigned per entity type</strong> from DS variables, and stays the same everywhere in the product.</li>
+              <li><strong>The rule is about the entity, not about whether the asset exists.</strong> A company with no logo still uses an avatar, falling back to initials.</li>
+              <li>The highlight icon <strong>names the entity type — it is not decorative</strong>, which is why a classification tag is redundant beside it.</li>
+            </ul>
           </section>
 
           <section>
-            {/* Content-mapping table, transposed from the old chips/Details/actions-only
-                table (kept below in spirit, not duplicated) to cover every slot a reader
-                actually hits top-to-bottom on the card — Primary through Details — since
-                "Tier 1" on a Tag tells you nothing about which slot it came from or why,
-                which is the definition gap this section exists to close. */}
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Content mapping — what goes in each slot, per variant</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              The only variant-specific logic in the whole component lives in two places: <code className="text-[var(--primary)]">getRecordFields</code> (name/type label/tags/Details) and <code className="text-[var(--primary)]">RECORD_HEADER_RECOMMENDED_ACTIONS</code> (the canonical CTA below). Both are exported from <code className="text-[var(--primary)]">record-header.tsx</code> — a generated screen should pull from these rather than inventing new fields or action labels per instance, so every Employee/Customer/Client card stays predictable. Signal and Signal action aren't in either export — they're whatever the NBA engine returns for that record right now (see the NextBestAction table above), so the cells below show a representative example, not a fixed field name.
-            </p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[170px_1fr_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Slot", "Employee", "Customer", "Client"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
-              </div>
-              {[
-                ["Primary (name)", "data.name — e.g. \"Sarah Chen\"", "data.accountName — e.g. \"Acme Corp\" (note: not .name)", "data.name — e.g. \"Marcus Webb\""],
-                ["Type label", "\"Employee\" (static)", "\"Customer account\" (static)", "\"Client (deal)\" (static)"],
-                ["Identity tags (max 3, read-only — see rule below)", "role, department, location", "tier, segment, industry", "company, dealValue, leadSource"],
-                ["Signal", "NBA recommendation — e.g. \"2 tasks pending your approval\"", "NBA recommendation — e.g. \"Health score dropped to 61\"", "NBA recommendation — e.g. \"Ready to send final proposal\" (can be aiGenerated)"],
-                ["Signal action (optional)", "none in this example — several distinct items, not one action to name", "\"Schedule renewal call\" — one nameable next step", "\"Send proposal\" — the one decision; replaces a separate CTA entirely"],
-                ["Primary CTA", "Message", "Contact account (CTA) · View contract (overflow)", "Email (CTA) · Log call (overflow)"],
-                ["Details (expanded)", "manager, email, phone, startDate, team, accessRole", "owner, renewalDate, mrr, lastContact, openTickets, primaryContact, adoptionLevel", "dealStage, owner, email, phone, lastInteraction, expectedCloseDate"],
-              ].map(([slot, emp, cus, cli], i) => (
-                <div key={slot} className="grid grid-cols-[170px_1fr_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{slot}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{emp}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cus}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{cli}</div>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Picking the variant:</strong> an internal team member (has a manager/department/access role) → <code>employee</code>. An existing paying account (has MRR/renewal date/tier) → <code>customer</code>. A prospect still in the pipeline (has a deal stage/value/close date, not yet paying) → <code>client</code>. If a record has fields from none of these 3 shapes, RecordHeader is the wrong component — flag it as a <code>// DS-GAP</code> instead of forcing a mismatched variant.
-              </p>
-            </div>
-            <div className="rounded-md px-[14px] py-[12px] mt-[8px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                <strong>Adding a 4th variant:</strong> the layout doesn't change. Define its row in the table above (Primary / Type label / Identity tags / Signal / Signal action / Primary CTA / Details) and its data source — a new <code>XRecord</code> interface plus a branch in <code>getRecordFields</code> (and, if it needs a default CTA, an entry in <code>RECORD_HEADER_RECOMMENDED_ACTIONS</code>). <code>record-header.tsx</code>'s own JSX is untouched — this table and that function are the only two places a 4th variant needs to be taught.
-              </p>
-            </div>
-          </section>
-
-          <section>
-            {/* Glossary — every value here comes from this page's own mock data, not a
-                confirmed backend contract. Scales/thresholds are marked as assumptions
-                (see the callout below) rather than documented as settled, since nothing
-                here has been confirmed against a real Tier/health-score/NBA-confidence
-                source yet. */}
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Glossary — terms that aren't self-explanatory from the examples alone</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              Seeing "Tier 1" on a Tag or "confidence 82%" in a Signal doesn't say what scale it's on or where the number comes from. This table is that missing definition layer.
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Tag roles — three kinds, two colour rules</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              The vocabulary belongs to the tenant; the colour belongs to the platform.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
-              <div className="grid grid-cols-[140px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Term", "Definition"].map(h => (
+              <div className="grid grid-cols-[130px_1fr_110px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Role", "What it is", "How many", "Colour"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["Tier",            "Customer account tier shown as an identity tag (e.g. \"Tier 1\"). Assumed scale: Tier 1 = highest strategic value/spend, counting down from there — not confirmed against a real CS/RevOps tiering source."],
-                ["Health score",    "Numeric customer-health indicator shown in Signal (e.g. \"Health score dropped to 61\"). Assumed 0–100 scale with assumed thresholds — roughly ≥80 on track, 60–79 watch, <60 at risk — consistent with this page's own mocks (61 = at risk, 92 = on track) but not confirmed against a real scoring model."],
-                ["Confidence % (NBA engine)", "Attached to an aiGenerated: true NextBestAction (e.g. \"confidence 82%\") — meant to convey the NBA engine's certainty in a probabilistic recommendation, as opposed to a deterministic fact. The calculation itself isn't confirmed; treat the number as illustrative, not a defined formula."],
-                ["Adoption level",  "Qualitative product-adoption level shown in Customer's Details (e.g. \"Low\"). Assumed values: Low / Medium / High — the enum isn't confirmed against a real product-usage data source."],
-              ].map(([term, def], i) => (
-                <div key={term} className="grid grid-cols-[140px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{term}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{def}</div>
+                ["State", "The entity's overall status. Its own slot on the right — the state badge is NOT a tag. On leave · Active · Suspended · Awaiting parts · Degraded · Blocked", "Exactly one", "Full semantic range. Active reads success, Degraded reads alert, Blocked reads error. There is only one, so colour costs nothing and carries real meaning"],
+                ["Signal", "Something that needs attention, bounded in time or condition. Access review · Renewal at risk · 6d overdue · Sync failing · Claim denied", "Zero or many", "error when blocking or overdue, alert when it needs review, otherwise neutral"],
+                ["Classification", "What kind of thing this is. ONLY when the visual is an avatar. Employee · Customer · Vendor · Partner", "Zero or one", "NEVER coloured. The component strips any tone you pass"],
+              ].map(([role, what, many, colour], i) => (
+                <div key={role} className="grid grid-cols-[130px_1fr_110px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{role}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{many}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{colour}</div>
                 </div>
               ))}
             </div>
-            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
-              <div>
-                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>Every scale/threshold above is an assumption, not a confirmed contract</p>
-                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                  Tier's value range, health score's 0–100 scale and at-risk/on-track thresholds, the NBA engine's confidence % calculation, and Adoption level's enum are all inferred from this page's own mock data, not confirmed by whatever backend eventually feeds this component. Verify each against the real source before a generated screen treats them as fixed.
-                </p>
+            <ul className="text-[12px] leading-[1.7] list-disc pl-[18px]" style={{ color: "var(--field-supporting)" }}>
+              <li><strong>The test for a left tag is not its role.</strong> It is whether someone has to do something about it. If yes, colour. If no, neutral.</li>
+              <li><strong>Why left tags get only two colours:</strong> there can be six of them. If each picked its own semantic colour, a healthy header would light up in three shades and colour would stop meaning anything.</li>
+              <li><strong>Classification is never coloured, and that is what makes the vocabulary scalable.</strong> A tenant can define a hundred classifications in Helix Data Studio and none of them breaks the visual system, because none of them picks a colour.</li>
+              <li><strong>Order:</strong> signals first, sorted by severity, then classification. The component sorts them — pass them in any order.</li>
+              <li><strong>If several statuses are true at once, the most blocking one wins</strong> and the rest become signals. The component renders the one badge it is given.</li>
+              <li><strong>Not a tag at all:</strong> Entity · Governed · Manufacturing · Insurance · Direct materials · Automotive. None is a state, a signal or a type, and some are true of every entity in the platform, which makes them noise. They belong in secondary metadata or nowhere.</li>
+            </ul>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">The three actions — they look like one group and they are not</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Figma: reading them as a row of buttons is the most common misreading of this component.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[150px_120px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Action", "Opens", "What it is, and what it is not"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
               </div>
+              {[
+                ["Ask", "SidePanel", "A context-aware Personal Assistant. It answers questions about this entity and produces summaries. IT NEVER RESOLVES A TASK and never commits the user to anything. The label is one word on purpose: it was \"Ask about {entity name}\", which grew with the name and consumed space the header needs — \"Ask\" is the same promise in a fifth of the width, and it lets the same button be reused on other surfaces. The tooltip carries the rest."],
+                ["Information", "SidePanel", "The source of the fields IN THIS HEADER: where the title, the source and the state came from. It is not the Overview and it is not the Knowledge tab — it explains what is on screen right now, nothing more."],
+                ["Menu", "Menu", "Destructive and secondary actions only. NEVER a visible button. The header does not define which actions exist — that is configured per entity in Helix Data Studio. The header owns one rule: destructive actions live here."],
+                ["Secondary action", "caller's choice", "The fourth thing, and not one of \"the three\". Off by default: most entities do not have one, and a second labelled CTA competes with Ask. Anything the page already offers below the header is dead weight here, not a valid action."],
+              ].map(([a, opens, what], i) => (
+                <div key={a} className="grid grid-cols-[150px_120px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{a}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{opens}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
+                </div>
+              ))}
             </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">3-tier action hierarchy + assigned agent</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              AIMS OS is agent-first — every record has an assigned agent, so that trigger is required and identical across all 3 variants (<code className="text-[var(--primary)]">assignedAgent: {"{ id, name, onOpenChat }"}</code>), not something each screen decides to include. The action row is always, in order: AI agent (icon-only, <code>variant="main"</code> — a deliberate, named exception to this repo's usual "never main in a card" rule, since this is the platform's one persistent agent entry point, not a regular card CTA) → the variant's contextual CTA → "···" overflow (<code>Menu</code>/<code>MenuItem</code>) for anything else. <code className="text-[var(--primary)]">actions[0]</code> is always the CTA; <code className="text-[var(--primary)]">actions[1+]</code> land in overflow automatically.
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              <strong style={{ color: "var(--foreground)" }}>Signal is actionable, not just readable:</strong> set <code className="text-[var(--primary)]">signal.actionLabel</code> when the NBA engine names one specific action (e.g. "Send proposal," "Schedule renewal call") — it renders as a real inline button instead of an implicit click-anywhere chevron. Leave it unset when there's no single action (Employee's "2 tasks pending approval" — several distinct items, not one thing to do).
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] max-w-[680px]">
-              <strong style={{ color: "var(--foreground)" }}>Not every Signal is an alert.</strong> Pick severity from the record's actual state, not from a fixed per-variant template: <code>alert</code>/<code>error</code> for something urgent or at-risk, <code>success</code> for a genuinely good state worth noting, <code>informative</code>/<code>neutral</code> for a calm status with nothing pressing. See "All 3 variants — nothing urgent to surface" in Overview, and the Playground's "Needs attention / All good" toggle — the same variant looks completely different depending on what's actually true about that record.
+            <p className="text-[12px] text-[var(--field-supporting)] max-w-[720px]">
+              <strong>Actions are always visible. There is no hover reveal.</strong> And <strong>one side panel at a time</strong>: the Personal Assistant and the Information panel both open on the side, opening one closes the other, and the panel requested last wins. The component delegates both, so enforcing that is the host&rsquo;s job.
             </p>
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Identity tags — read-only, max 3, stable attributes only</p>
-            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)" }}>
-              <p className="text-[13px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
-                The brief calls them "chips," but this repo's <code>Chip</code> component is documented as the interactive filter-row control (toggleable, used in Filters/quick-filter rows). Context chips here are pure metadata — never clickable — which is exactly what <code>Tag</code> is for. Same visual weight, correct semantics.
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Behaviour — three mechanisms, in this order. Do not confuse them</p>
+            <div className="grid gap-[12px] md:grid-cols-3">
+              {[
+                ["1 · Reflow — stack before you shrink", "Below 720px of CARD width the identity row breaks into stacked rows and keeps everything. On a narrower screen there is vertical space to spare, so stacking costs nothing and loses nothing. Figma's Size=Responsive variant documents this: it is not a smaller version of the desktop row, it is a different arrangement of the same slots.", "Implemented. Measured with a ResizeObserver on the card, never a media query — the header sits in panels and split views, where the viewport tells you nothing."],
+                ["2 · Space allocation — how a row shares its width", "The right side (state badge and actions) is fixed and never compressed. The left side yields in order of protection: visual identity never yields, the title is protected and truncates only after everything else has, source yields next, and TAGS YIELD FIRST — collapsing to +N one at a time.", "Implemented. Tags cap into +N, the title is flex 0 1 auto with min-width 0 and a 540px ceiling, and source and secondary metadata now carry their own ceilings too."],
+                ["3 · Visibility priority — what is dropped once reflow and yielding are exhausted", "Visual identity, then title, then state badge — priorities 1 to 3 are NEVER dropped at any width. Then tags (signals before classification), source, and the two optional blocks. Secondary metadata is hidden before it is stripped of text: a row of bare icons is worse than no row.", "Implemented, with the last two REVERSED from Figma on Michael's call: description drops below 420px of card width, the metadata row below 320px. Metadata carries the facts someone might act on; the description is the edge case for extra granularity, so it goes first."],
+              ].map(([title, body, status]) => (
+                <div key={title} className="rounded-[8px] p-[12px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[12px] font-semibold" style={{ color: "var(--foreground)" }}>{title}</p>
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>{body}</p>
+                  <p className="text-[11px] leading-[1.6] mt-[2px]" style={{ color: "var(--primary)" }}>{status}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              <strong>Tags are the flexible element.</strong> Show fewer tags and a larger <code>+N</code> rather than truncating the title further — the identifier is what the user came to read, and a tag can be recovered from the overflow tooltip while a cut-off name cannot. Tags never have a fixed width: they hug, so growth in the title or in source makes them collapse rather than overlap.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Truncation — nothing wraps, nothing abbreviates</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Tenants write their own entity names and tag vocabulary, so long strings are not an edge case — eventually they are the norm. Abbreviating a label is worse than truncating it: an ellipsis tells the reader there is more, an abbreviation looks like the real value and misleads.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[190px_110px_130px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Element", "Ceiling", "Kind", "State in this repo"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Title", "540 px", "Protected", "Implemented — max-w-[540px] plus min-w-0, so it takes what the row has left and truncates only there"],
+                ["Source", "160 px", "Fixed ceiling", "Implemented — max-w-[160px], so it truncates at its own ceiling even when the row has more to give"],
+                ["Tag chip", "160 px", "Fixed ceiling", "Belongs to the Tag component, not here. Setting it here would fix only this header"],
+                ["State badge", "140 px", "Fixed ceiling", "Belongs to the Tag component"],
+                ["Primary action label", "180 px", "Fixed ceiling", "Belongs to the Button component. Moot for Ask, which is one word"],
+                ["Secondary metadata", "8 / 24 char", "Fixed ceiling", "Implemented as max-w-[24ch] — a character width in CSS, so Figma's character limit is not converted into a px guess"],
+                ["Description", "container width", "Elastic", "Implemented — one line, truncated with a tooltip, never wrapped"],
+              ].map(([el, ceil, kind, state], i) => (
+                <div key={el} className="grid grid-cols-[190px_110px_130px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{el}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{ceil}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{kind}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{state}</div>
+                </div>
+              ))}
+            </div>
+            <ul className="text-[12px] leading-[1.7] list-disc pl-[18px]" style={{ color: "var(--field-supporting)" }}>
+              <li><strong>Why 540 and not 320.</strong> The identity row is 932px; visual, source, tags and gaps take roughly 395 of it, which leaves about 537 for the title. 540 is the most the row can give without pushing the tags, and it lands at the low end of the 50–60 character range the industry uses for titles. Anything lower wastes space that is already there — the earlier mistake was a title cutting at 45 characters with 175px sitting empty beside it.</li>
+              <li><strong>A title cut short with empty space next to it is a bug, not a rule.</strong> If you see one, the ceiling is set too low or a stale width override is holding it back.</li>
+              <li><strong>Measure in pixels, not characters.</strong> A &ldquo;w&rdquo; is roughly three times the width of an &ldquo;i&rdquo;, so a character count is only ever an approximation. CSS truncation does this for free.</li>
+              <li><strong>An ellipsis must hide at least three characters, and at least four must stay visible</strong> (Carbon and PatternFly both state this) &mdash; truncating one or two letters costs more space than it saves. <strong>Deliberately dropped</strong> (Michael, 2026-09-07): CSS cannot count characters, so honouring it means measuring every string on every render, and nobody ships it that way.</li>
+              <li><strong>The title has no minimum.</strong> Unlike a Next Best Action title, an entity title is an identifier, not a sentence: <code>RO-48291</code> is eight characters and complete.</li>
+              <li>In Figma these are max-width values, because Figma text is either hug or fill — there is no shrink-to-fit. Figma says so itself: <em>&ldquo;the number in the file is a stand-in for that behaviour, not a specification.&rdquo;</em></li>
+            </ul>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Focus order — nine stops, six when nothing is truncated</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              With six tags and six metadata items, one stop per item means a keyboard user presses Tab twenty-five times to get past the header. That is not an inconvenience, it is a barrier. Tags, source and secondary metadata are each ONE stop: Tab enters the group, arrows move inside it, Tab leaves it — the WAI-ARIA composite widget pattern, the same one a toolbar uses.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
+              <div className="grid grid-cols-[40px_220px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Stop", "Notes"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Title", "Only when truncated"],
+                ["2", "Source", "—"],
+                ["3", "Tags", "One group. Arrows move inside it, and it includes the +N chip"],
+                ["4", "Information", "—"],
+                ["5", "Secondary action", "—"],
+                ["6", "Ask", "—"],
+                ["7", "Menu", "—"],
+                ["8", "Description", "Only when truncated"],
+                ["9", "Secondary metadata", "One group. Arrows move inside it"],
+              ].map(([n, stop, note], i) => (
+                <div key={stop} className="grid grid-cols-[40px_220px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{stop}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{note}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md px-[14px] py-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[12px] leading-[1.7]" style={{ color: "var(--field-supporting)" }}>
+                <strong style={{ color: "var(--foreground)" }}>Never a stop:</strong> the visual identity (decorative to the keyboard, named to the screen reader), the state badge (status, not a control), and any slot that is hidden or empty — there are no empty stops.
               </p>
-              <p className="text-[13px] leading-[1.6] mt-[10px]" style={{ color: "var(--foreground)" }}>
-                Two more rules on top of that, enforced by <code>getRecordFields</code> slicing the array rather than by trusting the caller: <strong>max 3</strong>, and <strong>stable identity attributes only</strong> — role/department/location, tier/segment/industry, company/deal value/lead source. Never a dynamic state or a metric. <code>Deal stage</code> and <code>Adoption level</code> are the concrete counter-examples: both look like they'd fit here, but both change over the record's lifecycle, so both live in Details instead (and, when urgent enough to act on, in Signal) — not as an identity tag. A tag you'd need to update when something <em>happens</em> to the record is in the wrong slot.
+              <p className="text-[12px] leading-[1.7] mt-[6px]" style={{ color: "var(--field-supporting)" }}>
+                <strong style={{ color: "var(--foreground)" }}>Always true:</strong> focus order follows visual order and never jumps to the actions first · tooltips open on focus, not only on hover, and dismiss with Escape · the +N chip exposes its hidden tags inside the group, not only on hover · a truncated value exposes its full string to assistive technology · focus is always visible, never removed and never relying on colour alone.
+              </p>
+              <p className="text-[12px] leading-[1.7] mt-[6px]" style={{ color: "var(--primary)" }}>
+                <strong>State in this repo: implemented.</strong> Tags and secondary metadata are each one stop with a roving tabindex — arrows and Home/End move inside, Tab leaves. The <code>+N</code> chip and the <code>Locked</code> tag are items INSIDE the tag group, not stops of their own. The title and the description are stops only when they actually overflow, measured with a ResizeObserver rather than guessed, so an entity whose name fits costs no stop at all — which is what turns nine stops into six. Focus rings reuse the Button&rsquo;s own token and appear on <code>focus-visible</code> only, so a mouse user never sees them. Tooltips open on focus because focus bubbles to the Tooltip&rsquo;s own trigger.
               </p>
             </div>
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[8px]">Assumed tokens — verify before relying on this in production</p>
-            <div className="rounded-md px-[14px] py-[12px] flex items-start gap-[10px]" style={{ background: "var(--color-surface-yellow-subtle)", border: "0.5px solid var(--color-surface-yellow-default)" }}>
-              <div>
-                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>--ab-informative-* and --ab-neutral-* do not exist yet</p>
-                <p className="text-[12px] leading-[1.6] mt-[4px]" style={{ color: "var(--field-supporting)" }}>
-                  Alert Banner (this Signal bar's visual model) only ships success/alert/error. For the other 2 severities this component falls back to Tag's own <code style={{ fontSize: 11 }}>--tag-informative-*</code> and <code style={{ fontSize: 11 }}>--tag-neutral-*</code> triads — real, existing tokens, just borrowed from a different component's family rather than invented. If Michael adds a complete <code style={{ fontSize: 11 }}>--ab-*</code> set for all 5 severities, swap <code style={{ fontSize: 11 }}>SEVERITY_CONFIG</code> in record-header.tsx to use them instead.
-                </p>
-              </div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">States — what the component owns, and what it delegates</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Figma models two independent axes: <code>Property 1 = Default | Loading | Restricted</code> and <code>Size = Default | Responsive</code>. Independent means an entity can be loading on a tablet — six combinations.
+            </p>
+            <div className="rounded-md px-[14px] py-[12px] mb-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[12px] leading-[1.7]" style={{ color: "var(--field-supporting)" }}>
+                <strong style={{ color: "var(--foreground)" }}>Delegated — do not redraw these.</strong> Hover, focus, pressed and disabled on buttons, tags and the avatar belong to those components and already exist in the Design System. Redrawing them here creates a second source of truth that will drift.
+              </p>
             </div>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Design tokens — Signal severities</p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[110px_1fr_130px_130px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Severity", "Token family", "Light", "Dark"].map(h => (
+              <div className="grid grid-cols-[160px_1fr_150px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Owned state", "Rule", "State in this repo"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["success",     "--ab-success-*",     "#e5fdf8", "#0a1f1a"],
-                ["alert",       "--ab-alert-*",       "#fff4e5", "#281e00"],
-                ["error",       "--ab-error-*",       "#fdeded", "#2d1515"],
-                ["informative", "--tag-informative-*", "#e9f1ff", "rgba(21,93,252,0.15)"],
-                ["neutral",     "--tag-neutral-*",     "#f2f2f2", "rgba(255,255,255,0.08)"],
-                ["aiGenerated: true (overrides severity)", "--tag-purple-*", "#f3e9fd", "#120520"],
-              ].map(([sev, token, light, dark], i) => (
-                <div key={sev} className="grid grid-cols-[110px_1fr_130px_130px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{sev}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{token}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{light}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--field-supporting)]">{dark}</div>
+                ["Metadata tooltip", "On hover AND on focus, always — including when the text is not truncated. The tooltip names the field; the header only shows its value. The same pattern covers a truncated title.", "Implemented"],
+                ["Tag overflow", "The +N chip reveals the hidden tags, reachable by keyboard and screen reader, not only on hover. This is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.", "Implemented"],
+                ["Loading", "A skeleton for title, state and metadata, matching the arrangement of its size. NEVER an empty state — saying \"nothing here\" while data is in flight states something untrue.", "Implemented — state=\"loading\". Geometry read from Figma's own Loading variants; the skeleton stacks below 720px exactly as the loaded card does"],
+                ["Restricted", "The user lacks entitlement to a value. Calm and explanatory, visually distinct from an error: the field exists and is governed. This is a state, not a failure. The built variant is the default card at 50% opacity and nothing else.", "Implemented — state=\"restricted\": the 50% opacity from the variant, plus a neutral Restricted Tag beside the title with the reason in a Tooltip (hover AND focus). The Tag is Michael's addition, closing the gap between Figma's prose and its instance"],
+                ["Minimum", "Only visual, title and state. No description, no tags, no metadata — the header stays valid. This is what visibility priorities 1 to 3 guarantee.", "Nothing to implement — pass only name, visual, stateBadge and assignedAgent and this is what you get"],
+                ["No signals", "The tag group is REMOVED, not left empty.", "Implemented"],
+                ["Not found", "NOT THIS COMPONENT. When an entity ID resolves to nothing, the page handles it. There is no \"not found\" variant.", "Correctly absent"],
+              ].map(([st, rule, repo], i) => (
+                <div key={st} className="grid grid-cols-[160px_1fr_150px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{st}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{rule}</div>
+                  <div className="px-[12px] py-[10px] text-[12px]" style={{ color: "var(--primary)" }}>{repo}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              <strong>Figma expresses the optional layers as eight booleans, not variants</strong> — Description (default false), State, Tags, Primary Meta Data (source), Secondary Meta Data, Primary CTA (Ask), Secondary CTA (default false) and Menu. Eight booleans express 256 combinations; the same coverage as variants would need 256 variants. The two enums are enums because their options are mutually exclusive rather than optional. In code the booleans are the optional props themselves — omitting one removes the slot. <strong>There is no boolean for the visual</strong>, because there is no state where a header has neither an avatar nor an icon.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Do / Don&rsquo;t — Figma&rsquo;s own seven</p>
+            <div className="grid gap-[10px] md:grid-cols-2">
+              {[
+                ["Description", "\"Discussed financing options, client interested in the 0% APR promotion.\"", "\"Decision maker for infrastructure purchases across all sites.\"", "An activity note belongs in the Overview. The description says what the entity IS."],
+                ["Secondary metadata", "Eleven items because the ceiling allows it, with \"4 mins\" repeated four times.", "Four or five that help someone decide something.", "Six is a ceiling, not a target."],
+                ["Entity type", "\"Employee\" as the source.", "\"Employee\" as a classification tag.", "Source answers where the data came from, not what kind of thing this is."],
+                ["Tags", "A fixed-width tag container.", "Hug, so tags yield instead of overlapping their neighbour.", "A fixed width overlaps the source instead of collapsing."],
+                ["Title vs tags", "Truncate the title further to keep all tags visible.", "Collapse tags into +N and let the title use the space.", "The identifier is what the user came to read."],
+                ["Metadata", "An icon on its own under space pressure.", "Always icon plus text; hide the item entirely before stripping its text.", "A row of bare icons is worse than no row."],
+                ["List context", "Reuse this component as a list row.", "Use Entity List.", "A row navigates to the detail on click. A header cannot — you are already there."],
+              ].map(([topic, dont, do_, why]) => (
+                <div key={topic} className="rounded-[8px] p-[12px] flex flex-col gap-[6px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--field-label)" }}>{topic}</p>
+                  <p className="text-[12px] leading-[1.6]"><span className="font-semibold" style={{ color: "var(--badge-error)" }}>Don&rsquo;t</span> <span style={{ color: "var(--field-supporting)" }}>{dont}</span></p>
+                  <p className="text-[12px] leading-[1.6]"><span className="font-semibold" style={{ color: "var(--badge-success)" }}>Do</span> <span style={{ color: "var(--field-supporting)" }}>{do_}</span></p>
+                  <p className="text-[12px] leading-[1.6]" style={{ color: "var(--foreground)" }}>{why}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[12px]">Anatomy</p>
-            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[160px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Layer", "Composition"].map(h => (
-                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
-                ))}
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Relationship to Entity List — same content model, different component</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              They must not be substituted for each other.
+            </p>
+            <div className="grid gap-[12px] md:grid-cols-2">
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-[6px]" style={{ color: "var(--field-label)" }}>Shared</p>
+                <ul className="text-[12px] leading-[1.7] list-disc pl-[16px]" style={{ color: "var(--field-supporting)" }}>
+                  <li>The layer model — Identity, Context, Metadata, Action</li>
+                  <li>Source is one item; secondary metadata caps at 6</li>
+                  <li>Text limits — 8 characters short form, 24 long</li>
+                  <li>Tags — max 6 plus overflow</li>
+                  <li>Colour never carries meaning alone</li>
+                </ul>
               </div>
-              {[
-                ["1. Identity (always visible)", "AvatarCircle sizeKey=lg · Name (18px, --color-text-title, never truncated) · type label · up to 3 Tag chips · up to 3 Buttons · disclosure chevron. Salesforce Highlights Panel pattern."],
-                ["2. Signal (always visible)",   "One NextBestAction — icon + label + dueContext, semantically colored by severity, clickable when onAction is set. HubSpot conditional-section + Next Best Action engine pattern."],
-                ["3. Details (disclosure)",      "2–3 col grid of label/value pairs, max-height transition (320ms), aria-expanded on the trigger button, Enter/Space activation via native <button>."],
-              ].map(([el, desc], i) => (
-                <div key={el} className="grid grid-cols-[160px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[12px] text-[13px] font-semibold text-[var(--field-text)]">{el}</div>
-                  <div className="px-[12px] py-[12px] text-[13px] text-[var(--field-supporting)]">{desc}</div>
-                </div>
-              ))}
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[11px] font-semibold uppercase tracking-widest mb-[6px]" style={{ color: "var(--field-label)" }}>Different on purpose</p>
+                <ul className="text-[12px] leading-[1.7] list-disc pl-[16px]" style={{ color: "var(--field-supporting)" }}>
+                  <li>Title scale — larger. It is the page subject</li>
+                  <li>Affordances — always visible, no hover reveal</li>
+                  <li>Body click — no action. You are already here</li>
+                  <li>Selected / pinned — not supported</li>
+                  <li>Bottom separator — none. Tabs provide the boundary</li>
+                  <li>Virtualization — not applicable. Single instance</li>
+                  <li>Insight section — not present. The Overview carries the NBA widget</li>
+                  <li>Secondary metadata — always icon + text, never icon-only</li>
+                  <li>Timestamp — not present</li>
+                </ul>
+              </div>
             </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              <strong>Why not reuse the header as a list row.</strong> A row navigates to the detail on click; a header cannot, because you are already in the detail. The row also needs selection, pinning, hover-revealed affordances and virtualization, none of which applies to a single instance. And if the header looks identical to a row, the user loses the signal of where they are.
+            </p>
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Signal click destinations — one real example per variant</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[680px]">
-              RecordHeader never decides this itself — <code className="text-[var(--primary)]">onAction</code> is whatever the consuming screen wires up. Same decision framework as Notification Item's Reference tab (Full Navigation / Slideout / Modal), applied per variant below. Click any Signal in Overview to see the real result.
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Where this repo diverges from Figma — and why</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Figma&rsquo;s prose and its built component set disagree in five places. The rule applied throughout: <strong>the instance is what renders, so the instance wins</strong> — and the disagreement is recorded here rather than quietly resolved. Two further divergences are Michael&rsquo;s own rulings.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
-              <div className="grid grid-cols-[110px_100px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
-                {["Variant", "Opens", "Why"].map(h => (
+              <div className="grid grid-cols-[190px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Point", "What Figma says", "What this repo does, and why"].map(h => (
                   <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
                 ))}
               </div>
               {[
-                ["Employee", "Slideout", "Multiple items need reviewing one by one (PTO, expense) — content exceeds one paragraph, needs review before deciding."],
-                ["Customer", "Slideout", "A risk state to investigate, not a single click-to-fix — shows the score trend and why it dropped before recommending a next step."],
-                ["Client",   "Modal",   "One immediate, reversible-by-Cancel decision — \"send it or not\" fits the 1-click binary confirmation rule exactly."],
-              ].map(([v, dest, why], i) => (
-                <div key={v} className="grid grid-cols-[110px_100px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
-                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{v}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{dest}</div>
-                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{why}</div>
+                ["The stacked rows", "BEHAVIOUR lists five rows: title, then source, then tags, then description, then metadata — source and tags on SEPARATE rows.", "Source and tags share one row. The built Size=Responsive variant (20150:8324) has exactly three rows and puts a Divider between source and tags — a divider the prose's row list does not mention at all. The instance wins."],
+                ["Ask's glyph", "\"The card must not share the glyph or colour used by Ask\" — and THE THREE ACTIONS repeats it: Ask must not share the mark used for signals.", "Ask and the Next Best Action card share the Sparkle. Michael confirmed it deliberately (2026-09-07): both are AI surfaces and the shared mark is what says so — one converses, the other transacts. Figma's own instances also share it. Do not \"fix\" this."],
+                ["The secondary action", "RULES THAT ARE EASY TO MISS: \"Secondary action: icon only.\"", "It is a labelled button. The built Default variant renders it as a labelled \"Secondary CTA\" button, not an icon. The instance wins."],
+                ["Ask as a boolean", "COMPONENT PROPERTIES lists Primary CTA as a boolean, default TRUE — so Ask can be switched off.", "assignedAgent is REQUIRED as a prop and the button is always present; a null value renders it disabled with a tooltip. Michael's ruling: AIMS OS is agent-first, so every caller must decide, and a silently missing agent button is worse than a disabled one."],
+                ["Source's second item", "SPACE ALLOCATION says source \"yields its second item, then its first\", implying two. METADATA says \"one item, never two\".", "One item. METADATA is the rule and the instances follow it; TRUNCATION even hedges its own sentence — \"a second source item WOULD be dropped, if one existed\"."],
+                ["Restricted", "A whole-card variant on the Property 1 axis, and prose asking for something \"calm and EXPLANATORY\" — but the variant itself is only the default card at 50% opacity, with no explanatory element at all.", "The opacity from the instance, and a neutral Restricted Tag with a Tooltip to satisfy the prose — Michael's call (2026-09-07), the one place this repo goes BEYOND the instance rather than following it. The reason: opacity alone cannot be told apart from loading or failed. `locked` remains a separate thing (\"you cannot edit\" vs \"you cannot see\") and so does RecordField.state === \"masked\", which is restricted applied to one field."],
+                ["The drop order", "VISIBILITY PRIORITY puts description at 6 and secondary metadata at 7, which drops metadata first.", "Reversed, on Michael's call (2026-09-07): the description drops first and the metadata row survives longer. Metadata is what you reach for first and it carries facts someone might act on; the description is the very edge case for extra granularity when metadata is not enough. The rest of Figma's order is untouched, and priorities 1 to 3 are still never dropped."],
+                ["The right-cluster order", "The prose fixes it as Information → state badge → secondary → Ask → Menu. The Responsive instance renders secondary → Ask → Information → badge → Menu.", "The documented order, in both layouts. This one is the exception to \"the instance wins\": the prose states an order explicitly and the Responsive instance's differs from the Default instance's, so one of the two instances is wrong regardless."],
+              ].map(([pt, figma, repo], i) => (
+                <div key={pt} className="grid grid-cols-[190px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{pt}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{figma}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{repo}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Still open in Figma — not decided by this implementation</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              Copied from the file&rsquo;s own OPEN frame, with its attributions. None of these is settled by the code; where the code had to pick something, it picked the narrowest option.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[1fr_110px] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Question", "Owner"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Is the tag vocabulary a closed platform set, or can tenants extend it in Helix Data Studio?", "Edgardo"],
+                ["Confirm the reversal: an entity may be a process, which overrides the earlier rule that a contact is never a process.", "Thom"],
+                ["When the hierarchy is deeper than two levels, does source show the direct parent, the root, or the full path?", "Edgardo"],
+                ["Which entity types exist at launch, so highlight icon colours can be assigned per type.", "Edgardo"],
+                ["Tab overflow when an entity has many secondary entities — belongs to the UEP shell, not this component.", "—"],
+              ].map(([q, owner], i) => (
+                <div key={q} className="grid grid-cols-[1fr_110px] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{q}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{owner}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-start justify-between gap-[12px] mb-[4px]">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)]">The Next Best Action card — its own component, documented separately</p>
+              <SpecButton onClick={() => openSpec("next-best-action")} />
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
+              It is not a slot in this header and never was in Figma. Its rules, character limits, two variants and the four action families its detail panel uses all live in its own spec — open it with the button above. The three rules worth repeating here, because they are the ones a header author gets wrong: <strong>one at a time</strong>, <strong>under the header and never inside it</strong>, and <strong>no recommendation means no card at all</strong> — not an empty state, because there is nothing to say when there is nothing to do.
+            </p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[190px_1fr_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["Action family", "What the user has to do", "Inputs it composes"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["Nothing to edit", "Confirm a defined change. Before and after, read-only. Approval, permission change, attestation.", "None. A Textarea appears only when rejecting, to record the reason"],
+                ["Content to review", "Read a draft the agent wrote. Prefilled and editable. Email, message.", "Text Input for recipient and subject, Textarea for the body"],
+                ["Parameters to set", "Fill in fields. Empty or suggested. Call, meeting, task.", "Text Input, Date Picker, Select, Textarea"],
+                ["A sequence to inspect", "Read a multi-step plan. Read-only steps plus a couple of run parameters. Workflow run.", "Process for the steps, Select for how it runs, Toggle for notifications"],
+              ].map(([fam, what, inputs], i) => (
+                <div key={fam} className="grid grid-cols-[190px_1fr_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-semibold text-[var(--field-text)]">{fam}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{what}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{inputs}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[720px]">
+              Everything above the divider in that panel is the same in every family — why, when, who executes, status. Only the block below it changes, and it is built entirely from Node Config components that already exist in the Workflow Builder, whose Nodes Configuration section documents fifteen input types with their own USE WHEN / DON&rsquo;T USE WHEN rules. <strong>Do not restate those here</strong> — a second copy drifts the first time someone edits one of them. What belongs here is the mapping above. This page&rsquo;s own demo panel models three of the four families (Approval, Email, Call); <em>a sequence to inspect</em> is not built yet.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">How to compose this component — the contract for a prototype</p>
+            <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+              <div className="grid grid-cols-[40px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
+                {["#", "Step"].map(h => (
+                  <div key={h} className="px-[12px] py-[10px] text-[11px] font-semibold uppercase tracking-widest text-[var(--table-header-text)]">{h}</div>
+                ))}
+              </div>
+              {[
+                ["1", "Render <EntityHeader /> directly. Do NOT wrap it in your own CardContainer — it already is one, and a second is the box-within-a-box Figma forbids."],
+                ["2", "Pick the visual by asking one question: does this entity have a face or a brand? Avatar for people, companies, sites, tenants, suppliers and partners; a highlight icon for everything else. Build the lookup map exhaustively — an undefined `visual` throws, and this repo's TypeScript settings will not catch it."],
+                ["3", "Decide the state badge from what is actually true of THIS entity right now, never from a per-type template. If several statuses are true, pass the most blocking one and move the rest into tags."],
+                ["4", "Write the tags. A classification only if the visual is an avatar. Colour a signal only when someone has to do something about it. Pass them in any order — the component sorts and caps them."],
+                ["5", "Set source to the system the record came from, and nothing else. No job title, no region, no category, no parent company. No source at all means omit the prop."],
+                ["6", "Aim for four secondary metadata items, six at the absolute most, each with a real tooltip that names the field and adds context. Anything beyond six goes to the Overview."],
+                ["7", "Leave description off unless the title is an opaque code. Run the five-step ladder first, and then the durability test: if the sentence could change next week, it is an activity note."],
+                ["8", "Pass assignedAgent always — the real agent, or null. Never omit it. Leave secondaryAction off unless this entity type genuinely has one, and put destructive actions in menuActions."],
+                ["9", "Render NextBestActionCard as the next sibling, in its own container. One recommendation, or none — never an array, never a placeholder."],
+                ["10", "Do not restate a value across slots. If it is in source, it is not also a tag or in the description."],
+                ["11", "While the entity's data is in flight, pass state=\"loading\" — never render an empty header and never withhold the card until data arrives. If the viewer lacks entitlement to the values, pass state=\"restricted\"; it is a governed state, so do not dress it as an error."],
+              ].map(([n, step], i) => (
+                <div key={n} className="grid grid-cols-[40px_1fr] border-b border-[var(--table-border)] last:border-0" style={{ background: i % 2 === 1 ? "var(--row-alt-bg)" : undefined }}>
+                  <div className="px-[12px] py-[10px] text-[12px] font-mono text-[var(--primary)]">{n}</div>
+                  <div className="px-[12px] py-[10px] text-[12px] text-[var(--field-supporting)]">{step}</div>
                 </div>
               ))}
             </div>
@@ -32909,130 +33096,322 @@ function RecordHeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         </div>
       )}
 
-      {/* ── Signal click destinations — real overlays, not fake alerts, same
-          honesty standard as Notification Item/Center's own click-routing
-          demos. Employee and Customer open a Slideout (content to review
-          before deciding); Client opens a Modal (one immediate yes/no). */}
+      {/* ── AI Assistant — "Ask about {name}" opens this SidePanel (not a
+           SlideOut — this refinement's own point 2): docked to the right
+           edge, no backdrop, no fake app shell, so the rest of the page
+           stays visible and usable while the user chats. Body is a
+           PLACEHOLDER: no Chat component exists anywhere in src/components/ui/
+           yet (pending from Figma) — do not build a real chat UI here. Swap
+           the body below when that component lands. */}
+      {rhChatWith && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[10005] flex justify-end pointer-events-none">
+          <div className="pointer-events-auto h-full">
+            <SidePanel
+              open={Boolean(rhChatWith)}
+              onClose={() => setRhChatWith(null)}
+              title={rhChatWith?.name ?? ""}
+              description={rhChatWith ? `Ask about ${rhChatWith.recordName}` : ""}
+              titleIcon={<LucideIcons.Sparkle size={14} />}
+              titleIconVariant="purple"
+              showCollapsedStrip={false}
+              footer={
+                <div className="flex items-center gap-[8px] w-full">
+                  {/* TODO: reemplazar con el componente de Chat cuando exista en el repo */}
+                  <Input placeholder="Message the agent…" className="flex-1" disabled />
+                  <Button variant="primary" size="sm" disabled>Send</Button>
+                </div>
+              }
+            >
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Conversation</span>
+              </div>
+              <div className="rounded-[8px] px-[12px] py-[10px] max-w-[80%] mt-[8px]" style={{ background: "var(--tag-purple-bg)", color: "var(--tag-purple-fg)" }}>
+                <p className="text-[13px]">Hi — I'm {rhChatWith?.name}, here to help with {rhChatWith?.recordName}. What do you need?</p>
+              </div>
+            </SidePanel>
+          </div>
+        </div>,
+        document.body,
+      )}
+
+
+      {/* The Active Workflow SlideOut lived here. Nothing opened it any
+          more: its only entry point was the Agentic System zone, so it
+          became unreachable UI the moment the zone went. Its content — a
+          workflow's steps, status and provenance — belongs to the Overview
+          widget that now carries that data. */}
+
+      {/* ── About this record (Law 2) — renamed this redesign pass (was
+           "Data Provenance") to match the reference brief's own framing:
+           the (i)/info trigger beside the name opens an overview of the
+           record's own fields — each field still Source → Model → Value,
+           traced. Subtitle is derived from whichever fields THIS open
+           record actually has (closing pass — it used to be one hardcoded
+           string that only matched UEP). Read-only viewer with no
+           confirmed related action, so no edit pencil AND no invented menu
+           — showTopButton={false}. */}
       <SlideOut
-        open={rhApprovalsOpen}
-        onClose={() => setRhApprovalsOpen(false)}
+        open={rhProvenanceOpen}
+        onClose={() => setRhProvenanceOpen(false)}
         type="with-variants"
         size="m"
-        title="Pending approvals"
-        subtitle="Sarah Chen · Employee"
-        statusLabel="2 open"
-        showIcon
-        showStatus
-        showTopButton={false}
+        title="About this record"
+        subtitle={openRecordSubtitle}
+        iconContent={<LucideIcons.Info size={24} style={{ color: "var(--hi-neutral-icon)" }} />}
+        iconBg="var(--hi-neutral-bg)"
+        showStatus={false}
         showTabs={false}
         showSearchBar={false}
         showChips={false}
         showCta={false}
+        showTopButton={false}
       >
-        <div className="flex flex-col gap-[8px]">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Awaiting your review</span>
-          {/* Single action ("Review"), due-date in primaryMeta rather than a
-              right-aligned state Tag — a 350px Slideout is too narrow for
-              title + 2 action buttons + a tag on the same row without
-              crowding; this keeps every row legible at the panel's default
-              width instead of relying on the user dragging it wider. */}
-          <EntityList items={[
-            {
-              id: "appr-1", title: "PTO request — Aug 24–28",
-              iconName: "Calendar", iconVariant: "info",
-              primaryMeta: [{ iconName: "Clock", label: "Due today" }],
-              actions: [{ label: "Review", variant: "primary" }],
-            },
-            {
-              id: "appr-2", title: "Expense report — $340.00",
-              iconName: "Receipt", iconVariant: "info",
-              primaryMeta: [{ iconName: "Clock", label: "Due tomorrow" }],
-              actions: [{ label: "Review", variant: "primary" }],
-            },
-          ]} />
+        <div>
+          <div className="flex items-center h-[32px]">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Fields</span>
+          </div>
+          <div className="mt-[8px] rounded-[8px] border border-[var(--table-border)] overflow-hidden">
+            {openRecordFields.filter((f): f is RecordField => Boolean(f)).map((f, i) => <ProvenanceRow key={i} field={f} />)}
+          </div>
         </div>
       </SlideOut>
 
+      {/* ── Next Best Action detail — an NBA is a TASK with 3 layers (call
+           with Edgardo, infra): base (always present) → type-specific (one
+           of a growing set — approval/call/email are the first 3) →
+           dynamic inputs (runtime data the action needs). That 3-layer
+           model is how this comment and the Reference tab talk about the
+           structure to a dev — the rendered SlideOut below never labels
+           any section "Layer N"/"Capa N" (correction pass); it shows the
+           action's own content with a plain divider between groupings.
+           Converges with HTL's own task SlideOut below (Pending
+           Decisions) — same Section-Title + Details-grid primitives, not
+           a separate visual language. See "Next Best Action — the task
+           model" under the Reference tab's Panel content section. */}
       <SlideOut
-        open={rhHealthOpen}
-        onClose={() => setRhHealthOpen(false)}
+        open={rhNbaOpen}
+        onClose={() => setRhNbaOpen(false)}
         type="with-variants"
         size="m"
-        title="Account health"
-        subtitle="Acme Corp · Customer account"
-        statusLabel="At risk"
-        showIcon
-        showStatus
-        showTopButton={false}
+        title={openNba?.title ?? "Next Best Action"}
+        subtitle="AI-recommended — not a pending decision"
+        iconContent={<LucideIcons.Sparkle size={24} style={{ color: "var(--hi-purple-icon)" }} />}
+        iconBg="var(--hi-purple-bg)"
+        showStatus={false}
         showTabs={false}
         showSearchBar={false}
         showChips={false}
-        showCta
-        ctaPrimaryLabel="Schedule renewal call"
-        ctaSecondaryLabel="Dismiss"
-        onCtaPrimary={() => setRhHealthOpen(false)}
-        onCtaSecondary={() => setRhHealthOpen(false)}
+        showCta={nbaFooterCta.show}
+        ctaPrimaryLabel={"primary" in nbaFooterCta ? nbaFooterCta.primary : undefined}
+        ctaSecondaryLabel={"secondary" in nbaFooterCta ? nbaFooterCta.secondary : undefined}
+        onCtaPrimary={"onPrimary" in nbaFooterCta ? nbaFooterCta.onPrimary : undefined}
+        onCtaSecondary={"onSecondary" in nbaFooterCta ? nbaFooterCta.onSecondary : undefined}
+        showTopButton={false}
       >
-        <div className="flex flex-col gap-[8px]">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Key metrics</span>
-          <AdaptiveMetricGrid cards={[
-            { label: "Health score", value: "61", iconName: "Activity" },
-            { label: "Open tickets", value: "2",  iconName: "Ticket" },
-            { label: "Renews in",    value: "19d", iconName: "Calendar" },
-          ]} />
-        </div>
-        <div className="flex flex-col gap-[8px]">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this dropped</span>
-          <ul className="flex flex-col gap-[4px]">
-            {["Product adoption fell to \"Low\" this quarter", "2 open support tickets, oldest unresolved for 6 days", "No executive contact in the last 30 days"].map((b, bi) => (
-              <li key={bi} className="flex items-start gap-[6px] text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
-                <span className="mt-[6px] w-[4px] h-[4px] rounded-full shrink-0" style={{ background: "var(--field-supporting)" }} />{b}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </SlideOut>
-
-      <ModalDialog
-        isOpen={rhProposalOpen}
-        onClose={() => setRhProposalOpen(false)}
-        variant="confirmation"
-        tone="success"
-        title="Send final proposal to Initech?"
-        description="Marcus Webb will receive the $42,000 proposal by email. The NBA engine flagged this as the recommended next step (confidence 82%)."
-        ctaPrimary={{ label: "Send proposal", onClick: () => setRhProposalOpen(false) }}
-        ctaSecondary={{ label: "Not yet", onClick: () => setRhProposalOpen(false) }}
-      />
-
-      {/* Assigned-agent chat (task 5) — SidePanel, the repo's real inline (not
-          overlay) panel primitive, since there's no dedicated chat component
-          to reuse yet. Content here is a minimal, honest demo — a real chat
-          surface is a separate build, not something RecordHeader should
-          assume the shape of. */}
-      <SidePanel
-        open={rhChatWith !== null}
-        onClose={() => setRhChatWith(null)}
-        title={rhChatWith?.name}
-        description={rhChatWith ? `Chatting about ${rhChatWith.recordName}` : undefined}
-        titleIcon={<LucideIcons.Sparkle size={14} strokeWidth={1.75} />}
-        titleIconVariant="purple"
-        footer={
-          <div className="flex items-center gap-[8px] w-full">
-            <Input placeholder="Ask about this record…" className="flex-1" />
-            <Button variant="primary" size="sm" iconPosition="alone" icon={<LucideIcons.Send size={14} />} aria-label="Send" />
-          </div>
-        }
-      >
-        {rhChatWith && (
-          <div className="flex flex-col gap-[12px] p-[4px]">
-            <div className="rounded-[8px] px-[12px] py-[10px] self-start max-w-[85%]" style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)" }}>
-              <p className="text-[13px] leading-[1.5]" style={{ color: "var(--tag-purple-fg)" }}>
-                Hi! I'm {rhChatWith.name}, assigned to {rhChatWith.recordName}. Ask me anything about their history, open items, or what to do next.
-              </p>
+        {openNba && (
+          <div className={PANEL_CONTENT_CLASS}>
+            {/* ── Base (common to every task, always present) ── */}
+            <div className="flex items-center gap-[6px]">
+              <Tag variant="purple" size="sm" leadingIcon={<LucideIcons.Sparkle size={12} />}>System-suggested</Tag>
             </div>
+            <div>
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Why this</span>
+              </div>
+              <p className="text-[13px] leading-[1.6] mt-[4px]" style={{ color: "var(--foreground)" }}>{openNba.description}</p>
+            </div>
+            <div>
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Details</span>
+              </div>
+              <div className="grid grid-cols-2 gap-[12px] text-[12px] mt-[4px]">
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Assigned to</p>
+                  <p className="mt-[2px] text-[13px] flex items-center gap-[6px]" style={{ color: "var(--foreground)" }}>
+                    {openNba.assignedToKind === "agent"
+                      ? <LucideIcons.Bot size={14} style={{ color: "var(--field-supporting)" }} />
+                      : <LucideIcons.User size={14} style={{ color: "var(--field-supporting)" }} />}
+                    {openNba.assignedTo}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Due date</p>
+                  <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openNba.dueDate}</p>
+                </div>
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Status</p>
+                  <div className="mt-[2px]"><Tag variant={NBA_STATUS_TAG[openNba.status]} size="sm">{openNba.status}</Tag></div>
+                </div>
+                {openNba.recurrence && (
+                  <div>
+                    <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Repeats</p>
+                    <p className="mt-[2px] text-[13px]" style={{ color: "var(--foreground)" }}>{openNba.recurrence}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <NbaSectionDivider />
+
+            {/* ── Type-specific (grows as new task types are built; only 3
+                 modeled so far) — no header at all when the type hasn't
+                 been modeled yet, since the fallback notice below already
+                 says so. ── */}
+            {openNba.task && (
+              <div className="flex items-center h-[32px]">
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                  {NBA_TASK_LABEL[openNba.task.kind]}
+                </span>
+              </div>
+            )}
+
+            {openNba.task?.kind === "approval" && (
+              <div className="flex flex-col gap-[12px]">
+                <CardContainer variant="default" size="sm">
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.whatChanges}</p>
+                  <p className="text-[12px] leading-[1.5] mt-[4px]" style={{ color: "var(--field-supporting)" }}>{openNba.task.context}</p>
+                </CardContainer>
+              </div>
+            )}
+
+            {/* Correction pass — in AIMS OS the agent executes external
+                actions (calling, emailing); the human governs, never
+                triggers them directly. "Call" (something the viewer would
+                do themselves right now) is wrong here — the CTA is either
+                assigning the call to the agent or scheduling it, never a
+                same-second "Call now." */}
+            {openNba.task?.kind === "call" && (
+              <div className="flex flex-col gap-[12px]">
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.contactName}</p>
+                  <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{openNba.task.contactRole}</p>
+                </div>
+                <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide mb-[4px]" style={{ color: "var(--field-label)" }}>Suggested talking point</p>
+                  <p className="text-[13px] leading-[1.5]" style={{ color: "var(--foreground)" }}>{openNba.task.suggestedNote}</p>
+                </div>
+                {/* "Assign call to agent" / "Schedule call" live in the
+                    SlideOut's own fixed footer (nbaFooterCta above). */}
+              </div>
+            )}
+
+            {/* Correction pass — same governance split as Call above: the
+                agent drafts (and would send) the email; the human's CTA is
+                approving that send or editing the draft first, never a
+                bare "Send" that reads as the viewer's own action. */}
+            {openNba.task?.kind === "email" && (
+              <div className="flex flex-col gap-[12px]">
+                <div>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Subject</p>
+                  <p className="mt-[2px] text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{openNba.task.subject}</p>
+                </div>
+                <Textarea defaultValue={openNba.task.bodyPreview} readOnly rows={5} supportingText="Drafted by the agent — review before it sends" />
+                {/* "Approve send" / "Edit" live in the SlideOut's own fixed
+                    footer (nbaFooterCta above). */}
+              </div>
+            )}
+
+            {!openNba.task && (
+              <div className="rounded-[8px] p-[12px]" style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                <p className="text-[12px] leading-[1.5]" style={{ color: "var(--field-supporting)" }}>
+                  This action's type hasn't been modeled yet. Approval / Call / Email are the first 3 representative types — the list grows as new actions are built.
+                </p>
+              </div>
+            )}
+
+            {/* Closing pass — a clear closure after the action is taken,
+                never silence. Confirmed/Rejected for Approval; for Call/
+                Email, the task's own `outcome` decides which of Edgardo's
+                2 closures shows — executed (done, no further gate) or
+                in-review (held for sign-off before it actually happens). */}
+            {nbaResultDisplay && (
+              <InformativeCard size="sm" state={nbaResultDisplay.state} title={nbaResultDisplay.title} />
+            )}
+
+            {/* ── Dynamic inputs (less protagonist than HTL's own, per the
+                 brief — one representative example per typed task) ── */}
+            {openNba.dynamicInputs && openNba.dynamicInputs.length > 0 && (
+              <>
+                <NbaSectionDivider />
+                <div className="flex items-center h-[32px]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Action inputs — details this action needs to run</span>
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  {/* TODO: reciclar input de nodos — no reusable Workflow
+                      Builder node-input component exists in this repo yet
+                      (checked directly: "Workflow Builder UI" is only named
+                      in an estimation table, never implemented), so this
+                      reuses Input/Select styled the same way a node input
+                      would be. `input.label` renders as supportingText below
+                      the field — desktop never gets a floating label (see
+                      CLAUDE.md's Input/Textarea rule) — so it's the ONLY
+                      place naming what this specific field is ("CC
+                      (optional)", "Call date & time", ...); `placeholder`
+                      carries the concrete example. Closing pass — this used
+                      to be one hardcoded "Set when this task runs" string
+                      repeated under every field regardless of what it
+                      configured, which read as generic no matter how
+                      specific the placeholder was.
+
+                      "date" kind — closing pass, investigated directly:
+                      this used to render <Input type="date">, which passes
+                      `type` straight through to a NATIVE <input
+                      type="date">. That native control's calendar-icon
+                      affordance is the browser's own chrome, not a DS
+                      element — it can't be restyled with tokens, which is
+                      exactly why it looked wrong in dark mode. No
+                      DatePicker/Calendar-popover component exists anywhere
+                      in this repo yet (checked directly: no `*date*` file
+                      under src/components/ui/, and filters-slideout.tsx has
+                      the SAME native-input gap, unrelated to this fix). So
+                      "date" kind now renders as a plain DS Input (type=
+                      "text", never "date") with a themed Calendar leftIcon
+                      (uses --field-icon like every other Input icon) —
+                      composed entirely from existing DS pieces, no new
+                      component. // DS-GAP: a real DatePicker would replace
+                      this if one ever gets built. */}
+                  {openNba.dynamicInputs.map((input, i) => (
+                    input.kind === "select" ? (
+                      <div key={i} className="relative">
+                        <Select
+                          placeholder={input.placeholder}
+                          value={rhNbaSelectValues[i]}
+                          open={rhNbaSelectOpenIdx === i}
+                          onClick={() => setRhNbaSelectOpenIdx(prev => (prev === i ? null : i))}
+                          onClear={() => setRhNbaSelectValues(prev => { const next = { ...prev }; delete next[i]; return next })}
+                          supportingText={input.label}
+                        />
+                        {rhNbaSelectOpenIdx === i && (
+                          <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[50]">
+                            <Menu className="w-full">
+                              {(input.options ?? []).map(opt => (
+                                <MenuItem
+                                  key={opt}
+                                  label={opt}
+                                  state={opt === rhNbaSelectValues[i] ? "focus" : "default"}
+                                  onClick={() => { setRhNbaSelectValues(prev => ({ ...prev, [i]: opt })); setRhNbaSelectOpenIdx(null) }}
+                                />
+                              ))}
+                            </Menu>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <Input
+                        key={i}
+                        type="text"
+                        placeholder={input.placeholder}
+                        supportingText={input.label}
+                        leftIcon={input.kind === "date" ? <LucideIcons.Calendar size={16} strokeWidth={1.75} /> : undefined}
+                      />
+                    )
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
-      </SidePanel>
+      </SlideOut>
     </div>
   )
 }
@@ -34337,13 +34716,713 @@ function FiltersInteractivePlayground() {
   )
 }
 
+// ── ProcessItemShowcase — the component's full visual documentation ──────────
+// Rendered in two places: its own catalog page (Components → Process Item) and,
+// as step 5, inside the SlideOut/SidePanel Content pattern page. It lives here
+// once so the two can never drift apart. Two copies of the truth is what kept
+// Breadcrumb getting rebuilt by hand for a month while it sat in the repo —
+// do not inline a second copy of these examples anywhere.
+function ProcessItemShowcase() {
+  const [showSpec, setShowSpec] = useState(false)
+  return (
+    <>
+        {/* ── Statuses — Default state ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>All statuses — Default state</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            {([
+              { status: "done",    title: "Data enrichment",     description: "Fetched from Clearbit — 4 fields added",   timestamp: "2 min ago",  tag: "Completed" },
+              { status: "loading", title: "AI analysis running",  description: "Scoring customer health signal",            timestamp: "Just now"                        },
+              { status: "error",   title: "CRM sync failed",      description: "Connection timeout — retrying in 60s",      timestamp: "1 min ago"                       },
+              { status: "pending", title: "Notification queued",  description: "Waiting for AI step to finish",             timestamp: "Pending"                         },
+              { status: "warning", title: "Low confidence score", description: "Below threshold — manual review recommended",timestamp: "5 min ago", tag: "Review"     },
+            ] as { status: ProcessStatus; title: string; description: string; timestamp: string; tag?: string }[]).map((item, i, arr) => (
+              <ProcessItem
+                key={item.status}
+                status={item.status}
+                title={item.title}
+                description={item.description}
+                timestamp={item.timestamp}
+                tag={item.tag}
+                showLine={i < arr.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Selected state ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Selected state</p>
+          <div className="flex flex-col gap-[4px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <ProcessItem
+              status="done"
+              state="selected"
+              title="Data enrichment"
+              description="Fetched from Clearbit — 4 fields added"
+              timestamp="2 min ago"
+              tag="Completed"
+              showLine={false}
+            />
+          </div>
+        </div>
+
+        {/* ── Number badge variant ── */}
+        <div className="mb-[16px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>Number badge (step indicator)</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            {([
+              { status: "done" as ProcessStatus,    number: "1", title: "Trigger received",  description: "Health score dropped below 50" },
+              { status: "done" as ProcessStatus,    number: "2", title: "Playbook executed",  description: "Sent alert to CSM team" },
+              { status: "loading" as ProcessStatus, number: "3", title: "CRM update",         description: "Writing risk flag to Salesforce" },
+              { status: "pending" as ProcessStatus, number: "4", title: "Notification",        description: "Queued — waiting for step 3" },
+            ]).map((item, i, arr) => (
+              <ProcessItem
+                key={item.number}
+                status={item.status}
+                number={item.number}
+                title={item.title}
+                description={item.description}
+                showLine={i < arr.length - 1}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── With expand slot ── */}
+        <div className="mb-[20px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[8px]" style={{ color: "var(--field-label)" }}>With expand slot</p>
+          <div className="flex flex-col gap-0 p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+            <ProcessItemExpandDemo />
+          </div>
+        </div>
+
+        {/* ── ProcessList states ── */}
+        <div className="mb-[4px]">
+          <p className="text-[11px] font-semibold uppercase tracking-wide mb-[12px]" style={{ color: "var(--field-label)" }}>ProcessList — all 3 states</p>
+          <div className="grid grid-cols-3 gap-[12px]">
+            {/* Empty */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>EMPTY</p>
+              <ProcessList
+                title="Process"
+                state="empty"
+                emptyTitle="No activity yet"
+                emptyDescription="Steps appear when the workflow runs."
+              />
+            </div>
+            {/* Loading */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>LOADING</p>
+              <ProcessList title="Process" state="loading" />
+            </div>
+            {/* Populated */}
+            <div className="p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+              <p className="text-[10px] font-semibold mb-[8px]" style={{ color: "var(--field-label)" }}>POPULATED</p>
+              <ProcessList
+                title="Process"
+                state="populated"
+                onViewAll={() => {}}
+                items={[
+                  { id: "p1", title: "Data enrichment",  status: "done",    description: "4 fields added", timestamp: "2m ago" },
+                  { id: "p2", title: "AI scoring",        status: "loading", description: "Running…" },
+                  { id: "p3", title: "CRM update",        status: "pending", description: "Waiting" },
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Usage rules ── */}
+        <div className="mt-[20px] flex flex-col gap-[12px]">
+          {[
+            { type: "do",   text: "Use showLine=true on all items except the last — the connector visually chains steps." },
+            { type: "do",   text: "Use status='loading' only for the currently active step — never for future steps." },
+            { type: "do",   text: "Combine with ProcessList to get the section title, CTA, and empty/loading states for free." },
+            { type: "dont", text: "Don't mix number badges and status icons in the same list — use one pattern consistently." },
+            { type: "dont", text: "Don't show more than 5–6 items without a 'View all' CTA in the ProcessList header." },
+          ].map((rule, i) => (
+            <div key={i} className="flex items-start gap-[8px]">
+              <span
+                className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                style={{
+                  background: rule.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                  color: rule.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                }}
+              >
+                {rule.type === "do" ? "Do" : "Don't"}
+              </span>
+              <span className="text-[12px] text-[var(--foreground)]">{rule.text}</span>
+            </div>
+          ))}
+        </div>
+          <div className="mt-[16px]">
+            <button onClick={() => setShowSpec(v => !v)}
+              className="flex items-center gap-[6px] text-[11px] font-semibold"
+              style={{ color: "var(--field-label)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>
+              <LucideIcons.ChevronRight size={12} style={{ transform: showSpec ? "rotate(90deg)" : undefined, transition: "transform 0.15s" }} />
+              Design Spec
+            </button>
+            {showSpec && (
+              <div className="mt-[8px] flex flex-col gap-[6px] p-[12px] rounded-[8px]"
+                style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+                {[
+                    { token: "--color-surface-success-default", usage: "done icon bg" },
+                    { token: "--color-surface-error-default", usage: "error icon bg" },
+                    { token: "--color-border-neutral-lighter", usage: "connector line" },
+                ].map(row => (
+                  <div key={row.token} className="flex items-start gap-[8px]">
+                    <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0"
+                      style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)" }}>
+                      {row.token}
+                    </code>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                  </div>
+                ))}
+                <div className="flex items-center gap-[6px] pt-[4px]" style={{ borderTop: "0.5px solid var(--field-border)" }}>
+                  <LucideIcons.ExternalLink size={11} style={{ color: "var(--field-supporting)" }} />
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>Figma: v6rmYKA2zmyXWOahlxLOeI · 13501-28579</span>
+                </div>
+              </div>
+            )}
+          </div>
+    </>
+  )
+}
+
+// ── ProcessItemPage ──────────────────────────────────────────────────────────
+// The component and its documentation both already existed — the documentation
+// was just buried as step 5 of the SlideOut Content pattern page, with no
+// catalog entry, so searching "process" in the sidebar found nothing. That is
+// the same reason Breadcrumb got rebuilt by hand for a month while sitting in
+// the repo. This page is the entry; the content itself is shared, not copied.
+function ProcessItemPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+  const spec = PROCESS_ITEM_SPEC
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Process Item</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            One step of a running process, with its state. Reach for it wherever the progress of a workflow,
+            pipeline or agent run has to be visible — <code className="font-mono text-[13px] text-[var(--primary)]">SlideOut</code> and{" "}
+            <code className="font-mono text-[13px] text-[var(--primary)]">SidePanel</code> content, widgets, run detail views.
+            Pair it with <code className="font-mono text-[13px] text-[var(--primary)]">ProcessList</code> to get the section
+            title, the “View all” CTA and the empty/loading states for free.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("process-item")} />
+      </div>
+
+      <TabBar
+        tabs={[
+          { id: "overview",  label: "Overview"  },
+          { id: "reference", label: "Reference" },
+        ]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* ── ProcessItem vs Stepper — the question every PM hits ── */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">ProcessItem or Stepper?</h2>
+              <p className="text-[13px]" style={{ color: "var(--field-supporting)" }}>
+                Both render a sequence of steps, and picking the wrong one is the most common mistake with this
+                component. The test is <strong>who is doing the work</strong>.
+              </p>
+              <div className="grid grid-cols-2 gap-[12px]">
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-success-more-subtle)", border: "1px solid var(--color-border-success-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-success)" }}>
+                    ProcessItem — the system is working
+                  </span>
+                  <p className="text-[12px] text-[var(--foreground)]">
+                    The user is <strong>watching</strong>. Steps advance on their own, can fail, and the user does not
+                    control the order. A workflow run, an agent executing a playbook, a sync pipeline.
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    Statuses exist because a step can fail: <code className="font-mono">done · loading · error · pending · warning</code>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-informative-more-subtle)", border: "1px solid var(--color-border-informative-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--color-text-info)" }}>
+                    Stepper — the user is working
+                  </span>
+                  <p className="text-[12px] text-[var(--foreground)]">
+                    The user is <strong>advancing</strong>. They move between stages themselves, and nothing progresses
+                    until they act. A multi-stage create flow, a wizard.
+                  </p>
+                  <p className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    There is no “failed” stage in a wizard — it pairs with <code className="font-mono">StepperNavFooter</code>, not statuses.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── The component itself — shared with the SlideOut Content page ── */}
+            <ProcessItemShowcase />
+          </div>
+        )}
+
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Props — rendered from PROCESS_ITEM_SPEC so this table can never drift from the spec modal */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Generated from the component's own spec — this table and the “View DS spec” modal read the same source.
+              </p>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Notes"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.properties.map((row, i, arr) => (
+                      <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.name}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                          {/* Only an enum gets expanded into its union — the spec marks those
+                              as "Variant". Everything else shows its declared type, because a
+                              spec's `values` are examples there, not the full domain. */}
+                          {row.type === "Variant" ? row.values.join(" | ") : row.type}
+                        </td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.default}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Statuses — also from the spec */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Statuses</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["status", "Meaning"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.variants.map((v, i, arr) => (
+                      <tr key={v.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{v.name}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{v.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Typography — from the spec */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Typography</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Element", "Size", "Weight", "Line height"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.typography.map((row, i, arr) => (
+                      <tr key={row.element} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.element}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.size}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.weight}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.lineHeight}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Usage */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { ProcessItem, ProcessList } from "@/components/ui/process-item"
+
+// A run's steps — showLine on every item except the last
+{steps.map((s, i, arr) => (
+  <ProcessItem
+    key={s.id}
+    status={s.status}          // done | loading | error | pending | warning
+    title={s.title}
+    description={s.description}
+    timestamp={s.timestamp}
+    showLine={i < arr.length - 1}
+  />
+))}
+
+// Inside a widget or panel — ProcessList adds the title, CTA and
+// empty/loading states, so you don't compose them per screen
+<ProcessList
+  title="Process"
+  state={steps.length ? "populated" : "empty"}
+  items={steps}
+  onViewAll={() => setShowAll(true)}
+/>`}
+              </pre>
+            </div>
+
+            {/* Where else this appears */}
+            <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+              style={{ background: "var(--color-surface-neutral-subtle)", border: "0.5px solid var(--field-border)" }}>
+              <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Also documented in</span>
+              <p className="text-[12px] text-[var(--foreground)]">
+                <strong>Patterns → SlideOut/SidePanel — Content</strong>, as step 5 of the content vocabulary. That page
+                covers <em>where</em> a process list sits relative to the other content blocks; this page covers the
+                component. Both render the same examples from one source.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── RadioPage ────────────────────────────────────────────────────────────────
+function RadioPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
+  const [tab, setTab] = useState<"overview" | "reference">("overview")
+  const [plan, setPlan]       = useState("standard")
+  const [density, setDensity] = useState("comfortable")
+  const [scope, setScope]     = useState("tenant")
+  const spec = RADIO_SPEC
+
+  return (
+    <div className="flex flex-col gap-0">
+      <div className="flex items-start justify-between gap-[16px] mb-[28px]">
+        <div>
+          <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Radio</h1>
+          <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[620px]">
+            Selects exactly one option from a set of two or more mutually exclusive choices — picking
+            one deselects the rest. Never used alone: reach for{" "}
+            <code className="font-mono text-[13px] text-[var(--primary)]">RadioGroup</code>, which renders
+            the radios and owns the fieldset, the legend and arrow-key navigation.
+          </p>
+        </div>
+        <SpecButton onClick={() => openSpec("radio")} />
+      </div>
+
+      <TabBar
+        tabs={[{ id: "overview", label: "Overview" }, { id: "reference", label: "Reference" }]}
+        active={tab}
+        onChange={id => setTab(id as typeof tab)}
+      />
+
+      <div className="flex flex-col gap-[40px] pt-[32px]">
+
+        {tab === "overview" && (
+          <div className="flex flex-col gap-[32px]">
+
+            {/* Radio or Checkbox — the question this component always raises */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Radio, Checkbox or Select?</h2>
+              <div className="grid grid-cols-3 gap-[12px]">
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-primary-subtle)", border: "1px solid var(--color-border-primary-subtle)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Radio</span>
+                  <p className="text-[12px] text-[var(--foreground)]">Exactly one, from 2–6 options, all visible at once.</p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "1px solid var(--field-border)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>Checkbox</span>
+                  <p className="text-[12px] text-[var(--foreground)]">More than one can be selected at the same time.</p>
+                </div>
+                <div className="flex flex-col gap-[8px] p-[16px] rounded-[8px]"
+                  style={{ background: "var(--color-surface-neutral-subtle)", border: "1px solid var(--field-border)" }}>
+                  <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--field-supporting)" }}>Select</span>
+                  <p className="text-[12px] text-[var(--foreground)]">More than about six options — showing them all costs more room than it is worth.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Live</h2>
+              <CardContainer size="default">
+                <div className="grid grid-cols-2 gap-[32px] p-[8px]">
+                  <RadioGroup
+                    legend="Plan"
+                    value={plan}
+                    onChange={setPlan}
+                    options={[
+                      { value: "starter",    label: "Starter",    description: "Up to 5 seats" },
+                      { value: "standard",   label: "Standard",   description: "Up to 50 seats" },
+                      { value: "enterprise", label: "Enterprise", description: "Unlimited seats and SSO" },
+                      { value: "custom",     label: "Custom",     description: "Talk to sales", disabled: true },
+                    ]}
+                  />
+                  <RadioGroup
+                    legend="Scope"
+                    value={scope}
+                    onChange={setScope}
+                    options={[
+                      { value: "tenant",    label: "This tenant" },
+                      { value: "workspace", label: "This workspace only" },
+                    ]}
+                  />
+                </div>
+              </CardContainer>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Tab into the group, then use the arrow keys. Tab again leaves the group entirely rather than
+                stepping through every option — that is what the DS asks for, and it is why only the selected
+                radio holds the tab stop.
+              </p>
+            </div>
+
+            {/* Sizes */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Sizes</h2>
+              <CardContainer size="default">
+                <div className="flex items-start gap-[40px] p-[8px]">
+                  {(["sm", "md", "lg"] as const).map(s => (
+                    <div key={s} className="flex flex-col gap-[8px]">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                        {s === "sm" ? "S · 16px" : s === "md" ? "M · 20px" : "L · 24px"}
+                      </span>
+                      <RadioGroup
+                        legend={`Density ${s}`}
+                        hideLegend
+                        size={s}
+                        value={density}
+                        onChange={setDensity}
+                        options={[
+                          { value: "compact",     label: "Compact" },
+                          { value: "comfortable", label: "Comfortable" },
+                        ]}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </CardContainer>
+            </div>
+
+            {/* States */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">States</h2>
+              <CardContainer size="default">
+                <div className="flex items-start gap-[40px] p-[8px]">
+                  <Radio value="a" label="Unselect"  checked={false} onChange={() => {}} />
+                  <Radio value="b" label="Select"    checked        onChange={() => {}} />
+                  <Radio value="c" label="Disabled"  checked={false} disabled onChange={() => {}} />
+                  <Radio value="d" label="Disabled, selected" checked disabled onChange={() => {}} />
+                </div>
+              </CardContainer>
+            </div>
+
+            {/* Do / Don't — straight from the DS frame */}
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Do and don't</h2>
+              <div className="flex flex-col gap-[10px]">
+                {[
+                  { type: "do",   text: "Use when the user must select exactly one option from a predefined set." },
+                  { type: "do",   text: "Use for settings, form fields or filters where the options are mutually exclusive." },
+                  { type: "do",   text: "Use when there are 2–6 options and all of them should be visible at once." },
+                  { type: "dont", text: "Don't use when several options can be selected at the same time — that is Checkbox." },
+                  { type: "dont", text: "Don't use for more than about six options — use Select and save the room." },
+                  { type: "dont", text: "Never use a single radio on its own. It must always be part of a group." },
+                ].map((r, i) => (
+                  <div key={i} className="flex items-start gap-[8px]">
+                    <span className="text-[10px] font-bold px-[5px] py-[2px] rounded-[3px] shrink-0 mt-[1px] uppercase"
+                      style={{
+                        background: r.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)",
+                        color:      r.type === "do" ? "var(--color-text-success)" : "var(--color-text-error)",
+                      }}>
+                      {r.type === "do" ? "Do" : "Don't"}
+                    </span>
+                    <span className="text-[12px] text-[var(--foreground)]">{r.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "reference" && (
+          <div className="flex flex-col gap-[32px]">
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Props</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Prop", "Type", "Default", "Notes"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.properties.map((row, i, arr) => (
+                      <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.name}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                          {row.type === "Variant" ? row.values.join(" | ") : row.type}
+                        </td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.default}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{(row as { note?: string }).note ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Design tokens</h2>
+              <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                Every one already existed. None was created for this component.
+              </p>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["State", "Role", "Token", "Figma variable", "Light", "Dark"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.states.flatMap(st => st.tokens.map(tk => ({ st: st.name, ...tk }))).map((row, i, arr) => (
+                      <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.st}</td>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.role}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--primary)" }}>{row.variable}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.varId}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.light}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.dark}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Sizes</h2>
+              <div className="overflow-x-auto rounded-md border border-[var(--field-border)]">
+                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "var(--table-header-bg)", borderBottom: "1px solid var(--field-border)" }}>
+                      {["Size", "Ring", "Dot", "Padding"].map(h => (
+                        <th key={h} className="text-left px-[12px] py-[8px] text-[11px] font-semibold uppercase tracking-wider text-[var(--field-supporting)]">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {spec.sizes.map((row, i, arr) => (
+                      <tr key={row.size} style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--field-border)" : "none" }}>
+                        <td className="px-[12px] py-[8px] text-[var(--foreground)]">{row.size}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.ring}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.dot}</td>
+                        <td className="px-[12px] py-[8px] font-mono text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.padding}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Accessibility</h2>
+              <ul className="text-[13px] pl-[20px] flex flex-col gap-[7px]" style={{ color: "var(--color-text-subtitle)" }}>
+                <li><code className="font-mono text-[12px] text-[var(--primary)]">RadioGroup</code> renders a real <code className="font-mono text-[12px]">fieldset</code> and <code className="font-mono text-[12px]">legend</code>. Pass <code className="font-mono text-[12px]">hideLegend</code> to keep it for screen readers only.</li>
+                <li>Every radio carries a <code className="font-mono text-[12px]">label</code>. It is a required prop, not an optional one — placeholder text is not a label.</li>
+                <li>Arrow keys move between options and wrap; Tab leaves the group. Only the selected radio holds the tab stop, which is what makes that true.</li>
+                <li>Disabled options set <code className="font-mono text-[12px]">aria-disabled</code>, leave the tab order, and are skipped by the arrow keys.</li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-[12px]">
+              <h2 className="text-[16px] font-semibold text-[var(--foreground)]">Usage</h2>
+              <pre className="text-[12px] font-mono bg-[var(--field-bg)] p-[16px] rounded-[8px] overflow-x-auto text-[var(--foreground)]">{`import { RadioGroup } from "@/components/ui/radio"
+
+<RadioGroup
+  legend="Plan"
+  value={plan}
+  onChange={setPlan}
+  options={[
+    { value: "starter",    label: "Starter",    description: "Up to 5 seats" },
+    { value: "standard",   label: "Standard",   description: "Up to 50 seats" },
+    { value: "enterprise", label: "Enterprise", description: "Unlimited seats and SSO" },
+  ]}
+/>`}
+              </pre>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── BreadcrumbPage ────────────────────────────────────────────────────────────
+
+const PROCESS_ITEM_SPEC = {
+  name: "Process Item",
+  figmaNodeId: "13501:28579",
+  figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=13501-28579",
+  description: "One step of a process or workflow, with its state. Use it wherever the current state of a running process needs to be visible — SlideOut and SidePanel content, workflow views, threads. Each item can expand in place to reveal its detail. Not a Stepper: Stepper shows where the user is in a flow they advance themselves; Process Item shows what the system is doing.",
+  properties: [
+    { name: "title",       type: "string",          values: ["any string"],                                  default: "—",         note: "Required." },
+    { name: "description", type: "string",          values: ["any string"],                                  default: "undefined", note: "" },
+    { name: "timestamp",   type: "string",          values: ["any string"],                                  default: "undefined", note: "" },
+    { name: "tag",         type: "string",          values: ["any string"],                                  default: "undefined", note: "Renders an informative Tag when set." },
+    { name: "status",      type: "Variant",         values: ["done","loading","error","pending","warning"],  default: "pending",   note: "Drives the icon and its colour." },
+    { name: "state",       type: "Variant",         values: ["default","selected"],                          default: "default",   note: "" },
+    { name: "number",      type: "number | string", values: ["1","2","3"],                                   default: "undefined", note: "Shows a HighlightNumber badge instead of the status icon, for numbered sequences." },
+    { name: "showLine",    type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Vertical connector to the next item. On for every item except the last." },
+    { name: "showExpand",  type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Shows the expand chevron." },
+    { name: "expanded",    type: "Boolean",         values: ["true","false"],                                default: "false",     note: "Expanded state — reveals children in place." },
+    { name: "onExpand",    type: "function",        values: ["() => void"],                                  default: "undefined", note: "" },
+    { name: "children",    type: "node",            values: ["—"],                                      default: "undefined", note: "Slot shown when expanded — logs, payloads, per-step detail." },
+  ],
+  sizes: [
+    { element: "Status icon",  padding: "—", gap: "8px", radius: "50%", note: "16×16 inside a 32×32 slot" },
+    { element: "Number badge", padding: "—", gap: "8px", radius: "50%", note: "28×28 HighlightNumber, replaces the status icon" },
+    { element: "Text block",   padding: "—", gap: "2px", radius: "—",   note: "title · description · timestamp stacked" },
+  ],
+  typography: [
+    { element: "Title",       family: "Inter", size: "13px", weight: "SemiBold (600)", lineHeight: "1.4" },
+    { element: "Description", family: "Inter", size: "12px", weight: "Regular (400)",  lineHeight: "1.5" },
+    { element: "Timestamp",   family: "Inter", size: "11px", weight: "Regular (400)",  lineHeight: "1.4" },
+  ],
+  variants: [
+    { name: "done",    description: "Step finished. Check icon.",                    cssPrefix: "process", tokens: [] },
+    { name: "loading", description: "Step running now. Animated indicator.",         cssPrefix: "process", tokens: [] },
+    { name: "error",   description: "Step failed and needs attention.",              cssPrefix: "process", tokens: [] },
+    { name: "pending", description: "Step not started yet.",                         cssPrefix: "process", tokens: [] },
+    { name: "warning", description: "Step completed with something worth flagging.", cssPrefix: "process", tokens: [] },
+  ],
+}
 
 const BREADCRUMB_SPEC = {
   name: "Breadcrumb",
   figmaNodeId: "18352:45",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45",
-  description: "Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+  description: "Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
   properties: [
     { name: "depth",      type: "number",             values: ["2","3","4","4+"],               default: "3",   note: "depth<2 → no breadcrumb · depth=2 → Depth=2 variant · depth=3 → Depth=3 · depth≥4 → Depth=4 (middle items truncated with …)" },
     { name: "items",      type: "BreadcrumbItem[]",   values: ["{ label: string; href?: string }[]"], default: "[]",  note: "items[0] is always 'Home' with href='/'. items[last] is the Selected item (no href)." },
@@ -34398,7 +35477,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
-            Hierarchical back-navigation trail for L3+ depth levels. Shows the full path from root to current page with all ancestors clickable. At L2, use Header <code className="text-[11px] px-[4px] py-[1px] rounded" style={{ background: "var(--color-surface-neutral-default)" }}>backButton</code> instead.
+            Hierarchical navigation trail, used from L2 onwards inside <code>Header.breadcrumb</code>. Shows parent plus current page — ancestors clickable, current page not. Never paired with a backButton: from L2 the first crumb IS the way back.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("breadcrumb")} />
@@ -34438,8 +35517,8 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <tbody>
                     {[
                       { depth: "L1 — Root list",    pattern: "No back navigation",          code: null,                       example: "AI Workers list" },
-                      { depth: "L2 — Item detail",   pattern: "Header backButton only",      code: "backButton={true}",        example: "AI Workers → Meridian" },
-                      { depth: "L3 — Nested detail", pattern: "Breadcrumb + Header back",    code: "depth={3}",                example: "AI Workers → Meridian → Run #42" },
+                      { depth: "L2 — Item detail",   pattern: "Breadcrumb in Header.breadcrumb", code: "depth={2}",             example: "AI Workers → Meridian" },
+                      { depth: "L3 — Nested detail", pattern: "Breadcrumb, parent + current",    code: "depth={3}",             example: "AI Workers → Meridian → Run #42" },
                       { depth: "L4+ — Deep nested",  pattern: "Breadcrumb truncates middle", code: "depth={4+} → shows …",     example: "Home → … → Run #42 → Log entry" },
                     ].map(({ depth, pattern, code, example }, i, arr) => (
                       <tr key={i} style={{ borderBottom: i < arr.length - 1 ? "0.5px solid var(--field-border)" : "none" }}>
@@ -34509,12 +35588,14 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <LucideIcons.X size={12} /> Close Preview
                 </button>
 
-                {/* L2 / L3 toggle — centered at top */}
+                {/* L1 / L2+ toggle — centered at top. Under the current pattern the
+                    breadcrumb appears from L2, not L3, so the two states are
+                    "root list, nothing to trace" and "anything deeper". */}
                 <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
                   <SwitchTab
                     items={[
-                      { id: "l2", label: "L2 — Section view"  },
-                      { id: "l3", label: "L3+ — Detail view" },
+                      { id: "l2", label: "L1 — Root list"    },
+                      { id: "l3", label: "L2+ — Detail view" },
                     ]}
                     value={bcPreviewL3 ? "l3" : "l2"}
                     onChange={(v: string) => setBcPreviewL3(v === "l3")}
@@ -34777,19 +35858,20 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   title="AIMS Drive"
                   description="Securely store, manage, and organize your documents and folders."
                   tag={<Tag variant="primary" size="sm">Active</Tag>}
-                  primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New File</Button>}
-                  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                  primaryAction={{ label: "New File", icon: LucideIcons.Plus }}
+                  secondaryAction={{ label: "Export" }}
                 />
               </div>
               <div className="flex flex-col gap-[6px]">
                 {([
                   ["Title",         "Always visible. 24px in Size L, 18px in Size M and Compress."],
                   ["Description",   "Optional subtitle below the title. Hidden in Compress."],
-                  ["Status Tag",    "Optional inline chip after the title. Hidden in Compress."],
-                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress."],
+                  ["Status Tag",    "Optional inline chip after the title. Survives Compress — a detail view keeps its state visible while scrolled."],
+                  ["Breadcrumb",    "Optional trail above the title, for L2+ depth. Survives Compress. Never together with Back Button."],
+                  ["Back Button",   "Optional ArrowLeft — for inner-page drill-down contexts. Hidden in Compress unless showBackInCompress."],
                   ["Icon",          "Optional 24×24 icon in a primary-tint box. Hidden in Compress."],
-                  ["Primary CTA",   "Right-side primary action. Use Button variant=\"main\"."],
-                  ["Secondary CTA", "Right-side secondary action. Use Button variant=\"secondary\"."],
+                  ["Primary CTA",   "Right-side primary action. Pass an action object — { label, icon?, onClick? } — not a Button. Header applies variant=\"main\" itself."],
+                  ["Secondary CTA", "Right-side secondary action, rendered before primary. Same object shape. Two actions is the maximum."],
                 ] as [string, string][]).map(([name, desc]) => (
                   <div key={name} className="flex gap-[10px] items-start text-[13px]">
                     <span className="shrink-0 font-semibold text-[var(--foreground)] w-[120px]">{name}</span>
@@ -34813,8 +35895,8 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                       title="Meridian"
                       description="AI Worker · Customer support automation · Lexington HTL"
                       tag={<Tag variant="success" size="sm">Active</Tag>}
-                      primaryAction={<Button variant="main" size="sm"><LucideIcons.Settings2 size={13} /> Configure</Button>}
-                      secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+                      primaryAction={{ label: "Configure", icon: LucideIcons.Settings2 }}
+                      secondaryAction={{ label: "Export" }}
                     />
                   </div>
                 </div>
@@ -34835,7 +35917,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-success)" }}>Detail view — correct</span>
                   </div>
                   <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-success)", opacity: 0.9 }}>
-                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={<Button variant="main" size="sm">Configure</Button>} />
+                    <Header size="size-l" title="Meridian" tag={<Tag variant="success" size="sm">Active</Tag>} primaryAction={{ label: "Configure" }} />
                   </div>
                   <p className="text-[12px] text-[var(--field-supporting)]">One item open → one state → tag makes sense.</p>
                 </div>
@@ -34846,7 +35928,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     <span className="text-[11px] font-semibold" style={{ color: "var(--color-feedback-error)" }}>List view — never use tag here</span>
                   </div>
                   <div className="rounded-[8px] border overflow-hidden" style={{ borderColor: "var(--color-feedback-error)", opacity: 0.9 }}>
-                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={<Button variant="main" size="sm">New Worker</Button>} />
+                    <Header size="size-l" title="AI Workers" tag={<Tag variant="primary" size="sm">24 Active</Tag>} primaryAction={{ label: "New Worker" }} />
                   </div>
                   <p className="text-[12px] text-[var(--field-supporting)]">A list has many states simultaneously — one tag is misleading. Remove it.</p>
                 </div>
@@ -34969,8 +36051,8 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 backButton={pgBackButton}
                 icon={pgIcon ? (LucideIcons as unknown as Record<string, LucideIcons.LucideIcon>)[pgIconName] : undefined}
                 iconVariant={pgIconVariant}
-                primaryAction={<Button variant="main" size="sm"><LucideIcons.Plus size={13} /> New Worker</Button>}
-                secondaryAction={pgSecondaryCta ? <Button variant="secondary" size="sm">Export</Button> : undefined}
+                primaryAction={{ label: "New Worker", icon: LucideIcons.Plus }}
+                secondaryAction={pgSecondaryCta ? { label: "Export" } : undefined}
               />
             </div>
           </div>
@@ -35034,11 +36116,12 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                     { prop: "title",           type: "string",     def: "—",         desc: "Page title. Required. Always visible." },
                     { prop: "size",            type: "HeaderSize", def: '"size-l"',   desc: '"size-l" | "size-m" | "compress"' },
                     { prop: "description",     type: "string",     def: "undefined",  desc: "Subtitle below the title. Hidden in compress." },
-                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Hidden in compress." },
-                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress." },
+                    { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Survives compress — a detail view keeps its state visible while scrolled." },
+                    { prop: "breadcrumb",      type: "ReactNode",  def: "undefined",  desc: "Breadcrumb trail above the title, for L2+ depth. Survives compress. Never pass this together with backButton — the audit blocks it." },
+                    { prop: "backButton",      type: "boolean",    def: "false",      desc: "Shows an ArrowLeft back button. Hidden in compress unless showBackInCompress." },
                     { prop: "icon",            type: "LucideIcon", def: "undefined",  desc: "Lucide icon shown in a 24×24 primary-tint box. Hidden in compress." },
-                    { prop: "primaryAction",   type: "ReactNode",  def: "undefined",  desc: 'Primary CTA — right zone. Use Button variant="main".' },
-                    { prop: "secondaryAction", type: "ReactNode",  def: "undefined",  desc: 'Secondary CTA — right zone, before primary. Use Button variant="secondary".' },
+                    { prop: "primaryAction",   type: "HeaderAction", def: "undefined", desc: 'An action object — { label, icon?, onClick?, disabled?, priority? }. Header picks the Button variant, so no screen names one. Defaults to priority "primary" (variant="main").' },
+                    { prop: "secondaryAction", type: "HeaderAction", def: "undefined", desc: 'Same shape, rendered before primary. Defaults to priority "secondary". Header takes at most these two actions — a third belongs in an overflow menu.' },
                   ].map(row => (
                     <tr key={row.prop} className="border-b border-[var(--field-border)] last:border-0">
                       <td className="py-[10px] pr-[16px] font-mono text-[12px] text-[var(--primary)]">{row.prop}</td>
@@ -35065,12 +36148,8 @@ import { Plus } from "lucide-react"
   title="AI Workers"
   description="Manage and monitor your AI workers."
   tag={<Tag variant="success" size="sm">24 Published</Tag>}
-  primaryAction={
-    <Button variant="main" size="sm">
-      <Plus size={13} /> New Worker
-    </Button>
-  }
-  secondaryAction={<Button variant="secondary" size="sm">Export</Button>}
+  primaryAction={{ label: "New Worker", icon: Plus }}
+  secondaryAction={{ label: "Export" }}
 />
 
 // Scroll-triggered compress (driven by scroll state in parent)
@@ -35079,7 +36158,7 @@ import { Plus } from "lucide-react"
   title="AI Workers"
   description="Manage and monitor your AI workers."
   tag={<Tag variant="success" size="sm">24 Published</Tag>}
-  primaryAction={<Button variant="main" size="sm"><Plus size={13} /> New Worker</Button>}
+  primaryAction={{ label: "New Worker", icon: Plus }}
   style={{ transition: "padding 200ms ease-in-out" }}
 />`}
               </pre>
@@ -35123,7 +36202,7 @@ useEffect(() => {
     title="AI Workers"
     description="Manage and monitor your AI workers."
     tag={<Tag variant="success" size="sm">24 Published</Tag>}
-    primaryAction={<Button variant="main" size="sm">New Worker</Button>}
+    primaryAction={{ label: "New Worker" }}
     style={{ transition: "padding 200ms ease-in-out" }}
   />
 </div>`}
@@ -38954,7 +40033,8 @@ const [open, setOpen] = useState(false)
     { prop: "title",           type: "string",                         def: '"Title of section"', desc: "Panel heading. 24px SemiBold (M) / 18px SemiBold (S)." },
     { prop: "subtitle",        type: "string",                         def: "DS default text",  desc: "DS prop: description. Body text below title. 14px (M) / 12px (S)." },
     { prop: "showIcon",        type: "boolean",                        def: "true",             desc: "DS prop: icon. Purple icon highlight in header. 40px (M) / 32px (S)." },
-    { prop: "iconContent",     type: "ReactNode",                      def: "<Sparkles/>",      desc: "Custom content inside the purple icon container." },
+    { prop: "iconContent",     type: "ReactNode",                      def: "<Sparkles/>",      desc: "Custom content inside the icon container." },
+    { prop: "iconBg",          type: "string",                         def: "purple surface token", desc: "Background of the icon container — override when iconContent represents a specific colored source elsewhere in the UI, so the panel reads as the same item, not an unrelated color." },
     { prop: "showStatus",      type: "boolean",                        def: "true",             desc: "DS prop: status. Green status tag next to title." },
     { prop: "statusLabel",     type: "string",                         def: '"Status"',         desc: "Label inside the status tag." },
     { prop: "showTopButton",   type: "boolean",                        def: "true",             desc: "DS prop: topButton. Edit (pencil) icon in top-right header." },
@@ -39758,8 +40838,59 @@ const [open, setOpen] = useState(false)
 
 // ── Prototype Gallery ──────────────────────────────────────────────────────
 
+type PrototypeSort = "Date added" | "Name" | "Category" | "Author"
+
+const PROTOTYPE_SORTS: PrototypeSort[] = ["Date added", "Name", "Category", "Author"]
+
 function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
   const total = PROTOTYPE_PAGES.length
+
+  const [search,   setSearch]   = useState("")
+  const [author,   setAuthor]   = useState<string | undefined>(undefined)
+  const [category, setCategory] = useState<PrototypeCategory | undefined>(undefined)
+  const [sortBy,  setSortBy]  = useState<PrototypeSort>("Date added")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+
+  // Authors come from the registry itself, so a new PM shows up in the filter
+  // the moment their first screen is registered — nothing to keep in sync here.
+  const authors = useMemo(
+    () => Array.from(new Set(PROTOTYPE_PAGES.map(p => p.author))).sort(),
+    []
+  )
+
+  // Kept in PROTOTYPE_CATEGORIES order rather than alphabetised, and narrowed to
+  // the areas actually in use — a filter option that can only ever return zero
+  // results is worse than not offering it.
+  const categories = useMemo(() => {
+    const used = new Set(PROTOTYPE_PAGES.map(p => p.category))
+    return PROTOTYPE_CATEGORIES.filter(c => used.has(c))
+  }, [])
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const rows = PROTOTYPE_PAGES.filter(p =>
+      (!author || p.author === author) &&
+      (!category || p.category === category) &&
+      (!q ||
+        p.label.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.author.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q))
+    )
+    // addedOn is ISO (YYYY-MM-DD), so a plain string compare is a date compare.
+    const key = (p: (typeof PROTOTYPE_PAGES)[number]) =>
+      sortBy === "Name"     ? p.label
+      : sortBy === "Category" ? p.category
+      : sortBy === "Author"   ? p.author
+      : p.addedOn
+    return [...rows].sort((a, b) => {
+      const cmp = key(a).localeCompare(key(b))
+      return sortDir === "desc" ? -cmp : cmp
+    })
+  }, [search, author, category, sortBy, sortDir])
+
+  const isFiltered = Boolean(search.trim() || author || category)
+  const clearAll   = () => { setSearch(""); setAuthor(undefined); setCategory(undefined) }
 
   return (
     <div className="flex flex-col gap-[24px]">
@@ -39774,18 +40905,58 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
         </p>
       </div>
 
-      {PROTOTYPE_PAGES.length === 0 ? (
-        <div className="rounded-[12px] px-[32px] py-[48px] flex flex-col items-center gap-[12px] text-center" style={{ border: "1px dashed var(--field-border)" }}>
-          <p className="text-[15px] font-medium" style={{ color: "var(--foreground)" }}>No prototypes yet</p>
-          <p className="text-[13px] max-w-[360px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>Prototypes appear here once a PM generates a screen with Claude Code and registers it in <code style={{ fontSize: 12 }}>PROTOTYPE_PAGES</code> in App.tsx.</p>
-        </div>
+      {total > 0 && (
+        <Filters
+          searchPlaceholder="Search prototypes"
+          searchValue={search}
+          onSearchChange={setSearch}
+          slots={[
+            {
+              placeholder: "Category",
+              value:       category,
+              options:     [...categories],
+              onSelect:    c => setCategory(c as PrototypeCategory),
+              onRemove:    () => setCategory(undefined),
+            },
+            {
+              placeholder: "Author",
+              value:       author,
+              options:     authors,
+              onSelect:    setAuthor,
+              onRemove:    () => setAuthor(undefined),
+            },
+          ]}
+          showClearFilters={isFiltered}
+          onClearFilters={clearAll}
+          showAllFilters={false}
+          sortLabel={sortBy}
+          sortOptions={PROTOTYPE_SORTS}
+          onSortSelect={o => setSortBy(o as PrototypeSort)}
+          sortDirection={sortDir}
+          onSortDirectionChange={setSortDir}
+          showViewToggle={false}
+        />
+      )}
+
+      {total === 0 ? (
+        <EmptyState
+          icon={LucideIcons.LayoutGrid}
+          title="No prototypes yet"
+          description="Prototypes appear here once a PM generates a screen with Claude Code and registers it in PROTOTYPE_PAGES in App.tsx."
+        />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={LucideIcons.LayoutGrid}
+          title="No prototypes found"
+          description="Try adjusting the category or author filter, or the search term."
+          ctaLabel="Clear filters"
+          onCta={clearAll}
+        />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-          {PROTOTYPE_PAGES.map(p => {
-            const category = p.label.includes(" — ") ? p.label.split(" — ")[0] : p.label
-            return (
+          {visible.map(p => (
               <CardContainer key={p.id} variant="default" size="lg" className="flex flex-col gap-[16px]">
-                <Tag variant="informative" size="sm" className="self-start">{category}</Tag>
+                <Tag variant="informative" size="sm" className="self-start">{p.category}</Tag>
                 <div className="flex flex-col gap-[6px] flex-1">
                   <p className="text-[14px] font-semibold leading-[1.3]" style={{ color: "var(--foreground)" }}>
                     {p.label}
@@ -39800,13 +40971,16 @@ function PrototypeGalleryPage({ onOpen }: { onOpen: (id: string) => void }) {
                     {p.author[0].toUpperCase()}
                   </div>
                   <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{p.author}</span>
+                  <span className="text-[11px]" style={{ color: "var(--field-icon)" }}>·</span>
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    {new Date(`${p.addedOn}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </span>
                 </div>
                 <Button variant="secondary" size="sm" className="w-full" onClick={() => onOpen(p.id)}>
                   Open screen
                 </Button>
               </CardContainer>
-            )
-          })}
+          ))}
         </div>
       )}
     </div>
@@ -39820,6 +40994,24 @@ export default function App() {
   const [search,  setSearch]  = useState("")
   const [isDark,  setIsDark]  = useState(true)
   const [specModal, setSpecModal] = useState<SpecModal>(null)
+  // Where the prototype overlay's ← chip returns to. Null means the gallery,
+  // which is right when the reader arrived from the gallery. A component page
+  // that opens a prototype as its own worked example sets this to itself, so
+  // closing the example lands back on the component, not on a list the reader
+  // never asked for.
+  const [protoReturnTo, setProtoReturnTo] = useState<string | null>(null)
+
+  // Open a prototype as an example of the page the reader is on. Same tab —
+  // the ← chip is the way back, and it goes to `from`. Extra params (e.g.
+  // `profile`, which the UCP prototype reads on mount to open one record
+  // instead of its list) go on the URL BEFORE the state change, so they are
+  // already there when the prototype first renders.
+  function openProtoExample(protoId: string, from: string, params?: Record<string, string>) {
+    const qs = new URLSearchParams({ proto: protoId, ...(params ?? {}) })
+    window.history.replaceState(null, "", `?${qs.toString()}`)
+    setProtoReturnTo(from)
+    setActive(protoId)
+  }
 
   const theme = isDark ? "dark" : "light"
 
@@ -39849,13 +41041,30 @@ export default function App() {
     // be re-appended every time or it's lost before the target page can read it.
     const hash = window.location.hash
     const params = new URLSearchParams(window.location.search)
-    // Guard: React StrictMode double-invokes mount effects. Without this, the
-    // URL sync fires with the initial active="home" and clobbers a ?proto= deep-link
-    // before the deep-link effect's second invocation can read it.
-    if (active === "home" && params.get("proto")) return
+    // Guard: React StrictMode double-invokes mount effects, and this effect
+    // fires with the INITIAL active="home" before the deep-link effect below
+    // has resolved the URL. Without the guard it rewrites the address bar to
+    // ?page=home and the deep link is gone before anything can read it.
+    //
+    // It used to guard only `?proto=`, which is why `?page=<anything>` never
+    // worked: pasting ?page=chip landed on home, and the only way to reach a
+    // component page was to navigate the sidebar. Both params need the same
+    // protection, and both need it for any target rather than just a
+    // non-home one — ?page=home is a legitimate link too.
+    const deepLinked = params.get("proto") ?? params.get("page")
+    if (active === "home" && deepLinked) return
     const isProto = PROTOTYPE_PAGES.some(p => p.id === active)
     if (isProto) {
-      window.history.replaceState(null, "", `?proto=${active}${hash}`)
+      // Keep whatever else the prototype's link carried — `profile` on the
+      // UCP screen, and anything a future one adds. This used to rebuild the
+      // URL from the id alone, which wiped those on the first render after
+      // mount: the deep link still worked, because the screen reads the param
+      // in a state initialiser, but reloading the page silently lost it.
+      const next = new URLSearchParams(params)
+      next.delete("page")
+      next.delete("tab")
+      next.set("proto", active)
+      window.history.replaceState(null, "", `?${next.toString()}${hash}`)
     } else {
       // Preserve ?tab= (owned by the active page's own tab state, e.g. via
       // usePageTab in src/lib/use-page-tab.ts, or HomePage's hand-rolled
@@ -39896,10 +41105,12 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" || active === "record-header" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
+          {active === "ds-health"       && <DsHealthPage />}
           {active === "alert-banner"    && <AlertBannerPage      openSpec={setSpecModal} />}
+          {active === "toast"           && <ToastPage            openSpec={setSpecModal} />}
           {active === "app-background"  && <AppBackgroundPage   openSpec={setSpecModal} />}
           {active === "empty-state"     && <EmptyStatePage   openSpec={setSpecModal} />}
           {active === "avatar"          && <AvatarPage          openSpec={setSpecModal} />}
@@ -39950,8 +41161,11 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
-          {active === "record-header"       && <RecordHeaderPage      openSpec={setSpecModal} />}
+          {active === "record-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
+          {active === "next-best-action"    && <NextBestActionCardPage openSpec={setSpecModal} onNavigate={setActive} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
+          {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
+          {active === "radio"           && <RadioPage openSpec={setSpecModal} />}
           {active === "breadcrumb"      && <BreadcrumbPage openSpec={setSpecModal} />}
           {active === "header"          && <HeaderPage          openSpec={setSpecModal} />}
           {active === "pagination"      && <PaginationPage      openSpec={setSpecModal} />}
@@ -39978,7 +41192,7 @@ export default function App() {
         <div className={`${theme} fixed inset-0`} style={{ zIndex: 40, background: canvasBg }}>
           <ActiveProtoComponent key={activeProto.id} />
           <button
-            onClick={() => setActive("proto-gallery")}
+            onClick={() => { const to = protoReturnTo ?? "proto-gallery"; setProtoReturnTo(null); setActive(to) }}
             className="fixed top-[16px] left-[16px] flex items-center gap-[8px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-medium transition-opacity hover:opacity-70"
             style={{
               zIndex: 45,
@@ -39988,7 +41202,7 @@ export default function App() {
               boxShadow: "var(--shadow-elevation-2)",
             }}
           >
-            ← Prototypes
+            ← {protoReturnTo ? (NAV_SECTIONS.find(n => n.id === protoReturnTo)?.label ?? "Back") : "Prototypes"}
           </button>
         </div>
       )}
