@@ -1245,6 +1245,21 @@ function MemberDetailPage({
     >
       <BackBreadcrumb onBack={onBack} />
 
+      {/* Removing a member is irreversible and the answer is yes or no — that is
+          a ModalDialog, not a panel the page can scroll past. `warning`, not
+          `error`: the person still exists, they lose access to this workspace. */}
+      <ModalDialog
+        isOpen={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        tone="warning"
+        iconName="UserMinus"
+        title={`Remove ${member.name} from the workspace?`}
+        description={`${member.name} will immediately lose access to every studio, role and group in Avance Financial. Their audit history is kept.`}
+        informativeCard="This cannot be undone. Re-adding them requires a new invitation."
+        ctaPrimary={{ label: "Remove member", destructive: true, onClick: () => { setConfirmRemove(false); onRemove(member.id); onBack() } }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setConfirmRemove(false) }}
+      />
+
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
@@ -1309,23 +1324,10 @@ function MemberDetailPage({
                 {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
               </Button>
             )}
-            {!confirmRemove ? (
-              <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => setConfirmRemove(true)}>
-                <Icons.Trash2 size={13} /> Remove from workspace
-              </Button>
-            ) : (
-              <div style={{ padding: "12px", border: "1px solid var(--badge-error)", borderRadius: 8, background: "color-mix(in srgb, var(--badge-error) 6%, transparent)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 4 }}>Remove {member.name}?</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>This cannot be undone.</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Button variant="warning" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => { onRemove(member.id); onBack() }}>Confirm</Button>
-                  <Button variant="secondary" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => setConfirmRemove(false)}>Cancel</Button>
-                </div>
-              </div>
-            )}
+            <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
+              onClick={() => setConfirmRemove(true)}>
+              <Icons.Trash2 size={13} /> Remove from workspace
+            </Button>
           </div>
         </CardContainer>
 
@@ -1749,13 +1751,20 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
               Inherited via role · toggle to confirm direct access
             </div>
           )}
-          {/* Scope selector — edit mode, all permission nodes */}
+        </div>
+
+        {/* Control cluster — scope, then a hairline, then the toggle. The scope
+            chips used to sit under the label, which added ~26px to every row
+            and left the entire right half of the tree empty. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0, paddingTop: 1 }}>
           {mode === "edit" && (
-            <div
-              style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div role="group" aria-label={`Scope for ${node.label}`} style={{ display: "flex", gap: 4 }}>
+            <>
+              <div
+                role="group"
+                aria-label={`Scope for ${node.label}`}
+                style={{ display: "flex", gap: 4, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }}
+                onClick={e => e.stopPropagation()}
+              >
                 {SCOPE_ITEMS.map(item => {
                   const active = (scopeOverrides[node.id] ?? node.scope ?? "Own") === item.id
                   return (
@@ -1770,17 +1779,18 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
                   )
                 })}
               </div>
-            </div>
+              <span aria-hidden style={{ width: 1, height: 20, background: "var(--field-border)", flexShrink: 0 }} />
+            </>
           )}
+          <span onClick={e => e.stopPropagation()}>
+            <Toggle
+              checked={isDirect}
+              disabled={node.locked && node.state !== "g-inh"}
+              size="sm"
+              onChange={on => { onToggle(node.id, on) }}
+            />
+          </span>
         </div>
-        <span onClick={e => e.stopPropagation()} style={{ paddingTop: 2 }}>
-          <Toggle
-            checked={isDirect}
-            disabled={node.locked && node.state !== "g-inh"}
-            size="sm"
-            onChange={on => { onToggle(node.id, on) }}
-          />
-        </span>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
         <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle}
@@ -2727,21 +2737,15 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick }: {
                   </div>
 
                   {/* MFA badge */}
-                  <div
-                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: m.mfaEnabled
-                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                    }}
-                  >
-                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-                    MFA
-                  </div>
+                  <Tooltip side="cursor" content={m.mfaEnabled ? "MFA enabled" : "MFA not enabled"}>
+                    <Tag
+                      variant={m.mfaEnabled ? "success" : "alert"}
+                      size="sm"
+                      leadingIcon={m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    >
+                      MFA
+                    </Tag>
+                  </Tooltip>
 
                   {/* Status */}
                   <div style={{ minWidth: 76, display: "flex", justifyContent: "center", flexShrink: 0 }}>
@@ -3033,21 +3037,15 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick }: { group
                   </div>
 
                   {/* MFA badge */}
-                  <div
-                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: m.mfaEnabled
-                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                    }}
-                  >
-                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-                    MFA
-                  </div>
+                  <Tooltip side="cursor" content={m.mfaEnabled ? "MFA enabled" : "MFA not enabled"}>
+                    <Tag
+                      variant={m.mfaEnabled ? "success" : "alert"}
+                      size="sm"
+                      leadingIcon={m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+                    >
+                      MFA
+                    </Tag>
+                  </Tooltip>
 
                   {/* Status */}
                   <div style={{ minWidth: 76, display: "flex", justifyContent: "center", flexShrink: 0 }}>
@@ -3211,20 +3209,21 @@ function MemberRow({
         </div>
 
         {/* MFA */}
-        <div
-          title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
-          style={{
-            display: "flex", alignItems: "center", gap: 4, minWidth: 60, justifyContent: "center",
-            padding: "3px 8px", borderRadius: 100, fontSize: 11, fontWeight: 600, flexShrink: 0,
-            background: member.mfaEnabled
-              ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-              : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-            color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-            border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-          }}
-        >
-          {member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-          MFA
+        <div style={{ minWidth: 60, display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          <Tooltip
+            side="cursor"
+            content={member.mfaEnabled
+              ? `MFA enabled${member.mfaMethod ? ` · ${MFA_METHOD_LABEL[member.mfaMethod]}` : ""}`
+              : "MFA not enabled"}
+          >
+            <Tag
+              variant={member.mfaEnabled ? "success" : "alert"}
+              size="sm"
+              leadingIcon={member.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
+            >
+              MFA
+            </Tag>
+          </Tooltip>
         </div>
 
         {/* Status */}
@@ -3814,16 +3813,13 @@ function MemberPreview({
               <div style={{ color: "var(--muted-foreground)" }}><Icons.ShieldCheck size={13} /></div>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 3 }}>MFA</div>
-                <div style={{
-                  display: "inline-flex", alignItems: "center", gap: 4,
-                  fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 100,
-                  background: member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 12%, transparent)" : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                  color: member.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                  border: `1px solid ${member.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                }}>
-                  {member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                <Tag
+                  variant={member.mfaEnabled ? "success" : "alert"}
+                  size="sm"
+                  leadingIcon={member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                >
                   {member.mfaEnabled ? (member.mfaMethod ? `Enabled · ${MFA_METHOD_LABEL[member.mfaMethod]}` : "Enabled") : "Not enabled"}
-                </div>
+                </Tag>
               </div>
             </div>
             {!isInvited && (member.sessions?.length ?? 0) > 0 && (
@@ -4463,7 +4459,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Members view */}
       {mainTab === "members" && (
         <>
-          <CardContainer className="!p-0 overflow-hidden">
+          <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
             <div style={{
               padding: "10px 20px 10px 68px", display: "flex", alignItems: "center", gap: 14,
               background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
