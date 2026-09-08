@@ -736,7 +736,8 @@ export default function PMThomasWidgetBuilderScreen() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                       <StepLabel>Choose entity</StepLabel>
                       <div style={{ marginTop: -8 }}>
-                        <Button variant="tertiary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                        <Button variant="secondary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                          <LucideIcons.LayoutGrid size={14} />
                           Browse all entities
                         </Button>
                       </div>
@@ -1062,10 +1063,22 @@ export default function PMThomasWidgetBuilderScreen() {
                 row of twelve pushes the list off the bottom of the dialog. A
                 column grows downward, which the panel can scroll. */}
             <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
-              <div style={{ width: 132, flexShrink: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-                <Chip size="s" variant={srcFilter === "all" ? "primary" : "secondary"} onClick={() => setSrcFilter("all")}>All sources</Chip>
-                {INTEGRATIONS.map(i => (
-                  <Chip key={i} size="s" variant={srcFilter === i ? "primary" : "secondary"} onClick={() => setSrcFilter(i)}>{i}</Chip>
+              {/* Tertiary buttons with a chevron, not chips. A chip is a
+                  toggle sitting in a row of peers; this is a list you move
+                  down, and the chevron says the choice leads somewhere — which
+                  is what a category in a catalogue does. */}
+              <div style={{ width: 148, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {["all", ...INTEGRATIONS].map(src => (
+                  <Button
+                    key={src}
+                    variant="tertiary"
+                    size="sm"
+                    className={`justify-between w-full ${srcFilter === src ? "!text-[var(--primary)]" : ""}`}
+                    onClick={() => setSrcFilter(src)}
+                  >
+                    {src === "all" ? "All sources" : src}
+                    <LucideIcons.ChevronRight size={14} />
+                  </Button>
                 ))}
               </div>
 
