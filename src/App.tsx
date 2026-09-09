@@ -2091,6 +2091,7 @@ const MODAL_DIALOG_SPEC = {
     { name: "infoCardState", type: "Variant", values: ["informative","alert","error","success","neutral"], default: "from tone",     note: "Overrides tone for the InformativeCard" },
     { name: "ctaPrimary",    type: "object",  values: ["{ label, destructive?, onClick? }"],               default: "undefined" },
     { name: "ctaSecondary",  type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
+    { name: "ctaTertiary",   type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
     { name: "showClose",     type: "Boolean", values: ["true","false"],                                     default: "true" },
     { name: "embedded",      type: "Boolean", values: ["true","false"],                                     default: "false",         note: "Renders inline without overlay — used in docs previews" },
   ],
@@ -9385,7 +9386,8 @@ function SelectPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div className="rounded-[8px] border border-[var(--field-border)] p-[16px] flex flex-col gap-0 divide-y divide-[var(--field-border)]">
                 {[
                   { condition: "open = true",                          icon: "ChevronUp",   note: "Regardless of value" },
-                  { condition: "open = false · value exists",          icon: "X (clear)",   note: "Blue border — click to clear value" },
+                  { condition: "open = false · value exists · onClear", icon: "X (clear)",   note: "Blue border — click to clear value" },
+                  { condition: "open = false · value exists · no onClear", icon: "ChevronDown", note: "Blue border — a clear button with nothing to clear is not rendered" },
                   { condition: "open = false · no value · state=error",icon: "CircleAlert", note: "Red border" },
                   { condition: "open = false · no value · default",    icon: "ChevronDown", note: "Gray border" },
                 ].map(r => (

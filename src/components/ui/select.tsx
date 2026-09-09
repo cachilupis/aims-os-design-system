@@ -14,6 +14,12 @@ import { cn } from "@/lib/utils"
  * States (DS exact):
  *   default  → gray border 0.5px · ChevronDown · placeholder text
  *   selected → blue border 1px   · X (clear)   · value text
+ *              …but ONLY when `onClear` is supplied. Without a handler the X
+ *              renders, invites a click and does nothing, which is worse than
+ *              no affordance at all — 76 of the 80 Select call sites in this
+ *              repo were in exactly that state. No handler → ChevronDown, the
+ *              same glyph the field shows when it has no value, because in
+ *              both cases the only thing the right side can do is open.
  *   open     → blue border 1px   · ChevronUp   · value or placeholder
  *   error    → red border 0.5px  · CircleAlert · placeholder or value
  *   disabled → light border 1px  · ChevronDown · opacity 40%
@@ -215,10 +221,11 @@ const Select = forwardRef<HTMLDivElement, SelectProps & React.HTMLAttributes<HTM
         <span className={cn("shrink-0 flex items-center", rightIconColor)}>
           {open ? (
             <ChevronUp size={16} strokeWidth={1.75} />
-          ) : hasValue ? (
+          ) : hasValue && onClear ? (
             <button
               type="button"
               tabIndex={-1}
+              aria-label="Clear selection"
               onClick={handleClear}
               className="flex items-center cursor-pointer hover:opacity-70 transition-opacity"
             >
