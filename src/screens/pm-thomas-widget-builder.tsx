@@ -179,9 +179,45 @@ const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
   ],
 }
 
+/**
+ * What each governed dataset comes back with.
+ *
+ * A dataset arrives already aggregated, so its columns are the RESULT's
+ * columns, not the source entity's: "Contacts by Tier" returns a tier and a
+ * count, not the nine fields a contact has. Every one is read straight off the
+ * dataset's own description in PRESET_DATASETS — that copy is Thom's and it is
+ * already validated, so deriving from it is what keeps the two from drifting.
+ *
+ * This is also why the dataset path can be filtered at all: you filter the
+ * result ("only Gold"), which is a different question from the one the dataset
+ * already answered.
+ */
+const DATASET_COLUMN_DEFS: Record<string, ColumnDef[]> = {
+  "ds-contacts-by-tier": [
+    { label: "Tier",     type: "Text",   desc: "Gold, Silver or Bronze",                  key: "tier" },
+    { label: "Contacts", type: "Number", desc: "How many contacts fall in that tier",     key: "contacts" },
+  ],
+  "ds-deals-pipeline": [
+    { label: "Stage",      type: "Text",   desc: "The pipeline stage the deal sits in",   key: "stage" },
+    { label: "Deal Value", type: "Number", desc: "Summed value of the deals in the stage", key: "deal_value" },
+  ],
+  "ds-total-mrr": [
+    { label: "MRR", type: "Number", desc: "Monthly recurring revenue across active accounts", key: "mrr" },
+  ],
+  "ds-all-contacts": [
+    { label: "Name",  type: "Text", desc: "Full name of the contact",              key: "name" },
+    { label: "Email", type: "Text", desc: "Primary email address",                 key: "email" },
+    { label: "City",  type: "Text", desc: "City from the billing or main address", key: "city" },
+    { label: "Tier",  type: "Text", desc: "Gold, Silver or Bronze",                key: "tier" },
+  ],
+}
+
+/** Every source that can be filtered, keyed the same way whichever kind it is. */
+const ALL_COLUMN_DEFS: Record<string, ColumnDef[]> = { ...SOURCE_COLUMN_DEFS, ...DATASET_COLUMN_DEFS }
+
 /** Labels only — what the filter pickers and the calc column list read. */
 const SOURCE_COLUMNS: Record<string, string[]> = Object.fromEntries(
-  Object.entries(SOURCE_COLUMN_DEFS).map(([id, cols]) => [id, cols.map(c => c.label)]),
+  Object.entries(ALL_COLUMN_DEFS).map(([id, cols]) => [id, cols.map(c => c.label)]),
 )
 
 
@@ -565,6 +601,9 @@ export default function PMThomasWidgetBuilderScreen() {
   const [previewSize, setPreviewSize]   = useState("lg")
   const [showLeave, setShowLeave]       = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
+  /** The name it was saved under — holds the success view open, and survives
+   *  the reset that "Create new widget" runs, which clears `name`. */
+  const [savedName, setSavedName] = useState<string | null>(null)
   const [typeCat, setTypeCat] = useState<WidgetCategory | "all">("all")
   // The columns modal edits a DRAFT, so Cancel means cancel. Committing on each
   // checkbox would leave a half-made selection behind when someone backs out.
@@ -602,11 +641,14 @@ export default function PMThomasWidgetBuilderScreen() {
   const dataComplete = dataMode === "dataset"
     ? !!sourceId
     : !!sourceId && !!opType && (opType === "aggregate" ? true : recordColumns.length > 0)
-  // A widget IS its data and its type. The name is not part of that — the
-  // preview has been calling an unnamed one "Untitled widget" all along, so the
-  // screen already tolerates it, and requiring it only meant Save sat grey
-  // while everything that matters was decided.
-  const widgetComplete = dataComplete && !!typeId
+  // The name is required (Michael, 2026-09-09 — it was optional until then).
+  // This file used to argue the opposite: the widget IS its data and its type,
+  // and the preview happily says "Untitled widget". That holds right up to the
+  // moment it is saved, and then it does not — the catalog is a shared list
+  // other people search, and "Untitled widget" is unfindable in it. Optional
+  // was the right call for the preview and the wrong one for the catalog.
+  const namedOk        = !!name.trim()
+  const widgetComplete = dataComplete && !!typeId && namedOk
   const canSave        = widgetComplete
   const hasUnsaved     = !!(sourceId || typeId || name.trim() || subtitle.trim())
 
@@ -634,6 +676,8 @@ export default function PMThomasWidgetBuilderScreen() {
     ? "Finish configuring your data source on the Data tab."
     : !typeId
     ? "Choose a widget type on the Configure tab."
+    : !namedOk
+    ? "Give the widget a name — it is how people will find it in the catalog."
     : ""
 
   // ── Handlers ──
@@ -777,7 +821,11 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 )}
 
-                {sourceId && dataMode === "entity" && (
+                {/* Both paths get this. A dataset arrives aggregated, which
+                    answers "what is counted" — it does not answer "which of the
+                    results do I want to see". Only the entity path had a filter
+                    step, so a governed dataset was all-or-nothing. */}
+                {sourceId && (
                   <div>
                     <StepLabel n={3}>Filters</StepLabel>
                     {dataFilters.length === 0 ? (
@@ -900,13 +948,15 @@ export default function PMThomasWidgetBuilderScreen() {
                         onCta={() => { setColDraft(recordColumns); setShowColumns(true) }}
                       />
                     ) : (
+                      /* Every column, not the first four. A "+5 more" chip is
+                         right when the hidden items are decoration; here they
+                         ARE the widget — this list is the columns the table
+                         will show, in order, and a reader checking their work
+                         has to see all of them. */
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-                        {recordColumns.slice(0, 4).map(c => (
+                        {recordColumns.map(c => (
                           <Tag key={c} variant="neutral" size="sm">{c}</Tag>
                         ))}
-                        {recordColumns.length > 4 && (
-                          <Tag variant="neutral" size="sm">+{recordColumns.length - 4} more</Tag>
-                        )}
                         <Button variant="secondary" size="sm" onClick={() => { setColDraft(recordColumns); setShowColumns(true) }}>
                           Edit columns
                         </Button>
@@ -1220,20 +1270,36 @@ export default function PMThomasWidgetBuilderScreen() {
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowLeave(false) }}
       />
 
-      {/* ── Save confirmation modal ── */}
+      {/* ── Save confirmation ──────────────────────────────────────────────
+       *  Two outcomes, because only two exist before the save: go through with
+       *  it, or go back. "Create new widget" used to sit here as a third CTA
+       *  and it asked an impossible question — start a fresh widget from a
+       *  dialog whose own title is "Save to catalog?", with nothing saying
+       *  whether this one gets saved first. It belongs after the save, where
+       *  the answer is unambiguous. */}
       <ModalDialog
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
         tone="success"
         iconName="BookMarked"
         title="Save to catalog?"
-        description={`"${name || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
-        /* Three genuinely different outcomes, which is the only reason a third
-           CTA earns its place: save and stay with the widget, save and start a
-           fresh one, or go back without saving. */
-        ctaPrimary={{ label: "Save to catalog", onClick: () => setShowSaveModal(false) }}
+        description={`"${name}" will be added to the widget library and available across all dashboards.`}
+        ctaPrimary={{ label: "Save to catalog", onClick: () => { setShowSaveModal(false); setSavedName(name) } }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
-        ctaTertiary={{ label: "Create new widget", onClick: () => { resetAll(); setShowSaveModal(false) } }}
+      />
+
+      {/* ── Saved ──────────────────────────────────────────────────────────
+       *  The success view, and the only place "Create new widget" makes sense:
+       *  the widget is in the catalog, so starting a fresh one cannot lose it. */}
+      <ModalDialog
+        isOpen={!!savedName}
+        onClose={() => setSavedName(null)}
+        tone="success"
+        iconName="CircleCheck"
+        title={`"${savedName}" is in the catalog`}
+        description="Anyone on the workspace can now add it to a dashboard."
+        ctaPrimary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
+        ctaSecondary={{ label: "Done", onClick: () => setSavedName(null) }}
       />
     </ScreenLayout>
   )
