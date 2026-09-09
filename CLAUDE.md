@@ -244,11 +244,18 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
 | `state?` | whole card | `"default" \| "loading" \| "restricted"` — Figma's `Property 1` axis |
+| `compressOnScroll?` | whole card | `boolean` — **off by default.** Sticks the card and compresses it on scroll down |
 
 **`state` is Figma's `Property 1` axis, and it is independent of the reflow** — an entity can be loading on a tablet, which is why it is one enum and not three booleans.
 - **`loading`** renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does). Pass it while the entity's data is in flight — **never render an empty header, and never withhold the card until data arrives.** Figma's reason: saying "nothing here" while data is in flight states something untrue.
 - **`restricted`** renders the card at 50% opacity plus a neutral `Restricted` tag beside the title, with the reason in a tooltip on hover and on focus. The viewer lacks entitlement to the values; the entity exists and is governed, so **this must never read as an error.** The tag goes beyond Figma's own variant on purpose — opacity alone cannot be told apart from loading or failed. It is a separate thing from `locked` ("you cannot edit" vs "you cannot see") and both can be true at once. `RecordField.state === "masked"` is the same idea applied to one field.
 - **`Minimum`, Figma's fourth named state, needs no value** — "only visual, title and state" is what you get by passing only those props.
+
+**`compressOnScroll` sticks the card and compresses it as the reader scrolls down** (Michael, 2026-09-09). On the way down the `secondaryMetadata` row and the `description` drop and the visual goes one size down, L to M. **Scrolling back up restores all three at once**, and at the top the card is always whole — nobody who has returned to the top of a record should be looking at a reduced header.
+- **Scroll direction, never hover.** A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is mid-sentence in; hover exists neither on a tablet nor for a keyboard. Direction is also what `ScreenLayout` already computes for the page `Header`'s compress, so the two agree instead of competing.
+- **Identity never compresses.** Name, visual, source, tags, state badge and the entire right-hand cluster are untouched. It is the second row that goes, never the first.
+- **One prop, not two.** Sticky and compressed are inseparable — compressing a card that scrolls out of view anyway does nothing — so they are bound together and a caller cannot wire half of it.
+- **Turn it on for a record page whose content scrolls under the header** — a detail view's Overview tab. **Never in a `SlideOut`, a modal or a widget:** none of them has a long scroll to reclaim room from, and a card that sticks inside a panel just eats the panel.
 
 **Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useLayoutEffect, type KeyboardEvent } from "react"
+import { useState, useRef, useEffect, useLayoutEffect, type KeyboardEvent, type ReactNode } from "react"
 import { Sparkle, MoreHorizontal, Lock, EyeOff, Info, Database, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AvatarCircle } from "@/components/ui/avatar"
@@ -611,6 +611,26 @@ export interface EntityHeaderProps {
    * same idea applied to one field instead of the whole card.
    */
   state?: EntityHeaderState
+  /**
+   * Sticks the card to the top of its scroll container and COMPRESSES it as
+   * the reader scrolls down: the `secondaryMetadata` row and the
+   * `description` drop, and the visual goes down one size (L to M). Scrolling
+   * back up restores all three, at once, without waiting for the top.
+   *
+   * OFF BY DEFAULT, and it is one prop rather than two on purpose. Sticky and
+   * compressed are inseparable — compressing a card that scrolls out of view
+   * anyway does nothing — so binding them removes the broken half-state where
+   * a caller wires one and forgets the other.
+   *
+   * WHERE IT BELONGS: a record page whose content scrolls under the header —
+   * a detail view's Overview tab. Not in a SlideOut, a modal or a widget,
+   * where there is no long scroll to reclaim room from.
+   *
+   * WHAT IT NEVER TOUCHES: the name, the visual, the source, the tags, the
+   * state badge and the whole right-hand cluster. Compressed is still a
+   * complete identity; it is the second row that goes, never the first.
+   */
+  compressOnScroll?: boolean
   className?: string
 }
 
@@ -870,6 +890,74 @@ function useTagFit(opts: {
   return tags.length === 0 ? 0 : fit
 }
 
+/**
+ * COMPRESS ON SCROLL DOWN, RESTORE ON SCROLL UP (Michael, 2026-09-09).
+ *
+ * By the time someone scrolls a record page they have finished reading the
+ * header; keeping its full height spends the screen on what they are done
+ * with. So the second row goes, the visual drops one size, and everything
+ * that identifies the entity stays.
+ *
+ * SCROLL DIRECTION, NEVER HOVER. Hover was in the original sketch and is
+ * deliberately not here: a header that grows when the cursor passes over it
+ * fires by accident and pushes down the content the reader is in the middle
+ * of, and hover exists neither on a tablet nor for a keyboard. Direction is
+ * also the signal `ScreenLayout` already computes for the page `Header`'s own
+ * compress, so the two agree rather than competing.
+ *
+ * BACK AT THE TOP IS ALWAYS FULL. Never leave a reader who has returned to
+ * the top of a record looking at a reduced header — at rest the card is
+ * whole, and that is the state the page opens in.
+ *
+ * THRESHOLD, not raw direction: a few pixels of jitter (a trackpad settling,
+ * a focus scroll) must not flip the card. `SCROLL_EPSILON` is what makes it a
+ * deliberate gesture rather than a twitch.
+ *
+ * WHY IT LISTENS ON THE DOCUMENT IN THE CAPTURE PHASE, rather than walking up
+ * to find the scrolling ancestor and subscribing to that. Walking up resolves
+ * ONCE, when the effect runs — and at that moment the container is often not
+ * scrollable yet, because the widgets below this card have not rendered. The
+ * walk then falls back to the window and the card never compresses, which is
+ * exactly the bug this replaced. Scroll events do not bubble, but they DO
+ * capture, so one document-level capturing listener sees every scroller
+ * regardless of when it grew. The `contains` test is what keeps it precise:
+ * only the container this card actually sits inside can drive it, so a
+ * scrolling list elsewhere on the page cannot.
+ */
+const SCROLL_TOP_ZONE = 16
+const SCROLL_EPSILON = 4
+
+function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement | null>) {
+  const [compressed, setCompressed] = useState(false)
+  const lastY = useRef(0)
+
+  useEffect(() => {
+    if (!enabled) { setCompressed(false); return }
+    lastY.current = 0
+
+    const onScroll = (e: Event) => {
+      const el = ref.current
+      if (!el) return
+
+      const target = e.target
+      const isDocument = target === document || target === document.documentElement || target === document.body
+      if (!isDocument && !(target instanceof HTMLElement && target.contains(el))) return
+
+      const y = isDocument ? window.scrollY : (target as HTMLElement).scrollTop
+      const last = lastY.current
+      if (y <= SCROLL_TOP_ZONE) setCompressed(false)
+      else if (y > last + SCROLL_EPSILON) setCompressed(true)
+      else if (y < last - SCROLL_EPSILON) setCompressed(false)
+      lastY.current = y
+    }
+
+    document.addEventListener("scroll", onScroll, { capture: true, passive: true })
+    return () => document.removeEventListener("scroll", onScroll, { capture: true })
+  }, [enabled, ref])
+
+  return compressed
+}
+
 // ── Loading skeleton ────────────────────────────────────────────────────────
 // Every width and height below is read from Figma's own `Property 1=Loading`
 // variants (20134:314522 wide, 20152:6818 stacked) — not estimated, and not
@@ -954,6 +1042,7 @@ function EntityHeader({
   onInformationOpen,
   locked = false,
   state = "default",
+  compressOnScroll = false,
   className,
 }: EntityHeaderProps) {
 
@@ -1049,6 +1138,29 @@ function EntityHeader({
     return () => ro.disconnect()
   }, [])
 
+  /**
+   * THE STICKY WRAPPER, and why it is a wrapper rather than the card itself.
+   *
+   * `--card-default-bg` is a 10% white — the card's surface is TRANSLUCENT by
+   * design, and it reads correctly because it sits on the page ground. Stick
+   * that card directly and the content scrolling underneath shows straight
+   * through it. So the wrapper carries an opaque `--canvas` and the card keeps
+   * the exact surface it has at rest.
+   *
+   * `top-0` is the top of the SCROLL CONTAINER, not the viewport. In
+   * `ScreenLayout` the page `Header` lives outside that container, so the two
+   * never overlap — they stack.
+   */
+  const stick = (node: ReactNode) =>
+    compressOnScroll
+      ? <div className="sticky top-0 z-[2]" style={{ background: "var(--canvas)" }}>{node}</div>
+      : <>{node}</>
+
+  // Compress on scroll — see useCompressOnScroll. `rootRef` is what locates
+  // the scroll container, so this has to sit after the reflow block that
+  // declares it.
+  const compressed = useCompressOnScroll(compressOnScroll, rootRef)
+
   // Everything the fit has to measure around.
   const fitRowRef  = useRef<HTMLDivElement>(null)
   const probeRef   = useRef<HTMLDivElement>(null)
@@ -1093,7 +1205,7 @@ function EntityHeader({
   // whose shape does not match what replaces it is worse than none: the
   // content appears to jump.
   if (state === "loading") {
-    return (
+    return stick(
       <CardContainer size="default" variant="default" className={cn("w-full", className)}>
         <div
           ref={rootRef}
@@ -1108,7 +1220,7 @@ function EntityHeader({
     )
   }
 
-  return (
+  return stick(
     <CardContainer size="default" variant="default" className={cn("w-full", className)}>
       {/* Restricted — the card at 50% opacity, which is what Figma's own
           Restricted variant is, PLUS a `Restricted` Tag beside the title
@@ -1162,11 +1274,16 @@ function EntityHeader({
           {/* Visual identity — exactly one, never both. Avatar for people and
               brands, highlight icon for everything else. Decorative to the
               keyboard (never a focus stop), named to the screen reader. */}
+          {/* One size down when compressed — L to M, which is 32px to 24px
+              for an avatar and 40px to 32px for a highlight icon. The visual
+              is never DROPPED (it is half of how an entity is recognised at a
+              glance), but at a glance is all it has to do once the reader has
+              scrolled past, so it gives the row back some width. */}
           {safeVisual.kind === "avatar" ? (
-            <AvatarCircle name={name} sizeKey="lg" avatarStyle={hasName ? "text" : "empty"} />
+            <AvatarCircle name={name} sizeKey={compressed ? "md" : "lg"} avatarStyle={hasName ? "text" : "empty"} />
           ) : (
             <HighlightIcon
-              size="lg"
+              size={compressed ? "md" : "lg"}
               variant={safeVisual.variant ?? "neutral"}
               icon={<safeVisual.icon size={16} strokeWidth={1.75} />}
               className="shrink-0"
@@ -1490,7 +1607,7 @@ function EntityHeader({
             carrying the full sentence. Off unless the caller passes one:
             there is no default copy and no placeholder. Text/Body at 14px
             Medium, read from Figma. */}
-        {description && !dropped.description && (
+        {description && !dropped.description && !compressed && (
           <Tooltip content={description} side="cursor" triggerClassName="block min-w-0">
             {/* STOP 8 — and only when truncated, same reasoning as the title.
                 It is elastic, not fixed: one line at container width, with no
@@ -1515,7 +1632,7 @@ function EntityHeader({
         {/* STOP 9 — ONE stop for the whole row, arrows inside. Six metadata
             items as six stops is the other half of the twenty-five-press
             problem Figma's focus frame is written to avoid. */}
-        {visibleMetadata.length > 0 && !dropped.metadata && (
+        {visibleMetadata.length > 0 && !dropped.metadata && !compressed && (
           <div
             ref={metaGroup.ref}
             role="group"

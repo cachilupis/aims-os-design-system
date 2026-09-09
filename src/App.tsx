@@ -2268,6 +2268,7 @@ const ENTITY_HEADER_SPEC = {
     { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
     { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "\"You cannot act on or edit this entity.\" Shows a \"Locked\" Tag beside the title and disables secondaryAction plus the overflow's write actions, each with a Tooltip explaining why. `Ask` and the Information panel stay fully interactive — locked does not mean you cannot consult it. NOT the same thing as Figma's `Restricted`, which is \"you cannot see this value\" and lives on the field as RecordField.state === \"masked\". Both coexist." },
+    { name: "compressOnScroll", type: "Boolean", values: ["true", "false"], default: "false", note: "STICKS the card to the top of its scroll container and COMPRESSES it on the way down: the secondaryMetadata row and the description drop, and the visual goes one size down (L to M \u2014 32px to 24px for an avatar, 40px to 32px for a highlight icon). Scrolling back up restores all three at once, without waiting for the top; at the top (\u226416px) the card is always whole. SCROLL DIRECTION, NEVER HOVER (Michael, 2026-09-09): a header that grows under the cursor fires by accident, pushes down the content the reader is in the middle of, and does not exist on a tablet or for a keyboard. Direction is the same signal ScreenLayout computes for the page Header, so the two agree rather than compete. A 4px threshold keeps trackpad jitter from flipping it. IDENTITY NEVER COMPRESSES \u2014 name, visual, source, tags, state badge and the whole right-hand cluster are untouched; it is the second row that goes, never the first. ONE PROP, NOT TWO: sticky and compressed are inseparable, since compressing a card that scrolls out of view does nothing, so binding them removes the half-wired state. WHERE IT BELONGS: a record page whose content scrolls under the header \u2014 a detail view's Overview tab. NOT in a SlideOut, a modal or a widget, none of which has a long scroll to reclaim room from." },
     { name: "state",          type: "Variant",  values: ["default", "loading", "restricted"], default: '"default"', note: "Figma's `Property 1` axis. INDEPENDENT of the reflow — an entity can be loading on a tablet — and an enum rather than three booleans because the options are mutually exclusive. `loading` renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does), never an empty state: saying \"nothing here\" while data is in flight states something untrue. `restricted` renders the card at 50% opacity — Figma's own variant — plus a neutral `Restricted` Tag beside the title with the reason in a Tooltip. The Tag goes BEYOND Figma's instance on purpose (Michael, 2026-09-07): the prose asks this state to be \"calm and explanatory\" and the instance carries nothing explanatory, and opacity on its own cannot be told apart from loading or failed. Never error — the viewer lacks entitlement to the values, the entity exists and is governed, so this is a state and not a failure. Figma's fourth named state, `Minimum`, needs no value here: \"only visual, title and state\" is what you get by passing only those props." },
     { name: "className",      type: "string",   values: ["any string"], default: "undefined", note: "Merged onto the CardContainer." },
     { name: "entityType",     type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. In Figma the entity type is a classification TAG, not an icon-plus-label beside the name, and it only appears when the visual is an avatar. Figma's own icon examples (RO-48291, Customer Master) carry signals and no classification at all." },
@@ -33047,13 +33048,6 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   const [pvLocked,      setPvLocked]      = useState(false)
   const [pvNba,         setPvNba]         = useState(true)
 
-  // ── PROPOSAL · compress on scroll (Michael, 2026-09-09) ──────────────────
-  // Prototype state only. It drives a self-contained scroll stage further
-  // down the Overview tab and touches nothing in the shared component — the
-  // compressed look is produced by omitting two props, which is already how
-  // this card removes a slot.
-  const [ehCompressed, setEhCompressed] = useState(false)
-  const ehLastY = useRef(0)
   // Closing pass — Playground's own NBA-type selector, decoupled from
   // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
   // modeled" example) shows on the live card below, by pointing at one
@@ -33568,52 +33562,40 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             </p>
           </section>
 
-          {/* ── PROPOSAL, NOT YET IN FIGMA ───────────────────────────────
-              Michael, 2026-09-09. Everything above documents what the
-              component does today; this one section documents something it
-              does NOT do yet, and says so on screen so nobody implements it
-              from this page by mistake. ── */}
+          {/* ── Compress on scroll ───────────────────────────────────────
+              Michael, 2026-09-09. Shipped as `compressOnScroll` after the
+              prototype answered the two questions it was built to answer:
+              the two-bar stack reads fine because the page Header sits
+              OUTSIDE the scroll container, and the un-animated drop is
+              legible because only the second row moves. ── */}
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest mb-[4px]" style={{ color: "var(--color-text-alert)" }}>
-              Proposal &middot; Compress on scroll &mdash; prototype, not in Figma and not a prop yet
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Behaviour &middot; Compress on scroll &mdash; <code>compressOnScroll</code></p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              On a record page the header is the one thing the reader has already finished with by the time they start scrolling, and it keeps its full height anyway &mdash; spending the screen on what they are done with. With this on, the card <strong>sticks to the top of its scroll container</strong> and, on the way down, drops the metadata row and the description and takes the visual down one size, L to M. <strong>Scrolling back up restores all three at once</strong>, without waiting for the top.
             </p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              On a record page the header is the one thing you have already read by the time you start scrolling &mdash; and it keeps its full height anyway, taking room from the content you scrolled down to reach. The proposal: <strong>scroll down and the metadata row drops</strong>, leaving identity, tags, state and <code>Ask</code>; <strong>scroll back up and it returns</strong>. Nothing else moves, and the right-hand cluster never compresses.
+              <strong>Scroll direction, never hover.</strong> A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is in the middle of &mdash; and hover exists neither on a tablet nor for a keyboard. Direction is also the signal <code>ScreenLayout</code> already computes for the page <code>Header</code>, so the two agree instead of competing. <strong>Back at the top is always the full card:</strong> nobody who has returned to the top of a record should be looking at a reduced header.
             </p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              <strong>Restored by scrolling up, never by hover</strong> &mdash; decided before building it. A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is in the middle of, and hover does not exist on a tablet or for a keyboard. Scroll direction is the same signal the page <code>Header</code> already uses for its own compress, so the two agree instead of competing.
-            </p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              <em>Scroll inside the frame below.</em> The metadata is not hidden with CSS &mdash; the stage simply stops passing <code>secondaryMetadata</code>, which is how this card removes any slot. That is also why the prototype needs no change to the shared component: if the interaction is right, the only thing left to add is the axis that decides it.
+              <strong>Identity never compresses.</strong> Name, visual, source, tags, state badge and the entire right-hand cluster stay exactly as they are &mdash; it is the second row that goes, never the first. One prop rather than two, because sticky and compressed are inseparable: compressing a card that scrolls out of view anyway does nothing, so binding them removes the half-wired state.
             </p>
 
             <div
-              onScroll={e => {
-                const y = e.currentTarget.scrollTop
-                const last = ehLastY.current
-                // Back at the top is always the full card — never leave a
-                // reader at the top of a record looking at a reduced header.
-                if (y <= 16) setEhCompressed(false)
-                else if (y > last + 4) setEhCompressed(true)
-                else if (y < last - 4) setEhCompressed(false)
-                ehLastY.current = y
-              }}
               className="h-[420px] overflow-y-auto rounded-[12px] p-[16px]"
               style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}
             >
-              <div className="sticky top-0 z-[2]" style={{ background: "var(--canvas)" }}>
-                <EntityHeader
-                  name={RH_UCP.name}
-                  visual={RH_VISUAL.ucp}
-                  source={RH_SOURCE.ucp}
-                  tags={RH_TAGS.ucp}
-                  stateBadge={RH_STATE_BADGE.ucp}
-                  secondaryMetadata={ehCompressed ? [] : RH_SECONDARY_METADATA.ucp}
-                  assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
-                  showInformation
-                  onInformationOpen={() => rhOpenProvenance("ucp")}
-                />
-              </div>
+              <EntityHeader
+                compressOnScroll
+                name={RH_UCP.name}
+                visual={RH_VISUAL.ucp}
+                source={RH_SOURCE.ucp}
+                tags={RH_TAGS.ucp}
+                stateBadge={RH_STATE_BADGE.ucp}
+                secondaryMetadata={RH_SECONDARY_METADATA.ucp}
+                assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+                showInformation
+                onInformationOpen={() => rhOpenProvenance("ucp")}
+              />
               <div className="mt-[12px] flex flex-col gap-[12px]">
                 {[
                   { t: "Renewal readiness",  d: "Contract value, term and the three approvals still outstanding." },
@@ -33632,7 +33614,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             </div>
 
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
-              <strong>Two things to judge here, because they are what decide whether this ships.</strong> First, the header sits inside the scroll area, so making it compress means first making it <em>stick</em> &mdash; and on a real record page the page <code>Header</code> is already stuck above it. Two bars holding the top of the screen is the thing to look at, not the compress itself. Second, the drop is not animated: the row simply goes. If the snap reads badly, the fix belongs in the component, where the row can collapse rather than vanish.
+              <em>Scroll inside the frame.</em> <strong>Where it belongs:</strong> a record page whose content scrolls under the header &mdash; a detail view&rsquo;s Overview tab. <strong>Where it does not:</strong> a SlideOut, a modal or a widget, none of which has a long scroll to reclaim room from. It is off by default, so a card that has no business sticking simply never asks for it.
             </p>
           </section>
 
