@@ -23,6 +23,16 @@ export interface TagInputProps {
   maxTags?: number
   /** Tags shown before collapsing to "+N". Default: 8 */
   maxVisibleTags?: number
+  /**
+   * Show the "Add tag" commit button beside the field. Default: true.
+   *
+   * Off for fields where the button reads as a second, competing action rather
+   * than part of the field — an invite form's email row, where the dialog
+   * already has its own primary CTA. Enter still commits, so nothing becomes
+   * unreachable; say so in the field's helper text when you turn it off,
+   * because the button was the only visible hint that a commit step exists.
+   */
+  showAddButton?: boolean
   className?: string
 }
 
@@ -43,6 +53,7 @@ export function TagInput({
   error,
   maxTags = 30,
   maxVisibleTags = 8,
+  showAddButton = true,
   className,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState("")
@@ -132,22 +143,24 @@ export function TagInput({
         </div>
 
         {/* Add tag button */}
-        <button
-          onClick={commit}
-          disabled={isInputDisabled}
-          className="shrink-0 flex items-center justify-center rounded-[8px] px-[16px] text-sm font-medium whitespace-nowrap"
-          style={{
-            height: 40,
-            background: isInputDisabled ? "var(--color-surface-neutral-subtle)" : "var(--surface)",
-            border: isInputDisabled
-              ? "1px solid var(--color-border-neutral-lighter)"
-              : "1px solid var(--field-border)",
-            color: isInputDisabled ? "var(--field-placeholder)" : "var(--foreground)",
-            cursor: isInputDisabled ? "not-allowed" : "pointer",
-          }}
-        >
-          Add tag
-        </button>
+        {showAddButton && (
+          <button
+            onClick={commit}
+            disabled={isInputDisabled}
+            className="shrink-0 flex items-center justify-center rounded-[8px] px-[16px] text-sm font-medium whitespace-nowrap"
+            style={{
+              height: 40,
+              background: isInputDisabled ? "var(--color-surface-neutral-subtle)" : "var(--surface)",
+              border: isInputDisabled
+                ? "1px solid var(--color-border-neutral-lighter)"
+                : "1px solid var(--field-border)",
+              color: isInputDisabled ? "var(--field-placeholder)" : "var(--foreground)",
+              cursor: isInputDisabled ? "not-allowed" : "pointer",
+            }}
+          >
+            Add tag
+          </button>
+        )}
       </div>
 
       {/* ── Error / max-reached message ────────────────────────────────── */}
