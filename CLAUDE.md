@@ -849,6 +849,15 @@ Chip supports 11 color variants, but **color signals meaning — it is not a sty
 
 **Rule of thumb:** if you can't name the specific state or outcome the chip represents, it's `primary`/`secondary`. If you need color coding for categories or brands (not status), use Purple or Light Blue — never a semantic color for that.
 
+### Header size — `size-l` is a ceiling, not a setting
+
+**`size="size-l"` renders at 24px ONLY at XL (≥1920px). Below that the component downgrades it to `size-m` (18px) by itself** (Michael, 2026-09-09). The tall bar is for a Wide screen; anywhere narrower it spends height at the top of the page, where it costs the content most.
+
+- **Keep writing `size={isScrolled ? "compress" : "size-l"}`.** Nothing at the call site changes — asking for L is asking for "as large as this screen has earned", and the component decides.
+- 1920px is the DS breakpoint table's `xl` / Wide tier, not a number invented for this.
+- Measured on the **viewport**, not a container — this bar always spans the page, and the breakpoints are defined in viewport terms. (Contrast `EntityHeader`, which measures its own card because it can sit in a narrow panel on a wide screen.)
+- `compress` is untouched: it is scroll state, not a size, and the screen still owns it.
+
 ### Header sticky
 - Scroll == 0 → DEFAULT (full header)
 - Scroll > 16px → COMPRESSED (60px, title + status + CTA)
