@@ -12,7 +12,7 @@ export type ELMetaItem = {
   iconName?:  string     // icon shown (optional when tag is set)
   label?:     string     // text label
   tooltip?:   string     // tooltip on hover; falls back to label
-  tag?:       string     // if set, renders as a lightBlue Tag chip
+  tag?:       string     // if set, renders as a neutral Tag chip
 }
 
 export type ELAction = {
@@ -173,12 +173,12 @@ function MetaItemView({ meta, mode, isFirst }: { meta: ELMetaItem; mode: "icon" 
   const anchorRef = useRef<HTMLDivElement>(null)
   const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null)
 
-  // Tag variant: renders as a lightBlue Tag chip (no bullet before tags)
+  // Tag variant: renders as a neutral Tag chip (no bullet before tags)
   if (meta.tag) {
     return (
       <div className="flex items-center gap-[4px]">
         {!isFirst && <Bullet />}
-        <Tag variant="lightBlue" size="sm">{meta.tag}</Tag>
+        <Tag variant="neutral" size="sm">{meta.tag}</Tag>
       </div>
     )
   }
@@ -240,7 +240,7 @@ function TagOverflow({ labels }: { labels: string[] }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <Tag variant="lightBlue" size="sm">+{labels.length}</Tag>
+      <Tag variant="neutral" size="sm">+{labels.length}</Tag>
       {hovered && (
         <div
           className="absolute pointer-events-none z-50"
@@ -465,7 +465,13 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               {isLong && aiExpanded && <div className="flex-1" />}
               {/* Right controls: View more (expanded only) + chevron */}
               {isLong && (
-                <div className="flex items-center gap-[6px] shrink-0">
+                // NEUTRAL, never light blue. Michael, 2026-09-09: a coloured
+              // classification competes with the row's `state`, which is the one
+              // thing on the row whose colour means something — a blue
+              // "Customer" beside a green "Active" reads as two statuses. Same
+              // rule the Entity Header already applies to its classification
+              // tag, where the component strips any tone the caller passes.
+              <div className="flex items-center gap-[6px] shrink-0">
                   {aiExpanded && ai.viewMore && (
                     <button
                       className="text-xs font-medium px-[10px] h-[24px] rounded-[4px] transition-opacity hover:opacity-70"
@@ -523,7 +529,7 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
             return (
               <div className="flex items-center gap-[6px] shrink-0">
                 {visible.map((tag, i) => (
-                  <Tag key={i} variant="lightBlue" size="sm">{tag.label}</Tag>
+                  <Tag key={i} variant="neutral" size="sm">{tag.label}</Tag>
                 ))}
                 {hidden.length > 0 && <TagOverflow labels={hidden.map(t => t.label)} />}
               </div>
