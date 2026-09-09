@@ -1432,8 +1432,13 @@ export default function PMThomasWidgetBuilderScreen() {
         iconName="CircleCheck"
         title={`"${savedName}" is in the catalog`}
         description="Anyone on the workspace can now add it to a dashboard."
+        /* Done goes to the catalog, not back to the builder. The widget is
+           saved and the sentence above says where it went — landing back on
+           the form you just finished, still filled in, reads as if the save
+           did not take. This is the Create pattern's rule for a full-page
+           create: navigate to where the created object now lives. */
         ctaPrimary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
-        ctaSecondary={{ label: "Done", onClick: () => setSavedName(null) }}
+        ctaSecondary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
       />
     </ScreenLayout>
   )

@@ -187,11 +187,17 @@ export default function PMThomasWidgetLibrary() {
         ]}
       />
 
+      {/* 24px from the last nav layer to the first card, per the DS. Filters
+          carries no bottom margin of its own, so without this the filter row
+          sits flush against the first row of cards and reads as part of the
+          grid. The cards keep their own 12px between them. */}
       {sorted.length === 0 ? (
-        <EmptyState icon={LucideIcons.Search} title="No widgets found" description="Try a different search or filter." />
+        <div style={{ marginTop: 24 }}>
+          <EmptyState icon={LucideIcons.Search} title="No widgets found" description="Try a different search or filter." />
+        </div>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(264px,100%), 1fr))", gap: 12 }}>
+          <div style={{ marginTop: 24, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(264px,100%), 1fr))", gap: 12 }}>
             {page.map(w => (
               <div key={w.id} style={{ position: "relative" }}>
               <CardContainer
@@ -248,7 +254,7 @@ export default function PMThomasWidgetLibrary() {
           </div>
 
           {hasMore && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 24 }}>
               <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>Showing {page.length} of {sorted.length}</span>
               <Button variant="secondary" size="sm" onClick={() => setShown(n => n + PAGE_SIZE)}>
                 Load {Math.min(sorted.length - shown, PAGE_SIZE)} more
