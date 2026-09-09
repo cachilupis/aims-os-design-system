@@ -23,38 +23,64 @@ type Freshness  = "live" | "fresh" | "stale"
 type Category   = "AIMS OS" | "Operational" | "Engagement" | "Intelligence"
 type Profile    = "All" | "Company" | "Contact" | "Employee" | "Deal" | "Standalone"
 
+type Status = "published" | "draft"
+
 type Widget = {
-  id: string; name: string; source: string; skeleton: LibrarySkeleton
+  id: string; name: string; source: string
+  /**
+   * Null on a draft that has not picked its widget type yet — the one thing a
+   * card cannot draw a preview without. Every other draft keeps its type and
+   * previews normally.
+   */
+  skeleton: LibrarySkeleton | null
   category: Category; health: Health; freshness: Freshness
   governed: boolean; system: boolean; usedIn: number
   placement: Profile; description: string
+  status: Status
+  /** What a draft is still missing, phrased to finish "still needs …". */
+  missing?: string
 }
+
+/** Same word, same colour and same filter as the Dashboard List's own drafts —
+ *  two sibling libraries calling the same state two things is how a vocabulary
+ *  starts drifting. */
+const STATUS_LABEL: Record<Status, string> = { published: "Published", draft: "Draft" }
 
 // ── Dataset ────────────────────────────────────────────────────────────────────
 
 const WIDGETS: Widget[] = [
-  { id:"w-001", name:"Human-in-the-Loop Queue",      source:"AIMS OS — Agentic Studio",   skeleton:"Feed",     category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:true,  usedIn:5,  placement:"Standalone", description:"Live queue of all conversations waiting for a human agent to pick up or review." },
-  { id:"w-002", name:"Workflow Runs",                source:"AIMS OS — Agentic Studio",   skeleton:"Chart",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Standalone", description:"Daily run volume trend for all active workflows, broken down by status." },
-  { id:"w-003", name:"Credits Consumed",             source:"AIMS OS — Credits",          skeleton:"KPI",      category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:5,  placement:"Standalone", description:"Total AI credits consumed this billing cycle vs. your plan limit." },
-  { id:"w-004", name:"SLA Compliance Rate",          source:"AIMS OS — HTL",              skeleton:"Gauge",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:3,  placement:"Standalone", description:"Percentage of human-touch interactions resolved within the defined SLA window." },
-  { id:"w-005", name:"Council Outcomes",             source:"AIMS OS — Governance",       skeleton:"Donut",    category:"AIMS OS",        health:"active", freshness:"fresh", governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"Breakdown of governance council decisions: Approved, Escalated, Rejected." },
-  { id:"w-006", name:"Agent Status Board",           source:"AIMS OS — Agents",           skeleton:"Board",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Real-time status grid for all deployed agents: Running, Idle, Error, Paused." },
-  { id:"w-007", name:"Conversion Funnel",            source:"AIMS OS — Data Studio",      skeleton:"Funnel",   category:"AIMS OS",        health:"active", freshness:"fresh", governed:true,  system:false, usedIn:1,  placement:"Company",    description:"Stage-by-stage funnel from lead to closed-won for the selected entity scope." },
-  { id:"w-008", name:"Platform Snapshot",            source:"AIMS OS — Platform",         skeleton:"Stat Row", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"At-a-glance row of key platform metrics: DAU, agents active, workflows running." },
-  { id:"w-009", name:"Governance Alerts",            source:"AIMS OS — Governance",       skeleton:"Alerts",   category:"AIMS OS",        health:"review", freshness:"stale", governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"Active policy violations and blocked actions requiring admin review." },
-  { id:"w-010", name:"Account Revenue Health",       source:"Salesforce",                 skeleton:"KPI",      category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:8,  placement:"Company",    description:"ARR, churn risk score, and renewal date for the selected account." },
-  { id:"w-011", name:"Open Tickets",                 source:"Zendesk",                    skeleton:"KPI",      category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"Count of open support tickets by priority for this account." },
-  { id:"w-012", name:"Pipeline Stage Funnel",        source:"Salesforce",                 skeleton:"Funnel",   category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Opportunity stage progression with time-in-stage and velocity metrics." },
-  { id:"w-013", name:"Onboarding Checklist",         source:"AIMS OS — Platform",         skeleton:"Feed",     category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Employee",   description:"Checklist of onboarding tasks with completion status per new hire." },
-  { id:"w-014", name:"Email Engagement Rate",        source:"HubSpot",                    skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"fresh", governed:false, system:false, usedIn:7,  placement:"Contact",    description:"Open rate, click rate, and reply rate for outbound sequences targeting this contact." },
-  { id:"w-015", name:"Deal Velocity",                source:"Salesforce",                 skeleton:"Gauge",    category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Speed from stage entry to close compared to team median, per deal." },
-  { id:"w-016", name:"NPS Trend",                    source:"Qualtrics",                  skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"stale", governed:false, system:false, usedIn:3,  placement:"Company",    description:"Net Promoter Score trend over the past 12 months for this account." },
-  { id:"w-017", name:"Contact Interaction Timeline", source:"HubSpot",                    skeleton:"Feed",     category:"Engagement",     health:"active", freshness:"live",  governed:false, system:false, usedIn:4,  placement:"Contact",    description:"Chronological feed of emails, calls, meetings, and notes for this contact." },
-  { id:"w-018", name:"Risk Score Breakdown",         source:"AIMS OS — Intelligence",     skeleton:"Gauge",    category:"Intelligence",   health:"active", freshness:"fresh", governed:true,  system:false, usedIn:4,  placement:"Company",    description:"Composite churn/risk score with contributing signals and recommended actions." },
-  { id:"w-019", name:"Next Best Action",             source:"AIMS OS — Intelligence",     skeleton:"KPI",      category:"Intelligence",   health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"AI-recommended next action for this account with confidence score and reasoning." },
-  { id:"w-020", name:"Revenue Attribution",          source:"Salesforce",                 skeleton:"Chart",    category:"Intelligence",   health:"review", freshness:"stale", governed:false, system:false, usedIn:2,  placement:"Deal",       description:"First-touch and multi-touch attribution by channel for this deal." },
-  { id:"w-021", name:"Certification Tracker",        source:"Workday",                    skeleton:"Feed",     category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:3,  placement:"Employee",   description:"Required certifications, completion status, and expiry dates per employee." },
-  { id:"w-022", name:"Credit Spend Trend",           source:"AIMS OS — Credits",          skeleton:"Cost KPI", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Daily and monthly AI credit spend with projected end-of-cycle balance." },
+  { id:"w-001", name:"Human-in-the-Loop Queue",      source:"AIMS OS — Agentic Studio",   skeleton:"Feed",     category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:true,  usedIn:5,  placement:"Standalone", description:"Live queue of all conversations waiting for a human agent to pick up or review.", status:"published" },
+  { id:"w-002", name:"Workflow Runs",                source:"AIMS OS — Agentic Studio",   skeleton:"Chart",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Standalone", description:"Daily run volume trend for all active workflows, broken down by status.", status:"published" },
+  { id:"w-003", name:"Credits Consumed",             source:"AIMS OS — Credits",          skeleton:"KPI",      category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:5,  placement:"Standalone", description:"Total AI credits consumed this billing cycle vs. your plan limit.", status:"published" },
+  { id:"w-004", name:"SLA Compliance Rate",          source:"AIMS OS — HTL",              skeleton:"Gauge",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:3,  placement:"Standalone", description:"Percentage of human-touch interactions resolved within the defined SLA window.", status:"published" },
+  { id:"w-005", name:"Council Outcomes",             source:"AIMS OS — Governance",       skeleton:"Donut",    category:"AIMS OS",        health:"active", freshness:"fresh", governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"Breakdown of governance council decisions: Approved, Escalated, Rejected.", status:"published" },
+  { id:"w-006", name:"Agent Status Board",           source:"AIMS OS — Agents",           skeleton:"Board",    category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Real-time status grid for all deployed agents: Running, Idle, Error, Paused.", status:"published" },
+  { id:"w-007", name:"Conversion Funnel",            source:"AIMS OS — Data Studio",      skeleton:"Funnel",   category:"AIMS OS",        health:"active", freshness:"fresh", governed:true,  system:false, usedIn:1,  placement:"Company",    description:"Stage-by-stage funnel from lead to closed-won for the selected entity scope.", status:"published" },
+  { id:"w-008", name:"Platform Snapshot",            source:"AIMS OS — Platform",         skeleton:"Stat Row", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"At-a-glance row of key platform metrics: DAU, agents active, workflows running.", status:"published" },
+  { id:"w-009", name:"Governance Alerts",            source:"AIMS OS — Governance",       skeleton:"Alerts",   category:"AIMS OS",        health:"review", freshness:"stale", governed:true,  system:false, usedIn:2,  placement:"Standalone", description:"Active policy violations and blocked actions requiring admin review.", status:"published" },
+  { id:"w-010", name:"Account Revenue Health",       source:"Salesforce",                 skeleton:"KPI",      category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:8,  placement:"Company",    description:"ARR, churn risk score, and renewal date for the selected account.", status:"published" },
+  { id:"w-011", name:"Open Tickets",                 source:"Zendesk",                    skeleton:"KPI",      category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"Count of open support tickets by priority for this account.", status:"published" },
+  { id:"w-012", name:"Pipeline Stage Funnel",        source:"Salesforce",                 skeleton:"Funnel",   category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Opportunity stage progression with time-in-stage and velocity metrics.", status:"published" },
+  { id:"w-013", name:"Onboarding Checklist",         source:"AIMS OS — Platform",         skeleton:"Feed",     category:"Operational",    health:"active", freshness:"live",  governed:true,  system:false, usedIn:4,  placement:"Employee",   description:"Checklist of onboarding tasks with completion status per new hire.", status:"published" },
+  { id:"w-014", name:"Email Engagement Rate",        source:"HubSpot",                    skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"fresh", governed:false, system:false, usedIn:7,  placement:"Contact",    description:"Open rate, click rate, and reply rate for outbound sequences targeting this contact.", status:"published" },
+  { id:"w-015", name:"Deal Velocity",                source:"Salesforce",                 skeleton:"Gauge",    category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:5,  placement:"Deal",       description:"Speed from stage entry to close compared to team median, per deal.", status:"published" },
+  { id:"w-016", name:"NPS Trend",                    source:"Qualtrics",                  skeleton:"Chart",    category:"Engagement",     health:"active", freshness:"stale", governed:false, system:false, usedIn:3,  placement:"Company",    description:"Net Promoter Score trend over the past 12 months for this account.", status:"published" },
+  { id:"w-017", name:"Contact Interaction Timeline", source:"HubSpot",                    skeleton:"Feed",     category:"Engagement",     health:"active", freshness:"live",  governed:false, system:false, usedIn:4,  placement:"Contact",    description:"Chronological feed of emails, calls, meetings, and notes for this contact.", status:"published" },
+  { id:"w-018", name:"Risk Score Breakdown",         source:"AIMS OS — Intelligence",     skeleton:"Gauge",    category:"Intelligence",   health:"active", freshness:"fresh", governed:true,  system:false, usedIn:4,  placement:"Company",    description:"Composite churn/risk score with contributing signals and recommended actions.", status:"published" },
+  { id:"w-019", name:"Next Best Action",             source:"AIMS OS — Intelligence",     skeleton:"KPI",      category:"Intelligence",   health:"active", freshness:"live",  governed:true,  system:false, usedIn:6,  placement:"Company",    description:"AI-recommended next action for this account with confidence score and reasoning.", status:"published" },
+  { id:"w-020", name:"Revenue Attribution",          source:"Salesforce",                 skeleton:"Chart",    category:"Intelligence",   health:"review", freshness:"stale", governed:false, system:false, usedIn:2,  placement:"Deal",       description:"First-touch and multi-touch attribution by channel for this deal.", status:"published" },
+  { id:"w-021", name:"Certification Tracker",        source:"Workday",                    skeleton:"Feed",     category:"Operational",    health:"active", freshness:"fresh", governed:true,  system:false, usedIn:3,  placement:"Employee",   description:"Required certifications, completion status, and expiry dates per employee.", status:"published" },
+  { id:"w-022", name:"Credit Spend Trend",           source:"AIMS OS — Credits",          skeleton:"Cost KPI", category:"AIMS OS",        health:"active", freshness:"live",  governed:true,  system:false, usedIn:1,  placement:"Standalone", description:"Daily and monthly AI credit spend with projected end-of-cycle balance.", status:"published" },
+
+  // ── Drafts ────────────────────────────────────────────────────────────────
+  // Saved from the Widget Builder before they were finished. Each is missing a
+  // different piece, because those three are what the builder can actually
+  // leave unanswered — a draft with nothing missing would not be a draft.
+  // `usedIn: 0` is not a fixture choice: a draft cannot be added to a
+  // dashboard, so any other number would be a lie.
+  { id:"w-023", name:"Renewal Risk by Segment",      source:"Salesforce",                 skeleton:null,       category:"Intelligence",   health:"active", freshness:"stale", governed:true,  system:false, usedIn:0,  placement:"Company",    description:"Churn risk scored by customer segment, to sit beside the renewal date on an account.", status:"draft", missing:"a widget type" },
+  { id:"w-024", name:"Support Load by Team",         source:"Zendesk",                    skeleton:"Chart",    category:"Operational",    health:"active", freshness:"stale", governed:true,  system:false, usedIn:0,  placement:"Standalone", description:"Ticket volume per support team over time, to spot where the queue is piling up.", status:"draft", missing:"an entity" },
+  { id:"w-025", name:"Partner Sourced Pipeline",     source:"Salesforce",                 skeleton:"Funnel",   category:"Operational",    health:"active", freshness:"stale", governed:true,  system:false, usedIn:0,  placement:"Deal",       description:"Deals originated by partners, stage by stage, against the direct pipeline.", status:"draft", missing:"the rest of its data setup" },
 ]
 
 const CATEGORIES: Category[] = ["AIMS OS", "Operational", "Engagement", "Intelligence"]
@@ -84,6 +110,7 @@ export default function PMThomasWidgetLibrary() {
   const [search,    setSearch]    = useState("")
   const [cat,      setCat]       = useState("All")
   const [profile,  setProfile]   = useState<Profile>("All")
+  const [status,   setStatus]    = useState("All")
   const [skeleton, setSkeleton]  = useState("All")
   const [freshness,setFreshness] = useState("All")
   const [sortBy] = useState("name")
@@ -95,8 +122,10 @@ export default function PMThomasWidgetLibrary() {
   const [widgets,  setWidgets]   = useState(WIDGETS)
 
   const governedCount = widgets.filter(w => w.governed).length
+  const draftCount    = widgets.filter(w => w.status === "draft").length
 
   const filtered = widgets.filter(w => {
+    if (status   !== "All" && w.status    !== status)   return false
     if (cat      !== "All" && w.category  !== cat)      return false
     if (profile  !== "All" && w.placement !== profile)  return false
     if (skeleton !== "All" && w.skeleton  !== skeleton) return false
@@ -129,7 +158,7 @@ export default function PMThomasWidgetLibrary() {
         <Header
           size={isScrolled ? "compress" : "size-l"}
           title="Widget Library"
-          description={`${widgets.length} widgets · ${governedCount} governed`}
+          description={`${widgets.length} widgets · ${governedCount} governed · ${draftCount} drafts`}
           primaryAction={{ label: "Create widget", icon: LucideIcons.Sparkles }}
         />
       )}
@@ -137,7 +166,9 @@ export default function PMThomasWidgetLibrary() {
       <StudioWelcome
         iconName="PieChart"
         title={`${widgets.length} widgets in your library`}
-        description="Widgets connect to your data sources and live inside dashboards on entity profiles or standalone reports."
+        description={draftCount > 0
+          ? `Widgets connect to your data sources and live inside dashboards. ${draftCount} of these are drafts — saved but not finished, so they cannot be added to a dashboard yet.`
+          : "Widgets connect to your data sources and live inside dashboards on entity profiles or standalone reports."}
         ctaLabel="Create widget"
         onCta={() => {}}
       />
@@ -149,13 +180,22 @@ export default function PMThomasWidgetLibrary() {
         onSearchChange={setSearch}
         showAllFilters={false}
         showViewToggle={false}
-        showClearFilters={cat !== "All" || profile !== "All" || skeleton !== "All" || freshness !== "All"}
+        showClearFilters={status !== "All" || cat !== "All" || profile !== "All" || skeleton !== "All" || freshness !== "All"}
         onClearFilters={() => {
-          setCat("All"); setProfile("All"); setSkeleton("All"); setFreshness("All"); setShown(PAGE_SIZE)
+          setStatus("All"); setCat("All"); setProfile("All"); setSkeleton("All"); setFreshness("All"); setShown(PAGE_SIZE)
         }}
         sortLabel={sortBy}
         onSortClick={() => setSortDir(d => (d === "asc" ? "desc" : "asc"))}
         slots={[
+          {
+            /* First slot on purpose: "can I put this on a dashboard yet" comes
+               before any question about what the widget contains. */
+            placeholder: "Status",
+            value: status === "All" ? undefined : STATUS_LABEL[status as Status],
+            options: ["Published", "Draft"],
+            onSelect: v => { setStatus(v === "Published" ? "published" : "draft"); setShown(PAGE_SIZE) },
+            onRemove: () => { setStatus("All"); setShown(PAGE_SIZE) },
+          },
           {
             placeholder: "Category",
             value: cat === "All" ? undefined : cat,
@@ -220,21 +260,39 @@ export default function PMThomasWidgetLibrary() {
                     {/* Tags — health lives here now that the widget's own menu
                         owns the top-right corner. */}
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      <Tag variant="neutral" size="sm">{w.skeleton}</Tag>
+                      {/* Draft leads. It is the one tag that changes what you
+                          can DO with the card, so it is read first. Neutral,
+                          not alert: unfinished is not a problem, and the
+                          Dashboard List already spells it exactly this way. */}
+                      {w.status === "draft" && <Tag variant="neutral" size="sm">Draft</Tag>}
+                      {w.skeleton && <Tag variant="neutral" size="sm">{w.skeleton}</Tag>}
                       {!w.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
                       {w.system  && <Tag variant="informative" size="sm">System</Tag>}
                       <HealthBadge health={w.health} />
                     </div>
 
-                    <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
+                    {/* A draft with no widget type has nothing to draw — every
+                        other draft still previews, because it picked one. */}
+                    {w.skeleton
+                      ? <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
+                      : (
+                        <div style={{ height: 88, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <EmptyState compact icon={LucideIcons.Shapes} title="No widget type yet" />
+                        </div>
+                      )}
                   </div>
                 </WidgetFather>
 
                 {menuId === w.id && (
                   <div style={{ position: "absolute", top: 34, right: 12, zIndex: 2 }}>
                     <OverflowMenu onClose={() => setMenuId(null)} items={[
-                      { label: "Open",             icon: "Eye",       onClick: () => setDetailW(w) },
-                      { label: "Add to dashboard", icon: "Plus",      onClick: () => {} },
+                      { label: "Open", icon: "Eye", onClick: () => setDetailW(w) },
+                      /* Not offered on a draft — it is the one thing a draft
+                         cannot do, and a menu item that does nothing teaches
+                         that the menu is decorative. */
+                      ...(w.status === "published"
+                        ? [{ label: "Add to dashboard", icon: "Plus" as keyof typeof LucideIcons, onClick: () => {} }]
+                        : [{ label: "Finish setup", icon: "Pencil" as keyof typeof LucideIcons, onClick: () => { window.location.href = "?proto=proto-thomas-widget-builder" } }]),
                       ...(!w.system ? [{ label: "Edit",  icon: "Pencil" as keyof typeof LucideIcons, onClick: () => {} }] : []),
                       ...(!w.system ? [{ label: "Delete", icon: "Trash2" as keyof typeof LucideIcons, danger: true, onClick: () => setDeleteW(w) }] : []),
                     ]} />
@@ -242,11 +300,18 @@ export default function PMThomasWidgetLibrary() {
                 )}
 
                 {/* Footer */}
+                {/* A draft is on zero dashboards and has no data flowing, so
+                    "Used on 0 dashboards" beside a freshness badge would be two
+                    true statements that together read as broken. It says what
+                    it needs instead — the same sentence the builder showed when
+                    it was saved. */}
                 <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--field-border)", paddingTop: 10 }}>
                   <span style={{ fontSize: 11, color: w.health === "review" ? "var(--alert)" : "var(--field-supporting)", fontWeight: w.health === "review" ? 600 : 400 }}>
-                    {w.health === "review" ? "Remap needed →" : `Used on ${w.usedIn} dashboard${w.usedIn === 1 ? "" : "s"}`}
+                    {w.status === "draft"
+                      ? `Still needs ${w.missing} →`
+                      : w.health === "review" ? "Remap needed →" : `Used on ${w.usedIn} dashboard${w.usedIn === 1 ? "" : "s"}`}
                   </span>
-                  <WidgetFreshnessBadge status={w.freshness} />
+                  {w.status === "published" && <WidgetFreshnessBadge status={w.freshness} />}
                 </div>
               </CardContainer>
               </div>
@@ -269,8 +334,10 @@ export default function PMThomasWidgetLibrary() {
         <SlideOut title={detailW.name} open={true} onClose={() => setDetailW(null)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <WidgetFreshnessBadge status={detailW.freshness} />
-              <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>
+              {detailW.status === "draft"
+                ? <Tag variant="neutral" size="sm">Draft</Tag>
+                : <WidgetFreshnessBadge status={detailW.freshness} />}
+              {detailW.skeleton && <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>}
               <Tag variant={detailW.category === "AIMS OS" ? "informative" : "neutral"} size="sm">{detailW.category}</Tag>
               {!detailW.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
               {detailW.system   && <Tag variant="informative" size="sm">System</Tag>}
@@ -288,8 +355,13 @@ export default function PMThomasWidgetLibrary() {
               </div>
             )}
             <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-              <Button variant="primary" size="sm">Add to dashboard</Button>
-              {!detailW.system && <Button variant="secondary" size="sm">Edit widget</Button>}
+              {/* A draft's one useful action is finishing it — offering "Add
+                  to dashboard" on something that cannot be added is the same
+                  mistake as a disabled Eye on a row with nothing to preview. */}
+              {detailW.status === "draft"
+                ? <Button variant="primary" size="sm" onClick={() => { window.location.href = "?proto=proto-thomas-widget-builder" }}>Finish setup</Button>
+                : <Button variant="primary" size="sm">Add to dashboard</Button>}
+              {!detailW.system && detailW.status === "published" && <Button variant="secondary" size="sm">Edit widget</Button>}
             </div>
           </div>
         </SlideOut>
