@@ -913,6 +913,27 @@ function useTagFit(opts: {
  * a focus scroll) must not flip the card. `SCROLL_EPSILON` is what makes it a
  * deliberate gesture rather than a twitch.
  *
+ * AND THE CARD MUST NOT REACT TO ITS OWN HEIGHT. Compressing removes a row,
+ * which shortens the page, which lowers the container's maximum scroll. A
+ * reader sitting near the bottom is then CLAMPED upward by the browser — and
+ * a naive direction check reads that clamp as "scrolling up", expands the
+ * card, which lengthens the page again, which lets them scroll down, which
+ * compresses it… The card flickers, and it flickers exactly where a reader
+ * has stopped to read. Michael hit this one on the Universal Profile.
+ *
+ * Two guards, because one is not enough:
+ *
+ *   `atBottom`     pinned against the end of the scroll, a decrease is
+ *                  geometry rather than intent, so it is ignored. One pixel
+ *                  away from the end it is a real gesture again.
+ *   `TOGGLE_LOCK`  and because the reflow may not have happened yet when the
+ *                  event arrives, `atBottom` can read the OLD geometry and
+ *                  wave the clamp through. So a toggle also buys a short
+ *                  silence: for 180ms after the card changes, scroll only
+ *                  updates the baseline. Every spurious event is a
+ *                  consequence of our own change, and every one of them
+ *                  lands inside that window. A real gesture outlasts it.
+ *
  * WHY IT LISTENS ON THE DOCUMENT IN THE CAPTURE PHASE, rather than walking up
  * to find the scrolling ancestor and subscribing to that. Walking up resolves
  * ONCE, when the effect runs — and at that moment the container is often not
@@ -927,13 +948,21 @@ function useTagFit(opts: {
 const SCROLL_TOP_ZONE = 16
 const SCROLL_EPSILON = 4
 
+const TOGGLE_LOCK = 180
+
 function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement | null>) {
   const [compressed, setCompressed] = useState(false)
   const lastY = useRef(0)
+  // Mirrors `compressed` so the listener can read the current value without
+  // being re-created on every toggle — and so the lock is armed exactly when
+  // the value really changes.
+  const isCompressed = useRef(false)
+  const lockUntil = useRef(0)
 
   useEffect(() => {
-    if (!enabled) { setCompressed(false); return }
+    if (!enabled) { setCompressed(false); isCompressed.current = false; return }
     lastY.current = 0
+    lockUntil.current = 0
 
     const onScroll = (e: Event) => {
       const el = ref.current
@@ -944,10 +973,28 @@ function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement 
       if (!isDocument && !(target instanceof HTMLElement && target.contains(el))) return
 
       const y = isDocument ? window.scrollY : (target as HTMLElement).scrollTop
+      const now = performance.now()
+
+      // Inside the lock the card holds still and only re-baselines, so the
+      // reflow our own toggle caused cannot bounce it back.
+      if (now < lockUntil.current) { lastY.current = y; return }
+
+      const maxY = isDocument
+        ? document.documentElement.scrollHeight - window.innerHeight
+        : (target as HTMLElement).scrollHeight - (target as HTMLElement).clientHeight
+      const atBottom = y >= maxY - 1
+
       const last = lastY.current
-      if (y <= SCROLL_TOP_ZONE) setCompressed(false)
-      else if (y > last + SCROLL_EPSILON) setCompressed(true)
-      else if (y < last - SCROLL_EPSILON) setCompressed(false)
+      let next = isCompressed.current
+      if (y <= SCROLL_TOP_ZONE) next = false
+      else if (y > last + SCROLL_EPSILON) next = true
+      else if (y < last - SCROLL_EPSILON && !atBottom) next = false
+
+      if (next !== isCompressed.current) {
+        isCompressed.current = next
+        lockUntil.current = now + TOGGLE_LOCK
+        setCompressed(next)
+      }
       lastY.current = y
     }
 
@@ -1139,13 +1186,26 @@ function EntityHeader({
   }, [])
 
   /**
-   * THE STICKY WRAPPER, and why it is a wrapper rather than the card itself.
+   * THE STICKY WRAPPER, and why it is frosted rather than painted.
    *
-   * `--card-default-bg` is a 10% white — the card's surface is TRANSLUCENT by
-   * design, and it reads correctly because it sits on the page ground. Stick
-   * that card directly and the content scrolling underneath shows straight
-   * through it. So the wrapper carries an opaque `--canvas` and the card keeps
-   * the exact surface it has at rest.
+   * `--card-default-bg` is a 10% white: the card's surface is TRANSLUCENT by
+   * design and only reads correctly because the page ground shows through it.
+   * That makes a sticky card awkward twice over.
+   *
+   * Stick it with nothing behind it and the content scrolling underneath
+   * shows straight through — the first build did exactly that.
+   *
+   * Paint an opaque `var(--canvas)` behind it and the bleed-through goes, but
+   * so does the ground: `AppBackground` lays a radial gradient over the flat
+   * canvas, so a flat fill puts the card on a DIFFERENT ground from every
+   * other card on the page, and it reads as a different grey. Michael caught
+   * that one on sight (2026-09-09).
+   *
+   * `backdrop-filter` is what satisfies both. Nothing is painted, so the
+   * gradient still reaches the card and the tone is unchanged — blurring a
+   * smooth gradient is visually a no-op. What the blur destroys is the one
+   * thing that must not show: the text and edges of the content passing
+   * underneath.
    *
    * `top-0` is the top of the SCROLL CONTAINER, not the viewport. In
    * `ScreenLayout` the page `Header` lives outside that container, so the two
@@ -1153,7 +1213,14 @@ function EntityHeader({
    */
   const stick = (node: ReactNode) =>
     compressOnScroll
-      ? <div className="sticky top-0 z-[2]" style={{ background: "var(--canvas)" }}>{node}</div>
+      ? (
+          <div
+            className="sticky top-0 z-[2]"
+            style={{ backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
+          >
+            {node}
+          </div>
+        )
       : <>{node}</>
 
   // Compress on scroll — see useCompressOnScroll. `rootRef` is what locates

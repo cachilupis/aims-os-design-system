@@ -627,23 +627,20 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
       activeSidebarId="data"
       header={(isScrolled) => (
         <div>
+          {/* THE PAGE HEADER DOES NOT REPEAT THE RECORD (Michael, 2026-09-09).
+              It used to carry the name, the status tag, Export and Edit
+              Profile — all four of which the EntityHeader below already
+              shows, one card down. Two identities stacked on one screen is
+              not a hierarchy, it is a duplicate.
+
+              So this bar says only WHERE YOU ARE and how to get back. The
+              record's own identity, state and actions belong to the
+              EntityHeader, which is the component whose job that is. */}
           <Header
             size={isScrolled ? "compress" : "size-l"}
-            // A profile is one step below the Profiles list, so L2 â the DS back
-            // button, not a hand-rolled chevron sitting above the Header.
             backButton
             onBack={onBack}
-            title={profile.name}
-            description={profile.subtitle}
-            tag={<Tag variant={STATUS_TAG[profile.status]} size="sm">{profile.status}</Tag>}
-            secondaryAction={{ label: "Export", icon: LucideIcons.Download, onClick: () => {} }}
-            primaryAction={{ label: "Edit Profile", icon: LucideIcons.Pencil, onClick: () => {} }}
-            // Header owns the "Â·Â·Â·" now, so the hand-rolled menu and its open
-            // state are gone. A company profile has nothing to archive.
-            // DS-GAP: RBAC â archive visibility should depend on user role
-            overflowActions={profile.type !== "company"
-              ? [{ label: "Archive", icon: LucideIcons.Archive, onClick: () => setShowArchive(true) }]
-              : undefined}
+            title="Universal Profiles"
           />
         </div>
       )}
@@ -677,13 +674,21 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
         stateBadge={rhStateBadge}
         source={rhSource}
         secondaryMetadata={rhSecondaryMetadata}
-        /* No contextual CTA: `Ask` is the primary action. "Export" was one of
-           two primary CTAs competing with it, and this page already carries
-           Export in its own page Header above. It moves to the overflow, where
-           secondary and destructive actions belong. */
+        /* THE RECORD'S ACTIONS LIVE HERE NOW, not in the page Header — it
+           stopped carrying them when it stopped repeating the record. Nothing
+           was dropped in the move, only re-homed by kind:
+             Edit Profile → secondaryAction, the one labelled action this card
+                            allows beside `Ask`, which stays the primary.
+             Export, Archive → the overflow, where secondary and destructive
+                            actions belong. Archive keeps its confirmation. */
+        secondaryAction={{ label: "Edit Profile", onClick: () => {} }}
         menuActions={[
-          { label: "Export",  onClick: () => {} },
-          { label: "Archive", onClick: () => {} },
+          { label: "Export", onClick: () => {} },
+          /* DS-GAP: RBAC — archive visibility should depend on user role.
+             A company profile has nothing to archive. */
+          ...(profile.type !== "company"
+            ? [{ label: "Archive", onClick: () => setShowArchive(true) }]
+            : []),
         ]}
         assignedAgent={{ id: "agent-1", name: "AIMS Assistant", onOpenChat: () => {} }}
       />
