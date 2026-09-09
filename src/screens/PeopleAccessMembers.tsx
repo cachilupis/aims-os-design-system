@@ -897,7 +897,7 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
         onClick={() => setExpanded(e => !e)}
         style={{
           display: "grid", gridTemplateColumns: "20px 150px 160px 104px 130px 1fr 96px 60px",
-          padding: "11px 14px", cursor: "pointer", gap: 10, alignItems: "center",
+          padding: "10px 8px", cursor: "pointer", gap: 10, alignItems: "center",
           background: expanded ? "var(--table-row-hover-bg)" : "transparent",
         }}
         onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--table-row-hover-bg)" }}
@@ -941,7 +941,7 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
 
       {/* Expanded detail */}
       {expanded && (
-        <div style={{ background: "var(--surface-raised)", borderTop: "1px solid var(--border)", padding: "14px 44px 16px" }}>
+        <div style={{ background: "var(--surface-raised)", borderTop: "1px solid var(--border)", padding: "14px 8px 16px 38px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px 20px", marginBottom: 12 }}>
             {[
               { label: "USER ID",        value: ev.userId },
@@ -1041,7 +1041,7 @@ function ActivityPanel() {
         {/* Header */}
         <div style={{
           display: "grid", gridTemplateColumns: "20px 150px 160px 104px 130px 1fr 96px 60px",
-          padding: "8px 14px", gap: 10,
+          padding: "10px 8px", gap: 10,
           background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
           fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
         }}>
@@ -3283,7 +3283,7 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
           </span>
           <div style={{ marginLeft: "auto" }} onClick={e => e.stopPropagation()}>
             <Button variant="secondary" size="sm" onClick={() => onSelect(role)}>
-              {role.system ? "View role" : "Edit role"}
+              View role
             </Button>
           </div>
         </div>
@@ -3435,12 +3435,13 @@ function InviteModal({ onClose, onSend }: {
 
           {/* 1 · Emails — TagInput is the DS field for exactly this */}
           <div>
-            <SectionLabel hint="Press Enter or comma to add multiple addresses.">Email addresses</SectionLabel>
+            <SectionLabel hint="Press Enter after each address.">Email addresses</SectionLabel>
             <TagInput
               tags={emails}
               onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
               onRemoveTag={v => setEmails(e => e.filter(x => x !== v))}
               placeholder="name@company.com"
+              showAddButton={false}
             />
           </div>
 
@@ -4166,7 +4167,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   // preview component no longer renders its own "open the full thing" button.
   const previewCta =
     previewItem?.type === "member" ? { label: "View full profile", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
-  : previewItem?.type === "role"   ? { label: previewItem.role.system ? "View role" : "Edit role", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
+  : previewItem?.type === "role"   ? { label: "View role", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
   : previewItem?.type === "group"  ? { label: "Manage group", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
   : undefined
   const [showInvite, setShowInvite]     = useState(false)
