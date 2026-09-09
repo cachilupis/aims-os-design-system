@@ -51,7 +51,26 @@ export interface UcpNextBestAction {
 
 // ── Entity ────────────────────────────────────────────────────────────────────
 
-export type UcpEntityType = "person" | "employee" | "company"
+/**
+ * The entity types this tenant publishes.
+ *
+ * Three of them are people-shaped and three are not, which is the point: an
+ * entity type is whatever Helix Data Studio publishes, and the roster cannot
+ * assume they are all contacts. What each type declares about itself lives in
+ * ucpTypeModel; what they all share is this file.
+ */
+export type UcpEntityType =
+  | "person" | "employee" | "company"
+  | "repair-order" | "policy" | "asset"
+
+/** Types whose records are PEOPLE. Connections, coworkers and initials only
+ *  make sense for these — a repair order has no colleagues and no initials. */
+export const PEOPLE_TYPES: UcpEntityType[] = ["person", "employee"]
+
+/** An avatar needs a face or a brand. Everything else is an icon, and a
+ *  record titled with a code — RO-48291 — can only ever be an icon: there are
+ *  no initials in a code. Straight from the Entity Header's own rule. */
+export const AVATAR_TYPES: UcpEntityType[] = ["person", "employee", "company"]
 export type UcpStatus     = "Active" | "Inactive" | "Archived"
 
 /** A study either returned data, returned nothing, or failed. */
@@ -155,21 +174,41 @@ export interface UcpContact {
  * `person` so the type union does not churn.
  */
 export const TYPE_LABEL: Record<UcpEntityType, string> = {
-  person:   "Customer",
-  employee: "Employee",
-  company:  "Company",
+  person:         "Customer",
+  employee:       "Employee",
+  company:        "Company",
+  "repair-order": "Repair order",
+  policy:         "Policy",
+  asset:          "Asset",
+}
+
+/** The plural, for a tab and for an empty state. Derived labels read wrong
+ *  ("Policys"), so each type says its own. */
+export const TYPE_PLURAL: Record<UcpEntityType, string> = {
+  person:         "Customers",
+  employee:       "Employees",
+  company:        "Companies",
+  "repair-order": "Repair orders",
+  policy:         "Policies",
+  asset:          "Assets",
 }
 
 export const TYPE_ICON: Record<UcpEntityType, string> = {
-  person:   "UserRound",
-  employee: "IdCard",
-  company:  "Building2",
+  person:         "UserRound",
+  employee:       "IdCard",
+  company:        "Building2",
+  "repair-order": "Wrench",
+  policy:         "FileCheck2",
+  asset:          "Truck",
 }
 
 export const TYPE_TAG: Record<UcpEntityType, "informative" | "purple" | "lightBlue"> = {
-  person:   "informative",
-  employee: "purple",
-  company:  "lightBlue",
+  person:         "informative",
+  employee:       "purple",
+  company:        "lightBlue",
+  "repair-order": "informative",
+  policy:         "purple",
+  asset:          "lightBlue",
 }
 
 export const STATUS_TAG: Record<UcpStatus, TagVariantLite> = {
@@ -926,8 +965,190 @@ export const CONTACTS: UcpContact[] = [
     ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
-]
-// ── Per-record collections ────────────────────────────────────────────────────
+// ── Types that are not people ─────────────────────────────────────────────
+  // Three of them, two records each, added 2026-09-09 so the roster can be
+  // seen at seven types instead of three. They are deliberately NOT
+  // person-shaped: a repair order is titled with a code and has no initials,
+  // a policy has no company, an asset has a custodian rather than an owner.
+  // Everything the screen assumed about contacts shows up here as a bug or as
+  // a slot that goes empty, which is the point of having them.
+  {
+    id: "RO-48291", type: "repair-order", name: "RO-48291",
+    subtitle: "Transmission diagnostic · Tampa North · 9 days open",
+    email: "service@riverbendauto.com", phone: "+1 (813) 555-0190", company: "Riverbend Auto Group",
+    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 3, 2026",
+    stateBadge: { label: "Overdue", variant: "error" },
+    source: { label: "CDK Global", iconName: "Car" },
+    tags: [
+      { label: "9d overdue", role: "signal", tone: "error", severity: 4, tooltip: "Promised Aug 25, still open — the oldest order in the Tampa North queue" },
+    ],
+    meta: [
+      { iconName: "ShieldCheck", label: "6 facts",     tooltip: "Verified facts · 4 on the Truth plane, 2 across Sandbox and Sources." },
+      { iconName: "Store",       label: "Tampa North", tooltip: "Store · Tampa North, the location carrying 26 of the 41 late orders." },
+      { iconName: "Wrench",      label: "Bay 4",       tooltip: "Bay · 4, allocated since Aug 25 and not released." },
+      { iconName: "Bot",         label: "Tier 2",      tooltip: "Assigned agent · Service Concierge, tier 2." },
+    ],
+    agent: { id: "AGT-09", name: "Service Concierge" },
+    nba: {
+      title: "Release bay 4 or reassign the order to Brandon",
+      timestamp: "2h ago",
+      rationale: "The part arrived Aug 29 and the bay has been allocated without work logged since. Brandon has capacity today.",
+    },
+    insights: [
+      {
+        id: "read-1", category: "Service", destination: "Workflows",
+        headline: "Waiting on a bay, not on a part.",
+        detail: "The transmission arrived Aug 29 and nothing has been logged against this order since. Bay 4 is allocated to it, so the order and the bay are both idle — which is why this one order shows up in two different backlog counts.",
+        confidence: 81,
+      },
+    ],
+    governance: "empty", risk: "loaded", connections: "empty",
+  },
+  {
+    id: "RO-48307", type: "repair-order", name: "RO-48307",
+    subtitle: "Brake recall service · Brandon · 2 days open",
+    email: "service@riverbendauto.com", phone: "+1 (813) 555-0190", company: "Riverbend Auto Group",
+    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 5, 2026",
+    source: { label: "CDK Global", iconName: "Car" },
+    tags: [
+      { label: "Recall", role: "classification" },
+    ],
+    meta: [
+      { iconName: "ShieldCheck", label: "5 facts",  tooltip: "Verified facts · 4 on the Truth plane, 1 on Sources." },
+      { iconName: "Store",       label: "Brandon",  tooltip: "Store · Brandon, running at 60% bay capacity." },
+      { iconName: "Bot",         label: "Tier 2",   tooltip: "Assigned agent · Service Concierge, tier 2." },
+    ],
+    agent: { id: "AGT-09", name: "Service Concierge" },
+    nba: null,
+    insights: [
+      {
+        id: "read-1", category: "Service",
+        headline: "On schedule, and covered by the recall campaign.",
+        detail: "Parts are on site and the labour is billable to the manufacturer campaign rather than the customer. Nothing here needs a decision before the promised date.",
+        confidence: 88,
+      },
+    ],
+    governance: "loaded", risk: "empty", connections: "empty",
+  },
+  {
+    id: "POL-0114", type: "policy", name: "Data retention — customer records",
+    subtitle: "Tenant-wide · Reviewed quarterly · Effective Jan 2026",
+    email: "governance@acme.com", phone: "—", company: "Acme Corp",
+    owner: "Elena Fischer", status: "Active", lastInteraction: "Aug 30, 2026",
+    stateBadge: { label: "Under review", variant: "informative" },
+    source: { label: "Helix Data Studio", iconName: "Database" },
+    tags: [
+      { label: "Review due 12d", role: "signal", tone: "alert", severity: 2, tooltip: "Quarterly review opens Sep 21 and no evidence has been attached yet" },
+      { label: "Tenant-wide",    role: "classification" },
+    ],
+    meta: [
+      { iconName: "ShieldCheck", label: "9 facts",     tooltip: "Verified facts · 7 on the Truth plane, 2 on Sources." },
+      { iconName: "Users",       label: "4 studios",   tooltip: "Scope · applies to Agentic, Data, Governance and Comms studios." },
+      { iconName: "FileCheck2",  label: "3 documents", tooltip: "Canon Plane documents · the policy, its DPIA and the last audit note." },
+      { iconName: "Bot",         label: "Tier 1",      tooltip: "Assigned agent · Governance Concierge, tier 1." },
+    ],
+    agent: { id: "AGT-10", name: "Governance Concierge" },
+    nba: {
+      title: "Attach the evidence for the September review",
+      timestamp: "1d ago",
+      rationale: "The review opens Sep 21 and the last two cycles were signed off late because evidence was gathered in the week of the review.",
+    },
+    insights: [
+      {
+        id: "read-1", category: "Governance", destination: "Drives",
+        headline: "Applies to every studio, evidenced in one.",
+        detail: "The policy is tenant-wide but the only attached evidence comes from the Data studio. The other three have nothing on file, which is what made the last two reviews run late.",
+        confidence: 76,
+      },
+    ],
+    governance: "loaded", risk: "loaded", connections: "empty",
+  },
+  {
+    id: "POL-0121", type: "policy", name: "Agent escalation to a human",
+    subtitle: "Agentic studio · Reviewed monthly · Effective Jul 2026",
+    email: "governance@acme.com", phone: "—", company: "Acme Corp",
+    owner: "Marcus Webb", status: "Active", lastInteraction: "Sep 2, 2026",
+    source: { label: "Helix Data Studio", iconName: "Database" },
+    tags: [
+      { label: "Agentic studio", role: "classification" },
+    ],
+    meta: [
+      { iconName: "ShieldCheck", label: "7 facts",     tooltip: "Verified facts · 6 on the Truth plane, 1 on Sandbox." },
+      { iconName: "Workflow",    label: "11 workflows", tooltip: "Bound workflows · 11 route through this policy before acting." },
+      { iconName: "Bot",         label: "Tier 1",      tooltip: "Assigned agent · Governance Concierge, tier 1." },
+    ],
+    agent: { id: "AGT-10", name: "Governance Concierge" },
+    nba: null,
+    insights: [
+      {
+        id: "read-1", category: "Governance", destination: "Workflows",
+        headline: "Eleven workflows depend on this one policy.",
+        detail: "Every agent action that reaches a customer passes through this escalation rule. A change here is not a policy edit — it is a change to eleven live workflows, which is why it reviews monthly rather than quarterly.",
+        confidence: 84,
+      },
+    ],
+    governance: "loaded", risk: "empty", connections: "empty",
+  },
+  {
+    id: "AST-2290", type: "asset", name: "AST-2290",
+    subtitle: "Service loaner · Tampa North · Acquired Mar 2024",
+    email: "fleet@riverbendauto.com", phone: "—", company: "Riverbend Auto Group",
+    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 4, 2026",
+    source: { label: "CDK Global", iconName: "Car" },
+    tags: [
+      { label: "Service due", role: "signal", tone: "alert", severity: 2, tooltip: "42,000 km service was due at 40,000 — 2,000 km over" },
+      { label: "Loaner",      role: "classification" },
+    ],
+    meta: [
+      { iconName: "ShieldCheck", label: "5 facts",    tooltip: "Verified facts · 4 on the Truth plane, 1 on Sources." },
+      { iconName: "Store",       label: "Tampa North", tooltip: "Assigned site · Tampa North." },
+      { iconName: "Gauge",       label: "42,000 km",  tooltip: "Odometer · 42,000 km at the last check-in, Sep 4." },
+      { iconName: "Bot",         label: "Tier 3",     tooltip: "Assigned agent · Fleet Concierge, tier 3." },
+    ],
+    agent: { id: "AGT-11", name: "Fleet Concierge" },
+    nba: {
+      title: "Book the overdue 40,000 km service",
+      timestamp: "6h ago",
+      rationale: "It is 2,000 km past the interval and the vehicle is still going out as a loaner, which moves the liability to us.",
+    },
+    insights: [
+      {
+        id: "read-1", category: "Service", destination: "Workflows",
+        headline: "Still in rotation while overdue for service.",
+        detail: "The 40,000 km service is 2,000 km late and the vehicle has been issued to three customers since. It is the only loaner in the Tampa North pool in that state.",
+        confidence: 83,
+      },
+    ],
+    governance: "empty", risk: "loaded", connections: "empty",
+  },
+  {
+    id: "AST-2314", type: "asset", name: "AST-2314",
+    subtitle: "Diagnostic rig · Brandon · Acquired Nov 2025",
+    email: "fleet@riverbendauto.com", phone: "—", company: "Riverbend Auto Group",
+    owner: "Daniel Ruiz", status: "Inactive", lastInteraction: "Jul 18, 2026",
+    stateBadge: { label: "In storage", variant: "neutral" },
+    source: { label: "CDK Global", iconName: "Car" },
+    tags: [
+      { label: "Equipment", role: "classification" },
+    ],
+    meta: [
+      { iconName: "ShieldCheck", label: "4 facts",   tooltip: "Verified facts · 3 on the Truth plane, 1 on Sources." },
+      { iconName: "Store",       label: "Brandon",   tooltip: "Assigned site · Brandon, in storage since Jul 18." },
+      { iconName: "Bot",         label: "Tier 3",    tooltip: "Assigned agent · Fleet Concierge, tier 3." },
+    ],
+    agent: { id: "AGT-11", name: "Fleet Concierge" },
+    nba: null,
+    insights: [
+      {
+        id: "read-1", category: "Service",
+        headline: "Idle since July, and nothing is waiting on it.",
+        detail: "No repair order has requested this rig since Jul 18. It is in storage at Brandon and no workflow references it, so nothing breaks while it sits.",
+        confidence: 74,
+      },
+    ],
+    governance: "empty", risk: "empty", connections: "empty",
+  },
+]// ── Per-record collections ────────────────────────────────────────────────────
 // Built from the contact itself so every profile reads as that record's own
 // data rather than one shared fixture repeated 14 times.
 
@@ -1131,6 +1352,12 @@ export function getConnections(c: UcpContact): UcpConnection[] {
     const p = CONTACTS.find(x => x.id === r.id)
     if (p) push(p, r.relation, `${r.relation} · ${p.name}. ${TYPE_LABEL[p.type]} record in AIMS, so their own profile opens from here.`)
   }
+
+  // A repair order has no colleagues. Types that are not people or the company
+  // they work for get no derived connections at all — the widget shows its
+  // empty state, which is true, rather than the account's staff, which would
+  // be a different record's data on this one.
+  if (!PEOPLE_TYPES.includes(c.type) && c.type !== "company") return out
 
   // 2. Coworkers — same company, derived. A company's own connections are the
   //    people who work there, which is the same rule read from the other side.

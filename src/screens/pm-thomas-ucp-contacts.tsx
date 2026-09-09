@@ -37,6 +37,8 @@ import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { ModalDialog }       from "@/components/ui/modal-dialog"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import { Tooltip }           from "@/components/ui/tooltip"
+import { Checkbox }          from "@/components/ui/checkbox"
 import { AiSummaryWidget }   from "@/components/experimental/ai-summary-widget"
 import { Input }             from "@/components/ui/input"
 import { Chip }              from "@/components/ui/chip"
@@ -47,20 +49,55 @@ import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
-  CONTACTS, CONCIERGE_PROMPTS, PLANE_META,
-  TYPE_ICON, TYPE_LABEL, TYPE_TAG, entityState, restrictionFor,
+  CONTACTS, CONCIERGE_PROMPTS, PLANE_META, PEOPLE_TYPES,
+  TYPE_ICON, TYPE_LABEL, TYPE_PLURAL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
 } from "./ucpShared"
 import type { UcpContact, UcpEntityType } from "./ucpShared"
 
 const PAGE_SIZE = 10
 
-const TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[] = [
-  { id: "all",       label: "All",       type: "all"      },
-  { id: "customers", label: "Customers", type: "person"   },
-  { id: "employees", label: "Employees", type: "employee" },
-  { id: "companies", label: "Companies", type: "company"  },
+/**
+ * ── The tab bar at seven entity types ──────────────────────────────────────
+ *
+ * Tabs work while there are few types and stop working when there are many,
+ * and "many" arrives on its own: an entity type is whatever Helix Data Studio
+ * publishes, so this roster starts at Customers / Employees / Companies and
+ * ends up with repair orders, policies and assets beside them.
+ *
+ * The answer is the one Salesforce, HubSpot and Notion all landed on: the bar
+ * shows a SUBSET the user chooses, and a `+` adds the rest. Salesforce calls
+ * it "Add More Items", HubSpot caps pinned views and puts the rest behind a
+ * menu, Notion gives each tab a `···`. None of them tries to show everything.
+ *
+ * Two rules make it safe rather than clever:
+ *   · the picker IS the manager — one checkbox list does show AND hide, so
+ *     there is no second "remove tab" flow to find
+ *   · the tab you are on is never hidden, and the bar never empties
+ *
+ * The cap is 6, HubSpot's mechanic: past it, adding asks you to remove. A bar
+ * that wraps to a second line is not a bar any more, and unlimited tabs is how
+ * every one of these products ended up needing a picker in the first place.
+ *
+ * Past ~12 types this stops being enough and the type belongs in the Sidebar,
+ * with the tabs left as the user's own shortlist. That threshold is a decision
+ * to take when it arrives, not to build for now.
+ */
+const ALL_TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[] = [
+  // "All" is not a type. It works today because the first three are all
+  // person-shaped records that share columns and filters; a repair order beside
+  // a person is where it stops meaning anything, and its replacement is the
+  // global search rather than a wider table.
+  { id: "all", label: "All", type: "all" },
+  ...(["person", "employee", "company", "repair-order", "policy", "asset"] as UcpEntityType[])
+    .map(t => ({ id: t, label: TYPE_PLURAL[t], type: t })),
 ]
+
+/** What a new user sees. Not alphabetical — the types most people work in. */
+const DEFAULT_TAB_IDS = ["all", "person", "employee", "company"]
+
+/** Six visible at most, including All. */
+const MAX_VISIBLE_TABS = 6
 
 /**
  * The create CTA names what it will make, so it tracks the active tab. On All
@@ -68,18 +105,25 @@ const TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[] = 
  * form asks for the type.
  */
 const CREATE_LABEL: Record<string, string> = {
-  all:       "Create New Contact",
-  customers: "Create New Customer",
-  employees: "Create New Employee",
-  companies: "Create New Company",
+  all: "Create New Contact",
+  ...Object.fromEntries(
+    (["person", "employee", "company", "repair-order", "policy", "asset"] as UcpEntityType[])
+      .map(t => [t, `Create New ${TYPE_LABEL[t]}`]),
+  ),
 }
 
 /** Which fields the create form asks for, per type. Six at most — past that it
  *  stops being a panel and becomes a page. */
 const CREATE_FIELDS: Record<UcpEntityType, string[]> = {
-  person:   ["Full name", "Title", "Company", "Email", "Phone", "Account owner"],
-  employee: ["Full name", "Role", "Department", "Work email", "Manager", "Access role"],
-  company:  ["Legal name", "Industry", "Headcount", "Account email", "Account owner", "Primary contact"],
+  person:         ["Full name", "Title", "Company", "Email", "Phone", "Account owner"],
+  employee:       ["Full name", "Role", "Department", "Work email", "Manager", "Access role"],
+  company:        ["Legal name", "Industry", "Headcount", "Account email", "Account owner", "Primary contact"],
+  // A create form asks what the OBJECT needs, never what the pattern needs.
+  // Nothing about these three is person-shaped, and that is the whole reason
+  // they are in this prototype.
+  "repair-order": ["Order code", "Vehicle", "Store", "Reported issue", "Service advisor"],
+  policy:         ["Policy name", "Scope", "Owner", "Effective date", "Review cycle"],
+  asset:          ["Asset code", "Type", "Assigned site", "Acquired", "Custodian"],
 }
 
 type SortKey = "recent" | "name" | "owner"
@@ -307,6 +351,52 @@ export default function PMThomasUcpContactsScreen() {
   const [anchor,     setAnchor]     = useState<DropdownAnchor | null>(null)
   const dropdown = useDropdownPosition(anchor)
 
+  // ── Which types are tabs ──────────────────────────────────────────────────
+  // Per user, so it survives a reload. In the product this is a user
+  // preference like any other; localStorage is the prototype's stand-in and is
+  // wrapped because a private window throws on read.
+  const [tabIds, setTabIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("ucp.tabIds")
+      const parsed = saved ? (JSON.parse(saved) as string[]) : null
+      // Anything saved that is no longer a type is dropped, so removing a type
+      // from the platform cannot leave a tab pointing at nothing.
+      const valid = parsed?.filter(id => ALL_TYPE_TABS.some(t => t.id === id)) ?? []
+      return valid.length > 0 ? valid : DEFAULT_TAB_IDS
+    } catch { return DEFAULT_TAB_IDS }
+  })
+  const persistTabs = (ids: string[]) => {
+    setTabIds(ids)
+    try { localStorage.setItem("ucp.tabIds", JSON.stringify(ids)) } catch { /* private window */ }
+  }
+  // THE TAB YOU ARE ON IS ALWAYS VISIBLE, even when it is not in the set —
+  // arriving on a record type through search or a link should not hide the tab
+  // you are standing on. It leaves the bar when you leave it.
+  const visibleTabs = useMemo(
+    () => ALL_TYPE_TABS.filter(t => tabIds.includes(t.id) || t.id === tab),
+    [tabIds, tab],
+  )
+  const [typeAnchor, setTypeAnchor] = useState<DropdownAnchor | null>(null)
+  const typeDropdown    = useDropdownPosition(typeAnchor)
+  const typePendingAnchor = useRef<DropdownAnchor | null>(null)
+
+  const toggleTab = (id: string) => {
+    const on = tabIds.includes(id)
+    // NEVER ZERO TABS: the last one cannot be turned off. And at the cap,
+    // adding asks you to remove first rather than silently dropping someone
+    // else's choice — HubSpot's mechanic for pinned views.
+    if (on && tabIds.length === 1) return
+    if (!on && tabIds.length >= MAX_VISIBLE_TABS) return
+    const next = on ? tabIds.filter(x => x !== id) : [...tabIds, id]
+    persistTabs(next)
+    // Turning off the tab you are on sends you to the first one that is left,
+    // rather than leaving the list showing a type with no tab.
+    if (on && id === tab) {
+      const fallback = ALL_TYPE_TABS.find(t => next.includes(t.id))
+      if (fallback) { setTab(fallback.id); setApplied({}); resetPage() }
+    }
+  }
+
   const [preview,    setPreview]    = useState<UcpContact | null>(null)
   // El anchor y el "abrir" tienen que cambiar en el MISMO commit. useDropdownPosition
   // mide el panel en useLayoutEffect y sale temprano si todavía no está montado;
@@ -322,7 +412,7 @@ export default function PMThomasUcpContactsScreen() {
   const [chatOpen,   setChatOpen]   = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
-  const activeType = TYPE_TABS.find(t => t.id === tab)?.type ?? "all"
+  const activeType = ALL_TYPE_TABS.find(t => t.id === tab)?.type ?? "all"
 
   const facets = useMemo(() => facetsForType(activeType), [activeType])
 
@@ -419,9 +509,17 @@ export default function PMThomasUcpContactsScreen() {
     //
     // Las compañías se quedan con el HighlightIcon: no hay logo en el modelo,
     // y unas iniciales derivadas de una razón social se leen como una persona.
-    ...(c.type === "company"
-      ? { iconName: TYPE_ICON[c.type], iconVariant: "light-blue" as const }
-      : { avatarName: c.name }),
+    //
+    // Correction (2026-09-09): the test is the TYPE, not "is it a company".
+    // With repair orders, policies and assets in the roster, `avatarName` was
+    // deriving initials from a code — "RO-48307" came out as "R" — which is
+    // the same bug the Entity Header had and the same rule fixes both: only
+    // people carry initials here. Everything that is not a person gets its
+    // type's icon, which is also the one place the type is visible for a
+    // record whose title is a code.
+    ...(PEOPLE_TYPES.includes(c.type)
+      ? { avatarName: c.name }
+      : { iconName: TYPE_ICON[c.type], iconVariant: "light-blue" as const }),
     // Top row is context plus identifier: the source (one item, always visible,
     // per the shared content model) and the record ID.
     primaryMeta: [
@@ -562,22 +660,37 @@ export default function PMThomasUcpContactsScreen() {
           : undefined
       }
     >
-      <Tabs
-        className="mb-[24px]"
-        activeId={tab}
-        onChange={id => {
-          // Facets are published per type, so carrying them across a tab change
-          // would keep a filter the new tab cannot answer. They clear — and the
-          // screen says so, because a list that silently resets reads as broken
-          // rather than reset.
-          const had = Object.values(applied).filter(Boolean).length
-          setTab(id)
-          setApplied({})
-          setClearedOn(had > 0 ? (TYPE_TABS.find(t => t.id === id)?.label ?? null) : null)
-          resetPage()
-        }}
-        items={TYPE_TABS.map(t => ({ id: t.id, label: t.label }))}
-      />
+      {/* The bar and its `+` share a row. Tabs takes no trailing slot, and it
+          does not need one for this — a Button beside it in the same flex row
+          is the whole composition. If a second screen ever wants the same
+          affordance, THEN it is a prop on Tabs. */}
+      <div className="flex items-end justify-between gap-[12px] mb-[24px]">
+        <Tabs
+          activeId={tab}
+          onChange={id => {
+            // Facets are published per type, so carrying them across a tab change
+            // would keep a filter the new tab cannot answer. They clear — and the
+            // screen says so, because a list that silently resets reads as broken
+            // rather than reset.
+            const had = Object.values(applied).filter(Boolean).length
+            setTab(id)
+            setApplied({})
+            setClearedOn(had > 0 ? (ALL_TYPE_TABS.find(t => t.id === id)?.label ?? null) : null)
+            resetPage()
+          }}
+          items={visibleTabs.map(t => ({ id: t.id, label: t.label }))}
+        />
+        <div onClickCapture={e => { typePendingAnchor.current = anchorFromEvent(e) }}>
+          <Tooltip content="Choose which entity types show as tabs" side="top">
+            <Button
+              variant="tertiary" size="sm" iconPosition="alone"
+              icon={<Plus size={16} strokeWidth={1.75} />}
+              aria-label="Choose which entity types show as tabs"
+              onClick={() => { if (typePendingAnchor.current) setTypeAnchor(typePendingAnchor.current) }}
+            />
+          </Tooltip>
+        </div>
+      </div>
 
       <div className="mb-[24px]" onClickCapture={e => setAnchor(anchorFromEvent(e))}>
         <Filters
@@ -638,6 +751,46 @@ export default function PMThomasUcpContactsScreen() {
             </div>
           ))}
         </div>
+      )}
+
+      {/*
+        The type picker. One checkbox list that both adds and removes, which is
+        why there is no `···` per tab: two affordances for one job is how a
+        tab bar ends up with a hidden second way to do the same thing.
+
+        No search field: at seven types it would be furniture. Past ~10 it
+        stops being optional — that is the threshold, not a preference.
+      */}
+      {typeAnchor && (
+        <>
+          <div className="fixed inset-0 z-[10000]" onClick={() => setTypeAnchor(null)} />
+          <div ref={typeDropdown.ref} style={{ position: "fixed", zIndex: 10001, ...typeDropdown.style }}>
+            <Menu>
+              {ALL_TYPE_TABS.map(t => {
+                const on      = tabIds.includes(t.id)
+                const atCap   = !on && tabIds.length >= MAX_VISIBLE_TABS
+                const isLast  = on && tabIds.length === 1
+                const count   = t.type === "all" ? CONTACTS.length : CONTACTS.filter(c => c.type === t.type).length
+                return (
+                  <MenuItem
+                    key={t.id}
+                    size="sm"
+                    label={t.label}
+                    subtext={
+                      atCap  ? `${count} records · remove one to add this`
+                      : isLast ? `${count} records · the last tab stays`
+                      : `${count} records`
+                    }
+                    state={atCap || isLast ? "disabled" : "default"}
+                    checkbox={<Checkbox size="sm" checked={on} onChange={() => toggleTab(t.id)} />}
+                    leadingIcon={<HighlightIcon size="sm" variant="neutral" iconName={t.type === "all" ? "LayoutGrid" : TYPE_ICON[t.type]} />}
+                    onClick={() => toggleTab(t.id)}
+                  />
+                )
+              })}
+            </Menu>
+          </div>
+        </>
       )}
 
       {/* ── Filter slot dropdowns ── */}

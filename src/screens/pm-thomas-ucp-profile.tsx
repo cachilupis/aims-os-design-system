@@ -86,7 +86,7 @@ import {
   PANEL_CONTENT_CLASS, toAiInsights,
   PLANE_META, PLANE_ORDER, CHANNEL_META, CONCIERGE_PROMPTS,
   CONTACTS,
-  TYPE_LABEL, entityState, restrictionFor, getRecordFields,
+  AVATAR_TYPES, TYPE_ICON, TYPE_LABEL, entityState, restrictionFor, getRecordFields,
   getActivity, getConciergeOpening, getConnections, getDrives,
   getFacts, getGovernance, getRisk,
 } from "./ucpShared"
@@ -1001,7 +1001,11 @@ export function UcpProfileView({
   // tone of "neutral" is the absence of a tone, not a third colour.
   const headerTags = useMemo<EntityHeaderTag[]>(
     () => [
-      { label: TYPE_LABEL[contact.type], role: "classification" as const },
+      // Only when the visual is an avatar. A highlight icon already names the
+      // type, so a tag repeating it is the same fact twice.
+      ...(AVATAR_TYPES.includes(contact.type)
+        ? [{ label: TYPE_LABEL[contact.type], role: "classification" as const }]
+        : []),
       ...contact.tags.map(t => ({
         label: t.label,
         role:  t.role,
@@ -1179,11 +1183,22 @@ export function UcpProfileView({
           <div style={{ padding: "0 32px 8px" }}>
             <EntityHeader
               name={contact.name}
-              /* All three types here have a real-world visual identity — a
-                 face or a brand — so all three are avatars. That is also why
-                 each one carries a classification tag: an avatar cannot say
-                 what kind of thing this is, where an icon would. */
-              visual={{ kind: "avatar" }}
+              /*
+                AVATAR OR ICON, decided by the type — not hardcoded.
+                A face or a brand gets an avatar: customers, employees,
+                companies. Everything else gets an icon, and a record titled
+                with a code has no choice: "RO-48291" has no initials, so an
+                avatar there renders nonsense. That is the Entity Header's own
+                rule, and it only became visible once the roster had types that
+                are not people in it (2026-09-09).
+
+                The avatar types are also the ones that carry a classification
+                tag, because an avatar cannot say what kind of thing this is
+                and a highlight icon already does.
+              */
+              visual={AVATAR_TYPES.includes(contact.type)
+                ? { kind: "avatar" }
+                : { kind: "icon", icon: (LucideIcons[TYPE_ICON[contact.type] as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon, variant: "informative" }}
               tags={headerTags}
               stateBadge={{ label: state.label, variant: state.variant }}
               source={contact.source.label}

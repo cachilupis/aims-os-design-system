@@ -113,6 +113,66 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     }
   }
 
+  if (c.type === "repair-order") {
+    const [service, store, age] = p
+    return {
+      extraTabs: [],
+      widget: {
+        uid: "order", title: "Order",
+        rows: [
+          { label: "Service",  value: service ?? "—", icon: "Wrench",     variant: "informative",
+            tooltip: `Service · ${service ?? "not recorded"}. What the order was opened for, from the service advisor's intake.` },
+          { label: "Store",    value: store   ?? "—", icon: "Store",      variant: "neutral",
+            tooltip: `Store · ${store ?? "not recorded"}. Where the work is scheduled, which decides the bay it holds.` },
+          { label: "Open for", value: age     ?? "—", icon: "Clock",      variant: "alert",
+            tooltip: `Open for · ${age ?? "not recorded"}. Measured from the promised date, not from intake.` },
+          { label: "Advisor",  value: c.owner,        icon: "UserRound",  variant: "informative",
+            tooltip: `Service advisor · ${c.owner}. Accountable for the promise made to the customer.` },
+        ],
+      },
+    }
+  }
+
+  if (c.type === "policy") {
+    const [scope, cycle, effective] = p
+    return {
+      extraTabs: [],
+      widget: {
+        uid: "policy", title: "Policy",
+        rows: [
+          { label: "Scope",      value: scope     ?? "—", icon: "Globe",      variant: "informative",
+            tooltip: `Scope · ${scope ?? "not recorded"}. How far this policy reaches, which decides who has to evidence it.` },
+          { label: "Review",     value: cycle     ?? "—", icon: "RefreshCw",  variant: "neutral",
+            tooltip: `Review cycle · ${cycle ?? "not recorded"}. How often governance re-opens it.` },
+          { label: "Effective",  value: effective ?? "—", icon: "CalendarCheck", variant: "neutral",
+            tooltip: `Effective · ${effective ?? "not recorded"}. Anything before this date was governed by the previous version.` },
+          { label: "Owner",      value: c.owner,          icon: "UserRound",  variant: "informative",
+            tooltip: `Owner · ${c.owner}. Signs the review off; escalations go here.` },
+        ],
+      },
+    }
+  }
+
+  if (c.type === "asset") {
+    const [cls, site, acquired] = p
+    return {
+      extraTabs: [],
+      widget: {
+        uid: "asset", title: "Asset",
+        rows: [
+          { label: "Class",     value: cls      ?? "—", icon: "Truck",     variant: "informative",
+            tooltip: `Class · ${cls ?? "not recorded"}. What kind of asset this is, which decides its service interval.` },
+          { label: "Site",      value: site     ?? "—", icon: "Store",     variant: "neutral",
+            tooltip: `Assigned site · ${site ?? "not recorded"}. Where it lives when it is not in use.` },
+          { label: "Acquired",  value: acquired ?? "—", icon: "Calendar",  variant: "neutral",
+            tooltip: `Acquired · ${acquired ?? "not recorded"}. The start of its depreciation and of its service history.` },
+          { label: "Custodian", value: c.owner,         icon: "UserRound", variant: "informative",
+            tooltip: `Custodian · ${c.owner}. Accountable for the asset, which is not the same as owning it.` },
+        ],
+      },
+    }
+  }
+
   // Customer. The last part is the account; anything between it and the role is
   // the department, which only some records carry.
   const role    = p[0] ?? "—"
@@ -207,6 +267,29 @@ const FACETS: Record<string, UcpFacet[]> = {
     { id: "owner",    label: "Account owner" },
     { id: "source",   label: "Source" },
   ],
+  // The three that are not people. Their facets are not a variation on a
+  // contact's — a repair order filters by store, a policy by scope. Which is
+  // the argument for the type publishing its own rather than the screen
+  // guessing from a shared shape.
+  "repair-order": [
+    { id: "status", label: "Status", inline: true },
+    { id: "store",  label: "Store",  inline: true },
+    { id: "owner",  label: "Advisor" },
+    { id: "source", label: "Source" },
+  ],
+  policy: [
+    { id: "status", label: "Status", inline: true },
+    { id: "scope",  label: "Scope",  inline: true },
+    { id: "owner",  label: "Owner" },
+    { id: "source", label: "Source" },
+  ],
+  asset: [
+    { id: "status", label: "Status", inline: true },
+    { id: "store",  label: "Site",   inline: true },
+    { id: "class",  label: "Class" },
+    { id: "owner",  label: "Custodian" },
+    { id: "source", label: "Source" },
+  ],
 }
 
 export function facetsForType(type: string): UcpFacet[] {
@@ -230,6 +313,11 @@ export function facetValue(c: UcpContact, facetId: string): string {
     case "location":   return c.type === "employee" ? (p[2] ?? "") : ""
     case "industry":   return c.type === "company"  ? (p[0] ?? "") : ""
     case "hq":         return c.type === "company"  ? (p[2] ?? "") : ""
+    // The non-people types. Same parser, different position — each type says
+    // what its subtitle means, and nothing else has to know.
+    case "store":      return c.type === "repair-order" || c.type === "asset" ? (p[1] ?? "") : ""
+    case "scope":      return c.type === "policy" ? (p[0] ?? "") : ""
+    case "class":      return c.type === "asset"  ? (p[0] ?? "") : ""
     default: return ""
   }
 }
