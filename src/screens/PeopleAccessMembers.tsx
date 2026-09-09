@@ -20,6 +20,8 @@ import { Radio }        from "@/components/ui/radio"
 import { Checkbox }     from "@/components/ui/checkbox"
 import { Textarea }     from "@/components/ui/textarea"
 import { Input }        from "@/components/ui/input"
+import { EmptyState }   from "@/components/ui/empty-state"
+import { useToast }     from "@/components/ui/toast"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -64,8 +66,6 @@ interface Role {
   id: string; label: string; system: boolean; desc: string; memberIds: string[]
   /** Studios this role can grant permissions in. Empty = not scoped yet. */
   studios?: string[]
-  /** Scope applied by default to permissions this role grants. */
-  defaultScope?: string
 }
 
 interface Group {
@@ -202,12 +202,12 @@ const PERM_TREE: Record<string, PermNode[]> = {
 // ─── Roles fixture ────────────────────────────────────────────────────────────
 
 const ROLES: Role[] = [
-  { id: "workspace-admin",    label: "Workspace Admin",    system: true, desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"], studios: ["governance", "datastudio", "agentic", "admin"], defaultScope: "Tenant" },  // audit-ignore: prototype fixture data
-  { id: "developer",          label: "Developer",          system: true, desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"], studios: ["agentic", "datastudio"], defaultScope: "Team" },  // audit-ignore: prototype fixture data
-  { id: "viewer",             label: "Viewer",             system: true, desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"], studios: ["governance", "datastudio", "agentic", "admin"], defaultScope: "Own" },  // audit-ignore: prototype fixture data
-  { id: "agent-builder",      label: "Agent Builder",      system: false, desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"], studios: ["agentic"], defaultScope: "Team" },  // audit-ignore: prototype fixture data
-  { id: "data-steward",       label: "Data Steward",       system: false, desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"], studios: ["datastudio", "governance"], defaultScope: "Tenant" },  // audit-ignore: prototype fixture data
-  { id: "compliance-auditor", label: "Compliance Auditor", system: false, desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [], studios: ["governance", "admin"], defaultScope: "Tenant" },  // audit-ignore: prototype fixture data
+  { id: "workspace-admin",    label: "Workspace Admin",    system: true, desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"], studios: ["governance", "datastudio", "agentic", "admin"] },  // audit-ignore: prototype fixture data
+  { id: "developer",          label: "Developer",          system: true, desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"], studios: ["agentic", "datastudio"] },  // audit-ignore: prototype fixture data
+  { id: "viewer",             label: "Viewer",             system: true, desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"], studios: ["governance", "datastudio", "agentic", "admin"] },  // audit-ignore: prototype fixture data
+  { id: "agent-builder",      label: "Agent Builder",      system: false, desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"], studios: ["agentic"] },  // audit-ignore: prototype fixture data
+  { id: "data-steward",       label: "Data Steward",       system: false, desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"], studios: ["datastudio", "governance"] },  // audit-ignore: prototype fixture data
+  { id: "compliance-auditor", label: "Compliance Auditor", system: false, desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [], studios: ["governance", "admin"] },  // audit-ignore: prototype fixture data
 ]
 
 const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number; agentic: number; admin: number; total: number }> = {
@@ -3981,129 +3981,160 @@ function FormSectionLabel({ children, hint, optional }: { children: React.ReactN
 }
 
 /**
- * Create / edit a custom role.
+ * Create a role — a full-page wizard, not a modal.
  *
- * Five fields, which is what keeps this a `ModalDialog` at all: the Create
- * pattern's cascade sends a standalone create to `ModalDialog variant="content"`
- * at five fields or fewer and to a full-page form above that. Assigning members
- * was the sixth candidate and is deliberately out — a role is assigned from the
- * member's profile or the role's own page, so adding it here would both push
- * this to a full page and duplicate a surface that already exists.
+ * Assigning members made it six field groups, and the Create cascade sends a
+ * standalone create past five fields to a full-page form; adding stages on top
+ * of that lands on "two or more stages → full-page wizard + Stepper +
+ * StepperNavFooter". So the surface follows from the content, which is the
+ * order the pattern insists on.
  *
- * The field set follows how RBAC tools actually shape role creation — name,
- * description, start-from-an-existing-role, where the role may act, and a
- * default scope — mapped onto what AIMS OS has: studios, and the Own/Team/
- * Tenant scope the permission editor already uses.
+ * The Sidebar is hidden for the duration (`hideSidebar`) — the pattern's own
+ * rule for full-page create surfaces, and the reason `ScreenLayout` grew the
+ * prop. `Header` carries the title and a backButton only: the flow completes in
+ * the footer, never in a header CTA.
  *
- * "Start from" is a Chip row, not a dropdown. `Select` is a trigger with no
- * list, and the base-ui Popover pairing CLAUDE.md prescribes is documented as
- * NOT working in two places in this repo (select.tsx's own docblock and
- * widget-builder's OptionPicker). Seven short labels fit a chip row, so this
- * needs neither a dropdown nor a second copy of OptionPicker.
+ * Three stages, in the order the object needs them:
+ *   1 Details      — what it is
+ *   2 Permissions  — what it grants. Not optional and not deferred to a
+ *                    "default scope": a role that grants nothing is not a role,
+ *                    and scope is decided per permission, in the tree.
+ *   3 Members      — who gets it. The stage that pushed this off a modal.
  */
-function RoleFormModal({ role, onSave, onClose }: {
-  role: Role | null
-  onSave: (saved: Role) => void
-  onClose: () => void
+function NewRoleWizard({ onCancel, onCreate }: {
+  onCancel: () => void
+  onCreate: (role: Role, memberIds: string[]) => void
 }) {
-  const isEdit = role !== null
-  const [name, setName]       = useState(role?.label ?? "")
-  const [desc, setDesc]       = useState(role?.desc ?? "")
+  const [step, setStep]       = useState(0)
+  const [name, setName]       = useState("")
+  const [desc, setDesc]       = useState("")
   const [basedOn, setBasedOn] = useState<string | null>(null)
-  const [studios, setStudios] = useState<string[]>(role?.studios ?? [])
-  const [scope, setScope]     = useState(role?.defaultScope ?? "Own")
+  const [studios, setStudios] = useState<string[]>([])
+  const [activeStudio, setActiveStudio] = useState<string | null>(null)
+  const [overrides, setOverrides]           = useState<PermOverrides>({})
+  const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
+  const [memberIds, setMemberIds] = useState<string[]>([])
+  const [memberQuery, setMemberQuery] = useState("")
 
-  // Picking a source role seeds the two fields it can actually supply. It does
-  // NOT quietly copy permissions — those are edited on the role's own page, and
-  // implying otherwise here would overstate what happened.
+  // Picking a source role copies the studios it covers. It does NOT copy
+  // permissions — the fixture holds one shared tree, not a grant list per role,
+  // so claiming otherwise would be a lie the UI cannot back up.
   function chooseBase(id: string | null) {
     setBasedOn(id)
     const src = id ? ROLES.find(r => r.id === id) : null
     if (src) {
       setStudios(src.studios ?? [])
-      setScope(src.defaultScope ?? "Own")
+      setActiveStudio((src.studios ?? [])[0] ?? null)
     }
   }
 
   function toggleStudio(id: string) {
-    setStudios(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    setStudios(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      setActiveStudio(cur => next.includes(cur ?? "") ? cur : next[0] ?? null)
+      return next
+    })
   }
 
-  function handleSave() {
-    if (!name.trim()) return
-    onSave({
-      id: role?.id ?? name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+  function togglePermission(id: string, on: boolean) {
+    setOverrides(prev => {
+      const copy = { ...prev }
+      if (on) copy[id] = "g-direct"
+      else delete copy[id]
+      return copy
+    })
+  }
+
+  const grantedCount = Object.values(overrides).filter(v => GRANTED_STATES.includes(v)).length
+  const canContinue  = step === 0 ? name.trim().length > 0
+                     : step === 1 ? studios.length > 0 && grantedCount > 0
+                     : true
+
+  const steps: StepItem[] = [
+    { label: "Details",     state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Permissions", state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Members",     state: step === 2 ? "active" : "default" },
+  ]
+
+  function finish() {
+    onCreate({
+      id: name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
       label: name.trim(),
       system: false,
       desc: desc.trim(),
-      memberIds: role?.memberIds ?? [],
+      memberIds,
       studios,
-      defaultScope: scope,
-    })
-    // No success screen: the new role lands in the list behind this modal, and
-    // the Create pattern says the object appearing IS the confirmation.
-    onClose()
+    }, memberIds)
   }
 
-  return (
-    <ModalDialog
-      isOpen
-      onClose={onClose}
-      variant="content"
-      tone="default"
-      iconName="ShieldPlus"
-      showClose
-      title={isEdit ? "Edit role" : "New role"}
-      description={isEdit
-        ? "Update what this role is for and where it can act."
-        : "A role bundles permissions so they can be granted to several people at once."}
-      slotUnstyled
-      slot={
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxHeight: "min(68vh, 640px)", overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+  const shownMembers = members_forWizard(memberQuery)
 
+  return (
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title="New role"
+          description="A role bundles permissions so they can be granted to several people at once."
+          backButton
+          onBack={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} />
+      </div>
+
+      {/* ── 1 · Details ───────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
           <div>
             <FormSectionLabel>Role name</FormSectionLabel>
             <Input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Risk Analyst" />
           </div>
-
           <div>
-            <FormSectionLabel>Description</FormSectionLabel>
-            <Textarea
-              value={desc}
-              onChange={e => setDesc(e.target.value)}
-              placeholder="What does this role allow members to do?"
-              rows={3}
-            />
+            <FormSectionLabel optional>Description</FormSectionLabel>
+            <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
+              placeholder="What does this role allow members to do?" />
           </div>
-
-          {!isEdit && (
-            <div>
-              <FormSectionLabel hint="Copies that role's studios and default scope. Permissions are still edited on the role's own page.">
-                Start from
-              </FormSectionLabel>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <Chip size="s" variant={basedOn === null ? "primary" : "secondary"} onClick={() => chooseBase(null)}>
-                  Blank
-                </Chip>
-                {ROLES.map(r => (
-                  <Chip key={r.id} size="s" variant={basedOn === r.id ? "primary" : "secondary"} onClick={() => chooseBase(r.id)}>
-                    {r.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div>
-            <FormSectionLabel hint="Which studios this role can grant permissions in.">Studio access</FormSectionLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <FormSectionLabel optional hint="Copies which studios that role covers. Permissions are chosen in the next step either way.">
+              Start from
+            </FormSectionLabel>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <Chip size="s" variant={basedOn === null ? "primary" : "secondary"} onClick={() => chooseBase(null)}>Blank</Chip>
+              {ROLES.map(r => (
+                <Chip key={r.id} size="s" variant={basedOn === r.id ? "primary" : "secondary"} onClick={() => chooseBase(r.id)}>
+                  {r.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2 · Permissions ───────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <FormSectionLabel hint="Pick the studios first — the permissions below are the ones those studios define.">
+              Studio access
+            </FormSectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
               {INVITE_STUDIO_OPTIONS.map(st => {
                 const on = studios.includes(st.id)
                 return (
                   <CardContainer key={st.id} size="sm" selected={on} onClick={() => toggleStudio(st.id)}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <Checkbox size="sm" checked={on} onChange={() => toggleStudio(st.id)} id={`role-studio-${st.id}`} />
-                      <label htmlFor={`role-studio-${st.id}`} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", minWidth: 0 }}>
+                      <Checkbox size="sm" checked={on} onChange={() => toggleStudio(st.id)} id={`wiz-studio-${st.id}`} />
+                      <label htmlFor={`wiz-studio-${st.id}`} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", minWidth: 0 }}>
                         <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
                         <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
                       </label>
@@ -4114,28 +4145,107 @@ function RoleFormModal({ role, onSave, onClose }: {
             </div>
           </div>
 
-          <div>
-            <FormSectionLabel hint="Applied to each permission this role grants. Individual permissions can be narrowed afterwards.">
-              Default scope
-            </FormSectionLabel>
-            <div role="group" aria-label="Default scope" style={{ display: "flex", gap: 6 }}>
-              {SCOPE_ITEMS.map(item => (
-                <Chip key={item.id} size="s" variant={scope === item.id ? "primary" : "secondary"} onClick={() => setScope(item.id)}>
-                  {item.label}
-                </Chip>
-              ))}
+          {studios.length === 0 ? (
+            <EmptyState
+              icon={Icons.ShieldQuestion}
+              title="Pick a studio first"
+              description="A role grants permissions inside a studio, so choose at least one above."
+            />
+          ) : (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <FormSectionLabel>Permissions</FormSectionLabel>
+                <Tag variant={grantedCount > 0 ? "success" : "neutral"} size="sm" className="ml-auto">
+                  {grantedCount} granted
+                </Tag>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+                {STUDIO_TABS.filter(t => studios.includes(t.id)).map(t => (
+                  <Chip key={t.id} size="s" variant={activeStudio === t.id ? "primary" : "secondary"} onClick={() => setActiveStudio(t.id)}>
+                    {t.label}
+                  </Chip>
+                ))}
+              </div>
+              <CardContainer className="!p-0 overflow-hidden">
+                {(PERM_TREE[activeStudio ?? ""] ?? []).map(n => (
+                  <EditablePermTreeNode
+                    key={n.id}
+                    node={n}
+                    depth={0}
+                    overrides={overrides}
+                    onToggle={togglePermission}
+                    mode="edit"
+                    scopeOverrides={scopeOverrides}
+                    onScopeChange={(id, sc) => setScopeOverrides(prev => ({ ...prev, [id]: sc }))}
+                  />
+                ))}
+              </CardContainer>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 3 · Members ───────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+          <FormSectionLabel optional hint="You can also assign this role later, from a member's profile.">
+            Assign members
+          </FormSectionLabel>
+          <Input value={memberQuery} onChange={e => setMemberQuery(e.target.value)} placeholder="Search members…" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {shownMembers.length === 0 ? (
+              <EmptyState icon={Icons.UserSearch} title="No members found"
+                description="Try a different name or email." />
+            ) : shownMembers.map(m => {
+              const on = memberIds.includes(m.id)
+              return (
+                <CardContainer key={m.id} size="sm" selected={on}
+                  onClick={() => setMemberIds(prev => on ? prev.filter(x => x !== m.id) : [...prev, m.id])}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Checkbox size="sm" checked={on} onChange={() => {}} id={`wiz-member-${m.id}`} />
+                    <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                      avatarStyle={m.status === "active" ? "text" : "empty"} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{m.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{m.email}</div>
+                    </div>
+                    <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
+                  </div>
+                </CardContainer>
+              )
+            })}
           </div>
         </div>
-      }
-      ctaSecondary={{ label: "Cancel", onClick: onClose }}
-      ctaPrimary={{
-        label: isEdit ? "Save changes" : "Create role",
-        disabled: !name.trim(),
-        onClick: handleSave,
-      }}
-    />
+      )}
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2 ? "Create role" : "Next"}
+            nextDisabled={!canContinue}
+            onNext={step === 2 ? finish : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+          />
+        </div>,
+        document.body,
+      )}
+    </ScreenLayout>
   )
+}
+
+/** Members the wizard offers, filtered by the search box. */
+function members_forWizard(query: string) {
+  const q = query.trim().toLowerCase()
+  if (!q) return MEMBERS
+  return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -4160,15 +4270,20 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   : previewItem?.type === "group"  ? { label: "Manage group", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
   : undefined
   const [showInvite, setShowInvite]     = useState(false)
-  const [roleForm, setRoleForm]         = useState<{ role: Role | null } | null>(null)
+  const [creatingRole, setCreatingRole] = useState(false)
+  const toast = useToast()
 
-  function handleRoleSave(saved: Role) {
-    setRoles(prev => {
-      const exists = prev.some(r => r.id === saved.id)
-      return exists ? prev.map(r => r.id === saved.id ? saved : r) : [...prev, saved]
+  function handleRoleCreate(saved: Role, assigned: string[]) {
+    setRoles(prev => [...prev, saved])
+    setCreatingRole(false)
+    // A wizard lands on the object it created (Create pattern), and the toast
+    // confirms the write itself — top-right, gone in 3.5s.
+    setDetailView({ type: "role", role: saved })
+    toast.success(`Role "${saved.label}" created`, {
+      description: assigned.length > 0
+        ? `Assigned to ${assigned.length} member${assigned.length === 1 ? "" : "s"}.`
+        : "Assign it to members from their profile whenever you are ready.",
     })
-    setDetailView(dv => dv?.type === "role" && dv.role.id === saved.id ? { type: "role", role: saved } : dv)
-    setRoleForm(null)
   }
 
   const counts = useMemo(() => ({
@@ -4231,6 +4346,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   }
 
   // Detail pages
+  if (creatingRole) {
+    return <NewRoleWizard onCancel={() => setCreatingRole(false)} onCreate={handleRoleCreate} />
+  }
+
   if (detailView?.type === "member") {
     return (
       <MemberDetailPage
@@ -4284,7 +4403,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             mainTab === "members"
               ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
               : mainTab === "roles"
-              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setRoleForm({ role: null }) }
+              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setCreatingRole(true) }
               : { label: "New group",     icon: Icons.FolderPlus }
           }
         />
@@ -4503,9 +4622,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         />
       )}
 
-      {roleForm !== null && (
-        <RoleFormModal role={roleForm.role} onSave={handleRoleSave} onClose={() => setRoleForm(null)} />
-      )}
     </ScreenLayout>
   )
 }
