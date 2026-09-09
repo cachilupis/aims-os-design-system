@@ -1,4 +1,4 @@
-import { useState, useMemo, type ReactElement } from "react"
+import { useState, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
@@ -713,7 +713,7 @@ function RolePermissionsPanel({ role }: { role: Role }) {
         const isEditing = editingStudio === studio.id
         const justSaved = savedStudio === studio.id
         const isOpen = (isExpanded || isEditing) && !isRemoved
-        const IconEl = (Icons as Record<string, React.ComponentType<{ size?: number; color?: string; style?: React.CSSProperties }>>)[studio.icon]
+        const IconEl = (Icons as unknown as Record<string, React.ComponentType<{ size?: number; color?: string; style?: React.CSSProperties }>>)[studio.icon]
 
         return (
           <div key={studio.id} style={{
