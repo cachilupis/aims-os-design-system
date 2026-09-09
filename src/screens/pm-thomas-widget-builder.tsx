@@ -427,21 +427,27 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
   // the Marketplace and the Universal Profile now call, so a Donut is the same
   // Donut in all four.
   // The `key` is what makes this animate: React remounts on a type change, so
-  // the entry animation runs again instead of only on first paint. Utilities
-  // from tw-animate-css, already a dependency — 200ms and a 1px rise, enough to
-  // say "this is new" without making someone wait to read it.
+  // the entry animation runs again instead of only on first paint. The class is
+  // the DS's own ds-enter-widget (index.css) — the tw-animate-css utilities
+  // this used to carry are a Tailwind v4 feature and this repo is v3, so they
+  // compiled to nothing and the widget had been appearing instantly all along.
   const body = !typeInfo
     ? <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
     : (
-      <div key={`${typeInfo.id}:${activeFilter ?? ""}`} className="animate-in fade-in slide-in-from-bottom-1 duration-200 ease-out">
-        <WidgetPreview typeId={typeInfo.id} />
+      <div key={`${typeInfo.id}:${activeFilter ?? ""}`} className="ds-enter-widget">
+        <WidgetPreview typeId={typeInfo.id} filter={activeFilter} />
       </div>
     )
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1, color: "var(--color-text-subtitle)" }}>Live preview</span>
+      {/* The two columns start with a section heading each, so they have to be
+          the same heading and start on the same line. This one was its own
+          11px/700 span centred against a 32px switcher, which put it 14px below
+          "DATA SOURCE" and in a different type. StepLabel plus a top-aligned
+          row fixes both: same words, same line, same style. */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <StepLabel>Live preview</StepLabel>
         {/* A segmented switcher, drawn by hand: three buttons in a bordered
             box, one painted with --primary. That is SwitchTab, which the
             screen already imports for its own stages. */}
