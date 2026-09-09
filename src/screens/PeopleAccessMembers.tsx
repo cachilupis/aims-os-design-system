@@ -18,6 +18,7 @@ import { Stepper, type StepItem } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { SwitchTab, type SwitchTabItem } from "@/components/ui/switch-tab"
 import { AvatarCircle, nameToAvatarColor } from "@/components/ui/avatar"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -336,13 +337,34 @@ const STATUS_LABEL: Record<MemberStatus, string> = {
   invited:   "Invited",
   suspended: "Suspended",
 }
+const STATUS_COLOR: Record<MemberStatus, string> = {
+  active:    "var(--badge-success)",
+  invited:   "var(--badge-light-blue)",
+  suspended: "var(--muted-foreground)",
+}
 const USER_TYPE_COLOR: Record<UserType, string> = {
   "Owner":  "var(--badge-error)",
   "Admin":  "var(--badge-alert)",
   "Member": "var(--muted-foreground)",
 }
-// Keep alias for any legacy references in this file
-const ROLE_COLOR = USER_TYPE_COLOR
+const USER_TYPE_TAG: Record<UserType, "error" | "alert" | "neutral"> = {
+  "Owner":  "error",
+  "Admin":  "alert",
+  "Member": "neutral",
+}
+const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informative"> = {
+  governance: "limeGreen",
+  datastudio: "purple",
+  agentic:    "lightBlue",
+  admin:      "informative",
+}
+const STUDIO_HI: Record<string, "lime" | "purple" | "light-blue" | "informative"> = {
+  governance: "lime",
+  datastudio: "purple",
+  agentic:    "light-blue",
+  admin:      "informative",
+}
+const TABLE_CARD = "hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]"
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
 
 function formatRelative(iso: string): string {
@@ -1417,7 +1439,7 @@ function MemberDetailPage({
               <Icons.Trash2 size={13} /> Remove from workspace
             </Button>
           </div>
-        </CardContainer>
+        </div>
 
         {/* Right: tabs */}
         <div>
@@ -3399,7 +3421,7 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
                 </div>
               )
             })}
-          </div>
+          </CardContainer>
         )}
 
         {/* Settings */}
@@ -3696,8 +3718,8 @@ function RoleCard({ role, onSelect }: { role: Role; onSelect: (r: Role) => void 
             {role.system ? "View role" : "Edit role"}
           </Button>
         </div>
-      </CardContainer>
-    </div>
+      </div>
+    </CardContainer>
   )
 }
 
@@ -3740,8 +3762,8 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
             Manage group
           </Button>
         </div>
-      </CardContainer>
-    </div>
+      </div>
+    </CardContainer>
   )
 }
 
@@ -4402,6 +4424,67 @@ function InviteStepReview({
   )
 }
 
+// ─── Permissions breakdown ────────────────────────────────────────────────────
+
+export type StudioPermRow = { id: string; label: string; value: number; max: number; names: string[] }
+
+export function studioPermRows(counts: Record<string, number>): StudioPermRow[] {
+  return STUDIO_TABS.map(studio => {
+    const value = counts[studio.id] ?? 0
+    const leaves = (PERM_TREE[studio.id] ?? []).flatMap(n => n.children?.length ? n.children : [n])
+    return {
+      id: studio.id,
+      label: studio.label,
+      value,
+      max: Math.max(leaves.length, value, 1),
+      names: leaves.slice(0, value).map(n => n.label),
+    }
+  })
+}
+
+export function PermissionsBreakdown({ rows }: { rows: StudioPermRow[] }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {rows.map(row => <StudioPermBreakdownRow key={row.id} row={row} />)}
+    </div>
+  )
+}
+
+function StudioPermBreakdownRow({ row }: { row: StudioPermRow }) {
+  const [open, setOpen] = useState(false)
+  const empty = row.value === 0
+  const pct = Math.min((row.value / row.max) * 100, 100)
+  return (
+    <CardContainer size="sm" onClick={empty ? undefined : () => setOpen(o => !o)}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          {!empty && (open
+            ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+            : <Icons.ChevronRight size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />)}
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{row.label}</span>
+        </div>
+        <Tag variant={empty ? "secondary" : (STUDIO_TAG[row.id] ?? "secondary")} size="sm">{row.value}</Tag>
+      </div>
+      <div style={{ height: 3, borderRadius: 2, background: "var(--field-border)", overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`, borderRadius: 2, transition: "width 0.3s",
+          background: empty ? "transparent" : `var(--hi-${(STUDIO_HI[row.id] ?? "neutral").replace("-", "")}-icon)`,
+        }} />
+      </div>
+      {open && row.names.length > 0 && (
+        <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+          {row.names.map(name => (
+            <li key={name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
+              <Icons.Check size={11} color="var(--badge-success)" style={{ flexShrink: 0 }} />
+              {name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </CardContainer>
+  )
+}
+
 // ─── Preview slide-out contents ──────────────────────────────────────────────
 
 function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: number; onChange: (i: number) => void }) {
@@ -4692,7 +4775,7 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
   )
 }
 
-function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+function GroupPreview({ group, onViewFull: _onViewFull, onMemberClick }: { group: Group; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
   const [tab, setTab] = useState(0)
   const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
 
