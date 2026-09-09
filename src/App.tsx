@@ -1945,7 +1945,7 @@ const HEADER_SPEC = {
     { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
     { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
     { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after the title. Survives compress — a detail page's status is exactly what you still want to see once you have scrolled." },
-    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. From L2 onwards this is how a page states where it sits: parent plus current page (Workers › Meridian), not the whole path. Survives compress. Never combine with backButton — at L2 the first crumb IS the way back." },
+    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. FROM L3 ONWARDS this is how a page states where it sits: parent plus current page, not the whole path. Survives compress. Never combine with backButton — one affordance, and the depth picks it: L2 is the back arrow with the PARENT as the title (that text is what labels the arrow), L3+ is the breadcrumb, because only there are \"up one level\" and \"back\" different destinations. Revised 2026-09-09; it used to start at L2." },
     { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages." },
     { name: "onBack",          type: "function", values: ["() => void"],                                                                      default: "undefined",     note: "Click handler for the back button. Never affects visibility — use backButton for that." },
     { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
@@ -36485,7 +36485,7 @@ const BREADCRUMB_SPEC = {
   name: "Breadcrumb",
   figmaNodeId: "18352:45",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45",
-  description: "Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+  description: "Hierarchical navigation trail, used FROM L3 ONWARDS inside Header.breadcrumb. Shows the path from root to the current page with all ancestors clickable. At L2 use Header backButton instead, with the PARENT's name as the title so the arrow is labelled — never both, and never a breadcrumb at L2, where \"up\" and \"back\" are the same place. Revised 2026-09-09.",
   properties: [
     { name: "depth",      type: "number",             values: ["2","3","4","4+"],               default: "3",   note: "depth<2 → no breadcrumb · depth=2 → Depth=2 variant · depth=3 → Depth=3 · depth≥4 → Depth=4 (middle items truncated with …)" },
     { name: "items",      type: "BreadcrumbItem[]",   values: ["{ label: string; href?: string }[]"], default: "[]",  note: "items[0] is always 'Home' with href='/'. items[last] is the Selected item (no href)." },
@@ -36525,7 +36525,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgDepth, setPgDepth] = useState(3)
   const [bcPreviewOpen, setBcPreviewOpen] = useState(false)
-  const [bcPreviewL3, setBcPreviewL3]     = useState(false)
+  const [bcPreviewLevel, setBcPreviewLevel] = useState<1 | 2 | 3>(1)
 
   const depthItems: Record<number, BreadcrumbItem[]> = {
     2: [{ label: "Home", href: "/" }, { label: "Page Title" }],
@@ -36540,7 +36540,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
-            Hierarchical navigation trail, used from L2 onwards inside <code>Header.breadcrumb</code>. Shows parent plus current page — ancestors clickable, current page not. Never paired with a backButton: from L2 the first crumb IS the way back.
+            Hierarchical navigation trail, used <strong>from L3 onwards</strong> inside <code>Header.breadcrumb</code>. Shows parent plus current page &mdash; ancestors clickable, current page not. Never paired with a backButton: it is one affordance or the other, and the depth picks it. <strong>At L2 they point at the same place</strong>, so L2 keeps the back arrow and puts the PARENT&rsquo;s name in the title, which is what labels it.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("breadcrumb")} />
@@ -36651,22 +36651,23 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <LucideIcons.X size={12} /> Close Preview
                 </button>
 
-                {/* L1 / L2+ toggle — centered at top. Under the current pattern the
-                    breadcrumb appears from L2, not L3, so the two states are
-                    "root list, nothing to trace" and "anything deeper". */}
+                {/* Three states, because the pattern has three (revised
+                    2026-09-09): nothing at L1, a back arrow labelled by the
+                    parent at L2, and the breadcrumb only from L3. */}
                 <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
                   <SwitchTab
                     items={[
-                      { id: "l2", label: "L1 — Root list"    },
-                      { id: "l3", label: "L2+ — Detail view" },
+                      { id: "l1", label: "L1 — Root list"        },
+                      { id: "l2", label: "L2 — Back button"      },
+                      { id: "l3", label: "L3 — Breadcrumb"       },
                     ]}
-                    value={bcPreviewL3 ? "l3" : "l2"}
-                    onChange={(v: string) => setBcPreviewL3(v === "l3")}
+                    value={`l${bcPreviewLevel}`}
+                    onChange={(v: string) => setBcPreviewLevel(Number(v.slice(1)) as 1 | 2 | 3)}
                     size="s"
                   />
                 </div>
 
-                <BreadcrumbExampleScreen showBreadcrumb={bcPreviewL3} />
+                <BreadcrumbExampleScreen level={bcPreviewLevel} />
               </div>
             )}
 

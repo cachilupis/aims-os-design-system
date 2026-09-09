@@ -153,7 +153,7 @@ These are checks 15-18. They are written down here too because a check tells you
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
-- **NEVER** combine `Header.breadcrumb` and `backButton` — from L2 it is the breadcrumb; the first crumb IS the way back. `backButton` is only for pages with no hierarchy to express (a creation wizard).
+- **NEVER** combine `Header.breadcrumb` and `backButton` — one affordance, and the depth decides which: **L2 is `backButton` with the PARENT's name as the title; L3+ is the breadcrumb.** `backButton` also covers pages with no hierarchy to express at all (a creation wizard).
 - **NEVER** use `WidgetCanvasSection` or a hand-rolled grid for Overview tabs — always `WidgetCanvasView`.
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
@@ -402,18 +402,27 @@ Every entity detail page follows this structure — tabs always in this order:
 3. **Logs** → always the `Table` component following the Logs Table pattern. (See PatternLogsPage.)
 
 Header rules on detail pages:
-- `breadcrumb` with parent + current page — a detail page is L2 or deeper. Never `backButton` alongside it.
-- Always show status `tag` — detail view = one entity, one state.
-- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one.
+- **A detail page reached from its list is L2**, so it carries `backButton` and its `title` is the PARENT's name — not the record's. `breadcrumb` starts at L3. See *Navigation depth* below; never both.
+- Show the status `tag` — detail view = one entity, one state. **Unless an `EntityHeader` is on the page:** it carries the state badge, and the bar above it must not repeat it.
+- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one. **Again, unless an `EntityHeader` is on the page** — then the record's actions belong to that card and the bar carries none.
 
 ```tsx
-// ✅ Standard detail page structure
+// ✅ L2 detail page, no EntityHeader — the bar carries the record
 <Header
-  title="Meridian"
+  title="Workers"                                   // the PARENT
+  backButton
+  onBack={go}
   tag={<Tag variant="success" size="s">Active</Tag>}
-  breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />}
   size={isScrolled ? "compress" : "size-l"}
   primaryAction={{ label: "Edit", icon: Pencil }}
+/>
+
+// ✅ L2 detail page WITH an EntityHeader — the bar carries navigation only
+<Header
+  title="Workers"
+  backButton
+  onBack={go}
+  size={isScrolled ? "compress" : "size-l"}
 />
 <Tabs items={[
   { id: "overview", label: "Overview" },   // always first
@@ -456,51 +465,73 @@ Maximum 2 navigation layers:
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
 24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
-### Navigation depth — the breadcrumb pattern
+### Navigation depth — back at L2, breadcrumb from L3
 
-**From L2 onwards, a page states where it sits with a breadcrumb inside the `Header`. Not a back arrow.**
+**L2 keeps the `Header` with a `backButton`, and its title names the PARENT. The breadcrumb starts at L3.**
 
-Confirmed by Michael (2026-09-02) after checking how Carbon and Atlassian handle it. Back and breadcrumb answer different questions — back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I") — and that distinction only earns its keep from L3, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place**: the first crumb IS the way back, so an arrow beside it is two affordances pointing at one target, in a 62px header.
+Revised by Michael, 2026-09-09. The previous version of this rule said the opposite — breadcrumb from L2 onwards, never a back arrow — and the reasoning it gave is worth keeping, because it is what makes the revision correct rather than a reversal.
+
+Back and breadcrumb answer different questions. Back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I"), and **that distinction only earns its keep from L3**, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place.** So at L2 you should show one affordance, not two — the only question is which.
+
+The old rule picked the crumb, on the grounds that a bare arrow does not say where it goes while a crumb is labelled. **That argument assumed the `Header` title was the RECORD's name**, which left the arrow orphaned beside it. It no longer holds, because at L2 the title names the parent:
+
+```
+← Universal Profiles
+```
+
+The arrow is now labelled by the text beside it. And where an `EntityHeader` is on the page, this is the only version that does not duplicate: the record's name, state and actions belong to that card, and a crumb naming the record would put its name back in the bar the card sits under.
 
 | Depth | Pattern |
 |---|---|
 | L1 (a list, a home) | No breadcrumb, no back. `Breadcrumb` renders nothing below `depth={2}` anyway |
-| **L2+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
+| **L2** | `Header` with `backButton`, and **`title` = the parent's name** — the list you came from. No `tag`. No CTAs when an `EntityHeader` carries them |
+| **L3+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
 
 ```tsx
+// L2 — a record's detail page, under an EntityHeader
+<Header
+  size={isScrolled ? "compress" : "size-l"}
+  backButton
+  onBack={onBack}
+  title="Universal Profiles"   // the PARENT, never the record
+/>
+
+// L3 — something inside that record
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 
 <Header
   size={isScrolled ? "compress" : "size-l"}
-  title="Meridian"
-  tag={<Tag variant="success" size="sm">Active</Tag>}
+  title="Q3 Compliance Check"
   breadcrumb={
     <Breadcrumb
-      depth={2}
-      items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]}
+      depth={3}
+      items={[{ label: "Universal Profiles", href: "profiles" }, { label: "Meridian Corp", href: "meridian" }, { label: "Q3 Compliance Check" }]}
       onNavigate={go}
     />
   }
-  primaryAction={{ label: "Run now", onClick: run }}
 />
 ```
 
+**At L2 the title must name the parent, not the record.** This is the whole condition the rule rests on. Name the record there and the arrow loses its label AND the identity is duplicated — both failures at once, which is exactly the state the Universal Profile was in before 2026-09-09.
+
 `Breadcrumb` lives at `src/components/ui/breadcrumb.tsx` — **import it, never hand-roll one.** Ancestors carry `href`; the current page does not.
 
-**What happens on scroll.** The breadcrumb and the tag both survive compress, stacked above the title:
+**What happens on scroll at L3.** The breadcrumb and the tag both survive compress, stacked above the title:
 
 ```
-size-l    Workers › Meridian          ← breadcrumb
-          Meridian  [Active]          ← title + tag
-          Manages … (description)     ← hidden in compress
+size-l    Universal Profiles › Meridian Corp    ← breadcrumb
+          Q3 Compliance Check  [Passed]         ← title + tag
+          Ran 10 Aug … (description)            ← hidden in compress
 
-compress  Workers › Meridian          ← still there
-          Meridian  [Active]          ← still there
+compress  Universal Profiles › Meridian Corp    ← still there
+          Q3 Compliance Check  [Passed]         ← still there
 ```
 
 Compress is **content-driven, not a fixed 60px** — about 48px normally, about 62px with a breadcrumb. That is deliberate: scrolling should never cost you your place in the hierarchy or the record's status. The 4px between the two rows is what keeps them reading as *path + page* instead of one wrapped title.
 
-**Never combine `breadcrumb` and `backButton`.** `backButton` remains for pages with no hierarchy to express — a creation wizard, a standalone flow — where there is a "back" but no "up".
+**Never combine `breadcrumb` and `backButton`.** That has not changed — it is still one affordance or the other, and now the depth decides which. `backButton` also remains for pages with no hierarchy to express at all — a creation wizard, a standalone flow — where there is a "back" but no "up".
+
+**When an `EntityHeader` is on the page, the bar above it carries navigation ONLY** — no `tag`, and no CTAs the card already shows. Identity, state and actions belong to the card; where you are and how to leave belong to the bar. Two identity blocks stacked on one screen is not a hierarchy, it is a duplicate.
 
 ### Panel overlays — PM component selection guide
 
@@ -776,6 +807,7 @@ The `tag` prop renders a chip/badge inline next to the title. Use it only when i
 |---|---|---|
 | **List view** (multiple items, each with its own state) | ❌ Never | A list contains many states simultaneously — a single tag is meaningless and misleading |
 | **Detail view** (one specific item open, e.g. a SlideOut or full-screen detail) | ✅ Yes, show the item's current state | A single item has one state; the tag gives immediate context |
+| **Detail view with an `EntityHeader` on it** | ❌ Never | The card already carries the state badge, one row down. Two badges for one state is a duplicate, not emphasis |
 
 **What goes in the tag:** a status label only — `Active`, `Draft`, `Running`, `Paused`, `Archived`. Never a count (`4 Workers`), never a statistic (`24 Polish`), never a category label.
 
