@@ -19,6 +19,7 @@
  */
 
 import { hasScope } from "./viewerScopes"
+import type { AiInsight } from "@/components/experimental/ai-summary-widget"
 
 /**
  * These three shapes used to be imported from a pair of components in
@@ -57,6 +58,21 @@ export type UcpStatus     = "Active" | "Inactive" | "Archived"
 export type StudyState = "loaded" | "empty" | "error"
 
 export type TagVariantLite = "success" | "error" | "alert" | "informative" | "neutral"
+
+/**
+ * One read. `category` is the area — "Renewal", "Governance", "Service" — and
+ * `destination` is where in the platform to act on it, when there is such a
+ * place. Both are the tenant's vocabulary, not the platform's.
+ */
+export interface UcpInsight {
+  id:           string
+  category:     string
+  headline:     string
+  detail:       string
+  confidence:   number
+  /** A section of the platform, or one of this record's own tabs. */
+  destination?: string
+}
 
 export interface UcpContact {
   id:              string
@@ -115,7 +131,18 @@ export interface UcpContact {
    */
   nba:             UcpNextBestAction | null
   /** The agent's read on this record, shown as the Overview AI widget. */
-  aiSummary:       { headline: string; detail: string; confidence: number }
+  /**
+   * The agent's reads on this record — one or many, each about a different
+   * AREA. The Overview widget carousels them and names the area, so a reader
+   * knows where a read is pointing before deciding to act on it.
+   *
+   * They are AUTHORED, never derived from the studies on the same page: a
+   * sentence generated from a number the reader can already see is not an
+   * interpretation, and putting a confidence on it would be inventing one.
+   * A record with a single read is the normal case, and the widget's pager
+   * only appears from two.
+   */
+  insights:        UcpInsight[]
   governance:      StudyState
   risk:            StudyState
   connections:     StudyState
@@ -394,11 +421,20 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "2h ago",
       rationale: "Usage grew 18% but three escalations are open and no proposal has been sent. The master agreement renews in 12 days.",
     },
-    aiSummary: {
-      headline: "Renewal at risk — usage is up, sentiment is down.",
-      detail: "Seat usage grew 18% this quarter but three support escalations opened since July, all routing through the same integration. Sandra Torres has asked twice about the migration timeline without a written answer. The renewal call is the place to close that gap.",
-      confidence: 82,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Renewal", destination: "Workflows",
+        headline: "Renewal at risk — usage is up, sentiment is down.",
+        detail: "Seat usage grew 18% this quarter but three support escalations opened since July, all routing through the same integration. Sandra Torres has asked twice about the migration timeline without a written answer. The renewal call is the place to close that gap.",
+        confidence: 82,
+      },
+      {
+        id: "read-2", category: "Governance", destination: "Snapshot",
+        headline: "The integration is the common thread in all three escalations.",
+        detail: "Every escalation since July routes through the same integration, and the DPA on file predates it. Governance has one open review; closing it removes the blocker the renewal call would otherwise inherit.",
+        confidence: 74,
+      },
+    ],
     governance: "loaded", risk: "loaded", connections: "loaded",
   },
   {
@@ -420,11 +456,14 @@ export const CONTACTS: UcpContact[] = [
     agent: { id: "AGT-02", name: "Deal Concierge" },
     relations: [{ id: "PER-0128", relation: "Family · sister" }],
     nba: null,
-    aiSummary: {
-      headline: "Technical evaluator, not the economic buyer.",
-      detail: "Sarah has driven every compliance question on the Meridian expansion and cleared the data-residency review herself. She has never discussed price. Route commercial terms to Sandra Torres and keep Sarah on audit evidence.",
-      confidence: 76,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Deal", destination: "Drives",
+        headline: "Technical evaluator, not the economic buyer.",
+        detail: "Sarah has driven every compliance question on the Meridian expansion and cleared the data-residency review herself. She has never discussed price. Route commercial terms to Sandra Torres and keep Sarah on audit evidence.",
+        confidence: 76,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
   {
@@ -450,11 +489,14 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "6h ago",
       rationale: "The mid-year review has sat with Lisa Park for 12 days and blocks his promotion cycle, which closes at the end of the month.",
     },
-    aiSummary: {
-      headline: "Consistent operator, overdue on one approval.",
-      detail: "James has closed every quarterly governance check on time for six quarters. The one open item is his mid-year review, waiting on Lisa Park since Aug 20. Nothing else on this record needs attention.",
-      confidence: 91,
-    },
+    insights: [
+      {
+        id: "read-1", category: "People", destination: "Workflows",
+        headline: "Consistent operator, overdue on one approval.",
+        detail: "James has closed every quarterly governance check on time for six quarters. The one open item is his mid-year review, waiting on Lisa Park since Aug 20. Nothing else on this record needs attention.",
+        confidence: 91,
+      },
+    ],
     governance: "loaded", risk: "loaded", connections: "error",
   },
   {
@@ -479,11 +521,14 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "1d ago",
       rationale: "Two of the five clinics added on Aug 30 are still unsynced, so their staff cannot reach the platform and the expansion is not fully live.",
     },
-    aiSummary: {
-      headline: "Healthy account, expanding on its own initiative.",
-      detail: "Northwind added five clinic sites without a discount request. Two of the five have not completed network sync, which is an onboarding task rather than a commercial risk.",
-      confidence: 88,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Expansion",
+        headline: "Healthy account, expanding on its own initiative.",
+        detail: "Northwind added five clinic sites without a discount request. Two of the five have not completed network sync, which is an onboarding task rather than a commercial risk.",
+        confidence: 88,
+      },
+    ],
     governance: "loaded", risk: "loaded", connections: "loaded",
   },
   {
@@ -509,11 +554,20 @@ export const CONTACTS: UcpContact[] = [
       rationale: "She has raised it on the last two calls without a written answer, and she owns the budget line on a renewal that closes in 12 days.",
       variant: "accept",
     },
-    aiSummary: {
-      headline: "Economic buyer on the Meridian renewal.",
-      detail: "Sandra owns the budget line and has raised the migration timeline in the last two calls without getting a written answer. That single open question is the strongest predictor of how the renewal lands.",
-      confidence: 84,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Renewal", destination: "Workflows",
+        headline: "Economic buyer on the Meridian renewal.",
+        detail: "Sandra owns the budget line and has raised the migration timeline in the last two calls without getting a written answer. That single open question is the strongest predictor of how the renewal lands.",
+        confidence: 84,
+      },
+      {
+        id: "read-2", category: "Governance", destination: "Snapshot",
+        headline: "Her budget authority is recorded, not inferred.",
+        detail: "The Truth plane carries her as the approver on the Meridian expansion, sourced from the countersigned contract. Nothing needs to be verified before treating her as the decision point.",
+        confidence: 88,
+      },
+    ],
     governance: "empty", risk: "loaded", connections: "loaded",
   },
   {
@@ -539,11 +593,20 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "4h ago",
       rationale: "Three reviews are waiting on her approval and the oldest has been open 12 days, which is holding up two promotion cycles.",
     },
-    aiSummary: {
-      headline: "Approval queue is the bottleneck, not her workload.",
-      detail: "Lisa manages nine reports and has three reviews queued, the oldest open 12 days. Her own governance and policy items are all current.",
-      confidence: 79,
-    },
+    insights: [
+      {
+        id: "read-1", category: "People", destination: "Workflows",
+        headline: "Approval queue is the bottleneck, not her workload.",
+        detail: "Lisa manages nine reports and has three reviews queued, the oldest open 12 days. Her own governance and policy items are all current.",
+        confidence: 79,
+      },
+      {
+        id: "read-2", category: "Risk",
+        headline: "The queue is a process problem, not a capacity one.",
+        detail: "Her open items are all approvals waiting on her, while her own workload sits at the team median. The bottleneck is the routing rule, which is why adding headcount would not move it.",
+        confidence: 77,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
   {
@@ -563,11 +626,20 @@ export const CONTACTS: UcpContact[] = [
     agent: { id: "AGT-02", name: "Deal Concierge" },
     relations: [{ id: "EMP-00518", relation: "Family · sibling" }],
     nba: null,
-    aiSummary: {
-      headline: "Technical gatekeeper, currently unblocked.",
-      detail: "David signed off on the SSO and data-residency reviews in July. No open questions since. He is the right contact if the migration timeline turns into an implementation plan.",
-      confidence: 71,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Deal", destination: "Snapshot",
+        headline: "Technical gatekeeper, currently unblocked.",
+        detail: "David signed off on the SSO and data-residency reviews in July. No open questions since. He is the right contact if the migration timeline turns into an implementation plan.",
+        confidence: 71,
+      },
+      {
+        id: "read-2", category: "Service", destination: "Workflows",
+        headline: "Unblocked now, but he owns both remaining gates.",
+        detail: "The data-residency review cleared last week and the two open technical gates are both assigned to him. If he goes quiet, nothing behind him moves.",
+        confidence: 73,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
   {
@@ -592,11 +664,14 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "3d ago",
       rationale: "The pilot met every success criterion and then contact stopped without a churn signal, which usually means a sponsor change rather than a loss.",
     },
-    aiSummary: {
-      headline: "Dormant since the pilot closed, no stated reason.",
-      detail: "The pilot completed with all success criteria met, then contact stopped. No churn signal was ever recorded, which usually means a sponsor change rather than a lost deal.",
-      confidence: 64,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Retention", destination: "Activity",
+        headline: "Dormant since the pilot closed, no stated reason.",
+        detail: "The pilot completed with all success criteria met, then contact stopped. No churn signal was ever recorded, which usually means a sponsor change rather than a lost deal.",
+        confidence: 64,
+      },
+    ],
     governance: "empty", risk: "loaded", connections: "empty",
   },
   {
@@ -616,11 +691,14 @@ export const CONTACTS: UcpContact[] = [
     ],
     agent: { id: "AGT-03", name: "People Concierge" },
     nba: null,
-    aiSummary: {
-      headline: "Clear queue, current on every policy.",
-      detail: "Marcus cleared his approval queue on Aug 27 and has all twelve policies signed. Nothing on this record needs a decision this week.",
-      confidence: 86,
-    },
+    insights: [
+      {
+        id: "read-1", category: "People",
+        headline: "Clear queue, current on every policy.",
+        detail: "Marcus cleared his approval queue on Aug 27 and has all twelve policies signed. Nothing on this record needs a decision this week.",
+        confidence: 86,
+      },
+    ],
     governance: "loaded", risk: "loaded", connections: "loaded",
   },
   {
@@ -643,11 +721,14 @@ export const CONTACTS: UcpContact[] = [
     ],
     agent: { id: "AGT-02", name: "Deal Concierge" },
     nba: null,
-    aiSummary: {
-      headline: "Superseded as the finance contact.",
-      detail: "Amy approved the original Meridian contract in 2024. Finance approvals have routed through Sandra Torres since April. Keep the record for contract history.",
-      confidence: 69,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Governance", destination: "Snapshot",
+        headline: "Superseded as the finance contact.",
+        detail: "Amy approved the original Meridian contract in 2024. Finance approvals have routed through Sandra Torres since April. Keep the record for contract history.",
+        confidence: 69,
+      },
+    ],
     governance: "empty", risk: "empty", connections: "loaded",
   },
   {
@@ -672,11 +753,14 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "1d ago",
       rationale: "Four of six checks have cleared and the remaining two sit with Halden, who have answered every prior request within two business days.",
     },
-    aiSummary: {
-      headline: "Mid-review, on schedule.",
-      detail: "Four of six security checks have cleared. The two open items are network segmentation evidence and the sub-processor list, both assigned to Halden's side.",
-      confidence: 74,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Governance", destination: "Drives",
+        headline: "Mid-review, on schedule.",
+        detail: "Four of six security checks have cleared. The two open items are network segmentation evidence and the sub-processor list, both assigned to Halden's side.",
+        confidence: 74,
+      },
+    ],
     governance: "loaded", risk: "loaded", connections: "empty",
   },
   {
@@ -702,11 +786,14 @@ export const CONTACTS: UcpContact[] = [
       rationale: "He owns both open checks and replies within two business days, so a checklist is likely enough to close the review before Sep 12.",
       variant: "accept",
     },
-    aiSummary: {
-      headline: "Single owner of both blockers.",
-      detail: "Tomás owns network segmentation evidence and the sub-processor list. He has answered every prior request within two business days, so a checklist is likely enough.",
-      confidence: 80,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Service", destination: "Workflows",
+        headline: "Single owner of both blockers.",
+        detail: "Tomás owns network segmentation evidence and the sub-processor list. He has answered every prior request within two business days, so a checklist is likely enough.",
+        confidence: 80,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
   {
@@ -726,11 +813,14 @@ export const CONTACTS: UcpContact[] = [
     ],
     agent: { id: "AGT-03", name: "People Concierge" },
     nba: null,
-    aiSummary: {
-      headline: "Owns two accounts mid-review, no personnel items open.",
-      detail: "Elena carries Halden and Kestrel. Both have open account-side work, but nothing on her own employee record requires a decision.",
-      confidence: 83,
-    },
+    insights: [
+      {
+        id: "read-1", category: "People", destination: "Workflows",
+        headline: "Owns two accounts mid-review, no personnel items open.",
+        detail: "Elena carries Halden and Kestrel. Both have open account-side work, but nothing on her own employee record requires a decision.",
+        confidence: 83,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
   {
@@ -749,11 +839,14 @@ export const CONTACTS: UcpContact[] = [
     ],
     agent: { id: "AGT-04", name: "Northwind Concierge" },
     nba: null,
-    aiSummary: {
-      headline: "Executive sponsor of the expansion.",
-      detail: "Grace drove the five-clinic expansion internally and signed without a discount request. Two clinics still need network sync — an onboarding task her team can close.",
-      confidence: 87,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Expansion", destination: "Activity",
+        headline: "Executive sponsor of the expansion.",
+        detail: "Grace drove the five-clinic expansion internally and signed without a discount request. Two clinics still need network sync — an onboarding task her team can close.",
+        confidence: 87,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
   {
@@ -778,11 +871,20 @@ export const CONTACTS: UcpContact[] = [
       timestamp: "5h ago",
       rationale: "Tampa North holds 26 of the 41 late repair orders while Brandon runs at 60% bay capacity, so the backlog is routing, not headcount.",
     },
-    aiSummary: {
-      headline: "Healthy group, one store carrying the backlog.",
-      detail: "Riverbend runs four dealerships on one master agreement. Tampa North holds 26 of the 41 late repair orders while Brandon sits at 60% bay capacity — the backlog is a routing problem, not a staffing one, and it is the only thing hurting CSI scores this quarter.",
-      confidence: 79,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Service", destination: "Workflows",
+        headline: "Healthy group, one store carrying the backlog.",
+        detail: "Riverbend runs four dealerships on one master agreement. Tampa North holds 26 of the 41 late repair orders while Brandon sits at 60% bay capacity — the backlog is a routing problem, not a staffing one, and it is the only thing hurting CSI scores this quarter.",
+        confidence: 79,
+      },
+      {
+        id: "read-2", category: "Governance", destination: "Drives",
+        headline: "Four stores, one master agreement.",
+        detail: "The group signs centrally, so a service commitment made for Tampa North applies to all four. The agreement in Drives is the one that governs the backlog conversation.",
+        confidence: 71,
+      },
+    ],
     governance: "loaded", risk: "loaded", connections: "loaded",
   },
   {
@@ -808,11 +910,20 @@ export const CONTACTS: UcpContact[] = [
       rationale: "He owns service throughput for all four stores and replies same day, so the rebalance needs his sign-off before it reaches store managers.",
       variant: "accept",
     },
-    aiSummary: {
-      headline: "Accountable for the one metric that is slipping.",
-      detail: "Marcus owns service throughput across all four Riverbend stores, which makes him the decision point on the backlog. He replies same day and prefers a call to email — the routing proposal should reach him by phone, not in writing.",
-      confidence: 81,
-    },
+    insights: [
+      {
+        id: "read-1", category: "Service", destination: "Workflows",
+        headline: "Accountable for the one metric that is slipping.",
+        detail: "Marcus owns service throughput across all four Riverbend stores, which makes him the decision point on the backlog. He replies same day and prefers a call to email — the routing proposal should reach him by phone, not in writing.",
+        confidence: 81,
+      },
+      {
+        id: "read-2", category: "People",
+        headline: "He is the only accountable owner across the four stores.",
+        detail: "No second name appears on service throughput in any Riverbend record. A routing change he does not agree to has nobody else to escalate to.",
+        confidence: 69,
+      },
+    ],
     governance: "loaded", risk: "empty", connections: "loaded",
   },
 ]
@@ -1156,6 +1267,43 @@ export function getGovernance(c: UcpContact): StudyRow[] {
       ]
 }
 
+/**
+ * The record's reads, in the shape the AI Summary widget takes.
+ *
+ * ONE mapper for every surface that shows them — the profile's Overview
+ * canvas and the roster's preview panel — so the two cannot drift into
+ * different anatomies again. `onOpenDestination` is wired by the caller
+ * because only the caller knows how to get there; without it the destination
+ * button is omitted rather than rendered dead.
+ */
+export function toAiInsights(
+  c: UcpContact,
+  opts?: { onOpenDestination?: (destination: string) => void },
+): AiInsight[] {
+  const facts = getFacts(c)
+  const drawnFrom = PLANE_ORDER
+    .map(plane => ({
+      label:   `${PLANE_META[plane].label} · ${facts.filter(f => f.plane === plane).length}`,
+      variant: PLANE_META[plane].tag as TagVariantLite,
+      count:   facts.filter(f => f.plane === plane).length,
+    }))
+    .filter(d => d.count > 0)
+    .map(({ label, variant }) => ({ label, variant }))
+
+  return c.insights.map(r => ({
+    id:         r.id,
+    agent:      c.agent.name,
+    category:   r.category,
+    headline:   r.headline,
+    detail:     r.detail,
+    confidence: r.confidence,
+    drawnFrom,
+    destination: r.destination && opts?.onOpenDestination
+      ? { label: `Open in ${r.destination}`, onOpen: () => opts.onOpenDestination!(r.destination!) }
+      : undefined,
+  }))
+}
+
 // ── Concierge chat ────────────────────────────────────────────────────────────
 
 export interface ConciergeTurn {
@@ -1174,7 +1322,7 @@ export function getConciergeOpening(c: UcpContact): ConciergeTurn[] {
     },
     {
       id: "t2", from: "agent",
-      text: c.aiSummary.detail,
+      text: c.insights[0].detail,
       sources: [
         { label: "Interaction history",    plane: "truth"   },
         { label: "Call notes — Aug 22",    plane: "sandbox" },

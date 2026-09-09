@@ -28,6 +28,7 @@ import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { NextBestActionCard } from "@/components/ui/next-best-action-card"
+import { AiSummaryWidget } from "@/components/experimental/ai-summary-widget"
 import { Button } from "@/components/ui/button"
 import { useWidgetSize } from "@/components/layouts/widget-canvas-view"
 import * as LucideIcons from "lucide-react"
@@ -41,29 +42,44 @@ const row: React.CSSProperties = {
   borderBottom: `1px solid ${LINE}`,
 }
 
-/** A written read of the data, not the data. The purple treatment is the DS's
- *  own marker for machine-generated interpretation.
+/**
+ * A written read of the data, not the data.
  *
- *  ONE purple recipe, Michael's call (2026-09-09): the card tokens plus the
- *  single 4-point Sparkle, which is what NextBestActionCard and EntityList's
- *  own insight block already use. This block used to paint a bare
- *  --color-surface-purple-more-subtle with the 3-star Sparkles, so the same
- *  "an agent produced this" marker read as two different objects depending on
- *  which surface you were looking at. */
+ * HOMOLOGATED with the UCP's own Overview widget on 2026-09-09: both render
+ * `AiSummaryWidget`, so the AI Summary a PM previews in the Widget Builder is
+ * the same object they get on a record. This used to be a purple paragraph
+ * drawn here — one anatomy in the builder, another on the profile, and no way
+ * to tell which one was the widget.
+ *
+ * Two sample reads rather than one, because the carousel and the area Tag are
+ * the parts a preview needs to show: they are what says a record has several
+ * reads and what each one is about.
+ */
 function AiSummaryContent() {
+  const { isNarrow } = useWidgetSize()
   return (
-    <div style={{
-      display: "flex", gap: 10, padding: 12, borderRadius: 8,
-      background: "var(--card-purple-bg)",
-      border: "1px solid var(--card-purple-border)",
-    }}>
-      <LucideIcons.Sparkle size={14} strokeWidth={1.75} style={{ color: "var(--color-text-purple)", flexShrink: 0, marginTop: 2 }} />
-      <p style={{ fontSize: 12, lineHeight: 1.55, color: TXT, margin: 0 }}>
-        Pipeline is concentrated: three accounts carry 61% of open value, and two of
-        them slipped a stage this month. Win rate is holding at 34%, but the median
-        deal is 11 days older than last quarter.
-      </p>
-    </div>
+    <AiSummaryWidget
+      compact={isNarrow}
+      items={[
+        {
+          id: "read-1", agent: "Deal Concierge", category: "Renewal",
+          headline: "Pipeline is concentrated in three accounts.",
+          detail: "Three accounts carry 61% of open value and two of them slipped a stage this month. Win rate holds at 34%, but the median deal is 11 days older than last quarter.",
+          confidence: 84,
+          drawnFrom: [
+            { label: "Truth · 5",   variant: "success" },
+            { label: "Sandbox · 3", variant: "alert"   },
+          ],
+        },
+        {
+          id: "read-2", agent: "Deal Concierge", category: "Risk",
+          headline: "The slippage is in one segment, not across the board.",
+          detail: "Both stalled deals are mid-market renewals with the same integration dependency. Enterprise and SMB moved on schedule.",
+          confidence: 71,
+          drawnFrom: [{ label: "Truth · 4", variant: "success" }],
+        },
+      ]}
+    />
   )
 }
 

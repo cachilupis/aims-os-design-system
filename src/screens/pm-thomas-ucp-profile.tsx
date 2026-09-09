@@ -68,6 +68,7 @@ import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
+import { AiSummaryWidget } from "@/components/experimental/ai-summary-widget"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { Skeleton }          from "@/components/ui/skeleton"
@@ -82,7 +83,7 @@ import type { LucideIcon } from "lucide-react"
 import { specForContact, tabsForContact } from "./ucpTypeModel"
 import type { ProfileWidgetRow } from "./ucpTypeModel"
 import {
-  PANEL_CONTENT_CLASS,
+  PANEL_CONTENT_CLASS, toAiInsights,
   PLANE_META, PLANE_ORDER, CHANNEL_META, CONCIERGE_PROMPTS,
   CONTACTS,
   TYPE_LABEL, entityState, restrictionFor, getRecordFields,
@@ -434,75 +435,25 @@ function ConnectionsContent({ contact }: { contact: UcpContact }) {
 
 /** The assigned agent's read on this record. Purple = "AI produced this",
  *  the same treatment EntityList's own aiInsight block uses. */
-function AiSummaryContent({ contact, onAsk }: { contact: UcpContact; onAsk: () => void }) {
+function AiSummaryContent({ contact, onAsk, onGoTab }: {
+  contact: UcpContact
+  onAsk:   () => void
+  onGoTab: (id: string) => void
+}) {
   const { isNarrow } = useWidgetSize()
-  return (
-    // No paddingBottom: WidgetFather already insets the card 24px all round,
-    // so anything here is a second bottom margin inside the first one.
-    <div style={{ paddingTop: 4, display: "flex", flexDirection: "column", gap: 12 }}>
-      <div
-        // El mismo read del agente que muestra el preview del listado, así que
-        // la misma superficie: tokens de card, no de tag.
-        style={{
-          background: "var(--card-purple-bg)",
-          border: "1px solid var(--card-purple-border)",
-          borderRadius: 8,
-          padding: "12px 14px",
-          display: "flex", flexDirection: "column", gap: 8,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {/* Un token de borde no es un color de texto. El acento va con el
-              mismo foreground que la etiqueta que tiene al lado. */}
-          <Sparkle size={13} style={{ color: "var(--color-text-purple)" }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-purple)" }}>
-            {contact.agent.name}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--color-text-purple)", opacity: 0.75, marginLeft: "auto" }}>
-            {contact.aiSummary.confidence}% confidence
-          </span>
-        </div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-purple)", lineHeight: 1.4 }}>
-          {contact.aiSummary.headline}
-        </span>
-        {!isNarrow && (
-          <span style={{ fontSize: 12, color: "var(--color-text-purple)", opacity: 0.9, lineHeight: 1.55 }}>
-            {contact.aiSummary.detail}
-          </span>
-        )}
-      </div>
-      {/*
-        The CTA rides the "Drawn from" row, pushed right — it does not get a
-        row of its own. Michael (2026-09-09): under the tags it took a whole
-        band of the widget plus the padding beneath it, which is space the
-        canvas charges for and nothing was using. Sideways it costs nothing:
-        the chips are short and the row had empty width to the right.
-
-        At narrow the chips are hidden, so the button takes the row it would
-        have shared. That is the one case where it needs its own.
-      */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-        {!isNarrow && (
-          <>
-            <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Drawn from</span>
-            {PLANE_ORDER.map(plane => (
-              <Tag key={plane} variant={PLANE_META[plane].tag} size="sm">
-                {PLANE_META[plane].label} · {getFacts(contact).filter(f => f.plane === plane).length}
-              </Tag>
-            ))}
-          </>
-        )}
-        <Button
-          variant="primary" size="sm"
-          className={isNarrow ? "self-start" : "ml-auto"}
-          icon={<Sparkle size={13} />}
-          onClick={onAsk}
-        >
-          Ask the concierge
-        </Button>
-      </div>
-    </div>
+  const insights = useMemo(
+    () => toAiInsights(contact, {
+      // A destination is either one of this record's own tabs or a section of
+      // the platform. The tabs we can actually go to; the rest is a prototype
+      // stub rather than a dead button pretending to work.
+      onOpenDestination: dest => {
+        const tab = dest.toLowerCase()
+        if (["snapshot", "activity", "drives", "people", "overview"].includes(tab)) onGoTab(tab)
+      },
+    }),
+    [contact, onGoTab],
   )
+  return <AiSummaryWidget items={insights} onAsk={onAsk} compact={isNarrow} />
 }
 
 // ── Snapshot (Truth Facts) ────────────────────────────────────────────────────
@@ -1120,6 +1071,13 @@ export function UcpProfileView({
 
   const spec = useMemo(() => specForContact(contact), [contact])
 
+  // Declared before the slots that close over it — the AI Summary widget's
+  // destination button calls it, and a useMemo runs during render.
+  const goTab = (id: string) => {
+    setTab(id)
+    setActPage(1)
+  }
+
   const overviewSlots = useMemo<CanvasSlot[]>(() => {
     const slots: CanvasSlot[] = [
       {
@@ -1128,7 +1086,7 @@ export function UcpProfileView({
         // 60px above where the slot did, and an empty band at the bottom of a
         // widget is space the canvas charges every other widget for.
         colSpan: 3, widthClass: "full", rowSpan: 4,
-        content: <AiSummaryContent contact={contact} onAsk={openChat} />,
+        content: <AiSummaryContent contact={contact} onAsk={openChat} onGoTab={goTab} />,
       },
     ]
     // The type's own fields, ahead of the studies. It answers "what is this
@@ -1190,10 +1148,6 @@ export function UcpProfileView({
     return slots
   }, [contact, spec])
 
-  const goTab = (id: string) => {
-    setTab(id)
-    setActPage(1)
-  }
 
   return (
     <ScreenLayout

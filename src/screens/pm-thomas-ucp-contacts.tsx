@@ -37,6 +37,7 @@ import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { ModalDialog }       from "@/components/ui/modal-dialog"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import { AiSummaryWidget }   from "@/components/experimental/ai-summary-widget"
 import { Input }             from "@/components/ui/input"
 import { Chip }              from "@/components/ui/chip"
 import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
@@ -45,7 +46,7 @@ import { Sparkle, Send, Plus, Lock, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
-  PANEL_CONTENT_CLASS,
+  PANEL_CONTENT_CLASS, toAiInsights,
   CONTACTS, CONCIERGE_PROMPTS, PLANE_META,
   TYPE_ICON, TYPE_LABEL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
@@ -750,24 +751,12 @@ export default function PMThomasUcpContactsScreen() {
                 </span>
               </div>
             ) : (
-              <div
-                // Tokens de card, no de tag — mismo criterio que el bloque de
-                // Next Best Action: --tag-purple-bd es un #a855f7 a full pensado
-                // para delinear un Tag, y a tamaño de superficie se lee como una
-                // caja gritona. El fondo es el mismo valor en ambas familias, así
-                // que el borde era toda la diferencia.
-                style={{
-                  background: "var(--card-purple-bg)", border: "1px solid var(--card-purple-border)",
-                  borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6,
-                }}
-              >
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--tag-purple-fg)" }}>
-                  {preview.agent.name} · {preview.aiSummary.confidence}% confidence
-                </span>
-                <span style={{ fontSize: 12, color: "var(--tag-purple-fg)", lineHeight: 1.6 }}>
-                  {preview.aiSummary.detail}
-                </span>
-              </div>
+              // The same component the profile's Overview widget uses, so the
+              // agent's read looks like one object in both places. It carousels
+              // here too when the record has more than one, and it carries the
+              // area each read is about. No `onAsk`: the concierge opens from
+              // the profile, not from a preview of it.
+              <AiSummaryWidget items={toAiInsights(preview)} />
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
