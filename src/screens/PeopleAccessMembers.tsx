@@ -3469,12 +3469,15 @@ function InviteModal({ onClose, onSend }: {
                   const on = studios.includes(st.id)
                   return (
                     <CardContainer key={st.id} size="sm" selected={on} onClick={() => toggleStudio(st.id)}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <Checkbox size="sm" checked={on} onChange={() => toggleStudio(st.id)} id={`studio-${st.id}`} />
-                        <label htmlFor={`studio-${st.id}`} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", minWidth: 0 }}>
-                          <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
-                          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
-                        </label>
+                      {/* Pointer-transparent: the card is the only click target.
+                          Three things used to toggle this row — the card, the
+                          Checkbox, and a <label htmlFor> driving the same input
+                          — so a click on the checkbox or its label fired twice
+                          and cancelled out. Only the card's blank padding worked. */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+                        <Checkbox size="sm" checked={on} id={`studio-${st.id}`} />
+                        <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
                       </div>
                     </CardContainer>
                   )
@@ -3494,14 +3497,14 @@ function InviteModal({ onClose, onSend }: {
                 return (
                   <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Checkbox size="sm" checked={on} onChange={() => toggleGroup(g.id)} id={`group-${g.id}`} />
+                      <Checkbox size="sm" checked={on} id={`group-${g.id}`} className="pointer-events-none" />
                       <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
-                      <label htmlFor={`group-${g.id}`} style={{ flex: 1, minWidth: 0, cursor: "pointer" }}>
+                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</span>
                         <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>
                           {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
                         </span>
-                      </label>
+                      </div>
                       <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 1, minWidth: 0 }}>
                         {g.studios.map(st => (
                           <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
@@ -4132,12 +4135,10 @@ function NewRoleWizard({ onCancel, onCreate }: {
                 const on = studios.includes(st.id)
                 return (
                   <CardContainer key={st.id} size="sm" selected={on} onClick={() => toggleStudio(st.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <Checkbox size="sm" checked={on} onChange={() => toggleStudio(st.id)} id={`wiz-studio-${st.id}`} />
-                      <label htmlFor={`wiz-studio-${st.id}`} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", minWidth: 0 }}>
-                        <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
-                      </label>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+                      <Checkbox size="sm" checked={on} id={`wiz-studio-${st.id}`} />
+                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
                     </div>
                   </CardContainer>
                 )
@@ -4202,7 +4203,7 @@ function NewRoleWizard({ onCancel, onCreate }: {
                 <CardContainer key={m.id} size="sm" selected={on}
                   onClick={() => setMemberIds(prev => on ? prev.filter(x => x !== m.id) : [...prev, m.id])}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <Checkbox size="sm" checked={on} onChange={() => {}} id={`wiz-member-${m.id}`} />
+                    <Checkbox size="sm" checked={on} id={`wiz-member-${m.id}`} className="pointer-events-none" />
                     <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
                       avatarStyle={m.status === "active" ? "text" : "empty"} />
                     <div style={{ flex: 1, minWidth: 0 }}>
