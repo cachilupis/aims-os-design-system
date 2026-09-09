@@ -66,6 +66,7 @@ import { EntityList }        from "@/components/ui/entity-list"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
@@ -436,7 +437,9 @@ function ConnectionsContent({ contact }: { contact: UcpContact }) {
 function AiSummaryContent({ contact, onAsk }: { contact: UcpContact; onAsk: () => void }) {
   const { isNarrow } = useWidgetSize()
   return (
-    <div style={{ paddingTop: 4, paddingBottom: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+    // No paddingBottom: WidgetFather already insets the card 24px all round,
+    // so anything here is a second bottom margin inside the first one.
+    <div style={{ paddingTop: 4, display: "flex", flexDirection: "column", gap: 12 }}>
       <div
         // El mismo read del agente que muestra el preview del listado, así que
         // la misma superficie: tokens de card, no de tag.
@@ -468,19 +471,36 @@ function AiSummaryContent({ contact, onAsk }: { contact: UcpContact; onAsk: () =
           </span>
         )}
       </div>
-      {!isNarrow && (
-        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Drawn from</span>
-          {PLANE_ORDER.map(plane => (
-            <Tag key={plane} variant={PLANE_META[plane].tag} size="sm">
-              {PLANE_META[plane].label} · {getFacts(contact).filter(f => f.plane === plane).length}
-            </Tag>
-          ))}
-        </div>
-      )}
-      <Button variant="primary" size="sm" className="self-start" icon={<Sparkle size={13} />} onClick={onAsk}>
-        Ask the concierge
-      </Button>
+      {/*
+        The CTA rides the "Drawn from" row, pushed right — it does not get a
+        row of its own. Michael (2026-09-09): under the tags it took a whole
+        band of the widget plus the padding beneath it, which is space the
+        canvas charges for and nothing was using. Sideways it costs nothing:
+        the chips are short and the row had empty width to the right.
+
+        At narrow the chips are hidden, so the button takes the row it would
+        have shared. That is the one case where it needs its own.
+      */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        {!isNarrow && (
+          <>
+            <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>Drawn from</span>
+            {PLANE_ORDER.map(plane => (
+              <Tag key={plane} variant={PLANE_META[plane].tag} size="sm">
+                {PLANE_META[plane].label} · {getFacts(contact).filter(f => f.plane === plane).length}
+              </Tag>
+            ))}
+          </>
+        )}
+        <Button
+          variant="primary" size="sm"
+          className={isNarrow ? "self-start" : "ml-auto"}
+          icon={<Sparkle size={13} />}
+          onClick={onAsk}
+        >
+          Ask the concierge
+        </Button>
+      </div>
     </div>
   )
 }
@@ -514,12 +534,26 @@ const FACT_COLUMNS: TableColumn<UcpFact>[] = [
   },
 ]
 
-/** One icon per knowledge plane, so a plane looks the same wherever it is
- *  counted. Truth is verified, Sandbox is provisional, Sources is material. */
+/**
+ * One icon AND one tint per knowledge plane, so a plane looks the same
+ * wherever it is counted. Truth is verified, Sandbox is provisional, Sources
+ * is material.
+ *
+ * The tint is the same colour the plane's own Tag carries in the facts table
+ * below (`PLANE_META[p].tag`) — Truth green, Sandbox yellow, Sources blue.
+ * Three cards counting three different KINDS of knowledge all read
+ * informative blue before this, so the only thing separating them was the
+ * word in the label. Michael, 2026-09-09.
+ */
 const PLANE_ICON: Record<KnowledgePlane, string> = {
   truth:   "ShieldCheck",
   sandbox: "FlaskConical",
   sources: "Files",
+}
+const PLANE_ICON_VARIANT: Record<KnowledgePlane, HighlightIconVariant> = {
+  truth:   "success",
+  sandbox: "yellow",
+  sources: "informative",
 }
 
 function SnapshotTab({ contact }: { contact: UcpContact }) {
@@ -555,6 +589,7 @@ function SnapshotTab({ contact }: { contact: UcpContact }) {
             // confidence is how that plane is supposed to work, not a failure.
             feedbackType: (meta.tag === "success" ? "positive" : "neutral") as "positive" | "neutral",
             iconName:     PLANE_ICON[p],
+            iconVariant:  PLANE_ICON_VARIANT[p],
           }
         })}
       />
@@ -1089,7 +1124,10 @@ export function UcpProfileView({
     const slots: CanvasSlot[] = [
       {
         uid: "ai-summary", title: `${contact.agent.name} — read on this record`,
-        colSpan: 3, widthClass: "full", rowSpan: 5,
+        // 4 rows, not 5. With the CTA in the chips row the content ends about
+        // 60px above where the slot did, and an empty band at the bottom of a
+        // widget is space the canvas charges every other widget for.
+        colSpan: 3, widthClass: "full", rowSpan: 4,
         content: <AiSummaryContent contact={contact} onAsk={openChat} />,
       },
     ]
