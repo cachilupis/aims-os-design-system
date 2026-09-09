@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
@@ -8,9 +8,13 @@ import { Tag }           from "@/components/ui/tag"
 import { WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
 import { WidgetFather } from "@/components/ui/widget-father"
 import { WidgetPreview } from "@/components/experimental/widget-preview"
-import { LIBRARY_SKELETONS, typeIdForSkeleton, type LibrarySkeleton } from "@/lib/widget-catalog"
+import { LIBRARY_SKELETONS, typeIdForLabel, WIDGET_CATALOG, type LibrarySkeleton } from "@/lib/widget-catalog"
+import { savedWidgets } from "@/lib/widget-drafts"
 import { EmptyState }    from "@/components/ui/empty-state"
 import { CardContainer } from "@/components/ui/card-container"
+import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
+import { EntityList } from "@/components/ui/entity-list"
+import { InformativeCard } from "@/components/ui/informative-card"
 import { Filters } from "@/components/ui/filters"
 import { ModalDialog }   from "@/components/ui/modal-dialog"
 import { SlideOut }      from "@/components/ui/slide-out"
@@ -32,7 +36,16 @@ type Widget = {
    * card cannot draw a preview without. Every other draft keeps its type and
    * previews normally.
    */
-  skeleton: LibrarySkeleton | null
+  /**
+   * The widget type's label. A library fixture uses one of the ten library
+   * skeletons; a widget saved from the builder carries its own type's name
+   * ("Bar Chart"), which that vocabulary does not have to contain — so this is
+   * a string, and the Type filter simply does not match what it does not know.
+   * Null on a draft that never picked a type.
+   */
+  skeleton: string | null
+  /** The builder's own type id, so a saved widget previews what was built. */
+  previewTypeId?: string
   category: Category; health: Health; freshness: Freshness
   governed: boolean; system: boolean; usedIn: number
   placement: Profile; description: string
@@ -101,6 +114,62 @@ function HealthBadge({ health }: { health: Health }) {
 }
 
 
+/** The panel's own vertical rhythm — 20px between sections, and NO horizontal
+ *  padding: SlideOut's `aside` already insets its body by 24px, and adding more
+ *  here is what pushes content out of line with the header and footer. */
+const PANEL_SECTIONS = "flex flex-col gap-[20px] pb-[4px]"
+
+/** The section heading from the panel-content vocabulary — 11px, uppercase,
+ *  --field-label. Written once so the four sections cannot drift apart. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+      {children}
+    </span>
+  )
+}
+
+/** The vocabulary's key-value table: a bordered box, 120px labels, hairlines
+ *  between rows and none after the last. */
+function DetailTable({ rows }: { rows: [string, string][] }) {
+  return (
+    <div className="flex flex-col rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+      {rows.map(([label, value], i) => (
+        <div key={label}>
+          <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
+            <span className="w-[120px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
+            <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
+          </div>
+          {i < rows.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const FRESHNESS_LABEL: Record<Freshness, string> = { live: "Live", fresh: "Fresh", stale: "Stale" }
+
+/**
+ * Which dashboards a widget sits on.
+ *
+ * Named fixtures rather than "Dashboard 1, 2, 3" — the panel exists to answer
+ * "where is this used", and a list of placeholders answers it with nothing.
+ * Derived from the widget's own id so the same widget always shows the same
+ * dashboards, which is what stops a demo contradicting itself on a reload.
+ */
+const DASHBOARD_POOL = [
+  "Account Health Overview", "Sales Pipeline Monitor", "Employee Onboarding Tracker",
+  "Contact Engagement Summary", "Deal Velocity Monitor", "Risk Score Dashboard",
+  "Governance Audit Log", "Support Tickets Summary",
+]
+function dashboardsUsing(w: Widget) {
+  const seed = [...w.id].reduce((a, c) => a + c.charCodeAt(0), 0)
+  return Array.from({ length: Math.min(w.usedIn, 4) }, (_, i) => {
+    const name = DASHBOARD_POOL[(seed + i * 3) % DASHBOARD_POOL.length]
+    return { id: `${w.id}-d${i}`, title: name, iconName: "LayoutDashboard" as const, iconVariant: "neutral" as const }
+  })
+}
+
 // ── DS-GAP: FilterToolbar — 4-filter toolbar. Closest DS: Filters.
 // ── DS-GAP: OverflowMenu — per-card ⋯ actions. Closest DS: Menu + MenuItem.
 
@@ -119,7 +188,44 @@ export default function PMThomasWidgetLibrary() {
   const [menuId,   setMenuId]    = useState<string | null>(null)
   const [detailW,  setDetailW]   = useState<Widget | null>(null)
   const [deleteW,  setDeleteW]   = useState<Widget | null>(null)
-  const [widgets,  setWidgets]   = useState(WIDGETS)
+  /**
+   * Whatever the builder just saved, first, then the fixtures.
+   *
+   * Read once at mount rather than kept in sync: the builder leaves with a
+   * full page load, so by the time this screen exists the write has already
+   * happened. Category and placement are the two facts the builder never asks
+   * for — they default here rather than being invented at the save, so the
+   * guess stays in one place and is easy to delete when the builder does ask.
+   */
+  const [widgets, setWidgets] = useState<Widget[]>(() => [
+    ...savedWidgets().map((sw): Widget => ({
+      id: sw.id, name: sw.name, source: sw.source,
+      skeleton: sw.skeleton, previewTypeId: sw.previewTypeId,
+      category: "Operational", placement: "Standalone",
+      health: "active", freshness: "fresh",
+      governed: true, system: false, usedIn: 0,
+      description: sw.status === "draft"
+        ? `Saved from the Widget Builder before it was finished.`
+        : `Saved from the Widget Builder.`,
+      status: sw.status, missing: sw.missing,
+    })),
+    ...WIDGETS,
+  ])
+  /**
+   * The one just saved, highlighted for a moment so it can be found.
+   *
+   * The Create pattern asks for it "as the first row, briefly highlighted" —
+   * it is first in the array, but the list is sorted by name by default, so
+   * where it lands is wherever its name puts it. Overriding someone's sort to
+   * win an argument with it would be worse than the highlight being the only
+   * half that survives.
+   */
+  const [justSaved, setJustSaved] = useState<string | null>(() => savedWidgets()[0]?.id ?? null)
+  useEffect(() => {
+    if (!justSaved) return
+    const t = setTimeout(() => setJustSaved(null), 2500)
+    return () => clearTimeout(t)
+  }, [justSaved])
 
   const governedCount = widgets.filter(w => w.governed).length
   const draftCount    = widgets.filter(w => w.status === "draft").length
@@ -241,6 +347,7 @@ export default function PMThomasWidgetLibrary() {
             {page.map(w => (
               <div key={w.id} style={{ position: "relative" }}>
               <CardContainer
+                selected={justSaved === w.id}
                 onClick={e => { if (!(e.target as HTMLElement).closest("button")) setDetailW(w) }}
                 className="flex flex-col gap-[10px] cursor-pointer h-full"
               >
@@ -273,8 +380,8 @@ export default function PMThomasWidgetLibrary() {
 
                     {/* A draft with no widget type has nothing to draw — every
                         other draft still previews, because it picked one. */}
-                    {w.skeleton
-                      ? <WidgetPreview typeId={typeIdForSkeleton(w.skeleton)} fallbackHeight={72} clipTo={88} />
+                    {(w.previewTypeId ?? typeIdForLabel(w.skeleton))
+                      ? <WidgetPreview typeId={(w.previewTypeId ?? typeIdForLabel(w.skeleton))!} fallbackHeight={72} clipTo={88} />
                       : (
                         <div style={{ height: 88, display: "flex", alignItems: "center", justifyContent: "center" }}>
                           <EmptyState compact icon={LucideIcons.Shapes} title="No widget type yet" />
@@ -329,43 +436,118 @@ export default function PMThomasWidgetLibrary() {
         </>
       )}
 
-      {/* Widget Detail SlideOut */}
-      {detailW && (
-        <SlideOut title={detailW.name} open={true} onClose={() => setDetailW(null)}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "4px 0" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {detailW.status === "draft"
-                ? <Tag variant="neutral" size="sm">Draft</Tag>
-                : <WidgetFreshnessBadge status={detailW.freshness} />}
-              {detailW.skeleton && <Tag variant="neutral" size="sm">{detailW.skeleton}</Tag>}
-              <Tag variant={detailW.category === "AIMS OS" ? "informative" : "neutral"} size="sm">{detailW.category}</Tag>
-              {!detailW.governed && <Tag variant="alert" size="sm">Ungoverned</Tag>}
-              {detailW.system   && <Tag variant="informative" size="sm">System</Tag>}
-            </div>
-            {[["Source", detailW.source], ["Placement", detailW.placement], ["Used on", `${detailW.usedIn} dashboard${detailW.usedIn === 1 ? "" : "s"}`]].map(([label, value]) => (
-              <div key={label} style={{ display: "flex", gap: 12, fontSize: 13 }}>
-                <span style={{ width: 88, flexShrink: 0, color: "var(--field-supporting)", fontWeight: 500 }}>{label}</span>
-                <span style={{ color: "var(--foreground)" }}>{value}</span>
-              </div>
-            ))}
-            {detailW.description && (
-              <div>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--field-supporting)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 6px" }}>Description</p>
-                <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)", margin: 0 }}>{detailW.description}</p>
+      {/* ── Widget detail ────────────────────────────────────────────────
+       *  Composed from the panel-content vocabulary on the "SlideOut/SidePanel
+       *  — Content" pattern page, in its order: section title → key metrics →
+       *  list → detail table. It used to be `type` default, which meant the
+       *  component's own placeholders showed through — Tab 1 / Tab 2 / Tab 3, a
+       *  search box over nothing, "Subtitle with a short description of what
+       *  the user can do here" and two footer buttons labelled Button. None of
+       *  that was content; it was the demo state of a component nobody had
+       *  configured.
+       *
+       *  What replaces it is per-widget, not generic: a published widget is
+       *  asked "where is this used and how fresh is it", a draft is asked
+       *  "what is left". The header icon is the widget TYPE's own glyph from
+       *  WIDGET_CATALOG, so a Donut in the library opens with the Donut mark
+       *  it carries everywhere else. */}
+      {detailW && (() => {
+        const def       = WIDGET_CATALOG.find(d => d.id === (detailW.previewTypeId ?? typeIdForLabel(detailW.skeleton)))
+        const Glyph     = (def && (LucideIcons[def.icon as keyof typeof LucideIcons] as React.FC<{ size?: number; style?: React.CSSProperties }>)) || LucideIcons.Shapes
+        const isDraft   = detailW.status === "draft"
+        const previewId = detailW.previewTypeId ?? typeIdForLabel(detailW.skeleton)
+
+        return (
+        <SlideOut
+          open
+          onClose={() => setDetailW(null)}
+          type="with-variants"
+          size="m"
+          title={detailW.name}
+          subtitle={`${detailW.skeleton ?? "No type yet"} · ${detailW.category}`}
+          statusLabel={isDraft ? "Draft" : detailW.health === "review" ? "Needs remap" : "Published"}
+          showIcon
+          /* The type's own glyph on the type's own tint — the same pairing the
+             builder and the canvas use, rather than the default Sparkle. */
+          iconContent={<Glyph size={24} style={{ color: "var(--primary)" }} />}
+          iconBg="var(--color-surface-primary-more-subtle)"
+          showStatus
+          /* No pencil. It was wired to nothing, and at 350px the title, the
+             status badge and two icon buttons do not fit — dropping the one
+             that did not work is what lets the widget's NAME be readable. */
+          showTopButton={false}
+          showTabs={false}
+          showSearchBar={false}
+          showChips={false}
+          /* The panel's action belongs in the footer, never as a Button under
+             the title. A draft can only be finished; nothing else can be. */
+          showCta
+          showCtaSecondary={false}
+          ctaPrimaryLabel={isDraft ? "Finish setup" : "Add to dashboard"}
+          onCtaPrimary={() => { if (isDraft) window.location.href = "?proto=proto-thomas-widget-builder" }}
+        >
+          <div className={PANEL_SECTIONS}>
+            {/* What it is. The description is the widget's own sentence, and
+                for a draft it is the only thing that says why it exists. */}
+            <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)", margin: 0 }}>{detailW.description}</p>
+
+            {/* A draft's headline is what is left, so it goes above everything
+                else — the same sentence the builder showed when it saved. */}
+            {isDraft && (
+              <InformativeCard
+                state="informative"
+                title={`Still needs ${detailW.missing}`}
+                description="A draft is saved and searchable, but it cannot be added to a dashboard until it is finished."
+              />
+            )}
+
+            {previewId && (
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Preview</SectionLabel>
+                <CardContainer size="sm">
+                  <WidgetPreview typeId={previewId} fallbackHeight={96} />
+                </CardContainer>
               </div>
             )}
-            <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-              {/* A draft's one useful action is finishing it — offering "Add
-                  to dashboard" on something that cannot be added is the same
-                  mistake as a disabled Eye on a row with nothing to preview. */}
-              {detailW.status === "draft"
-                ? <Button variant="primary" size="sm" onClick={() => { window.location.href = "?proto=proto-thomas-widget-builder" }}>Finish setup</Button>
-                : <Button variant="primary" size="sm">Add to dashboard</Button>}
-              {!detailW.system && detailW.status === "published" && <Button variant="secondary" size="sm">Edit widget</Button>}
+
+            {/* Key metrics — the three facts you act on. A draft has none of
+                them yet, which is why it gets the card above instead. */}
+            {!isDraft && (
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Key metrics</SectionLabel>
+                <AdaptiveMetricGrid cards={[
+                  /* "Used on", not "Dashboards": at half the panel's width a
+                     ten-character label truncates behind its own icon, and the
+                     section below already says the word. */
+                  { label: "Used on",    value: String(detailW.usedIn), iconName: "LayoutDashboard" },
+                  { label: "Freshness",  value: FRESHNESS_LABEL[detailW.freshness], iconName: "RefreshCw" },
+                  { label: "Governance", value: detailW.governed ? "Governed" : "Ungoverned", iconName: "ShieldCheck" },
+                ]} />
+              </div>
+            )}
+
+            {/* Where it is used. The question a library card cannot answer and
+                the reason most people open this panel at all. */}
+            {!isDraft && detailW.usedIn > 0 && (
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Used on</SectionLabel>
+                <EntityList items={dashboardsUsing(detailW)} />
+              </div>
+            )}
+
+            <div className="flex flex-col gap-[8px]">
+              <SectionLabel>Details</SectionLabel>
+              <DetailTable rows={[
+                ["Source",    detailW.source],
+                ["Type",      detailW.skeleton ?? "Not chosen yet"],
+                ["Category",  detailW.category],
+                ["Placement", detailW.placement],
+              ]} />
             </div>
           </div>
         </SlideOut>
-      )}
+        )
+      })()}
 
       {/* Delete confirmation */}
       {deleteW && (

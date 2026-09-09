@@ -167,3 +167,9 @@ const SKELETON_TYPE: Record<LibrarySkeleton, string> = {
 }
 
 export const typeIdForSkeleton = (s: LibrarySkeleton): string => SKELETON_TYPE[s]
+
+/** The same, for a label that may not be a library skeleton at all — a widget
+ *  saved from the builder carries its type's own name ("Bar Chart"), which the
+ *  ten-name library vocabulary does not have to contain. */
+export const typeIdForLabel = (s: string | null | undefined): string | null =>
+  s && s in SKELETON_TYPE ? SKELETON_TYPE[s as LibrarySkeleton] : null

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
+import { saveWidget } from "@/lib/widget-drafts"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
@@ -809,6 +810,19 @@ export default function PMThomasWidgetBuilderScreen() {
     setShowSaveModal(false)
     setSavedAsDraft(asDraft)
     setSavedName(name)
+    // Hand it to the library. Without this the success view says "it is in the
+    // catalog" and the catalog has never heard of it — the one seam in this
+    // flow you could see from the outside.
+    saveWidget({
+      name: name.trim(),
+      source: ENTITY_SOURCES.find(e => e.id === sourceId)?.label
+           ?? PRESET_DATASETS.find(d => d.id === sourceId)?.name
+           ?? "Not connected",
+      skeleton: AUTHORABLE_WIDGETS.find(t => t.id === typeId)?.label ?? null,
+      previewTypeId: typeId ?? undefined,
+      status: asDraft ? "draft" : "published",
+      missing: asDraft ? missingPiece : undefined,
+    })
   }
 
   function resetAll() {
