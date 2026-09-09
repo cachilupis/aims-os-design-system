@@ -52,7 +52,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
+import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type EntityHeaderAction } from "@/components/ui/entity-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/ui/next-best-action-card"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
@@ -113,8 +113,19 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "ds-health" | "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
+// Renamed page ids, old → new. A link someone already pasted into Slack or a
+// Jira ticket must keep working: ids end up in ?page= URLs, so renaming one
+// silently breaks every link that was ever shared. Keep entries here forever
+// — they cost one lookup and they are the only thing standing between a
+// rename and a dead link.
+const PAGE_ID_ALIASES: Record<string, string> = {
+  // 2026-09-08 — the component is called Entity Header everywhere now, so the
+  // id matches the name. The old id shipped in links from PR #104 onwards.
+  "record-header": "entity-header",
+}
+
+type SectionId = "home" | "ds-health" | "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "entity-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "entity-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -228,7 +239,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 11 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
-  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
+  { id: "entity-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "header",          label: "Header",            group: "Components",  description: "Page header · title + description + status tag + CTAs + optional back button · 3 sizes: Size L (24px), Size M (18px), Compress (scroll state)" },
@@ -1613,8 +1624,8 @@ const TOPBAR_SPEC = {
     { name: "searchPlaceholder",  type: "string",   values: ["any string"],              default: '"Search…"',       note: "Center zone trigger label" },
     { name: "onSearchFocus",      type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens Global Search overlay (700×592px)" },
     { name: "actions",          type: "REMOVED",  values: ["— split into secondaryAction + menuActions —"], default: "—", note: "REMOVED. actions[0] was a labelled primary CTA (Message, Export, Contact account) competing with the agent trigger for the same job. In Figma Ask IS the primary CTA; there is no second one. What is left is one optional secondary action and the overflow." },
-    { name: "secondaryAction",  type: "object",   values: ["RecordAction"], default: "undefined", note: "The one optional secondary action, OFF by default — the vast majority of records do not have one. It exists for the edge case where a contextual CTA genuinely belongs in the header. Figma's documentation calls this slot icon-only; its built instance is a labelled secondary button with no icon (Icon=No). Michael chose the instance (2026-09-07), because that is what renders and what the team sees when they inspect the file." },
-    { name: "menuActions",      type: "Array",    values: ["RecordAction[]"], default: "[]", note: "The overflow menu. Destructive and secondary actions ONLY — never a visible button. The header does not define which actions exist; that is configured per entity in Helix Data Studio. The header owns exactly one rule: destructive actions live here." },
+    { name: "secondaryAction",  type: "object",   values: ["EntityHeaderAction"], default: "undefined", note: "The one optional secondary action, OFF by default — the vast majority of records do not have one. It exists for the edge case where a contextual CTA genuinely belongs in the header. Figma's documentation calls this slot icon-only; its built instance is a labelled secondary button with no icon (Icon=No). Michael chose the instance (2026-09-07), because that is what renders and what the team sees when they inspect the file." },
+    { name: "menuActions",      type: "Array",    values: ["EntityHeaderAction[]"], default: "[]", note: "The overflow menu. Destructive and secondary actions ONLY — never a visible button. The header does not define which actions exist; that is configured per entity in Helix Data Studio. The header owns exactly one rule: destructive actions live here." },
     { name: "logo",               type: "ReactNode",values: ["any"],                     default: "4-dot placeholder",note: "Replace with actual isotipo/brand mark" },
     { name: "companyName",        type: "string",   values: ["any string"],              default: '"Company"',       note: "Shown in Sub-group B, truncates" },
     { name: "onCompanyClick",     type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens company selector/Left Menu" },
@@ -2234,14 +2245,14 @@ const NOTIFICATION_CENTER_SPEC = {
 }
 
 // figmaNodeId/figmaUrl intentionally empty — this is a new component, not yet
-// synced from a Figma node. See record-header.tsx's own header comment for the
+// synced from a Figma node. See entity-header.tsx's own header comment for the
 // 3 industry patterns (Salesforce Highlights Panel, HubSpot conditional
 // sections, Next Best Action engine) it's modeled on instead.
 const ENTITY_HEADER_SPEC = {
   name: "Entity Header",
   figmaNodeId: "19815:101548",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=19815-101548",
-  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/record-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
+  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/entity-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
   properties: [
     { name: "name",           type: "string",   values: ["The entity's display name"], default: "required", note: "A person's name, an account name, or a code. There is NO variant prop and no closed set of entity types — what kind of thing this is arrives as a classification tag instead (see tags)." },
     { name: "visual",         type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product. WATCH OUT: this is the one required object with no fallback, and the card throws if it arrives undefined — which type-checking does not catch here, because this repo runs without strictNullChecks, so a lookup like MY_VISUALS[key] type-checks even for a key that is missing. Build the map exhaustively." },
@@ -2251,8 +2262,8 @@ const ENTITY_HEADER_SPEC = {
     { name: "description",    type: "string",   values: ["One line of durable context"], default: "undefined (OFF)", note: "OFF by default — most headers do not carry one, and it is an edge case rather than a slot to fill. Ask in this order and stop at the first yes: needs attention now → signal tag; what kind of thing this is → classification tag; current status → stateBadge; a fact someone might act on → secondaryMetadata; durable context none of those captured → this. The one case that justifies it is an opaque code as the title: \"RO-48291\" alone means nothing, so the description says what the record concerns. DURABILITY TEST — if the sentence could change next week it is an activity note and belongs in the Overview. It says what the entity IS, never what is happening to it. One line at 14px Medium, truncated with a Tooltip; it never wraps." },
     { name: "secondaryMetadata", type: "Array", values: ["SecondaryMetadataItem[] — { icon, text, tooltip }"], default: "[]", note: "The compact attribute row under the title. Icon says what KIND of information this is, text is the value, tooltip carries the field label plus context (\"Assigned agent · Manager Agent. Handling this account since Mar 3.\") and shows on hover AND focus, always — even when the text is not truncated. CAPPED AT 6 by the component (SECONDARY_METADATA_MAX), not by trusting the caller: past six it stops being a row and becomes a section. Six is the maximum, not the goal — aim for four. Anything beyond six goes to the Overview, NEVER to a +N chip: an item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place. THE ICON NEVER APPEARS ALONE — Entity List allows icon-only under space pressure, this header does not. What qualifies: counts of Truth Plane facts and Canon Plane documents (counted separately — TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits. What does not: anything true of every entity of the same type (a label, not information), and anything describing a conversation rather than the entity. This is NOT recordFields — those carry provenance and a masking state; both exist at once." },
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "This is the `Ask` button, and it is the card's only primary CTA. AIMS OS is agent-first — required as a PROP so every caller has to decide, but the value can be null for an entity that genuinely has none yet: null renders the SAME button, disabled, with a Tooltip explaining why, never a silently missing button. Icon-only, Sparkle glyph, variant=\"main\" — the one confirmed exception to \"never main inside a card\" in the whole design system. It keeps the same Sparkle as the Next Best Action card deliberately (Michael, 2026-09-07): both are AI surfaces, one converses and one transacts. The component never renders the chat UI itself." },
-    { name: "secondaryAction", type: "object",  values: ["RecordAction — { label, variant?, onClick?, disabled?, disabledTooltip?, disableWhenLocked? }"], default: "undefined (OFF)", note: "One optional labelled action beside `Ask`, off by default — most entities do not have one, and a second labelled CTA competes with `Ask`. Boolean in practice: either the entity type has a contextual action or it does not. Anything the page already offers below the header (a tab, a widget CTA) is dead weight here, not a valid action. Disabled by `locked` unless disableWhenLocked is false." },
-    { name: "menuActions",    type: "Array",    values: ["RecordAction[]"], default: "[]", note: "The \"···\" overflow. Secondary and destructive actions only — never the entity's main action, which is either `Ask` or secondaryAction. Empty or omitted removes the trigger. Write actions disable when `locked` is true, each with a Tooltip." },
+    { name: "secondaryAction", type: "object",  values: ["EntityHeaderAction — { label, variant?, onClick?, disabled?, disabledTooltip?, disableWhenLocked? }"], default: "undefined (OFF)", note: "One optional labelled action beside `Ask`, off by default — most entities do not have one, and a second labelled CTA competes with `Ask`. Boolean in practice: either the entity type has a contextual action or it does not. Anything the page already offers below the header (a tab, a widget CTA) is dead weight here, not a valid action. Disabled by `locked` unless disableWhenLocked is false." },
+    { name: "menuActions",    type: "Array",    values: ["EntityHeaderAction[]"], default: "[]", note: "The \"···\" overflow. Secondary and destructive actions only — never the entity's main action, which is either `Ask` or secondaryAction. Empty or omitted removes the trigger. Write actions disable when `locked` is true, each with a Tooltip." },
     { name: "showInformation", type: "Boolean", values: ["true","false"], default: "false", note: "Shows the ⓘ Information trigger. A boolean the caller owns, NOT derived from whether recordFields has anything in it — whether the panel is worth offering is a per-case decision, and the old behaviour made the control vanish whenever the field array happened to be empty. With showInformation but no onInformationOpen the trigger renders disabled with a Tooltip." },
     { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
     { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
@@ -3505,7 +3516,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
   if (id === "notification-item")   return NOTIFICATION_ITEM_SPEC   as AnySpec
   if (id === "notification-center") return NOTIFICATION_CENTER_SPEC as AnySpec
-  if (id === "record-header")       return ENTITY_HEADER_SPEC       as AnySpec
+  if (id === "entity-header")       return ENTITY_HEADER_SPEC       as AnySpec
   if (id === "next-best-action")    return NEXT_BEST_ACTION_SPEC    as unknown as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
@@ -3863,7 +3874,7 @@ function FigmaLogoIcon() {
 }
 
 function FigmaLink({ href }: { href: string }) {
-  // Guard added for RecordHeader — the first component in this catalog with no
+  // Guard added for EntityHeader — the first component in this catalog with no
   // real Figma node yet. Every other spec always has a real href; don't render
   // a "View in Figma" link that goes nowhere.
   if (!href) return null
@@ -32118,7 +32129,7 @@ const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba"
 // Epic (EHR) — the healthcare-vertical proof example (Block 3, this pass).
 // Deliberately a DIFFERENT source system + model name than UEP/UCP/UVP: if
 // this still renders through the exact same component with zero changes to
-// record-header.tsx, that's the agnosticism claim demonstrated, not asserted.
+// entity-header.tsx, that's the agnosticism claim demonstrated, not asserted.
 const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", systemAbbr: "EP", modelVersion: "Chart v4.1", syncedAgo })
 // Insurance vertical (this correction pass) — a claim genuinely spans 2
 // systems of record at once: the claims core (Guidewire) and the policy
@@ -32146,7 +32157,7 @@ const cdkProv = (syncedAgo: string): FieldProvenance => ({ system: "CDK Global",
 const carfaxProv = (syncedAgo: string): FieldProvenance => ({ system: "Carfax", systemAbbr: "CFX", modelVersion: "History v4.0", syncedAgo })
 const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty Portal", systemAbbr: "OEM", modelVersion: "Warranty v2.0", syncedAgo })
 
-// This demo page's own scope note (not a component doc — RecordHeader
+// This demo page's own scope note (not a component doc — EntityHeader
 // itself never enumerates entity types): UEP/UCP/UVP are the 3 native
 // Work Surfaces entity shapes this card actually ships for. Patient,
 // Claim, Borrower, and Repair Order exist ONLY to prove agnosticism across
@@ -32157,7 +32168,7 @@ const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty
 // additional native types, which is why the Playground groups them
 // separately (see the "Work Surfaces" vs. "Other Markets" CtrlGroups).
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
-// not a prop the component reads — RecordHeader only ever sees `name` +
+// not a prop the component reads — EntityHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
 type RhDemoKey =
   // People — an avatar, from a photo or initials
@@ -32270,7 +32281,7 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
 // figure), nothing further to open beyond its own provenance. Omitted
 // (defaults true) on Manager/Access Role/Department/Owner/Procurement
 // Owner — those stay clickable, opening Data Provenance. See
-// RecordField.hasDestination's own doc comment in record-header.tsx.
+// RecordField.hasDestination's own doc comment in entity-header.tsx.
 const RH_UEP = {
   name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering", location: "Remote — Austin, TX",
   manager:          { label: "Manager",        icon: LucideIcons.User,        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") } satisfies RecordField,
@@ -32493,8 +32504,8 @@ const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
 // Preview tab only — there is NO contextual CTA any more: `Ask` is the primary
 // action. What is left is the one optional secondary (off by default, because
 // most records do not have one) and the overflow, where destructive lives.
-const RH_PREVIEW_SECONDARY_ACTION: RecordAction = { label: "Log a call", onClick: () => {} }
-const RH_PREVIEW_MENU_ACTIONS: RecordAction[] = [
+const RH_PREVIEW_SECONDARY_ACTION: EntityHeaderAction = { label: "Log a call", onClick: () => {} }
+const RH_PREVIEW_MENU_ACTIONS: EntityHeaderAction[] = [
   { label: "Archive",   onClick: () => {} },
   { label: "Duplicate", onClick: () => {} },
 ]
@@ -32519,7 +32530,7 @@ const RH_UEP_MASKED_ACCESS_ROLE: RecordField = { label: "Access Role", icon: Luc
 const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCESS_ROLE, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate]
 
 // Assigned AI agent — one per demo entity, same shape (see AssignedAgent in
-// record-header.tsx). onOpenChat is wired inside EntityHeaderPage below.
+// entity-header.tsx). onOpenChat is wired inside EntityHeaderPage below.
 //
 // Closing pass — every entry is now the SAME generic "AI Assistant" persona,
 // not a per-vertical fictional name ("Renewal Copilot," "Claims Copilot AI",
@@ -32529,7 +32540,7 @@ const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCES
 // Agent" card and the Workflow SlideOut's own subtitle used to name — the
 // bug wasn't the button itself (that's a real, required-but-nullable
 // component feature, see AssignedAgent's own doc comment in
-// record-header.tsx, and it must stay ACTIVE — disabling it was itself a
+// entity-header.tsx, and it must stay ACTIVE — disabling it was itself a
 // bug from an earlier pass), it was reusing a workflow's own persona for a
 // separate feature. A flat, generic name here is fully decoupled from
 // RH_WORKFLOWS' own `owner` field, so the two can never collide again.
@@ -32545,7 +32556,7 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
 }
 
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
-// Not exported, not part of the DS component itself — RecordHeader only
+// Not exported, not part of the DS component itself — EntityHeader only
 // exposes onOpen/onAction callbacks (see its own file-header Composition
 // note); every SlideOut instance below is owned by this demo page, same
 // delegation pattern this catalog has used for every prior overlay demo.
@@ -32558,7 +32569,7 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
 // either "actively running" or "stuck on a human" and only the workflow
 // itself knows which.
 // Closing pass — a contact can be impacted by N workflows at once, not just
-// 1 (RH_WORKFLOWS[v] is now an array — see RecordHeader's own WorkflowSummary/
+// 1 (RH_WORKFLOWS[v] is now an array — see EntityHeader's own WorkflowSummary/
 // AgenticSystemInfo doc comment for the N-item disclosure pattern this
 // feeds). `id` is unique per workflow (not per vertical) so the SlideOut
 
@@ -32566,12 +32577,12 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
 // AgentDetail / RH_AGENT_DETAILS — REMOVED (closing pass). Backed the "Last
 // Agent" SlideOut (session summary/finding/recommendation), which is gone
 // along with the Agentic System agent card it opened from — see
-// AgenticSystemInfo's own doc comment in record-header.tsx for why.
+// AgenticSystemInfo's own doc comment in entity-header.tsx for why.
 // Recoverable from git history if a future case needs this content model
 // back. // TODO: descartado — valor absorbido en NBA.
 
 // Your Intervention can carry N items per record (see InterventionItem in
-// record-header.tsx). `onReview` isn't wired per-item at the mock-data
+// entity-header.tsx). `onReview` isn't wired per-item at the mock-data
 // level since it needs the item's own id in scope (see rhIntervention
 // below, which builds the real InterventionItem[] and attaches onReview
 // per item — always rhOpenHtlNewTab, HTL never opens a slideout).
@@ -32797,12 +32808,12 @@ function ProvenanceRow({ field }: { field: RecordField }) {
 
 // HeaderContextMenu — REMOVED (closing pass). Backed the "···" menus on
 // Active Workflow (now a direct footer CTA) and Last Agent (now gone
-// entirely — see AgenticSystemInfo's doc comment in record-header.tsx).
+// entirely — see AgenticSystemInfo's doc comment in entity-header.tsx).
 // No SlideOut on this page needs a header overflow menu anymore.
 // Recoverable from git history if a future case needs this pattern back.
 
 // ── Block 3 — full edge-case states gallery ─────────────────────────────────
-// Dev-facing coverage: every state RecordHeader can render, each labeled, so
+// Dev-facing coverage: every state EntityHeader can render, each labeled, so
 // dev doesn't have to guess what "loading" or "no permission" looks like.
 // Every instance below is collapsed (not defaultExpanded) except where a
 // caption specifically calls out the collapsed-tags look — expanding is
@@ -32813,7 +32824,7 @@ function ProvenanceRow({ field }: { field: RecordField }) {
 
 // ── End-to-end flows (this pass) — 2 complete walkthroughs, not loose
 // states. Each step is a real, rendered piece of this same page (a focused
-// RecordHeader instance showing only the zone the step is about — zones
+// EntityHeader instance showing only the zone the step is about — zones
 // are conditional, so recordFields={[]}/agenticSystem={undefined} simply
 // omit the other zones, no special-casing needed — or a button that opens
 // the SAME real SlideOut/ModalDialog used everywhere else on this page).
@@ -32953,7 +32964,7 @@ function NextBestActionCardPage({ openSpec, onNavigate }: { openSpec: (s: SpecMo
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Always as the next sibling below <code>EntityHeader</code>, in its own container. See it in place on the Entity Header page, and in a real screen through that page&rsquo;s <em>View screen example</em>.
             </p>
-            <Button variant="secondary" size="sm" onClick={() => onNavigate("record-header")}>Open the Entity Header page</Button>
+            <Button variant="secondary" size="sm" onClick={() => onNavigate("entity-header")}>Open the Entity Header page</Button>
           </section>
 
           <section>
@@ -33139,7 +33150,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   // entities (content keyed by whichever one was actually clicked).
   // Last Agent and Pending Decisions are both gone (closing pass) —
   // Agentic System's own agent card was removed (see AgenticSystemInfo's
-  // doc comment in record-header.tsx) and HTL never opens a slideout,
+  // doc comment in entity-header.tsx) and HTL never opens a slideout,
   // full stop (see rhOpenHtlNewTab below) — so neither has state here
   // anymore.
   const [rhOpenVariant, setRhOpenVariant] = useState<RhDemoKey | null>(null)
@@ -33272,7 +33283,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             Identity card for a Unified Entity Profile. It identifies the entity you are looking at and surfaces what needs attention — it carries no detail, which lives in the tabs below. Title, source, tags and actions in the first row; secondary metadata (max 6) in the second. One shared skeleton for every entity type — there is no variant prop, and no disclosure: this is a fixed arrangement of slots, not a collapsible card. The Next Best Action card below is a <strong>separate component in its own container</strong>, not part of this one.
           </p>
         </div>
-        <SpecButton onClick={() => openSpec("record-header")} />
+        <SpecButton onClick={() => openSpec("entity-header")} />
       </div>
 
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
@@ -33425,7 +33436,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 variant="secondary"
                 size="sm"
                 icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
-                onClick={() => openProtoExample("proto-thomas-universal-profile", "record-header", { profile: "ORG-0023" })}
+                onClick={() => openProtoExample("proto-thomas-universal-profile", "entity-header", { profile: "ORG-0023" })}
                 className="shrink-0"
               >
                 View screen example
@@ -33524,7 +33535,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient · an entity type the DS has never heard of</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Picked to be as unlike the three above as possible: a different source (Epic), a different record shape entirely, and a classification the component has no knowledge of. <strong>Nothing changed in <code>record-header.tsx</code> to support it</strong> — that is the point of one skeleton with no <code>variant</code> prop, and an entity type this file has never heard of is the normal case, not a gap. It also carries Law 4: the <code>Restricted</code> access role in the metadata row is a value that resolves per viewer entitlement at display time, and this component renders whichever state it is handed without ever resolving one itself.
+              Mock data — not confirmed AIMS OS content. Picked to be as unlike the three above as possible: a different source (Epic), a different record shape entirely, and a classification the component has no knowledge of. <strong>Nothing changed in <code>entity-header.tsx</code> to support it</strong> — that is the point of one skeleton with no <code>variant</code> prop, and an entity type this file has never heard of is the normal case, not a gap. It also carries Law 4: the <code>Restricted</code> access role in the metadata row is a value that resolves per viewer entitlement at display time, and this component renders whichever state it is handed without ever resolving one itself.
             </p>
             <EntityHeader name={RH_PATIENT.name} visual={RH_VISUAL.patient} tags={RH_TAGS.patient} stateBadge={RH_STATE_BADGE.patient}
               source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
@@ -42043,7 +42054,7 @@ export default function App() {
     if (protoId && PROTOTYPE_PAGES.some(p => p.id === protoId)) {
       setActive(protoId)
     } else if (pageId) {
-      setActive(pageId)
+      setActive(PAGE_ID_ALIASES[pageId] ?? pageId)
     }
   }, [])
 
@@ -42121,7 +42132,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" || active === "record-header" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" || active === "entity-header" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
           {active === "ds-health"       && <DsHealthPage />}
@@ -42177,7 +42188,7 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
-          {active === "record-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
+          {active === "entity-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
           {active === "next-best-action"    && <NextBestActionCardPage openSpec={setSpecModal} onNavigate={setActive} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}

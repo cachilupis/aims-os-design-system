@@ -15,9 +15,14 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *
  * Source of truth: Figma `Design System - AIMS OS`, node 19815:101548. Every
  * rule below is from that section — the Anatomy, Rules, Hierarchy, Focus
- * order, TAG ROLES, TRUNCATION, THE THREE ACTIONS and BEHAVIOUR blocks. The
- * file name stays `record-header.tsx` on purpose: the change spec forbids
- * renaming it.
+ * order, TAG ROLES, TRUNCATION, THE THREE ACTIONS and BEHAVIOUR blocks.
+ *
+ * Renamed from `record-header.tsx` on 2026-09-08. The change spec had frozen
+ * the old file name while the API was still moving; with the component
+ * settled, Michael's call is that it is called Entity Header everywhere —
+ * file, exports and page id. The old page id still resolves, see
+ * PAGE_ID_ALIASES in App.tsx: links to `?page=record-header` were shared
+ * before the rename and must not break.
  *
  * WHAT IT IS
  *
@@ -234,11 +239,11 @@ export interface AssignedAgent {
 }
 
 // ── Record action (Identity row CTA + overflow) ─────────────────────────────
-export type RecordActionVariant = "primary" | "secondary" | "tertiary"
+export type EntityHeaderActionVariant = "primary" | "secondary" | "tertiary"
 
-export interface RecordAction {
+export interface EntityHeaderAction {
   label: string
-  variant?: RecordActionVariant
+  variant?: EntityHeaderActionVariant
   onClick?: () => void
   /**
    * Explicit disabled override, independent from `locked` — e.g. "no
@@ -484,7 +489,7 @@ export interface EntityHeaderProps {
    * `actions[0]` — "Message", "Export", "Contact account" — is gone. Anything
    * that is not this one secondary action belongs in `menuActions`.
    */
-  secondaryAction?: RecordAction
+  secondaryAction?: EntityHeaderAction
   /**
    * The "···" overflow. Destructive and secondary actions ONLY — never a
    * visible button.
@@ -493,7 +498,7 @@ export interface EntityHeaderProps {
    * entity in Helix Data Studio. The header owns exactly one rule: destructive
    * actions live here.
    */
-  menuActions?: RecordAction[]
+  menuActions?: EntityHeaderAction[]
   /**
    * Shows the Information (ⓘ) trigger. A boolean the caller owns, NOT derived
    * from whether `recordFields` has anything in it — whether the panel is
@@ -551,7 +556,7 @@ export interface EntityHeaderProps {
 }
 
 // ── Centralized fallback copy (configurable/centralized, never scattered inline in JSX) ──
-export const RECORD_HEADER_FALLBACKS = {
+export const ENTITY_HEADER_FALLBACKS = {
   /** Tooltip on the agent trigger when assignedAgent is null. */
   noAgentTooltip: "No agent assigned to this record",
   /** Tooltip on Ask. The button's label is one word; this carries the rest. */
@@ -1071,14 +1076,14 @@ function EntityHeader({
                         </Tooltip>
                       )}
                       {locked && (
-                        <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
+                        <Tooltip content={ENTITY_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
                           <span
                             data-roving
                             tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) ? 0 : -1}
                             className={cn("inline-flex shrink-0", FOCUS_RING)}
                           >
                             <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
-                              {RECORD_HEADER_FALLBACKS.lockedTagLabel}
+                              {ENTITY_HEADER_FALLBACKS.lockedTagLabel}
                             </Tag>
                           </span>
                         </Tooltip>
@@ -1091,14 +1096,14 @@ function EntityHeader({
                           failed. Neutral, never error — the entity exists and
                           is governed, so this is a state and not a failure. */}
                       {state === "restricted" && (
-                        <Tooltip content={RECORD_HEADER_FALLBACKS.restrictedTooltip} side="cursor">
+                        <Tooltip content={ENTITY_HEADER_FALLBACKS.restrictedTooltip} side="cursor">
                           <span
                             data-roving
                             tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + (locked ? 1 : 0) ? 0 : -1}
                             className={cn("inline-flex shrink-0", FOCUS_RING)}
                           >
                             <Tag variant="secondary" size="sm" leadingIcon={<EyeOff size={12} strokeWidth={1.75} />} className="shrink-0">
-                              {RECORD_HEADER_FALLBACKS.restrictedTagLabel}
+                              {ENTITY_HEADER_FALLBACKS.restrictedTagLabel}
                             </Tag>
                           </span>
                         </Tooltip>
@@ -1162,7 +1167,7 @@ function EntityHeader({
             {secondaryAction && (() => {
               const lockDisabled = locked && secondaryAction.disableWhenLocked !== false
               const disabled = lockDisabled || Boolean(secondaryAction.disabled)
-              const tooltip = lockDisabled ? RECORD_HEADER_FALLBACKS.lockedActionTooltip : secondaryAction.disabledTooltip
+              const tooltip = lockDisabled ? ENTITY_HEADER_FALLBACKS.lockedActionTooltip : secondaryAction.disabledTooltip
               const btn = (
                 <Button
                   variant="secondary"
@@ -1194,12 +1199,12 @@ function EntityHeader({
                 needs — the tooltip carries the rest. That is also what makes
                 the width-measuring machinery obsolete: there is no long label
                 left to shorten. */}
-            <Tooltip content={assignedAgent ? RECORD_HEADER_FALLBACKS.askTooltip : RECORD_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
+            <Tooltip content={assignedAgent ? ENTITY_HEADER_FALLBACKS.askTooltip : ENTITY_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
               <Button
                 variant="main"
                 size="sm"
                 icon={<Sparkle size={16} strokeWidth={1.75} />}
-                aria-label={assignedAgent ? RECORD_HEADER_FALLBACKS.askTooltip : RECORD_HEADER_FALLBACKS.noAgentTooltip}
+                aria-label={assignedAgent ? ENTITY_HEADER_FALLBACKS.askTooltip : ENTITY_HEADER_FALLBACKS.noAgentTooltip}
                 disabled={!assignedAgent}
                 onClick={assignedAgent ? assignedAgent.onOpenChat : undefined}
               >
@@ -1215,7 +1220,7 @@ function EntityHeader({
               <ActionOverflowMenu
                 items={menuActions}
                 disabled={locked}
-                disabledTooltip={RECORD_HEADER_FALLBACKS.lockedActionTooltip}
+                disabledTooltip={ENTITY_HEADER_FALLBACKS.lockedActionTooltip}
               />
             )}
 
@@ -1312,7 +1317,7 @@ function ActionOverflowMenu({
   disabled,
   disabledTooltip,
 }: {
-  items: RecordAction[]
+  items: EntityHeaderAction[]
   disabled?: boolean
   disabledTooltip?: string
 }) {
