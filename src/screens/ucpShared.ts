@@ -90,7 +90,13 @@ export interface UcpContact {
    * for someone who holds the scope.
    */
   requiredScope?:  string
-  /** Signals first (by severity), then classification. Max 6 including overflow. */
+  /**
+   * Signals, and any classification BEYOND the entity's own type — "Buyer",
+   * "Enterprise", "Manager". The type's own tag is not stored here: the header
+   * derives it from TYPE_LABEL, which is the same map the roster chip reads,
+   * so a record cannot be a "Customer" in the list and a "Person" in its own
+   * header. The component sorts and caps what it is given.
+   */
   tags:            UcpTag[]
   /** Max 6, aim for four. Every item carries a tooltip naming its field. */
   meta:            UcpMetaItem[]
@@ -344,7 +350,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Salesforce", iconName: "Cloud" },
     tags: [
       { label: "Renewal at risk", role: "signal", tone: "alert", severity: 3, tooltip: "Health dropped to 61 · renews Sep 5" },
-      { label: "Customer",        role: "classification" },
       { label: "Enterprise",      role: "classification" },
     ],
     meta: [
@@ -374,7 +379,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Salesforce", iconName: "Cloud" },
     tags: [
       { label: "Awaiting review", role: "signal", tone: "neutral", severity: 1, tooltip: "Governance addendum sent Aug 28 · no response due yet" },
-      { label: "Person",          role: "classification" },
       { label: "Evaluator",       role: "classification" },
     ],
     meta: [
@@ -400,7 +404,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Workday", iconName: "Building" },
     tags: [
       { label: "Review overdue", role: "signal", tone: "alert", severity: 3, tooltip: "Mid-year review with Lisa Park since Aug 20 · 12 days open" },
-      { label: "Employee",       role: "classification" },
     ],
     meta: [
       { iconName: "ShieldCheck", label: "9 facts",   tooltip: "Verified facts · 5 on the Truth plane, 4 across Sandbox and Sources." },
@@ -430,7 +433,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Epic", iconName: "Cross" },
     tags: [
       { label: "Sync pending", role: "signal", tone: "alert", severity: 2, tooltip: "2 of 5 new clinic sites have not completed network sync" },
-      { label: "Customer",     role: "classification" },
       { label: "Enterprise",   role: "classification" },
     ],
     meta: [
@@ -460,7 +462,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Salesforce", iconName: "Cloud" },
     tags: [
       { label: "Awaiting us", role: "signal", tone: "error", severity: 4, tooltip: "Migration timeline asked twice · still unanswered since Aug 18" },
-      { label: "Person",      role: "classification" },
       { label: "Buyer",       role: "classification" },
     ],
     meta: [
@@ -491,7 +492,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Workday", iconName: "Building" },
     tags: [
       { label: "3 approvals due", role: "signal", tone: "alert", severity: 3, tooltip: "Oldest has been queued for 12 days" },
-      { label: "Employee",        role: "classification" },
       { label: "Manager",         role: "classification" },
     ],
     meta: [
@@ -520,7 +520,6 @@ export const CONTACTS: UcpContact[] = [
     owner: "Daniel Ruiz", status: "Active", lastInteraction: "Aug 19, 2026",
     source: { label: "Salesforce", iconName: "Cloud" },
     tags: [
-      { label: "Person",    role: "classification" },
       { label: "Technical", role: "classification" },
     ],
     meta: [
@@ -547,7 +546,6 @@ export const CONTACTS: UcpContact[] = [
     tags: [
       { label: "80d no contact", role: "signal", tone: "error", severity: 4, tooltip: "Last interaction Jun 14, when the pilot closed" },
       { label: "Inactive",       role: "signal", tone: "neutral", severity: 1, tooltip: "Lifecycle · moved to inactive Jul 1" },
-      { label: "Customer",       role: "classification" },
     ],
     meta: [
       { iconName: "ShieldCheck", label: "11 facts", tooltip: "Verified facts · 5 on the Truth plane, 6 across Sandbox and Sources." },
@@ -574,7 +572,6 @@ export const CONTACTS: UcpContact[] = [
     owner: "Elena Fischer", status: "Active", lastInteraction: "Aug 27, 2026",
     source: { label: "Workday", iconName: "Building" },
     tags: [
-      { label: "Employee", role: "classification" },
       { label: "Manager",  role: "classification" },
     ],
     meta: [
@@ -604,7 +601,6 @@ export const CONTACTS: UcpContact[] = [
     requiredScope: "finance.read",
     tags: [
       { label: "Inactive", role: "signal", tone: "neutral", severity: 1, tooltip: "Lifecycle · marked inactive Apr 3" },
-      { label: "Person",   role: "classification" },
     ],
     meta: [
       { iconName: "ShieldCheck", label: "10 facts",  tooltip: "Verified facts · 5 on the Truth plane, 5 across Sandbox and Sources." },
@@ -629,7 +625,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "NetSuite", iconName: "Boxes" },
     tags: [
       { label: "2 checks open", role: "signal", tone: "alert", severity: 2, tooltip: "Network segmentation evidence and sub-processor list · target Sep 12" },
-      { label: "Customer",      role: "classification" },
     ],
     meta: [
       { iconName: "ShieldCheck", label: "11 facts", tooltip: "Verified facts · 5 on the Truth plane, 6 across Sandbox and Sources." },
@@ -658,7 +653,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "NetSuite", iconName: "Boxes" },
     tags: [
       { label: "Owns 2 blockers", role: "signal", tone: "alert", severity: 3, tooltip: "Network segmentation evidence and sub-processor list · target Sep 12" },
-      { label: "Person",         role: "classification" },
       { label: "Technical",      role: "classification" },
     ],
     meta: [
@@ -688,7 +682,6 @@ export const CONTACTS: UcpContact[] = [
     owner: "Marcus Webb", status: "Active", lastInteraction: "Sep 2, 2026",
     source: { label: "Workday", iconName: "Building" },
     tags: [
-      { label: "Employee", role: "classification" },
       { label: "Revenue",  role: "classification" },
     ],
     meta: [
@@ -714,7 +707,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "Epic", iconName: "Cross" },
     tags: [
       { label: "Sponsor",  role: "classification" },
-      { label: "Person",   role: "classification" },
     ],
     meta: [
       { iconName: "ShieldCheck", label: "10 facts", tooltip: "Verified facts · 5 on the Truth plane, 5 across Sandbox and Sources." },
@@ -738,7 +730,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "CDK Global", iconName: "Car" },
     tags: [
       { label: "Service backlog", role: "signal", tone: "alert", severity: 2, tooltip: "41 repair orders open past their promised date across 4 stores" },
-      { label: "Customer",        role: "classification" },
       { label: "Multi-site",     role: "classification" },
     ],
     meta: [
@@ -768,7 +759,6 @@ export const CONTACTS: UcpContact[] = [
     source: { label: "CDK Global", iconName: "Car" },
     tags: [
       { label: "Owns the backlog", role: "signal", tone: "alert", severity: 3, tooltip: "Accountable for service throughput across all four stores" },
-      { label: "Customer",         role: "classification" },
       { label: "Operator",        role: "classification" },
     ],
     meta: [

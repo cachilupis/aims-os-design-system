@@ -827,15 +827,25 @@ export function UcpProfileView({
   const restriction = restrictionFor(contact)
 
   // The entity type is host-defined — EntityHeader enumerates nothing. With an
-  // avatar as the visual, the type arrives as a classification tag: signals
-  // first, then classification, and the component sorts and caps them itself.
-  // A tone of "neutral" is the absence of a tone, not a third colour.
+  // avatar as the visual, the type arrives as a classification tag, and it is
+  // read from TYPE_LABEL rather than stored per record: the roster chip reads
+  // the same map, so the two cannot drift. They had — the same person was a
+  // "Customer" in the list and a "Person" in her own header, and one record
+  // out of seven disagreed with the other six. One source of truth removes
+  // the class of bug, not just the instances.
+  //
+  // The component sorts (signals first, then classification) and caps the
+  // visible set itself, so the order here is only the order they arrive in. A
+  // tone of "neutral" is the absence of a tone, not a third colour.
   const headerTags = useMemo<EntityHeaderTag[]>(
-    () => contact.tags.map(t => ({
-      label: t.label,
-      role:  t.role,
-      tone:  t.tone === "error" || t.tone === "alert" ? t.tone : undefined,
-    })),
+    () => [
+      { label: TYPE_LABEL[contact.type], role: "classification" as const },
+      ...contact.tags.map(t => ({
+        label: t.label,
+        role:  t.role,
+        tone:  t.tone === "error" || t.tone === "alert" ? t.tone : undefined,
+      })),
+    ],
     [contact],
   )
 
