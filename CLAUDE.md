@@ -614,6 +614,8 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 
 `StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
 
+**No Sidebar while a full-page create surface is open.** Step 2's wizard and step 5's full-page form both occupy the whole page, so the app's persistent `Sidebar` would otherwise still be there and still clickable — a hazard exactly on these two surfaces, which have the most (a wizard's stages) or the longest (a form that earned a full page) work to lose. Hide the `Sidebar` for the duration; `Header`'s `backButton` and the flow's own `StepperNavFooter` (`Cancel`/`Back`) are the only ways out, and it reappears the moment the flow ends. Does not apply to `SlideOut` or `ModalDialog` — both already sit on a backdrop that blocks the `Sidebar`.
+
 **Second output — is a confirmation required?** Independent of the container, never merged into the cascade above.
 
 | Condition | Confirmation |
