@@ -96,6 +96,12 @@ jobs:
 
       # The same tool `npm run deploy` already used, so the published result is
       # byte-for-byte what a manual deploy produced — only the trigger changed.
+      #
+      # NOTE the identity has no "[bot]" in it, and must not get "corrected" back
+      # to GitHub's canonical `github-actions[bot] <…+github-actions[bot]@…>`:
+      # gh-pages parses --user with a strict RFC address matcher and square
+      # brackets are not legal in an unquoted local-part, so it exits 1 before
+      # doing any work. That is exactly how this job failed on its first run.
       - name: Publish to gh-pages
         env:
           REPO_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
@@ -103,5 +109,5 @@ jobs:
           npx gh-pages \
             --dist dist \
             --repo "$REPO_URL" \
-            --user "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>" \
+            --user "github-actions <41898282+github-actions@users.noreply.github.com>" \
             --message "Deploy ${GITHUB_SHA:0:7} from main"
