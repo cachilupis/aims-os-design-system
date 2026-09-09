@@ -3411,7 +3411,7 @@ const SLIDE_OUT_SPEC = {
     { name: "showTab3",       type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: tab3. Show or hide the third tab." },
     { name: "showSearchBar",  type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: searchBar. Search input field below tabs." },
     { name: "showChips",      type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: chips. Category chip row with overflow + > button." },
-    { name: "showCta",        type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: cta. Secondary + Primary CTA buttons row at the bottom." },
+    { name: "showCta",        type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: cta. Secondary + Primary CTA buttons row at the bottom. Renders for with-variants always; for full-slot only once onCtaPrimary is wired — a full-slot panel has no default footer to show." },
     { name: "showTopButton",  type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: topButton. Edit (pencil) icon in the top-right header." },
     { name: "showClose",      type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: close. X close button in the top-right header." },
   ],

@@ -13,6 +13,8 @@ import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { Tooltip }      from "@/components/ui/tooltip"
 import { AlertBanner }  from "@/components/ui/alert-banner"
 import { Tabs }         from "@/components/ui/tabs"
+import { Table, type TableColumn } from "@/components/ui/table"
+import { InformativeCard, type InformativeCardState } from "@/components/ui/informative-card"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -1645,7 +1647,9 @@ function MemberGroupsPanel({ member }: { member: Member }) {
               {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "8px 4px", flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 180 }}>
+          {/* Studio tags run along the row, not down it. The 180px cap forced
+              three tags into three lines and left the rest of the row empty. */}
+          <div style={{ display: "flex", gap: "8px 4px", flexShrink: 1, flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
             {group.studios.slice(0, 3).map(s => (
               <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{STUDIO_META[s]?.label ?? s}</Tag>
             ))}
@@ -2168,11 +2172,11 @@ const MEMBER_RESOURCES: Record<string, MemberResource[]> = {
   ],
 }
 
-const RESOURCE_TYPE_COLOR: Record<string, string> = {
-  Dataset:    "var(--badge-info)",
-  Model:      "var(--badge-success)",
-  "Event Bus":"var(--badge-alert)",
-  Sandbox:    "var(--muted-foreground)",
+const RESOURCE_TYPE_TAG: Record<string, "informative" | "purple" | "lightBlue" | "neutral"> = {
+  Dataset:     "informative",
+  Model:       "purple",
+  "Event Bus": "lightBlue",
+  Sandbox:     "neutral",
 }
 
 const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -2192,135 +2196,145 @@ function RemoveAccessModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const typeColor = RESOURCE_TYPE_COLOR[resource.type] ?? "var(--muted-foreground)"
   const isViaGroup = resource.grantPath === "via-group"
   const isViaRole  = resource.grantPath === "via-role"
   const isSystem   = resource.removable === false
 
-  // Warnings in priority order
-  const warnings: Array<{ icon: React.ReactNode; color: string; text: React.ReactNode }> = []
+  // Warnings in priority order. Each one is its own InformativeCard rather than
+  // a shared block: they carry different severities, and a single card cannot
+  // be red and green at once.
+  const warnings: Array<{ state: InformativeCardState; text: string }> = []
 
   if (isSystem) {
-    warnings.push({
-      icon: <Icons.Lock size={14} />,
-      color: "var(--muted-foreground)",
-      text: "This access is managed by the system and cannot be removed manually.",
-    })
+    warnings.push({ state: "neutral", text: "This access is managed by the system and cannot be removed manually." })
   } else if (resource.criticalAccess) {
-    warnings.push({
-      icon: <Icons.AlertTriangle size={14} />,
-      color: "var(--badge-error)",
-      text: <>Removing <strong>Owner</strong> access to <strong>{resource.name}</strong> may break {memberName}'s ability to manage or share this resource.</>,
-    })
+    warnings.push({ state: "error", text: `Removing Owner access to ${resource.name} may break ${memberName}'s ability to manage or share this resource.` })
   }
-
   if (isViaGroup && !isSystem) {
-    warnings.push({
-      icon: <Icons.Users size={14} />,
-      color: "var(--badge-alert)",
-      text: <>This access comes from the <strong>{resource.groupName}</strong> group ({resource.groupMemberCount} members). Removing it here removes access for the <strong>entire group</strong>, not just this member.</>,
-    })
+    warnings.push({ state: "alert", text: `This access comes from the ${resource.groupName} group (${resource.groupMemberCount} members). Removing it here removes access for the entire group, not just this member.` })
   }
-
   if (isViaRole && !isSystem) {
-    warnings.push({
-      icon: <Icons.Shield size={14} />,
-      color: "var(--badge-alert)",
-      text: <>This access is inherited from the <strong>{resource.roleName}</strong> role. Removing it will revoke all permissions granted by that role on this resource.</>,
-    })
+    warnings.push({ state: "alert", text: `This access is inherited from the ${resource.roleName} role. Removing it will revoke all permissions granted by that role on this resource.` })
   }
-
   if (resource.lastPath && !isSystem) {
-    warnings.push({
-      icon: <Icons.AlertCircle size={14} />,
-      color: "var(--badge-error)",
-      text: <>{memberName} has <strong>no other access path</strong> to this resource. After removal, they will lose access completely.</>,
-    })
+    warnings.push({ state: "error", text: `${memberName} has no other access path to this resource. After removal, they will lose access completely.` })
   }
-
   if (resource.dualPath && !isSystem) {
-    warnings.push({
-      icon: <Icons.CheckCircle size={14} />,
-      color: "var(--badge-success)",
-      text: <>Safe to remove — {memberName} will still be able to access <strong>{resource.name}</strong> via another path.</>,
-    })
+    warnings.push({ state: "success", text: `Safe to remove — ${memberName} will still be able to access ${resource.name} via another path.` })
   }
 
   return (
-    <>
-      <div
-        style={{ position: "fixed", inset: 0, zIndex: 10100, background: "rgba(0,0,0,0.5)" }} // audit-ignore: scrim
-        onClick={onCancel}
-      />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-        zIndex: 10101, width: 480, maxWidth: "90vw",
-        background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 14, overflow: "hidden",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)", // audit-ignore: modal shadow
-      }}>
-        {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
-            {isSystem ? "Access is system-managed" : "Remove resource access?"}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {isSystem
-              ? "This access cannot be changed from here."
-              : `You're about to remove ${memberName}'s access to the resource below.`}
-          </div>
-        </div>
+    <ModalDialog
+      isOpen
+      onClose={onCancel}
+      variant="content"
+      tone={isSystem ? "default" : "warning"}
+      iconName={isSystem ? "Lock" : "ShieldOff"}
+      showClose
+      title={isSystem ? "Access is system-managed" : "Remove resource access?"}
+      description={isSystem
+        ? "This access cannot be changed from here."
+        : `You're about to remove ${memberName}'s access to the resource below.`}
+      slotUnstyled
+      slot={
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* One card, one resource — the dialog's subject */}
+          <CardContainer size="sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>
+                {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>{resource.name}</span>
+              <Tag variant={RESOURCE_TYPE_TAG[resource.type] ?? "neutral"} size="sm">{resource.type}</Tag>
+            </div>
+            <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
+              {[
+                { label: "ACCESS",  value: resource.access    },
+                { label: "SOURCE",  value: resource.source    },
+                { label: "GRANTED", value: resource.grantedAt },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "var(--foreground)" }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </CardContainer>
 
-        {/* Resource card */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
-              {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>{resource.name}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, marginLeft: 4,
-              background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-              color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-            }}>{resource.type}</span>
-          </div>
-          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
-            {[
-              { label: "ACCESS",     value: resource.access    },
-              { label: "SOURCE",     value: resource.source    },
-              { label: "GRANTED",    value: resource.grantedAt },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 12, color: "var(--foreground)" }}>{value}</div>
-              </div>
-            ))}
-          </div>
+          {warnings.map((w, i) => (
+            <InformativeCard key={i} state={w.state} size="sm" title={w.text} />
+          ))}
         </div>
-
-        {/* Warnings */}
-        {warnings.length > 0 && (
-          <div style={{ padding: "14px 24px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
-            {warnings.map((w, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <span style={{ color: w.color, flexShrink: 0, marginTop: 1 }}>{w.icon}</span>
-                <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.55 }}>{w.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-          {!isSystem && (
-            <Button variant="warning" size="sm" onClick={onConfirm}>{isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}</Button>
-          )}
-        </div>
-      </div>
-    </>
+      }
+      ctaSecondary={{ label: "Cancel", onClick: onCancel }}
+      ctaPrimary={isSystem ? undefined : {
+        label: isViaGroup ? `Remove from ${resource.groupName}` : "Remove access",
+        destructive: true,
+        onClick: onConfirm,
+      }}
+    />
   )
 }
+
+// Columns live outside the panel so the header and the cells are one
+// definition — the pair that used to be two matching gridTemplateColumns.
+const RESOURCE_COLUMNS = (onRemove: (r: MemberResource) => void): TableColumn<MemberResource>[] => [
+  {
+    key: "name", header: "Resource",
+    render: r => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>
+          {RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />}
+        </span>
+        <span style={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</span>
+        {r.removable === false && (
+          <Tooltip side="cursor" content="System-managed — this access cannot be removed by hand">
+            <Icons.Lock size={11} color="var(--muted-foreground)" />
+          </Tooltip>
+        )}
+        {r.dualPath && (
+          <Tooltip side="cursor" content="Also reachable through another access path">
+            <Icons.GitMerge size={11} color="var(--badge-success)" />
+          </Tooltip>
+        )}
+      </div>
+    ),
+  },
+  {
+    key: "type", header: "Type", width: "110px",
+    render: r => <Tag variant={RESOURCE_TYPE_TAG[r.type] ?? "neutral"} size="sm">{r.type}</Tag>,
+  },
+  { key: "access", header: "Access", width: "100px" },
+  {
+    key: "grantedBy", header: "Granted by", width: "150px",
+    render: r => (
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <span>{r.grantedBy}</span>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>{r.source}</span>
+      </div>
+    ),
+  },
+  { key: "grantedAt", header: "When", width: "110px" },
+  {
+    key: "actions", header: "", width: "56px", align: "right",
+    render: r => {
+      const isSystem = r.removable === false
+      return (
+        <Tooltip side="cursor" content={isSystem ? "System-managed — cannot be removed" : `Remove access to ${r.name}`}>
+          <Button
+            variant="tertiary"
+            size="sm"
+            disabled={isSystem}
+            aria-label={isSystem ? "System-managed" : `Remove access to ${r.name}`}
+            onClick={e => { e.stopPropagation(); onRemove(r) }}
+          >
+            {isSystem ? <Icons.Lock size={12} /> : <Icons.Trash2 size={13} />}
+          </Button>
+        </Tooltip>
+      )
+    },
+  },
+]
 
 function ResourcesPanel({ member }: { member: Member }) {
   const initialResources = MEMBER_RESOURCES[member.id] ?? []
@@ -2391,91 +2405,28 @@ function ResourcesPanel({ member }: { member: Member }) {
 
       {allResources.length > 0 && (
         <>
-          {/* Type filter chips */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
+          {/* Type filter — Chip is the DS's selected/unselected control */}
+          <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
             {types.map(t => (
-              <button key={t} onClick={() => setActiveType(t)} style={{
-                padding: "4px 10px", fontSize: 11, fontWeight: 600, borderRadius: 20,
-                border: "1px solid", cursor: "pointer",
-                background: activeType === t ? "var(--primary)" : "transparent",
-                color: activeType === t ? "#fff" /* audit-ignore */ : "var(--muted-foreground)",
-                borderColor: activeType === t ? "var(--primary)" : "var(--border)",
-              }}>{t}</button>
+              <Chip key={t} size="s" variant={activeType === t ? "primary" : "secondary"} onClick={() => setActiveType(t)}>
+                {t}
+              </Chip>
             ))}
-            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)", alignSelf: "center" }}>
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>
               {resources.length} resource{resources.length !== 1 ? "s" : ""}
               {removedIds.size > 0 && <span style={{ color: "var(--badge-error)", marginLeft: 6 }}>· {removedIds.size} removed</span>}
             </span>
           </div>
 
-          {/* Table */}
-          <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
-              padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
-            }}>
-              <span>Resource</span><span>Type</span><span>Access</span><span>Granted by</span><span>When</span><span />
-            </div>
-            {resources.map((r, i) => {
-              const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
-              const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
-              const isSystem  = r.removable === false
-              return (
-                <div key={r.id} style={{
-                  display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
-                  padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
-                  alignItems: "center",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--table-row-hover-bg)" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
-                    {isSystem && (
-                      <span title="System-managed" style={{ display: "flex", color: "var(--muted-foreground)" }}>
-                        <Icons.Lock size={11} />
-                      </span>
-                    )}
-                    {r.dualPath && (
-                      <span title="Accessible via another path" style={{ display: "flex", color: "var(--badge-success)" }}>
-                        <Icons.GitMerge size={11} />
-                      </span>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                    background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-                    color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-                    width: "fit-content",
-                  }}>{r.type}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: 12, color: "var(--foreground)" }}>{r.grantedBy}</span>
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>{r.source}</span>
-                  </div>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>
-                  <button
-                    onClick={e => { e.stopPropagation(); setPendingRemove(r) }}
-                    title={isSystem ? "System-managed — cannot be removed" : "Remove access"}
-                    disabled={isSystem}
-                    style={{
-                      width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: isSystem ? "not-allowed" : "pointer",
-                      color: isSystem ? "var(--muted-foreground)" : "var(--badge-error)",
-                      opacity: isSystem ? 0.35 : 0.7,
-                    }}
-                    onMouseEnter={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "1" }}
-                    onMouseLeave={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "0.7" }}
-                  >
-                    {isSystem ? <Icons.Lock size={12} /> : <Icons.Trash2 size={13} />}
-                  </button>
-                </div>
-              )
-            })}
-          </CardContainer>
+          {/* The DS Table, not a hand-rolled grid — it owns the header, the row
+              hover, the sizes and the empty state, and its columns cannot drift
+              out of step with its header because there is only one definition. */}
+          <Table
+            size="sm"
+            columns={RESOURCE_COLUMNS(setPendingRemove)}
+            data={resources}
+            rowKey={r => r.id}
+          />
         </>
       )}
     </div>
@@ -3736,10 +3687,9 @@ function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: num
 }
 
 function MemberPreview({
-  member, onViewFull, onRoleChange, onToggleSuspend,
+  member, onRoleChange, onToggleSuspend,
 }: {
   member: Member
-  onViewFull: () => void
   onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
 }) {
@@ -3786,8 +3736,6 @@ function MemberPreview({
             </div>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
-          View full profile</Button>
       </div>
 
       {/* Tabs */}
@@ -3891,17 +3839,73 @@ function MemberPreview({
   )
 }
 
-function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+// One studio's share of a role's permissions, and — on expand — exactly which
+// ones. Michael asked for hover OR a chevron; it is a chevron, because a
+// tooltip cannot hold ten permission names and cannot be read on a touch
+// device, and this list runs to ten.
+function StudioPermBreakdownRow({ row }: {
+  row: { id: string; label: string; value: number; max: number; names: string[] }
+}) {
+  const [open, setOpen] = useState(false)
+  const empty = row.value === 0
+  const pct = Math.min((row.value / row.max) * 100, 100)
+
+  return (
+    <CardContainer size="sm" onClick={empty ? undefined : () => setOpen(o => !o)}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+          {!empty && (open
+            ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+            : <Icons.ChevronRight size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />)}
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{row.label}</span>
+        </div>
+        <Tag variant={empty ? "neutral" : (STUDIO_TAG[row.id] ?? "neutral")} size="sm">{row.value}</Tag>
+      </div>
+
+      {/* The bar takes the studio's own categorical colour, so a studio reads
+          the same here as in its tag and its HighlightIcon. --hi-*-icon, not
+          --tag-*-fg: the informative tag's foreground is White/80, which would
+          have drawn the Admin bar white. */}
+      <div style={{ height: 3, borderRadius: 2, background: "var(--field-border)", overflow: "hidden" }}>
+        <div style={{
+          height: "100%", width: `${pct}%`, borderRadius: 2, transition: "width 0.3s",
+          background: empty ? "transparent" : `var(--hi-${(STUDIO_HI[row.id] ?? "neutral").replace("-", "")}-icon)`,
+        }} />
+      </div>
+
+      {open && row.names.length > 0 && (
+        <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+          {row.names.map(name => (
+            <li key={name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
+              <Icons.Check size={11} color="var(--badge-success)" style={{ flexShrink: 0 }} />
+              {name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </CardContainer>
+  )
+}
+
+function RolePreview({ role, onMemberClick }: { role: Role; onMemberClick?: (m: Member) => void }) {
   const [tab, setTab] = useState(0)
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
 
-  const permRows = [
-    { label: "Governance",  value: perms.governance, max: 10, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-    { label: "Data Studio", value: perms.datastudio, max: 10, color: "#10b981" },  // audit-ignore: prototype fixture data
-    { label: "Agentic",     value: perms.agentic,    max: 10, color: "#f97316" },  // audit-ignore: prototype fixture data
-    { label: "Admin",       value: perms.admin,       max: 10, color: "#6366f1" },  // audit-ignore: prototype fixture data
-  ]
+  // A bar that only says "6" cannot be acted on — you have to open the role to
+  // learn WHICH six. The names come from the studio's own permission tree, so
+  // the breakdown and the tree can never disagree about what a studio contains.
+  const permRows = STUDIO_TABS.map(studio => {
+    const value = perms[studio.id as keyof typeof perms] ?? 0
+    const leaves = (PERM_TREE[studio.id] ?? []).flatMap(n => n.children?.length ? n.children : [n])
+    return {
+      id:    studio.id,
+      label: studio.label,
+      value,
+      max:   Math.max(leaves.length, value, 1),
+      names: leaves.slice(0, value).map(n => n.label),
+    }
+  })
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -3915,19 +3919,10 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
               <Tag variant={role.system ? "neutral" : "purple"} size="sm">
                 {role.system ? "System" : "Custom"}
               </Tag>
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 100,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)",
-                border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-              }}>
-                {perms.total} permissions
-              </span>
+              <Tag variant="neutral" size="sm">{perms.total} permissions</Tag>
             </div>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
-          {role.system ? "View role" : "Edit role"}</Button>
       </div>
 
       {/* Tabs */}
@@ -3943,21 +3938,8 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
             <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 2 }}>
               Permissions breakdown
             </div>
-            {permRows.map(s => (
-              <div key={s.label} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</span>
-                  </div>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                    <span style={{ fontWeight: 700, color: s.value > 0 ? "var(--primary)" : "var(--muted-foreground)" }}>{s.value}</span>
-                  </span>
-                </div>
-                <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.min((s.value / s.max) * 100, 100)}%`, background: s.value > 0 ? s.color : "transparent", borderRadius: 2, transition: "width 0.3s" }} />
-                </div>
-              </div>
+            {permRows.map(row => (
+              <StudioPermBreakdownRow key={row.id} row={row} />
             ))}
           </div>
         )}
@@ -3999,7 +3981,7 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
   )
 }
 
-function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onViewFull: () => void; onMemberClick?: (m: Member) => void }) {
+function GroupPreview({ group, onMemberClick }: { group: Group; onMemberClick?: (m: Member) => void }) {
   const [tab, setTab] = useState(0)
   const members = group.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
 
@@ -4031,8 +4013,6 @@ function GroupPreview({ group, onViewFull, onMemberClick }: { group: Group; onVi
             </div>
           </div>
         </div>
-        <Button variant="secondary" size="sm" onClick={onViewFull}><Icons.ExternalLink size={12} />
-          Manage group</Button>
       </div>
 
       {/* Tabs */}
@@ -4296,6 +4276,15 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [detailView, setDetailView]     = useState<DetailView>(null)
   const [previewItem, setPreviewItem]   = useState<DetailView>(null)
+
+  // The preview panel's footer CTA. One SlideOut hosts three preview types, so
+  // the label and the destination are resolved from whichever is open — a
+  // preview component no longer renders its own "open the full thing" button.
+  const previewCta =
+    previewItem?.type === "member" ? { label: "View full profile", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
+  : previewItem?.type === "role"   ? { label: previewItem.role.system ? "View role" : "Edit role", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
+  : previewItem?.type === "group"  ? { label: "Manage group", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
+  : undefined
   const [showInvite, setShowInvite]     = useState(false)
   const [roleForm, setRoleForm]         = useState<{ role: Role | null } | null>(null)
 
@@ -4576,7 +4565,9 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         </>
       )}
 
-      {/* Preview slide-out */}
+      {/* Preview slide-out. The panel's own footer carries the main action —
+          it used to be a small secondary Button under each preview's title,
+          which read as body content rather than as the panel's CTA. */}
       <SlideOut
         open={previewItem !== null}
         onClose={() => setPreviewItem(null)}
@@ -4589,13 +4580,15 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         showTabs={false}
         showSearchBar={false}
         showChips={false}
-        showCta={false}
         resizable={false}
+        showCta={!!previewCta}
+        showCtaSecondary={false}
+        ctaPrimaryLabel={previewCta?.label}
+        onCtaPrimary={previewCta?.onClick}
       >
         {previewItem?.type === "member" && (
           <MemberPreview
             member={previewItem.member}
-            onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
             onRoleChange={handleRoleChange}
             onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
           />
@@ -4603,14 +4596,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         {previewItem?.type === "role" && (
           <RolePreview
             role={previewItem.role}
-            onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
             onMemberClick={m => { setPreviewItem(null); setDetailView({ type: "member", member: m }) }}
           />
         )}
         {previewItem?.type === "group" && (
           <GroupPreview
             group={previewItem.group}
-            onViewFull={() => { setPreviewItem(null); setDetailView(previewItem) }}
             onMemberClick={m => { setPreviewItem(null); setDetailView({ type: "member", member: m }) }}
           />
         )}
