@@ -681,7 +681,19 @@ export default function PMThomasUcpContactsScreen() {
           items={visibleTabs.map(t => ({ id: t.id, label: t.label }))}
         />
         <div onClickCapture={e => { typePendingAnchor.current = anchorFromEvent(e) }}>
-          <Tooltip content="Choose which entity types show as tabs" side="top">
+          {/* `side="cursor"` because this trigger sits at the right edge of the
+              content column: `side="top"` centres the bubble on the trigger and
+              a 274px bubble on a trigger 44px from the edge loses half of
+              itself off-screen (measured). Cursor mode portals it and picks the
+              side that fits, which is what the component documents it for.
+
+              The copy carries the count as well as the verb — the tooltip is
+              the only place that says how many types exist, which is the thing
+              a user cannot see from a bar showing five of them. */}
+          <Tooltip
+            side="cursor"
+            content={`Choose which entity types show as tabs — ${tabIds.length} of ${ALL_TYPE_TABS.length} showing`}
+          >
             <Button
               variant="tertiary" size="sm" iconPosition="alone"
               icon={<Plus size={16} strokeWidth={1.75} />}
