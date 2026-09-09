@@ -78,7 +78,22 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER add anything visual to a `CardContainer` that is not part of the component** — no accent stripes, no coloured top borders, no dividers bolted on. If the card needs to signal something, that is a `Tag`, a `Chip` or a colour variant, not a decoration drawn on top. Use `variant="default"` unless the design genuinely calls for a colour, `size="sm"` for small items (entity rows, selectable cards, items with a CTA inside a SlideOut or Modal), and `variant="dashed"` for empty regions.
 - **`ModalDialog`'s `slot` wraps content in a grey surface (`--modal-slot-bg`) by default** — pass `slotUnstyled` for content that sits directly on the modal. A dialog never puts all of its content in one card; if cards are needed, one per item.
 - **`Input`/`Textarea` have a `label` prop, but the floating label is mobile-only** — on desktop, structure comes from grouping fields under a section label, never a per-field label.
-- **`Select` is a trigger only — it has no options list.** Compose a working dropdown with `@base-ui/react`'s `Popover` (already a dependency), anchored to the trigger — never with hand-computed coordinates.
+- **`Select` is a trigger only — it has no options list.** Pair it with the DS
+  `Menu` positioned by `src/lib/dropdown-anchor.ts` (`anchorFromEvent` +
+  `useDropdownPosition` + a click-catcher) — the same mechanism `Filters` uses.
+  `pm-thomas-widget-builder.tsx`'s `OptionPicker` is the working reference; copy
+  that shape rather than inventing a second one.
+
+  **This used to say "compose with `@base-ui/react`'s Popover", and that does
+  not work** — corrected 2026-09-09. `Select` renders a div, so `Popover.Trigger`
+  had nowhere to attach its ref or handlers, and anchoring a wrapper instead made
+  base-ui read the opening click as an outside click and dismiss the panel on the
+  same tick. Both `select.tsx`'s own docblock and `OptionPicker`'s record the
+  attempt. Do not re-try it.
+
+  If the option list is short and the labels are brief, a `Chip` row is often the
+  better answer than any dropdown — no menu, no positioning, and the choices stay
+  visible.
 
 ### Surfaces, tiles and hovers — the four the audit now catches
 
