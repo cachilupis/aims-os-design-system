@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
@@ -619,6 +619,9 @@ export default function PMThomasWidgetBuilderScreen() {
   /** The name it was saved under — holds the success view open, and survives
    *  the reset that "Create new widget" runs, which clears `name`. */
   const [savedName, setSavedName] = useState<string | null>(null)
+  const [savedAsDraft, setSavedAsDraft] = useState(false)
+  /** Bumped by every reset; the scroll-to-top effect keys off it. */
+  const [resetCount, setResetCount] = useState(0)
   const [typeCat, setTypeCat] = useState<WidgetCategory | "all">("all")
   // The columns modal edits a DRAFT, so Cancel means cancel. Committing on each
   // checkbox would leave a half-made selection behind when someone backs out.
@@ -679,8 +682,28 @@ export default function PMThomasWidgetBuilderScreen() {
   // was the right call for the preview and the wrong one for the catalog.
   const namedOk        = !!name.trim()
   const widgetComplete = dataComplete && !!typeId && namedOk
-  const canSave        = widgetComplete
-  const hasUnsaved     = !!(sourceId || typeId || name.trim() || subtitle.trim())
+  /**
+   * A named widget can always be saved; an unfinished one goes in as a DRAFT
+   * (Michael, 2026-09-09).
+   *
+   * Save used to sit grey until everything was answered, which quietly said
+   * "finish this in one sitting or lose it" — and the way people actually
+   * answer that is by leaving the tab open for a week. The catalog is where
+   * work in progress belongs too, so the only thing Save still insists on is a
+   * name: a draft nobody can find again is not saved, it is lost politely.
+   */
+  const canSave      = namedOk
+  const savesAsDraft = namedOk && !widgetComplete
+  const hasUnsaved   = !!(sourceId || typeId || name.trim() || subtitle.trim())
+
+  /** The one thing still missing, phrased to drop into a sentence. */
+  const missingPiece = !sourceId
+    ? (dataMode === "dataset" ? "a dataset" : "an entity")
+    : !dataComplete
+    ? "the rest of its data setup"
+    : !typeId
+    ? "a widget type"
+    : ""
 
   // ── Wizard stages ─────────────────────────────────────────────────────────
   // These were a hand-rolled tab strip: numbered dots, a check when complete,
@@ -689,17 +712,23 @@ export default function PMThomasWidgetBuilderScreen() {
   // stages are what Stepper is for. Its StepState covers every case the local
   // version drew by hand.
   const STEP_ORDER: TabId[] = ["data", "configure"]
+  // A button that says "Save to catalog" and produces a draft is lying about
+  // its own outcome, so the label follows the state.
+  const saveLabel = savesAsDraft ? "Save as draft" : "Save to catalog"
   const NEXT_LABEL: Record<TabId, string> = {
     data:      "Continue to Configure",
-    configure: "Save to catalog",
+    configure: saveLabel,
   }
 
   // The footer's shape follows the stage: Cancel on the first, Back after that,
   // and the primary button becomes Save on the last one.
   const isLast     = tab === "configure"
   const stepIndex  = STEP_ORDER.indexOf(tab)
-  const nextEnabled = tab === "data" ? dataComplete : tab === "configure" ? widgetComplete : canSave
+  const nextEnabled = tab === "data" ? dataComplete : canSave
 
+  // Guidance, not a gate. It still names the first thing missing, because that
+  // is what someone reading it wants to know next — it just no longer explains
+  // why a button is grey.
   const saveHint = !sourceId
     ? (dataMode === "dataset" ? "Choose a dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
     : !dataComplete
@@ -732,29 +761,54 @@ export default function PMThomasWidgetBuilderScreen() {
    * but the view is not, so nothing looks like it happened.
    */
   function scrollToTop() {
-    // After the frame, not during it. resetAll empties most of the page, so a
-    // scroll started in the click handler is still animating when the content
-    // shrinks — the browser clamps it to the new, much smaller maximum and the
-    // view lands 23px short of the top with the stage switcher clipped. One
-    // frame later the layout is final, and an instant jump has no animation
-    // left to interrupt.
-    requestAnimationFrame(() => {
-      let el: HTMLElement | null = rootRef.current
-      while (el) {
-        // Overflow style only — NOT "is it currently taller than its box". By
-        // this frame the reset has already emptied the page, so the container
-        // often has nothing to scroll for an instant and a height test walks
-        // straight past the only scroller there is, leaving the view wherever
-        // the browser clamped it. What makes an element the scroll container
-        // is how it is styled, not what it happens to hold right now.
-        const oy = getComputedStyle(el).overflowY
-        if (oy === "auto" || oy === "scroll") {
-          el.scrollTop = 0
-          return
-        }
-        el = el.parentElement
-      }
-    })
+    // Ask; the effect below does it. See the comment there for why.
+    setResetCount(c => c + 1)
+  }
+
+  /**
+   * A finished widget saves straight through; an unfinished one asks first.
+   *
+   * The confirmation is not about risk — saving to the catalog is undoable, and
+   * the Create pattern says an undoable save needs no dialog. It is about the
+   * OUTCOME differing from the one the person expects: they set out to publish
+   * a widget and what lands is a draft. That is worth a sentence and a way
+   * back, which is what Keep editing is.
+   */
+  /**
+   * Back to the top after a reset — as an effect, not from the click handler.
+   *
+   * resetAll empties most of the page, so anything scheduled inside the click
+   * runs while the layout is still the old, tall one; the browser then clamps
+   * the scroll to the new, much smaller maximum and the view settles a few
+   * pixels short of the top with the stage switcher clipped. requestAnimation-
+   * Frame was not late enough either. An effect keyed to the reset runs after
+   * React has committed and the browser has laid the page out, which is the
+   * first moment "top" means what it will still mean a frame later.
+   *
+   * ScreenLayout owns the scroll container and does not hand it out, so this
+   * walks up from the builder's own root to the first ancestor whose overflow
+   * says it scrolls — by STYLE, not by "is it taller than its box right now":
+   * once the page is empty that test walks straight past the only scroller.
+   */
+  useEffect(() => {
+    if (resetCount === 0) return
+    let el: HTMLElement | null = rootRef.current
+    while (el) {
+      const oy = getComputedStyle(el).overflowY
+      if (oy === "auto" || oy === "scroll") { el.scrollTop = 0; return }
+      el = el.parentElement
+    }
+  }, [resetCount])
+
+  function attemptSave() {
+    if (savesAsDraft) { setShowSaveModal(true); return }
+    commitSave(false)
+  }
+
+  function commitSave(asDraft: boolean) {
+    setShowSaveModal(false)
+    setSavedAsDraft(asDraft)
+    setSavedName(name)
   }
 
   function resetAll() {
@@ -783,7 +837,7 @@ export default function PMThomasWidgetBuilderScreen() {
             label: "Save to catalog",
             icon: LucideIcons.Check,
             disabled: !canSave,
-            onClick: () => setShowSaveModal(true),
+            onClick: attemptSave,
           }}
         />
       )}
@@ -1192,7 +1246,7 @@ export default function PMThomasWidgetBuilderScreen() {
           nextLabel={NEXT_LABEL[tab]}
           nextDisabled={!nextEnabled}
           onNext={() => {
-            if (isLast) { setShowSaveModal(true); return }
+            if (isLast) { attemptSave(); return }
             setTab(STEP_ORDER[stepIndex + 1])
           }}
         />
@@ -1447,21 +1501,24 @@ export default function PMThomasWidgetBuilderScreen() {
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowLeave(false) }}
       />
 
-      {/* ── Save confirmation ──────────────────────────────────────────────
-       *  Two outcomes, because only two exist before the save: go through with
-       *  it, or go back. "Create new widget" used to sit here as a third CTA
-       *  and it asked an impossible question — start a fresh widget from a
-       *  dialog whose own title is "Save to catalog?", with nothing saying
-       *  whether this one gets saved first. It belongs after the save, where
-       *  the answer is unambiguous. */}
+      {/* ── Save as draft ──────────────────────────────────────────────────
+       *  This dialog only appears for an UNFINISHED widget. A complete one
+       *  saves straight through: the Create pattern reserves a confirmation for
+       *  a save that cannot be undone, and this one can — asking "are you sure?"
+       *  about a reversible action trains people to click past the question.
+       *
+       *  What makes this case different is not risk, it is that the outcome is
+       *  not the one the button implied a moment ago: you set out to publish a
+       *  widget and a draft is what lands. Keep editing is the way back. */}
       <ModalDialog
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        tone="success"
-        iconName="BookMarked"
-        title="Save to catalog?"
-        description={`"${name}" will be added to the widget library and available across all dashboards.`}
-        ctaPrimary={{ label: "Save to catalog", onClick: () => { setShowSaveModal(false); setSavedName(name) } }}
+        tone="default"
+        iconName="FileClock"
+        title="Save as a draft?"
+        description={`"${name}" is still missing ${missingPiece}, so it goes to the catalog as a draft.`}
+        informativeCard="A draft is saved and searchable, but it cannot be added to a dashboard until it is finished."
+        ctaPrimary={{ label: "Save as draft", onClick: () => commitSave(true) }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
       />
 
@@ -1472,9 +1529,11 @@ export default function PMThomasWidgetBuilderScreen() {
         isOpen={!!savedName}
         onClose={() => setSavedName(null)}
         tone="success"
-        iconName="CircleCheck"
-        title={`"${savedName}" is in the catalog`}
-        description="Anyone on the workspace can now add it to a dashboard."
+        iconName={savedAsDraft ? "FileClock" : "CircleCheck"}
+        title={savedAsDraft ? `"${savedName}" is saved as a draft` : `"${savedName}" is in the catalog`}
+        description={savedAsDraft
+          ? "It is in the catalog and you can pick it up any time. Finish it to make it available on dashboards."
+          : "Anyone on the workspace can now add it to a dashboard."}
         /* Done is the primary: finishing is what most people came to do, and
            it goes to the catalog rather than back to the builder — the widget
            is saved and the sentence above says where it went, so landing back
