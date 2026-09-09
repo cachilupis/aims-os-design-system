@@ -32251,6 +32251,23 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
   ],
 }
 
+// Figma's maximum-content tag set (Edge cases, 20115:5664) — eight tags on a
+// customer account. This is the ONLY content in the file that overflows the
+// cap of six, which makes it the only content that renders the `+N` chip, so
+// it lives here rather than inline: the Overview's maximum-content example
+// and the Preview's overflow toggle are the same eight tags, not two lists
+// that drift apart.
+const RH_TAGS_OVERFLOW: EntityHeaderTag[] = [
+  { role: "signal",         label: "Renewal at risk",     tone: "alert" },
+  { role: "signal",         label: "Compliance overdue",  tone: "error" },
+  { role: "signal",         label: "Sync failing",        tone: "error" },
+  { role: "signal",         label: "Access review"                      },
+  { role: "signal",         label: "Renews in 52d"                      },
+  { role: "signal",         label: "Contract expiring"                  },
+  { role: "signal",         label: "Pending recertification"            },
+  { role: "classification", label: "Partner"                            },
+]
+
 
 // UEP — the reference variant (brief's own words: "la card de referencia").
 // RECORD fields deliberately follow the brief's literal list (Manager/Access
@@ -32998,6 +33015,11 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   const [pvSource,      setPvSource]      = useState(true)
   const [pvMetadata,    setPvMetadata]    = useState(true)
   const [pvTags,        setPvTags]        = useState(true)
+  // Overflow toggle — none of the five validated entities carries more than
+  // two tags, so without this the `+N` chip is documented on the page and
+  // never rendered by it. On, the card takes Figma's eight-tag set and the
+  // chip appears; hovering or focusing it lists the two it is holding.
+  const [pvTagOverflow, setPvTagOverflow] = useState(false)
   const [pvState,       setPvState]       = useState(true)
   const [pvSecondary,   setPvSecondary]   = useState(false)
   const [pvMenu,        setPvMenu]        = useState(true)
@@ -33070,6 +33092,14 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   // shared callback for the whole record), same reasoning as Your
   // Intervention above: each NBA needs its own id in scope for the detail
   // SlideOut below to show the right one.
+
+  // Which tags the Preview card actually renders. Classification is dropped
+  // whenever the visual is a highlight icon — that is the rule, not a display
+  // choice: an icon already names the type. It applies to the overflow set
+  // too, which is why the filter sits here rather than beside either source.
+  const pvBaseTags    = pvTagOverflow ? RH_TAGS_OVERFLOW : RH_TAGS[pvKey]
+  const pvVisibleTags = pvIconVisual ? pvBaseTags.filter(t => t.role !== "classification") : pvBaseTags
+
   const rhNextBestActions = (v: RhDemoKey): NextBestAction[] =>
     (RH_NBA[v] ?? []).map(nba => ({
       id: nba.id,
@@ -33188,7 +33218,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             <EntityHeader
               name={RH_NAME[pvKey]}
               visual={pvIconVisual ? { kind: "icon", icon: LucideIcons.Boxes, variant: "light-blue" } : RH_VISUAL[pvKey]}
-              tags={pvTags ? (pvIconVisual ? RH_TAGS[pvKey].filter(t => t.role !== "classification") : RH_TAGS[pvKey]) : []}
+              tags={pvTags ? pvVisibleTags : []}
               stateBadge={pvState ? RH_STATE_BADGE[pvKey] : undefined}
               source={pvSource ? RH_SOURCE[pvKey] : undefined}
               secondaryMetadata={pvMetadata ? RH_SECONDARY_METADATA[pvKey] : []}
@@ -33246,6 +33276,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                   ["Icon instead of avatar", pvIconVisual, setPvIconVisual],
                   ["Source",             pvSource,      setPvSource],
                   ["Tags",               pvTags,        setPvTags],
+                  ["More tags than fit", pvTagOverflow, setPvTagOverflow],
                   ["State badge",        pvState,       setPvState],
                   ["Secondary metadata", pvMetadata,    setPvMetadata],
                   ["Description",        pvDescription, setPvDescription],
@@ -33273,10 +33304,12 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               Turn it on elsewhere to see the slot; the copy you get is what that type would legitimately carry.{" "}
               <strong>Assigned agent off</strong> is not a missing button: it renders disabled with a Tooltip, because the prop
               is required and its value may be <code>null</code>.{" "}
-              <strong>Locked</strong> is "you cannot edit this record" — not Figma's <code>Restricted</code>, which is "you
-              cannot see this value" and lives on the field, not the card.{" "}
-              <code>Loading</code>, Figma's third state on the Property&nbsp;1 axis, is a skeleton this component does not
-              implement yet.
+              <strong>Locked</strong> is &ldquo;you cannot edit this record&rdquo; &mdash; a different axis from the
+              card&rsquo;s own <code>state</code>, which is Figma&rsquo;s <code>Property&nbsp;1</code>: <code>loading</code>
+              and <code>restricted</code> are both implemented, each with its own example in the Overview tab.{" "}
+              <strong>More tags than fit</strong> swaps in Figma&rsquo;s eight-tag set so the <code>+N</code> chip renders
+              &mdash; hover or focus it and the hidden labels are listed. It is the one behaviour the five validated
+              entities cannot show on their own, because none of them carries more than two tags.
             </p>
 
             {/* See it applied. Everything above is the component on a stage;
@@ -33432,16 +33465,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               name="Northwind Alliance Industrial Manufacturing Division"
               visual={{ kind: "avatar" }}
               source="Salesforce"
-              tags={[
-                { role: "signal",         label: "Renewal at risk",     tone: "alert" },
-                { role: "signal",         label: "Compliance overdue",  tone: "error" },
-                { role: "signal",         label: "Sync failing",        tone: "error" },
-                { role: "signal",         label: "Access review"                      },
-                { role: "signal",         label: "Renews in 52d"                      },
-                { role: "signal",         label: "Contract expiring"                  },
-                { role: "signal",         label: "Pending recertification"            },
-                { role: "classification", label: "Partner"                            },
-              ]}
+              tags={RH_TAGS_OVERFLOW}
               stateBadge={{ label: "Under review", variant: "informative" }}
               secondaryMetadata={[
                 { icon: LucideIcons.CircleCheckBig, text: "12 facts", tooltip: "Truth Plane facts · 12 attested facts on this account." },
