@@ -133,7 +133,7 @@ function MetricRows({ rows }: { rows: { label: string; value: string; icon: stri
   const maxRows = availableHeight ? Math.max(2, Math.floor((availableHeight - 70) / 37)) : rows.length
   const visible = rows.slice(0, maxRows)
   return (
-    <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column" }}>
+    <div style={{ paddingBottom: 16, display: "flex", flexDirection: "column" }}>
       {visible.map((row, i) => (
         // Icon, then label, then value — left to right, in the order the eye
         // scans. The icon used to sit beside the value on the right, which meant
@@ -218,7 +218,7 @@ function LastActivityContent({ contact, onViewAll }: { contact: UcpContact; onVi
   const maxItems = availableHeight ? Math.max(1, Math.floor((availableHeight - 86) / 56)) : items.length
 
   return (
-    <div style={{ padding: "0 16px 16px", display: "flex", flexDirection: "column" }}>
+    <div style={{ paddingBottom: 16, display: "flex", flexDirection: "column" }}>
       {items.slice(0, maxItems).map((a, i, shown) => (
         <div
           key={a.id}
@@ -273,7 +273,7 @@ function ConnectionsContent({ contact }: { contact: UcpContact }) {
   const visible      = connections.slice(0, maxRows)
   const hidden       = connections.length - visible.length
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ paddingTop: 4, paddingBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
       {visible.map(c => (
         <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <HighlightIcon size="sm" variant="neutral" iconName={c.icon} />
@@ -297,7 +297,7 @@ function ConnectionsContent({ contact }: { contact: UcpContact }) {
 function AiSummaryContent({ contact, onAsk }: { contact: UcpContact; onAsk: () => void }) {
   const { isNarrow } = useWidgetSize()
   return (
-    <div style={{ padding: "4px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ paddingTop: 4, paddingBottom: 16, display: "flex", flexDirection: "column", gap: 12 }}>
       <div
         // El mismo read del agente que muestra el preview del listado, así que
         // la misma superficie: tokens de card, no de tag.
