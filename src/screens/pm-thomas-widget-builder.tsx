@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
@@ -614,6 +614,7 @@ export default function PMThomasWidgetBuilderScreen() {
   const [dataMode, setDataMode]         = useState<"entity" | "dataset">("entity")
   const [previewSize, setPreviewSize]   = useState("lg")
   const [showLeave, setShowLeave]       = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   /** The name it was saved under — holds the success view open, and survives
    *  the reset that "Create new widget" runs, which clears `name`. */
@@ -718,9 +719,48 @@ export default function PMThomasWidgetBuilderScreen() {
     setRecordColumns([])
   }
 
+  /**
+   * Back to the top of whatever is scrolling.
+   *
+   * ScreenLayout owns the scroll container and does not hand it out, so this
+   * walks up from the builder's own root to the first ancestor that actually
+   * scrolls — the same search the browser does for scrollIntoView, and it
+   * keeps the screen from having to know the layout's internals.
+   *
+   * Without it, starting a fresh widget leaves you wherever you were when you
+   * saved — halfway down, looking at the widget-type grid. The form is reset
+   * but the view is not, so nothing looks like it happened.
+   */
+  function scrollToTop() {
+    // After the frame, not during it. resetAll empties most of the page, so a
+    // scroll started in the click handler is still animating when the content
+    // shrinks — the browser clamps it to the new, much smaller maximum and the
+    // view lands 23px short of the top with the stage switcher clipped. One
+    // frame later the layout is final, and an instant jump has no animation
+    // left to interrupt.
+    requestAnimationFrame(() => {
+      let el: HTMLElement | null = rootRef.current
+      while (el) {
+        // Overflow style only — NOT "is it currently taller than its box". By
+        // this frame the reset has already emptied the page, so the container
+        // often has nothing to scroll for an instant and a height test walks
+        // straight past the only scroller there is, leaving the view wherever
+        // the browser clamped it. What makes an element the scroll container
+        // is how it is styled, not what it happens to hold right now.
+        const oy = getComputedStyle(el).overflowY
+        if (oy === "auto" || oy === "scroll") {
+          el.scrollTop = 0
+          return
+        }
+        el = el.parentElement
+      }
+    })
+  }
+
   function resetAll() {
     setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
+    scrollToTop()
   }
 
 
@@ -749,7 +789,7 @@ export default function PMThomasWidgetBuilderScreen() {
       )}
     >
       {/* ── Builder ── */}
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
+      <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
           {/* Two stages read as a wizard when the top carries a Stepper AND
               the bottom carries StepperNavFooter — two progress bars for one
               two-step flow. The footer is the one that moves you forward, so
@@ -1400,7 +1440,10 @@ export default function PMThomasWidgetBuilderScreen() {
         tone="warning"
         title="Leave without saving?"
         description="Your widget isn't saved yet. If you leave now, your configuration will be lost."
-        ctaPrimary={{ label: "Leave without saving", destructive: true, onClick: resetAll }}
+        /* Close it too. resetAll clears the builder but knows nothing about
+           this dialog, so leaving used to empty the form behind a confirmation
+           that was still sitting on top of it. */
+        ctaPrimary={{ label: "Leave without saving", destructive: true, onClick: () => { setShowLeave(false); resetAll() } }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowLeave(false) }}
       />
 
@@ -1432,13 +1475,18 @@ export default function PMThomasWidgetBuilderScreen() {
         iconName="CircleCheck"
         title={`"${savedName}" is in the catalog`}
         description="Anyone on the workspace can now add it to a dashboard."
-        /* Done goes to the catalog, not back to the builder. The widget is
-           saved and the sentence above says where it went — landing back on
-           the form you just finished, still filled in, reads as if the save
-           did not take. This is the Create pattern's rule for a full-page
-           create: navigate to where the created object now lives. */
-        ctaPrimary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
-        ctaSecondary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
+        /* Done is the primary: finishing is what most people came to do, and
+           it goes to the catalog rather than back to the builder — the widget
+           is saved and the sentence above says where it went, so landing back
+           on the form you just filled in reads as if the save did not take.
+           That is the Create pattern's rule for a full-page create: navigate
+           to where the created object now lives.
+
+           Creating another is the secondary — a real outcome, but the one
+           fewer people want, and it is the only place the offer makes sense
+           because the current widget is already safe. */
+        ctaPrimary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
+        ctaSecondary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
       />
     </ScreenLayout>
   )
