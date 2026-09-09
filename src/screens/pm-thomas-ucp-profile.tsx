@@ -77,6 +77,7 @@ import * as LucideIcons from "lucide-react"
 import { Sparkle, Send, ScanLine, Inbox, HardDrive, FileSearch, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { specForContact, tabsForContact } from "./ucpTypeModel"
+import type { ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PLANE_META, PLANE_ORDER, CHANNEL_META, CONCIERGE_PROMPTS,
   CONTACTS,
@@ -167,6 +168,79 @@ function MetricRows({ rows }: { rows: { label: string; value: string; icon: stri
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+/**
+ * Stat Row (catalog id `status-warning`, the DS's "Status Warning Widget").
+ *
+ * Governance and Risk publish counters and scores — a compliance score, open
+ * reviews, a risk score, open flags. They used to render through the same
+ * MetricRows helper as Account and Employment, which made a *score* look like
+ * a *field*: the widget catalog separates those on purpose, and reusing one
+ * renderer for both is how the distinction stopped being visible.
+ *
+ * Three counters, which is what the DS widget is for, in the arrangement its
+ * own renderer uses: HighlightIcon, the label in the counter's semantic colour,
+ * the value at 14px. The fourth item every study carries is a DATE — last
+ * audit, last scan — and a date is not a counter, so it goes underneath as the
+ * line that says when this was last checked rather than into a fourth box.
+ *
+ * The icon sits beside the value when there is room and above it when there is
+ * not: three boxes in a narrow slot leave about 94px each, and at that width an
+ * icon on the left takes the space the number needs.
+ */
+function StatRowContent({ counters, checked }: {
+  counters: ProfileWidgetRow[]
+  checked?: ProfileWidgetRow
+}) {
+  const { isNarrow } = useWidgetSize()
+  const labelColor: Record<ProfileWidgetRow["variant"], string> = {
+    success:     "var(--color-text-success)",
+    alert:       "var(--color-text-alert)",
+    informative: "var(--color-text-info)",
+    neutral:     "var(--color-text-subtitle)",
+  }
+  return (
+    <div style={{ paddingBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+        {counters.slice(0, 3).map(c => (
+          <div
+            key={c.label}
+            style={{
+              display: "flex",
+              flexDirection: isNarrow ? "column" : "row",
+              alignItems: isNarrow ? "flex-start" : "center",
+              gap: isNarrow ? 8 : 12,
+              padding: "12px 14px", borderRadius: 8, minWidth: 0,
+              border: "1px solid var(--field-border)",
+              background: "var(--widget-bg)",
+            }}
+          >
+            <HighlightIcon size="md" variant={c.variant} iconName={c.icon} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span
+                title={c.label}
+                style={{
+                  fontSize: 10, fontWeight: 500, lineHeight: 1.2, color: labelColor[c.variant],
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}
+              >
+                {c.label}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1, color: "var(--color-text-title)", whiteSpace: "nowrap" }}>
+                {c.value}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      {checked && (
+        <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+          {checked.label} · {checked.value}
+        </span>
+      )}
     </div>
   )
 }
@@ -312,19 +386,19 @@ function AiSummaryContent({ contact, onAsk }: { contact: UcpContact; onAsk: () =
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {/* Un token de borde no es un color de texto. El acento va con el
               mismo foreground que la etiqueta que tiene al lado. */}
-          <Sparkle size={13} style={{ color: "var(--tag-purple-fg)" }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--tag-purple-fg)" }}>
+          <Sparkle size={13} style={{ color: "var(--color-text-purple)" }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-purple)" }}>
             {contact.agent.name}
           </span>
-          <span style={{ fontSize: 11, color: "var(--tag-purple-fg)", opacity: 0.75, marginLeft: "auto" }}>
+          <span style={{ fontSize: 11, color: "var(--color-text-purple)", opacity: 0.75, marginLeft: "auto" }}>
             {contact.aiSummary.confidence}% confidence
           </span>
         </div>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--tag-purple-fg)", lineHeight: 1.4 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-purple)", lineHeight: 1.4 }}>
           {contact.aiSummary.headline}
         </span>
         {!isNarrow && (
-          <span style={{ fontSize: 12, color: "var(--tag-purple-fg)", opacity: 0.9, lineHeight: 1.55 }}>
+          <span style={{ fontSize: 12, color: "var(--color-text-purple)", opacity: 0.9, lineHeight: 1.55 }}>
             {contact.aiSummary.detail}
           </span>
         )}
@@ -616,7 +690,7 @@ function ConciergeChat({
                   padding: "10px 12px",
                   fontSize: 12,
                   lineHeight: 1.6,
-                  color: turn.from === "user" ? "var(--foreground)" : "var(--tag-purple-fg)",
+                  color: turn.from === "user" ? "var(--foreground)" : "var(--color-text-purple)",
                 }}
               >
                 {turn.text}
@@ -926,22 +1000,29 @@ export function UcpProfileView({
       uid: spec.widget.uid, title: spec.widget.title, colSpan: 1, rowSpan: 4,
       content: <MetricRows rows={spec.widget.rows} />,
     })
+    // Governance and Risk are Stat Rows — counters and scores, three across,
+    // with the study's own date underneath. The type's field widget above is a
+    // Profile Card. Two different widgets because they hold two different
+    // kinds of thing; they shared one renderer until 2026-09-09.
     if (contact.governance !== "empty") {
+      const gov = getGovernance(contact)
       slots.push({
         uid: "governance", title: "Governance", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Governance" state={contact.governance}>
-            <MetricRows rows={getGovernance(contact)} />
+            <StatRowContent counters={gov.slice(0, 3)} checked={gov[3]} />
           </StudyWidget>
         ),
       })
     }
     if (contact.risk !== "empty") {
+      const risk = getRisk(contact)
       slots.push({
         uid: "risk", title: "Risk", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Risk" state={contact.risk}>
-            <MetricRows rows={getRisk(contact)} />
+            {/* The trend belongs with the counters; the scan date is the date. */}
+            <StatRowContent counters={[risk[0], risk[1], risk[3]]} checked={risk[2]} />
           </StudyWidget>
         ),
       })

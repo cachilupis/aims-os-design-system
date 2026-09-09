@@ -26,6 +26,8 @@ import { Chip } from "@/components/ui/chip"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { ProgressBar } from "@/components/ui/progress-bar"
+import { NextBestActionCard } from "@/components/ui/next-best-action-card"
+import { useWidgetSize } from "@/components/layouts/widget-canvas-view"
 import * as LucideIcons from "lucide-react"
 
 const TXT  = "var(--color-text-title)"
@@ -38,14 +40,22 @@ const row: React.CSSProperties = {
 }
 
 /** A written read of the data, not the data. The purple treatment is the DS's
- *  own marker for machine-generated interpretation. */
+ *  own marker for machine-generated interpretation.
+ *
+ *  ONE purple recipe, Michael's call (2026-09-09): the card tokens plus the
+ *  single 4-point Sparkle, which is what NextBestActionCard and EntityList's
+ *  own insight block already use. This block used to paint a bare
+ *  --color-surface-purple-more-subtle with the 3-star Sparkles, so the same
+ *  "an agent produced this" marker read as two different objects depending on
+ *  which surface you were looking at. */
 function AiSummaryContent() {
   return (
     <div style={{
       display: "flex", gap: 10, padding: 12, borderRadius: 8,
-      background: "var(--color-surface-purple-more-subtle)",
+      background: "var(--card-purple-bg)",
+      border: "1px solid var(--card-purple-border)",
     }}>
-      <LucideIcons.Sparkles size={14} style={{ color: "var(--color-text-purple)", flexShrink: 0, marginTop: 2 }} />
+      <LucideIcons.Sparkle size={14} strokeWidth={1.75} style={{ color: "var(--color-text-purple)", flexShrink: 0, marginTop: 2 }} />
       <p style={{ fontSize: 12, lineHeight: 1.55, color: TXT, margin: 0 }}>
         Pipeline is concentrated: three accounts carry 61% of open value, and two of
         them slipped a stage this month. Win rate is holding at 34%, but the median
@@ -261,6 +271,72 @@ function CompositeStatContent() {
 
 /** Chip row shown under a couple of the content types that offer their own
  *  in-widget controls. Kept here so the ten stay self-contained. */
+/**
+ * The engine's one recommendation, as widget content.
+ *
+ * It renders the REAL NextBestActionCard with `unstyled`, not a second drawing
+ * of it: a widget slot supplies its own surface, and the recommendation should
+ * not look like two different objects depending on whether it sits below an
+ * Entity Header or in a canvas.
+ *
+ * Three sizes, read off the slot rather than declared:
+ *
+ *   S  narrow (1/3)  — label, title, two lines of reasoning, View details.
+ *                      The timestamp drops; the reasoning is what earns space.
+ *   M  half / wide   — everything, one column.
+ *   L  full (3/3)    — the same, with the reasoning on one or two lines.
+ *
+ * There is no fourth arrangement and nothing is added at L: a recommendation
+ * that needs a wider layout to be understood is a recommendation that has
+ * stopped being one thing.
+ */
+function NextBestActionWidgetContent() {
+  const { isNarrow } = useWidgetSize()
+  return (
+    <NextBestActionCard
+      unstyled
+      size={isNarrow ? "sm" : "default"}
+      item={{
+        id: "nba-sample",
+        title: "Send the renewal timeline Meridian asked for",
+        timeAgo: "30m ago",
+        description: "They raised it on the last two calls without a written answer, and the renewal closes in 12 days.",
+        onViewDetails: () => {},
+      }}
+    />
+  )
+}
+
+/**
+ * How a record hangs off other records. Related ENTITIES, each with the
+ * relationship named — never a status, which is what separates this from List.
+ *
+ * The sample is AIMS OS's own vocabulary, not a generic CRM's: an employer, an
+ * account owner, a deal the record participates in, and the agent that handles
+ * it. An agent is a first-class relation here because every record has one.
+ */
+function ConnectionsContent() {
+  const items: [string, string, string][] = [
+    ["Meridian Corp",          "Organization · employer",  "Building2"],
+    ["Priya Nair",             "Account owner",            "UserRound"],
+    ["Enterprise Renewal 2026","Deal · participant",       "Handshake"],
+    ["Deal Concierge",         "Assigned agent",           "Bot"],
+  ]
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {items.map(([name, relation, icon]) => (
+        <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <HighlightIcon iconName={icon} variant="neutral" size="sm" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: TXT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+            <span style={{ fontSize: 11, color: SUB, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{relation}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function CandidateFilterHint({ labels }: { labels: string[] }) {
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -271,6 +347,8 @@ export function CandidateFilterHint({ labels }: { labels: string[] }) {
 
 const BY_ID: Record<string, () => React.ReactElement> = {
   "ai-summary":      AiSummaryContent,
+  "next-best-action": NextBestActionWidgetContent,
+  "connections":     ConnectionsContent,
   "list":            ListContent,
   "profile-card":    ProfileCardContent,
   "carousel":        CarouselContent,
