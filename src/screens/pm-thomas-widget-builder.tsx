@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select"
 import { Menu, MenuItem, MenuDivider } from "@/components/ui/menu-item"
 import { anchorFromEvent, useDropdownPosition, type DropdownAnchor } from "@/lib/dropdown-anchor"
 import { EmptyState } from "@/components/ui/empty-state"
+import { Tooltip } from "@/components/ui/tooltip"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import type { SidebarItem } from "@/components/ui/sidebar"
 import { OptionCard } from "@/components/experimental/widget-screen-parts"
@@ -36,51 +37,152 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "marketplace",   label: "Marketplace",   icon: "Store" },
 ]
 
+/**
+ * Thom's entities, from the two places he keeps them.
+ *
+ * His published prototype shows three Salesforce entities with column counts
+ * and per-column definitions. His own screen in this repo
+ * (pm-thomas-composable-dashboards.tsx) carries five more across Zendesk,
+ * BambooHR and AIMS OS, with the integrations each one can also come from.
+ * Both are his and neither is complete on its own, so both are here: the three
+ * with column definitions are the ones the page features, and the rest live
+ * behind Browse all entities.
+ *
+ * `featured` is what the page shows. Everything else is one click away rather
+ * than absent — which is also what his "More entities available" note meant.
+ */
 const ENTITY_SOURCES = [
-  { id: "contacts_hubspot",      label: "Contacts",       icon: "Users", desc: "CRM contact profiles and relationship history", integration: "HubSpot",  governed: true,  hasPII: true },
-  { id: "companies_hubspot",     label: "Companies",      icon: "Building2", desc: "Organization records, domains, and account data", integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "deals_hubspot",         label: "Deals",          icon: "TrendingUp", desc: "Pipeline opportunities and deal stages", integration: "HubSpot",  governed: true,  hasPII: false },
-  { id: "tickets_zendesk",       label: "Tickets",        icon: "LifeBuoy", desc: "Customer support requests and resolution history", integration: "Zendesk",  governed: true,  hasPII: false },
-  { id: "conversations_zendesk", label: "Conversations",  icon: "MessageSquare", desc: "Chat and email threads with CSAT scores", integration: "Zendesk",  governed: false, hasPII: true },
-  { id: "employees_bamboohr",    label: "Employees",      icon: "UserCheck", desc: "HR records, roles, and people data", integration: "BambooHR", governed: true,  hasPII: true },
-  { id: "workflows_aims",        label: "Workflows",      icon: "GitBranch", desc: "Automated process definitions in AIMS OS", integration: "AIMS OS",  governed: true,  hasPII: false },
-  { id: "ai_workers_aims",       label: "AI Workers",     icon: "Bot", desc: "AI agent instances and performance metrics", integration: "AIMS OS",  governed: true,  hasPII: false },
+  { id: "contacts_salesforce",   label: "Contacts",      icon: "Users",         desc: "CRM contact profiles and relationship history",    integration: "Salesforce", also: ["HubSpot", "Pipedrive"], columns: 9, governed: true,  hasPII: true,  featured: true },
+  { id: "accounts_salesforce",   label: "Accounts",      icon: "Building2",     desc: "Organization records, domains, and account data",  integration: "Salesforce", also: ["HubSpot"],              columns: 7, governed: true,  hasPII: false, featured: true },
+  { id: "deals_salesforce",      label: "Deals",         icon: "TrendingUp",    desc: "Pipeline opportunities and deal stages",           integration: "Salesforce", also: ["HubSpot", "Close"],     columns: 7, governed: true,  hasPII: false, featured: true },
+  { id: "tickets_zendesk",       label: "Tickets",       icon: "HelpCircle",    desc: "Customer support requests and resolution history", integration: "Zendesk",    also: ["Intercom"],             columns: 6, governed: true,  hasPII: false, featured: true },
+  { id: "conversations_zendesk", label: "Conversations", icon: "MessageSquare", desc: "Chat and email threads with CSAT scores",          integration: "Zendesk",    also: [],                       columns: 6, governed: false, hasPII: true,  featured: false },
+  { id: "employees_bamboohr",    label: "Employees",     icon: "UserCheck",     desc: "HR records, roles, and people data",               integration: "BambooHR",   also: ["Rippling", "Workday"],  columns: 6, governed: true,  hasPII: true,  featured: false },
+  { id: "workflows_aims",        label: "Workflows",     icon: "GitBranch",     desc: "Automated process definitions in AIMS OS",         integration: "AIMS OS",    also: [],                       columns: 6, governed: true,  hasPII: false, featured: false },
+  { id: "ai_workers_aims",       label: "AI Workers",    icon: "Bot",           desc: "AI agent instances and performance metrics",       integration: "AIMS OS",    also: [],                       columns: 6, governed: true,  hasPII: false, featured: false },
 ]
 
+const FEATURED_ENTITIES = ENTITY_SOURCES.filter(e => e.featured)
+
+// Thom's four datasets. The `shape` is the part that matters: a dataset arrives
+// already aggregated, and its shape is what says whether it is one number, a
+// grouping, or raw rows — which is also why the dataset path never asks for a
+// calculation. That question was answered when the dataset was built.
 const PRESET_DATASETS = [
-  { id: "ds-total-mrr",         name: "Total MRR",              description: "Month-to-date closed revenue across all deals.", integration: "HubSpot",  governed: true },
-  { id: "ds-active-contacts",   name: "Active Contacts",        description: "Contacts with at least one interaction in the last 30 days.", integration: "HubSpot",  governed: true },
-  { id: "ds-open-deals",        name: "Open Deals",             description: "All deals currently in an open pipeline stage.", integration: "HubSpot",  governed: true },
-  { id: "ds-ticket-volume",     name: "Ticket Volume",          description: "Total support tickets opened in the current period.", integration: "Zendesk", governed: true },
-  { id: "ds-csat-score",        name: "CSAT Score",             description: "Average satisfaction rating across closed tickets.", integration: "Zendesk", governed: true },
-  { id: "ds-headcount",         name: "Headcount",              description: "Active employee count by department.", integration: "BambooHR", governed: true },
-  { id: "ds-workflow-success",  name: "Workflow Success Rate",   description: "Percentage of workflow runs completed without errors.", integration: "AIMS OS", governed: true },
+  { id: "ds-contacts-by-tier", name: "Contacts by Tier", description: "Count of contacts grouped by tier (Gold, Silver, Bronze)", shape: "Grouped",      integration: "Salesforce", governed: true },
+  { id: "ds-deals-pipeline",   name: "Deals Pipeline",   description: "Sum of deal value grouped by stage",                       shape: "Grouped",      integration: "Salesforce", governed: true },
+  { id: "ds-total-mrr",        name: "Total MRR",        description: "Sum of MRR across all active accounts",                    shape: "Single value", integration: "Salesforce", governed: true },
+  { id: "ds-all-contacts",     name: "All Contacts",     description: "Full contact record set — name, email, city, tier",        shape: "Record set",   integration: "Salesforce", governed: true },
 ]
 
 /** Every integration the entity list draws from, derived rather than typed out
  *  so adding an entity cannot leave the filter row behind. */
 const INTEGRATIONS: string[] = [...new Set(ENTITY_SOURCES.map(s => s.integration))]
 
-const DESCRIBE_SUGGESTIONS = [
-  "Win Rate gauge",
-  "Workflow Runs over time",
-  "Contacts as a donut",
-]
-
-const COUNT_FN   = "Count"
-const CALC_FNS   = [COUNT_FN, "Sum", "Average", "Min", "Max"]
 const FILTER_OPS = ["is", "is not", "contains", "is empty", "is not empty", "greater than", "less than"]
 
-const SOURCE_COLUMNS: Record<string, string[]> = {
-  contacts_hubspot:      ["Name", "Email", "Company", "Lifecycle Stage", "Owner", "Created At"],
-  companies_hubspot:     ["Name", "Domain", "Industry", "Annual Revenue", "Employees", "Owner"],
-  deals_hubspot:         ["Name", "Stage", "Amount", "Close Date", "Pipeline", "Owner"],
-  tickets_zendesk:       ["Title", "Status", "Priority", "Assignee", "Created At", "Updated At"],
-  conversations_zendesk: ["Subject", "Status", "Channel", "Agent", "CSAT Score", "Created At"],
-  employees_bamboohr:    ["Name", "Department", "Title", "Manager", "Start Date", "Status"],
-  workflows_aims:        ["Name", "Status", "Run Count", "Success Rate", "Last Run", "Owner"],
-  ai_workers_aims:       ["Name", "Category", "Status", "Tasks Today", "Accuracy", "Created At"],
+/**
+ * A column is not just a name.
+ *
+ * The picker used to be a list of nine checkboxes reading "Name, Email, Phone,
+ * City…" — enough to recognise a field you already knew and useless for one you
+ * did not. `Tier` means nothing until something says it is Gold/Silver/Bronze,
+ * and `state` and `State / Region` are the same field under two names, which is
+ * the kind of thing that sends someone to ask an engineer.
+ *
+ * So every column carries four facts: the label a person reads, its `type`
+ * (which is also what the type filter sorts on), a sentence saying what it
+ * holds, and the `key` the data actually uses — the one you would search for.
+ * Every label, type, sentence and key here is read off Thom's prototype rather
+ * than written fresh — the copy is already validated, and two descriptions for
+ * the same field is exactly the drift this table exists to prevent.
+ */
+type ColumnType = "Text" | "Number" | "Date"
+type ColumnDef  = { label: string; type: ColumnType; desc: string; key: string }
+
+const COLUMN_TYPES: ColumnType[] = ["Text", "Number", "Date"]
+
+const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
+  contacts_salesforce: [
+    { label: "Name",           type: "Text",   desc: "Full name of the record",                        key: "name" },
+    { label: "Email",          type: "Text",   desc: "Primary email address",                          key: "email" },
+    { label: "Phone",          type: "Text",   desc: "Primary phone number",                           key: "phone" },
+    { label: "City",           type: "Text",   desc: "City from the billing or main address",          key: "city" },
+    { label: "State / Region", type: "Text",   desc: "State or region",                                key: "state" },
+    { label: "Tier",           type: "Text",   desc: "Account or contact tier (Gold, Silver, Bronze)", key: "tier" },
+    { label: "Score",          type: "Number", desc: "Lead or engagement score (0–100)",               key: "score" },
+    { label: "Lead Source",    type: "Text",   desc: "Channel where the lead originated",              key: "lead_source" },
+    { label: "Created At",     type: "Date",   desc: "Date and time the record was created",           key: "created_at" },
+  ],
+  accounts_salesforce: [
+    { label: "Name",       type: "Text",   desc: "Full name of the record",                        key: "name" },
+    { label: "Industry",   type: "Text",   desc: "Industry vertical of the account",               key: "industry" },
+    { label: "Employees",  type: "Number", desc: "Headcount of the company",                       key: "employees" },
+    { label: "MRR",        type: "Number", desc: "Monthly Recurring Revenue in USD",               key: "mrr" },
+    { label: "Tier",       type: "Text",   desc: "Account or contact tier (Gold, Silver, Bronze)", key: "tier" },
+    { label: "Owner",      type: "Text",   desc: "Team member responsible for this record",        key: "owner" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",           key: "created_at" },
+  ],
+  deals_salesforce: [
+    { label: "Name",       type: "Text",   desc: "Full name of the record",                 key: "name" },
+    { label: "Stage",      type: "Text",   desc: "Current pipeline stage",                  key: "stage" },
+    { label: "Amount",     type: "Number", desc: "Deal value in USD",                       key: "amount" },
+    { label: "Close Date", type: "Date",   desc: "Expected or actual deal close date",      key: "close_date" },
+    { label: "Owner",      type: "Text",   desc: "Team member responsible for this record", key: "owner" },
+    { label: "Account",    type: "Text",   desc: "Reference to the associated account",     key: "account_id" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",    key: "created_at" },
+  ],
+  // The five below are NOT from Thom — his prototype defines columns only for
+  // the three Salesforce entities. They are written to the same rule (say what
+  // the field holds, not what it is called) so the modal never dead-ends on an
+  // entity with nothing to pick, and they are the first thing to replace when
+  // his own definitions exist.
+  tickets_zendesk: [
+    { label: "Subject",    type: "Text",   desc: "What the ticket is about",                   key: "subject" },
+    { label: "Status",     type: "Text",   desc: "Open, pending, solved or closed",            key: "status" },
+    { label: "Priority",   type: "Text",   desc: "Urgency assigned to the ticket",             key: "priority" },
+    { label: "Assignee",   type: "Text",   desc: "Agent currently responsible",                key: "assignee" },
+    { label: "Requester",  type: "Text",   desc: "Person who opened the ticket",               key: "requester" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",       key: "created_at" },
+  ],
+  conversations_zendesk: [
+    { label: "Subject",    type: "Text",   desc: "Thread subject or first message",            key: "subject" },
+    { label: "Channel",    type: "Text",   desc: "Chat, email or web form",                    key: "channel" },
+    { label: "Agent",      type: "Text",   desc: "Agent who handled the thread",               key: "agent" },
+    { label: "CSAT Score", type: "Number", desc: "Satisfaction rating given, 1 to 5",          key: "csat_score" },
+    { label: "Messages",   type: "Number", desc: "How many messages the thread holds",         key: "message_count" },
+    { label: "Created At", type: "Date",   desc: "Date and time the record was created",       key: "created_at" },
+  ],
+  employees_bamboohr: [
+    { label: "Name",       type: "Text",   desc: "Full name of the record",                    key: "name" },
+    { label: "Department", type: "Text",   desc: "Department the person belongs to",           key: "department" },
+    { label: "Title",      type: "Text",   desc: "Job title as recorded in HR",                key: "title" },
+    { label: "Manager",    type: "Text",   desc: "Who this person reports to",                 key: "manager" },
+    { label: "Start Date", type: "Date",   desc: "First day of employment",                    key: "start_date" },
+    { label: "Status",     type: "Text",   desc: "Active, on leave or departed",               key: "status" },
+  ],
+  workflows_aims: [
+    { label: "Name",         type: "Text",   desc: "Full name of the record",                  key: "name" },
+    { label: "Status",       type: "Text",   desc: "Running, paused or draft",                 key: "status" },
+    { label: "Run Count",    type: "Number", desc: "Times the workflow has executed",          key: "run_count" },
+    { label: "Success Rate", type: "Number", desc: "Share of runs that finished without error", key: "success_rate" },
+    { label: "Last Run",     type: "Date",   desc: "When it last executed",                    key: "last_run" },
+    { label: "Owner",        type: "Text",   desc: "Team member responsible for this record",  key: "owner" },
+  ],
+  ai_workers_aims: [
+    { label: "Name",        type: "Text",   desc: "Full name of the record",                   key: "name" },
+    { label: "Category",    type: "Text",   desc: "What kind of work the agent does",          key: "category" },
+    { label: "Status",      type: "Text",   desc: "Running, idle, paused or error",            key: "status" },
+    { label: "Tasks Today", type: "Number", desc: "Tasks completed since midnight",            key: "tasks_today" },
+    { label: "Accuracy",    type: "Number", desc: "Share of outputs accepted without edits",   key: "accuracy" },
+    { label: "Created At",  type: "Date",   desc: "Date and time the record was created",      key: "created_at" },
+  ],
 }
+
+/** Labels only — what the filter pickers and the calc column list read. */
+const SOURCE_COLUMNS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(SOURCE_COLUMN_DEFS).map(([id, cols]) => [id, cols.map(c => c.label)]),
+)
 
 
 const FRESHNESS_OPTIONS = [
@@ -88,6 +190,21 @@ const FRESHNESS_OPTIONS = [
   { value: "15m",      label: "Every 15 minutes" },
   { value: "1h",       label: "Every hour" },
   { value: "24h",      label: "Every 24 hours" },
+]
+
+/**
+ * The filter row an end user would get, and what each one narrows.
+ *
+ * Inert chips taught nothing: a preview whose controls do not respond is a
+ * screenshot. Clicking one now selects it, names itself in the widget's own
+ * subtitle, and re-runs the entry animation — so the preview visibly answers.
+ * The numbers are fixtures and do not recompute; the tooltip says what the
+ * filter WOULD narrow, which is the honest version of a live preview.
+ */
+const PREVIEW_FILTERS = [
+  { label: "Last 30 days", hint: "Narrows to records created or updated in the last 30 days." },
+  { label: "Status",       hint: "Splits the widget by each record's current status." },
+  { label: "Team",         hint: "Narrows to the viewer's own team." },
 ]
 
 const WIDGET_SIZES = [
@@ -100,29 +217,6 @@ const WIDGET_SIZES = [
 
 // ── DS-GAP Components ─────────────────────────────────────────────────────────
 
-
-/**
- * Turn what someone typed into a widget name.
- *
- * "Win Rate gauge by team" → "Win Rate by Team". The chart word comes out
- * because the type picker in step 2 already says it, and a widget called
- * "Win Rate gauge" on a dashboard reads as a description of its own chrome.
- * Leading verbs go too — every widget shows something.
- */
-const CHART_WORDS = /\b(gauge|chart|graph|donut|pie|bar|line|area|funnel|heatmap|map|table|list|kpi|sparkline|trend)\b/gi
-const LEAD_VERBS  = /^(show me|show|track|display|give me|see|view|plot|chart)\s+/i
-const SMALL_WORDS = new Set(["by", "of", "per", "vs", "and", "or", "the", "a", "an", "in", "for", "to"])
-
-function widgetNameFrom(text: string): string {
-  const cleaned = text.trim().replace(LEAD_VERBS, "").replace(CHART_WORDS, " ").replace(/\s+/g, " ").trim()
-  if (!cleaned) return ""
-  return cleaned
-    .split(" ")
-    .map((w, i) => (i > 0 && SMALL_WORDS.has(w.toLowerCase())
-      ? w.toLowerCase()
-      : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ")
-}
 
 // DS-GAP: StepLabel — numbered section heading for builder form steps. Closest DS component: none.
 // A numbered step heading inside a stage. Deliberately NOT the SectionLabel the
@@ -155,7 +249,7 @@ function EntitySourceCard({ source, selected, onSelect }: { source: typeof ENTIT
           <HighlightIcon iconName={source.icon} variant={selected ? "informative" : "neutral"} size="sm" />
           <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 6, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{source.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{source.label}</span>
               <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", whiteSpace: "nowrap" as const }}>
                 · {(SOURCE_COLUMNS[source.id] ?? []).length} columns
               </span>
@@ -189,11 +283,13 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
         <div style={{ padding: 12, display: "flex", gap: 10 }}>
           <HighlightIcon iconName="Database" variant={selected ? "informative" : "neutral"} size="sm" />
           <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: selected ? "var(--primary)" : "var(--color-text-title)" }}>{dataset.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{dataset.name}</span>
             <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: 0, lineHeight: 1.4 }}>{dataset.description}</p>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              {/* The shape leads: it is what decides which widget types can
+                  draw this dataset, so it is the fact worth reading first. */}
+              <Tag variant="neutral" size="sm">{dataset.shape}</Tag>
               <Tag variant="neutral" size="sm">{dataset.integration}</Tag>
-              <Tag variant="neutral" size="sm">Governed</Tag>
             </div>
           </div>
         </div>
@@ -294,7 +390,7 @@ function TypeTile({ type, selected, onSelect }: { type: typeof AUTHORABLE_WIDGET
           />
           <span style={{
             fontSize: 12, fontWeight: 500, textAlign: "center" as const, lineHeight: 1.3,
-            color: selected ? "var(--primary)" : "var(--color-text-title)",
+            color: "var(--color-text-title)",
           }}>{type.label}</span>
         </div>
       </CardContainer>
@@ -308,37 +404,60 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
   typeId: string | null; name: string; sourceId: string | null; freshness: string
   interactiveFilters: boolean; previewSize: string; setPreviewSize: (s: string) => void; saveHint: string
 }) {
+  // The applied preview filter lives here, not in the builder: it is a property
+  // of looking at the widget, not of the widget being built. Nothing it does
+  // reaches what gets saved.
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const entitySrc  = ENTITY_SOURCES.find(s => s.id === sourceId)
   const datasetSrc = PRESET_DATASETS.find(d => d.id === sourceId)
   const srcLabel   = entitySrc?.label ?? datasetSrc?.name ?? null
   const typeInfo   = AUTHORABLE_WIDGETS.find(t => t.id === typeId)
-  const maxW = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : undefined
+  // Every size is a real number, including L. Transitioning to `undefined`
+  // does not animate — the card used to snap from 420 to full width and only
+  // the way back was smooth.
+  const maxW = previewSize === "sm" ? 240 : previewSize === "md" ? 420 : 640
   const freshnessLabel = freshness === "realtime" ? "Live" : freshness === "15m" ? "15m" : freshness === "1h" ? "1h" : "24h"
 
   // "KPI · Deals · HubSpot" — what this widget is, reading left to right.
-  const lineage = [typeInfo?.label, srcLabel, entitySrc?.integration].filter(Boolean).join(" · ")
+  const lineage = [typeInfo?.label, srcLabel, entitySrc?.integration, activeFilter]
+    .filter(Boolean).join(" · ")
 
   // The body only. WidgetFather draws every piece of chrome around it.
   // WidgetPreview owns the resolution chain — the same one the Widget Library,
   // the Marketplace and the Universal Profile now call, so a Donut is the same
   // Donut in all four.
+  // The `key` is what makes this animate: React remounts on a type change, so
+  // the entry animation runs again instead of only on first paint. The class is
+  // the DS's own ds-enter-widget (index.css) — the tw-animate-css utilities
+  // this used to carry are a Tailwind v4 feature and this repo is v3, so they
+  // compiled to nothing and the widget had been appearing instantly all along.
   const body = !typeInfo
     ? <EmptyState compact icon={LucideIcons.Shapes} title="Nothing to preview yet" description={saveHint} />
-    : <WidgetPreview typeId={typeInfo.id} />
+    : (
+      <div key={`${typeInfo.id}:${activeFilter ?? ""}`} className="ds-enter-widget">
+        <WidgetPreview typeId={typeInfo.id} filter={activeFilter} />
+      </div>
+    )
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: 1, color: "var(--color-text-subtitle)" }}>Live preview</span>
-        <div style={{ display: "flex", border: "1px solid var(--field-border)", borderRadius: 6, overflow: "hidden" }}>
-          {WIDGET_SIZES.map(s => (
-            <button key={s.id} onClick={() => setPreviewSize(s.id)} style={{
-              padding: "4px 10px", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer",
-              background: previewSize === s.id ? "var(--primary)" : "transparent",
-              color: previewSize === s.id ? "var(--canvas)" : "var(--color-text-subtitle)",
-            }}>{s.label}</button>
-          ))}
-        </div>
+      {/* The two columns start with a section heading each, so they have to be
+          the same heading and start on the same line. This one was its own
+          11px/700 span centred against a 32px switcher, which put it 14px below
+          "DATA SOURCE" and in a different type. StepLabel plus a top-aligned
+          row fixes both: same words, same line, same style. */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <StepLabel>Live preview</StepLabel>
+        {/* A segmented switcher, drawn by hand: three buttons in a bordered
+            box, one painted with --primary. That is SwitchTab, which the
+            screen already imports for its own stages. */}
+        <SwitchTab
+          items={WIDGET_SIZES}
+          value={previewSize}
+          onChange={setPreviewSize}
+          size="s"
+          aria-label="Preview size"
+        />
       </div>
 
       {/* The preview IS a widget, not a card imitating one.
@@ -353,7 +472,9 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
        *
        *  The name is no longer editable here; it is the "Widget name" field in
        *  Configure, which is one place instead of two. */}
-      <div style={{ maxWidth: maxW, transition: "max-width 0.2s" }}>
+      {/* 280ms on the same expo-out curve the DS modal uses, so a size change
+          eases rather than snaps. */}
+      <div style={{ maxWidth: maxW, transition: "max-width 280ms cubic-bezier(0.16, 1, 0.3, 1)" }}>
         <CardContainer size="lg" className="flex flex-col">
           <WidgetFather
             noCard
@@ -370,8 +491,16 @@ function WidgetPreviewPanel({ typeId, name, sourceId, freshness, interactiveFilt
                   what a live preview is for. Inert here on purpose. */}
               {interactiveFilters && typeInfo && (
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                  {["Last 30 days", "Status", "Team"].map(f => (
-                    <Chip key={f} size="s" variant="secondary">{f}</Chip>
+                  {PREVIEW_FILTERS.map(f => (
+                    <Tooltip key={f.label} content={f.hint} side="cursor">
+                      <Chip
+                        size="s"
+                        variant={activeFilter === f.label ? "primary" : "secondary"}
+                        onClick={() => setActiveFilter(activeFilter === f.label ? null : f.label)}
+                      >
+                        {f.label}
+                      </Chip>
+                    </Tooltip>
                   ))}
                 </div>
               )}
@@ -418,11 +547,9 @@ export default function PMThomasWidgetBuilderScreen() {
   // Thom's prototype builds a query, not a single metric: several calculations,
   // several groupers, several filters. The old single calcFn/calcColumn pair
   // could express exactly one aggregate with no grouping.
-  const [calcs, setCalcs]           = useState<{ id: string; fn: string; column: string }[]>([])
   const [groupers, setGroupers]     = useState<{ id: string; column: string }[]>([])
   const [dataFilters, setDataFilters] = useState<{ id: string; column: string; op: string; value: string }[]>([])
   const [srcFilter, setSrcFilter]   = useState("all")
-  const [describe, setDescribe]     = useState("")
 
   // Configure tab state
   const [typeId, setTypeId]             = useState<string | null>(null)
@@ -439,6 +566,29 @@ export default function PMThomasWidgetBuilderScreen() {
   const [showLeave, setShowLeave]       = useState(false)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [typeCat, setTypeCat] = useState<WidgetCategory | "all">("all")
+  // The columns modal edits a DRAFT, so Cancel means cancel. Committing on each
+  // checkbox would leave a half-made selection behind when someone backs out.
+  const [showColumns, setShowColumns] = useState(false)
+  const [colDraft, setColDraft]       = useState<string[]>([])
+  const [colQuery, setColQuery]       = useState("")
+  const [colType, setColType]         = useState<ColumnType | "All">("All")
+  const [showEntities, setShowEntities] = useState(false)
+  const [entQuery, setEntQuery]         = useState("")
+
+  // Search matches the label, the description AND the key — the key is there
+  // because someone who knows the data will type `lead_source`, not "Channel
+  // where the lead originated".
+  const visibleEntities = ENTITY_SOURCES.filter(e => {
+    if (srcFilter !== "all" && e.integration !== srcFilter) return false
+    const q = entQuery.trim().toLowerCase()
+    return !q || e.label.toLowerCase().includes(q) || e.desc.toLowerCase().includes(q)
+  })
+
+  const visibleColumns = (SOURCE_COLUMN_DEFS[sourceId ?? ""] ?? []).filter(c => {
+    if (colType !== "All" && c.type !== colType) return false
+    const q = colQuery.trim().toLowerCase()
+    return !q || c.label.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q) || c.key.includes(q)
+  })
 
   // ── Derived ──
 
@@ -446,13 +596,19 @@ export default function PMThomasWidgetBuilderScreen() {
   // per-row rather than "has a column".
   // Count needs no column; every other function does. Compared against the same
   // constant the picker offers, so the two cannot drift out of case again.
-  const calcsReady = calcs.length > 0 && calcs.every(c => c.fn === COUNT_FN || !!c.column)
+  // Summarize no longer asks WHICH calculation — it counts. Count is the one
+  // aggregation that needs no column, so the step is complete the moment an
+  // entity is chosen, and Group by is what shapes the result from there.
   const dataComplete = dataMode === "dataset"
     ? !!sourceId
-    : !!sourceId && !!opType && (opType === "aggregate" ? calcsReady : recordColumns.length > 0)
-  const widgetComplete = dataComplete && !!typeId && name.trim().length > 0
+    : !!sourceId && !!opType && (opType === "aggregate" ? true : recordColumns.length > 0)
+  // A widget IS its data and its type. The name is not part of that — the
+  // preview has been calling an unnamed one "Untitled widget" all along, so the
+  // screen already tolerates it, and requiring it only meant Save sat grey
+  // while everything that matters was decided.
+  const widgetComplete = dataComplete && !!typeId
   const canSave        = widgetComplete
-  const hasUnsaved     = !!(sourceId || typeId || name.trim())
+  const hasUnsaved     = !!(sourceId || typeId || name.trim() || subtitle.trim())
 
   // ── Wizard stages ─────────────────────────────────────────────────────────
   // These were a hand-rolled tab strip: numbered dots, a check when complete,
@@ -478,8 +634,6 @@ export default function PMThomasWidgetBuilderScreen() {
     ? "Finish configuring your data source on the Data tab."
     : !typeId
     ? "Choose a widget type on the Configure tab."
-    : !name.trim()
-    ? "Give your widget a name on the Configure tab."
     : ""
 
   // ── Handlers ──
@@ -487,14 +641,12 @@ export default function PMThomasWidgetBuilderScreen() {
   function selectSource(id: string) {
     if (id === sourceId) return
     setSourceId(id)
-    setOpType(null)
-    setCalcs([]); setGroupers([]); setDataFilters([])
+    setOpType(null); setGroupers([]); setDataFilters([])
     setRecordColumns([])
   }
 
   function resetAll() {
-    setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([])
-    setCalcs([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
+    setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
   }
 
@@ -556,28 +708,6 @@ export default function PMThomasWidgetBuilderScreen() {
           <div className="flex flex-col min-[1100px]:flex-row gap-[24px] items-stretch min-[1100px]:items-start">
           {/* Left: build panel */}
           <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
-            {/* DS-GAP: DescribeComposer — natural-language widget setup generator. Using simplified Input bar. */}
-            <div style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid var(--field-border)", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", gap: 8 }}>
-                <Input placeholder='Describe what you want to track, e.g. "Win Rate gauge by team"' value={describe} onChange={e => setDescribe(e.target.value)} />
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={!describe.trim()}
-                  onClick={() => setName(widgetNameFrom(describe))}
-                >
-                  Generate
-                </Button>
-              </div>
-              {/* One line, never two. A suggestion that does not fit is not
-                  worth a second row of vertical space above the form. */}
-              <div style={{ display: "flex", gap: 6, flexWrap: "nowrap" as const, overflow: "hidden" }}>
-                {DESCRIBE_SUGGESTIONS.map(x => (
-                  <Chip key={x} size="s" variant="secondary" onClick={() => setDescribe(x)}>{x}</Chip>
-                ))}
-              </div>
-            </div>
-
             {/* ── Tab 1: Data ── */}
             {tab === "data" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -592,35 +722,45 @@ export default function PMThomasWidgetBuilderScreen() {
                       icon="Database" title="Existing dataset"
                       description="Use a pre-built, governed query as your starting point."
                       selected={dataMode === "dataset"}
-                      onSelect={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setCalcs([]); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
+                      onSelect={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
                     />
                     <OptionCard
                       icon="Boxes" title="Entity"
                       description="Start from a raw entity and configure it from scratch."
                       selected={dataMode === "entity"}
-                      onSelect={() => { setDataMode("entity"); setSourceId(null); setOpType(null); setCalcs([]); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
+                      onSelect={() => { setDataMode("entity"); setSourceId(null); setOpType(null); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
                     />
                   </div>
                 </div>
 
                 {dataMode === "entity" && (
                   <div>
-                    <StepLabel n={2}>Choose entity</StepLabel>
-                    {/* Filter by the system the entity comes from — with eight
-                        sources and more arriving per install, the integration is
-                        the axis people scan by. */}
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 10 }}>
-                      <Chip size="s" variant={srcFilter === "all" ? "primary" : "secondary"} onClick={() => setSrcFilter("all")}>Browse all</Chip>
-                      {INTEGRATIONS.map(i => (
-                        <Chip key={i} size="s" variant={srcFilter === i ? "primary" : "secondary"} onClick={() => setSrcFilter(i)}>{i}</Chip>
-                      ))}
+                    {/* The catalogue opens from the section heading, not from
+                        under the grid: it is an alternative to the four below,
+                        so it belongs where you decide, before you have scanned
+                        them — not after. */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <StepLabel>Choose entity</StepLabel>
+                      <div style={{ marginTop: -8 }}>
+                        <Button variant="secondary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                          <LucideIcons.LayoutGrid size={14} />
+                          Browse all entities
+                        </Button>
+                      </div>
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
-                      {ENTITY_SOURCES.filter(src => srcFilter === "all" || src.integration === srcFilter).map(src => (
+                    {/* The card's hover is a box-shadow, and a grid that clips
+                        would cut it at the edges. Padding gives the glow room;
+                        the negative margin keeps the cards on the same left
+                        edge as everything else in the step. */}
+                    <div style={{
+                      display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10,
+                      padding: 4, margin: -4,
+                    }}>
+                      {FEATURED_ENTITIES.map(src => (
                         <EntitySourceCard key={src.id} source={src} selected={sourceId === src.id} onSelect={() => selectSource(src.id)} />
                       ))}
                     </div>
-                    <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: "10px 0 0" }}>
+                    <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: "12px 0 0" }}>
                       More entities available — install a model from the Models page to unlock them.
                     </p>
                   </div>
@@ -693,7 +833,7 @@ export default function PMThomasWidgetBuilderScreen() {
                     <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
                       <OptionCard
                         icon="Sigma" title="Summarize"
-                        description="Aggregate values — count, sum, average — and optionally group them."
+                        description="Count the records, and optionally group them."
                         selected={opType === "aggregate"}
                         onSelect={() => { setOpType("aggregate"); setRecordColumns([]) }}
                       />
@@ -701,7 +841,7 @@ export default function PMThomasWidgetBuilderScreen() {
                         icon="Rows3" title="Record set"
                         description="Show raw records — choose which columns to expose."
                         selected={opType === "record_set"}
-                        onSelect={() => { setOpType("record_set"); setCalcs([]); setGroupers([]) }}
+                        onSelect={() => { setOpType("record_set"); setGroupers([]) }}
                       />
                     </div>
                   </div>
@@ -709,60 +849,7 @@ export default function PMThomasWidgetBuilderScreen() {
 
                 {sourceId && dataMode === "entity" && opType === "aggregate" && (
                   <div>
-                    <StepLabel n={5}>Calculations</StepLabel>
-                    {calcs.length === 0 ? (
-                      <EmptyState
-                        compact icon={LucideIcons.Sigma}
-                        title="No calculations yet"
-                        description="Add at least one to continue."
-                        ctaLabel="Add calculation"
-                        onCta={() => setCalcs([{ id: `c-${Date.now()}`, fn: COUNT_FN, column: "" }])}
-                      />
-                    ) : (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {calcs.map(c => (
-                          <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                            <div style={{ width: 130, flexShrink: 0 }}>
-                              <OptionPicker
-                                options={CALC_FNS}
-                                value={c.fn}
-                                searchable={false}
-                                placeholder="Function…"
-                                onChange={fn => setCalcs(prev => prev.map(x => x.id === c.id ? { ...x, fn, column: fn === COUNT_FN ? "" : x.column } : x))}
-                              />
-                            </div>
-                            {/* Count needs no column — the prototype hides the
-                                picker rather than showing one that does nothing. */}
-                            {c.fn !== COUNT_FN ? (
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <OptionPicker
-                                  options={SOURCE_COLUMNS[sourceId] ?? []}
-                                  value={c.column}
-                                  placeholder="of column…"
-                                  onChange={col => setCalcs(prev => prev.map(x => x.id === c.id ? { ...x, column: col } : x))}
-                                />
-                              </div>
-                            ) : (
-                              <span style={{ flex: 1, fontSize: 12, color: "var(--color-text-subtitle)" }}>of all records</span>
-                            )}
-                            <Button variant="tertiary" size="sm" aria-label="Remove calculation" onClick={() => setCalcs(prev => prev.filter(x => x.id !== c.id))}>
-                              <LucideIcons.X size={14} />
-                            </Button>
-                          </div>
-                        ))}
-                        <div>
-                          <Button variant="secondary" size="sm" onClick={() => setCalcs(prev => [...prev, { id: `c-${Date.now()}`, fn: COUNT_FN, column: "" }])}>
-                            <LucideIcons.Plus size={14} />Add calculation
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {sourceId && dataMode === "entity" && opType === "aggregate" && (
-                  <div>
-                    <StepLabel n={6}>Group by</StepLabel>
+                    <StepLabel n={5}>Group by</StepLabel>
                     {groupers.length === 0 ? (
                       <EmptyState
                         compact icon={LucideIcons.Group}
@@ -801,16 +888,30 @@ export default function PMThomasWidgetBuilderScreen() {
                 {sourceId && dataMode === "entity" && opType === "record_set" && (
                   <div>
                     <StepLabel n={5}>Columns to expose</StepLabel>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                      {(SOURCE_COLUMNS[sourceId] ?? []).map(col => (
-                        <Checkbox
-                          key={col}
-                          label={col}
-                          checked={recordColumns.includes(col)}
-                          onChange={on => setRecordColumns(prev => on ? [...prev, col] : prev.filter(c => c !== col))}
-                        />
-                      ))}
-                    </div>
+                    {/* A summary, not the picker. Nine checkboxes inline made
+                        the step scroll and still said nothing about what each
+                        field holds — the explaining happens in the modal. */}
+                    {recordColumns.length === 0 ? (
+                      <EmptyState
+                        compact icon={LucideIcons.Columns3}
+                        title="No columns selected"
+                        description="Pick the fields this widget will show."
+                        ctaLabel="Choose columns"
+                        onCta={() => { setColDraft(recordColumns); setShowColumns(true) }}
+                      />
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                        {recordColumns.slice(0, 4).map(c => (
+                          <Tag key={c} variant="neutral" size="sm">{c}</Tag>
+                        ))}
+                        {recordColumns.length > 4 && (
+                          <Tag variant="neutral" size="sm">+{recordColumns.length - 4} more</Tag>
+                        )}
+                        <Button variant="secondary" size="sm" onClick={() => { setColDraft(recordColumns); setShowColumns(true) }}>
+                          Edit columns
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -821,7 +922,18 @@ export default function PMThomasWidgetBuilderScreen() {
             {tab === "configure" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div>
-                  <StepLabel n={1}>Widget type</StepLabel>
+                  <StepLabel n={1}>Name your widget</StepLabel>
+                  <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "0 0 10px" }}>
+                    What it is called on the dashboard, and the line under it.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <Input placeholder="Widget name, e.g. Pipeline by Stage" value={name} onChange={e => setName(e.target.value)} />
+                    <Input placeholder="Short description (optional, up to 120 characters)" value={subtitle} onChange={e => setSubtitle(e.target.value.slice(0, 120))} />
+                  </div>
+                </div>
+
+                <div>
+                  <StepLabel n={2}>Widget type</StepLabel>
                   <p style={{ fontSize: 12, color: "var(--color-text-subtitle)", margin: "0 0 10px" }}>
                     How to visualize the data.
                   </p>
@@ -862,10 +974,8 @@ export default function PMThomasWidgetBuilderScreen() {
                 </div>
 
                 <div>
-                  <StepLabel n={2}>Configure</StepLabel>
+                  <StepLabel n={3}>Settings</StepLabel>
                   <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <Input placeholder="Widget name, e.g. Pipeline by Stage" value={name} onChange={e => setName(e.target.value)} />
-                    <Input placeholder="Short description (optional, up to 120 characters)" value={subtitle} onChange={e => setSubtitle(e.target.value.slice(0, 120))} />
                     <OptionPicker
                       options={FRESHNESS_OPTIONS.map(o => o.label)}
                       value={FRESHNESS_OPTIONS.find(o => o.value === freshness)?.label ?? ""}
@@ -934,6 +1044,171 @@ export default function PMThomasWidgetBuilderScreen() {
           }}
         />
 
+      {/* ── Browse all entities ── */}
+      {/* Same catalogue shape as Choose columns: search, a filter row, a list
+          that explains each item. Picking one selects it and closes — a
+          catalogue's job ends at the choice. */}
+      <ModalDialog
+        isOpen={showEntities}
+        onClose={() => setShowEntities(false)}
+        variant="content"
+        showIcon={false}
+        title="Browse all entities"
+        description="Every entity your workspace can read from today."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input
+              size="sm"
+              placeholder="Search entities…"
+              value={entQuery}
+              onChange={e => setEntQuery(e.target.value)}
+            />
+            {/* The source filter is a left rail, not a chip row. Four sources
+                fit on one line today; every install adds one, and a wrapping
+                row of twelve pushes the list off the bottom of the dialog. A
+                column grows downward, which the panel can scroll. */}
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+              {/* Tertiary buttons with a chevron, not chips. A chip is a
+                  toggle sitting in a row of peers; this is a list you move
+                  down, and the chevron says the choice leads somewhere — which
+                  is what a category in a catalogue does. */}
+              <div style={{ width: 148, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {["all", ...INTEGRATIONS].map(src => (
+                  <Button
+                    key={src}
+                    variant="tertiary"
+                    size="sm"
+                    className={`justify-between w-full ${srcFilter === src ? "!text-[var(--primary)]" : ""}`}
+                    onClick={() => setSrcFilter(src)}
+                  >
+                    {src === "all" ? "All sources" : src}
+                    <LucideIcons.ChevronRight size={14} />
+                  </Button>
+                ))}
+              </div>
+
+              {/* Two columns: the cards carry a description, and a single
+                  column of eight made the dialog taller than the viewport.
+                  Padding gives the hover shadow room inside the scroll box —
+                  without it the glow is sliced at the container's edge. */}
+              <div style={{
+                flex: 1, minWidth: 0, height: 340, overflowY: "auto",
+                padding: 4, margin: -4,
+              }}>
+                {visibleEntities.length === 0 ? (
+                  <EmptyState
+                    compact icon={LucideIcons.SearchX}
+                    title="No entities found"
+                    description="Try a different search term or source."
+                  />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8 }}>
+                    {visibleEntities.map(src => (
+                      <EntitySourceCard
+                        key={src.id}
+                        source={src}
+                        selected={sourceId === src.id}
+                        onSelect={() => { selectSource(src.id); setShowEntities(false) }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        }
+      />
+
+      {/* ── Columns modal ── */}
+      {/* A picker, not a confirmation: variant="content" with slotUnstyled, so
+          the list sits directly on the modal instead of inside a grey card.
+          Each row explains its field, which is the whole reason this stopped
+          being an inline checkbox list. */}
+      <ModalDialog
+        isOpen={showColumns}
+        onClose={() => setShowColumns(false)}
+        variant="content"
+        showIcon={false}
+        title="Columns to expose"
+        description="Choose which fields are available in this dataset."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input
+              size="sm"
+              placeholder="Search by name, description, or field key…"
+              value={colQuery}
+              onChange={e => setColQuery(e.target.value)}
+            />
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" as const }}>
+              <Chip size="s" variant={colType === "All" ? "primary" : "secondary"} onClick={() => setColType("All")}>All</Chip>
+              {COLUMN_TYPES.map(t => (
+                <Chip key={t} size="s" variant={colType === t ? "primary" : "secondary"} onClick={() => setColType(t)}>{t}</Chip>
+              ))}
+              <div style={{ marginLeft: "auto" }}>
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => setColDraft(colDraft.length === 0 ? (SOURCE_COLUMNS[sourceId ?? ""] ?? []) : [])}
+                >
+                  {colDraft.length === 0 ? "Select all" : "Deselect all"}
+                </Button>
+              </div>
+            </div>
+
+            <div style={{ height: 320, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+              {visibleColumns.length === 0 ? (
+                <EmptyState
+                  compact icon={LucideIcons.SearchX}
+                  title="No columns found"
+                  description="Try a different search term or type."
+                />
+              ) : visibleColumns.map((c, i) => (
+                <div
+                  key={c.key}
+                  style={{
+                    display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12,
+                    padding: "12px 4px",
+                    borderBottom: i < visibleColumns.length - 1 ? "1px solid var(--field-border)" : "none",
+                  }}
+                >
+                  {/* Checkbox already models a title with a description under
+                      it, at the right sizes and colours — and as a <label>, so
+                      the whole thing is the hit target. The hand-rolled version
+                      this replaces only responded to a click on the box. */}
+                  <Checkbox
+                    label={c.label}
+                    description={c.desc}
+                    checked={colDraft.includes(c.label)}
+                    onChange={on => setColDraft(prev => on ? [...prev, c.label] : prev.filter(x => x !== c.label))}
+                    className="min-w-0 flex-1"
+                  />
+                  {/* Type and key sit on the right: both are facts ABOUT the
+                      field rather than part of what it means. The key is what
+                      someone who knows the data will search for. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, paddingTop: 4 }}>
+                    <Tag variant="neutral" size="sm">{c.type}</Tag>
+                    <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>{c.key}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <span style={{ fontSize: 12, color: "var(--color-text-subtitle)" }}>
+              {colDraft.length} of {(SOURCE_COLUMNS[sourceId ?? ""] ?? []).length} selected
+            </span>
+          </div>
+        }
+        ctaPrimary={{
+          label: "Done",
+          disabled: colDraft.length === 0,
+          onClick: () => { setRecordColumns(colDraft); setShowColumns(false) },
+        }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setShowColumns(false) }}
+      />
+
       {/* ── Leave confirmation modal ── */}
       <ModalDialog
         isOpen={showLeave}
@@ -953,8 +1228,12 @@ export default function PMThomasWidgetBuilderScreen() {
         iconName="BookMarked"
         title="Save to catalog?"
         description={`"${name || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
-        ctaPrimary={{ label: "Save to catalog", onClick: () => { resetAll(); setShowSaveModal(false) } }}
+        /* Three genuinely different outcomes, which is the only reason a third
+           CTA earns its place: save and stay with the widget, save and start a
+           fresh one, or go back without saving. */
+        ctaPrimary={{ label: "Save to catalog", onClick: () => setShowSaveModal(false) }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
+        ctaTertiary={{ label: "Create new widget", onClick: () => { resetAll(); setShowSaveModal(false) } }}
       />
     </ScreenLayout>
   )

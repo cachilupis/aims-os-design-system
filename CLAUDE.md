@@ -76,6 +76,80 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER** build a custom version of a DS component that exists in `src/components/ui/` — import it.
 - **NEVER** add `borderBottom` on a `<Tabs>` wrapper — the component manages its own active indicator.
 - **NEVER add anything visual to a `CardContainer` that is not part of the component** — no accent stripes, no coloured top borders, no dividers bolted on. If the card needs to signal something, that is a `Tag`, a `Chip` or a colour variant, not a decoration drawn on top. Use `variant="default"` unless the design genuinely calls for a colour, `size="sm"` for small items (entity rows, selectable cards, items with a CTA inside a SlideOut or Modal), and `variant="dashed"` for empty regions.
+- **`ModalDialog`'s `slot` wraps content in a grey surface (`--modal-slot-bg`) by default** — pass `slotUnstyled` for content that sits directly on the modal. A dialog never puts all of its content in one card; if cards are needed, one per item.
+- **`Input`/`Textarea` have a `label` prop, but the floating label is mobile-only** — on desktop, structure comes from grouping fields under a section label, never a per-field label.
+- **`Select` is a trigger only — it has no options list.** Compose a working dropdown with `@base-ui/react`'s `Popover` (already a dependency), anchored to the trigger — never with hand-computed coordinates.
+
+### Surfaces, tiles and hovers — the four the audit now catches
+
+These are checks 15-18. They are written down here too because a check tells you
+*that* something is wrong; only this says why.
+
+- **A tinted square with an icon in it is `HighlightIcon`**, not a `<div>` with a
+  width, a height, a radius and a background. The component owns three sizes and
+  nine semantic tints, which is what keeps an entity type the same colour in a
+  card, a list row and a slide-out. An icon-only `<button>` is a different thing
+  and stays a `<button>`.
+- **A card title has no fill.** A background strip above a divider is the
+  table-header device: it means "these words are column names". On a card it
+  means nothing and makes one card read as two stacked surfaces. Keep the
+  divider, drop the fill. Real table headers keep theirs.
+- **`var(--accent)` is not a hover.** It is a blue tint (`#2b7fff14`); on a row
+  it reads as *selected*, not as *your pointer is here*. Use
+  **`--el-row-hover`** for list rows and **`--table-row-hover-bg`** for table
+  rows.
+- **A `CardContainer` wrapping a table must not glow.** The card's hover shadow
+  fires from anywhere in the table, which says the whole table is clickable. The
+  rows own the hover; cancel the card's:
+  `hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]`.
+- **`SlideOut` already pads its panel `32px / 24px`.** A preview component that
+  adds another `20-24px` lands its content at 44-48px from the panel edge. Pass
+  **zero horizontal padding** in anything rendered as a `SlideOut` child and let
+  the component own the margin. Each half looks correct alone, which is why this
+  one survived in three previews for months.
+- **A scroll container clips its children's hover glow flat — move the clip
+  boundary, never shrink the card.** `CardContainer`'s dark hover shadow paints
+  *outside* the card (`0 0 4px 1px` white/40 plus `0 0 14px` white/15), and in a
+  350px `SlideOut` the content column is 302px — exactly the card's width. The
+  halo lands on the scroller's edge and is sliced off vertically on both sides.
+
+  The fix is **padding plus an equal negative margin** on the scroller: a scroll
+  container clips at its *padding box*, so the boundary moves out while the
+  content box, the card's width and the card's own padding all stay put.
+  `ScrollArea` does this by default via `crossAxisClipMargin` (16px); apply the
+  same two properties to any other scroller in the path.
+
+  ```tsx
+  <div style={{ flex: 1, overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+  ```
+
+  **`overflow-x: clip` + `overflow-clip-margin` is the obvious answer and does
+  not work** — measured in Chrome, `clip` on one axis beside `auto` on the other
+  computes back to `hidden`, and the clip margin then applies to nothing.
+  `overflow-x: visible` is coerced to `auto` for the same reason and adds a
+  horizontal scrollbar. Do not re-try either.
+
+  This is the one sanctioned exception to "zero horizontal padding inside a
+  `SlideOut` child" above: it is net zero, so content still lands at 24px.
+
+- **Per-studio permission counts are `PermissionsBreakdown`** (local to
+  `PeopleAccessMembers.tsx`, built from `studioPermRows`). One card per studio:
+  chevron, label in `--color-text-title`, the count as a `Tag` in the studio's
+  variant, a bar in its `--hi-*-icon` colour, and on expand the actual
+  permission names from `PERM_TREE`. It is used by the role preview, the member
+  preview's Permissions tab and anywhere else this data appears — a bar that
+  only says "6" cannot be acted on, and three screens drawing it three ways is
+  how the studio colours drifted apart.
+
+  A studio's identity colour comes from its `HighlightIcon` or its `Tag`, never
+  a raw hex dot. A studio *toggle* is selected/unselected, so it is a `Chip`.
+
+- **A status is a `Tag`; a `Chip` is something you can select.** `Chip` is for
+  selected/unselected: a filter, a scope toggle, a category switch. An entity's
+  state is a `Tag`. Reaching for `Chip` because it looked right is how "Active"
+  ended up as a `success-secondary` chip beside real tags.
+- **An icon-only control needs a `Tooltip`**, always. It has no label; `title`
+  is not a substitute — it is slow, unstyled and invisible to touch.
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
@@ -149,7 +223,7 @@ actions={[{ icon: "Eye", onClick: () => {} }]}
 ```
 
 ### Entity Header — entity profile header
-Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its old name on purpose; the change spec forbids renaming it) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
+Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard view that summarizes a **single** record — never for lists (use `EntityList`) and never as the page-level title bar (that's still `Header`; EntityHeader sits inside the content area, typically the Overview tab).
 
 **There are no variants.** The component models no entity types at all — Employee, Customer, Vendor, Patient, Borrower, anything the host defines tomorrow all use the same shape. Never look for a `variant` prop, never flag a missing one as a DS-GAP: an entity type the DS has never heard of is the normal case, not a gap.
 
@@ -160,12 +234,12 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 | `name` | Identity | `string` — required |
 | `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
 | `source?` | Identity | `string` — which system the record came from. **One item, never two** |
-| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **capped at 6 + `+N`** |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **2 visible + `+N`**. Pass all of them; the cap is the component's job |
 | `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
 | `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
-| `secondaryAction?` | Identity, right | `RecordAction` — **off by default** |
+| `secondaryAction?` | Identity, right | `EntityHeaderAction` — **off by default** |
 | `assignedAgent` | Identity, right | `AssignedAgent \| null` — required as a prop. This is `Ask` |
-| `menuActions?` | Identity, right | `RecordAction[]` — destructive and secondary only |
+| `menuActions?` | Identity, right | `EntityHeaderAction[]` — destructive and secondary only |
 | `description?` | below Identity | `string` — durable context, **off unless passed** |
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
@@ -178,7 +252,7 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 
 **Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.
 
-**Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. Six tags plus six metadata items as individual stops would be twenty-five Tab presses to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
+**Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. One stop per item would mean tabbing through every tag and every metadata item to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
 
 **The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
 
@@ -198,7 +272,9 @@ Use `EntityHeader` (`src/components/ui/record-header.tsx` — the file keeps its
 
 - **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
 - **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
-- **Beyond six, a `+N` chip.** Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **Two visible, then a `+N` chip** (Michael, 2026-09-09 — it was six until then). Six chips wrapped to a second line, saturated the card and, because they held their width, made the **title** truncate instead of the tags. Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **The classification keeps the second visible slot** whenever the entity has one, so the two tags answer two different questions — what needs attention most, and what kind of thing this is. A signal still takes the first slot. Read off Figma's own instances, which never let signals take both.
+- **Two is a hard cap standing in for a width calculation.** Figma has no fixed number — its cards show three, two and two depending on the room the title and the tags leave. Width-driven collapsing is not implemented; until it is, two is the count that never costs the title.
 - **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
 - **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
 
@@ -251,7 +327,7 @@ The one case that justifies it is **an opaque code as the title**: `RO-48291` al
 
 **Never repeat a value across slots.** If it appears in `source`, it does not also appear in `description` or as a tag.
 
-**Fallback copy comes from `RECORD_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
+**Fallback copy comes from `ENTITY_HEADER_FALLBACKS`** — never write fallback strings inline at the call site.
 
 **Zone click destinations** — same framework as Entity click behavior above:
 - Several items to review one by one before deciding → `SlideOut`
@@ -419,13 +495,9 @@ Compress is **content-driven, not a fixed 60px** — about 48px normally, about 
 
 **Never combine `breadcrumb` and `backButton`.** `backButton` remains for pages with no hierarchy to express — a creation wizard, a standalone flow — where there is a "back" but no "up".
 
-### Overlays
-- **`ModalDialog`** — user MUST stop (destructive action, confirmation, critical form)
-- **`SlideOut`** — user can continue browsing (details, filters, context)
-- Rule: can the user ignore it? → SlideOut. Must they respond? → Modal.
-- Only 1 Modal + 1 SlideOut active at a time.
-
 ### Panel overlays — PM component selection guide
+
+The general `ModalDialog` vs. `SlideOut` question — and the multi-step-form case specifically — are now answered by the Create pattern section below, not here: `ModalDialog` when the user can't ignore the task and keep working, `SlideOut` when they can; a multi-step **create** flow follows Create's own staged-flows table (2 stages, no branching → `SlideOut`; 3+ or any branching → dedicated view + `Stepper`). This section covers the rest of panel selection — which is still `SlideOut` vs. `SidePanel`, a distinct axis that belongs to **Configure**, not Create (a `SidePanel` never appears in a Create flow — see the Create pattern's Gate 0).
 
 **Which panel component to use:**
 
@@ -433,16 +505,14 @@ Compress is **content-driven, not a fixed 60px** — about 48px normally, about 
 |---|---|---|
 | Entity detail preview from a list (Eye button) | `SlideOut` | Overlay on top of the list — user browses back quickly |
 | Node / item configuration within a canvas or builder | `SidePanel` | Inline with the canvas — no backdrop, user sees context while editing |
-| Filters panel (full filter set) | `SlideOut` type `"filters"` | Standard pattern, always overlays list |
-| Step-by-step guided form (multi-step) | `SlideOut` | Focused flow, backdrop keeps user on task |
+| Filters panel (full filter set) | `FiltersSlideout` | Its own dedicated component (checked directly — it doesn't wrap `SlideOut`), always overlays list |
 
-**SlideOut — which `type` variant to use:**
+**SlideOut — which `type` to use.** Only 2 values exist on the real component (checked directly against `slide-out.tsx` — `"filters"` and `"default"` are NOT valid `SlideOutType` values; filters use the separate `FiltersSlideout` component above instead):
 
-| Use case | `type` prop | When to add `showTabs` |
+| Use case | `type` prop | Notes |
 |---|---|---|
-| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Yes, when content splits into Overview / History / Config |
-| Filter set (full filter controls) | `"filters"` | No — filters panel has its own layout |
-| Generic content / form without entity header | `"default"` | Only if content naturally separates into sections |
+| Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Add `showTabs` when content splits into Overview / History / Config |
+| Generic content — a form, a Create flow, anything without an entity header | `"full-slot"` | No built-in header, tabs or chips — compose those inside `children`. It **does** get the CTA footer, but only once `onCtaPrimary` is wired (see below) |
 
 **SlideOut — mandatory props for `type="with-variants"` (entity detail):**
 
@@ -467,6 +537,28 @@ Compress is **content-driven, not a fixed 60px** — about 48px normally, about 
 >
   {slotContent}
 </SlideOut>
+```
+
+**The panel's main action goes in the CTA footer — never a `Button` under the title.**
+`showCta` renders the footer for `with-variants` always, and for `full-slot`
+**once `onCtaPrimary` is wired** (a full-slot panel has no DS-default footer to
+show, so it opts in by supplying an action). Use `showCtaSecondary={false}` when
+there is nothing to cancel.
+
+A preview panel whose "open the full record" action is a small `secondary`
+Button beneath its own title reads as body content, not as the panel's CTA —
+that is how three previews in People & Access hid their only real action. If one
+`SlideOut` hosts several preview types, resolve the label and the handler at the
+call site from whichever is open; the preview component should not own it.
+
+```tsx
+<SlideOut
+  type="full-slot"
+  showCta={!!cta}
+  showCtaSecondary={false}
+  ctaPrimaryLabel={cta?.label}
+  onCtaPrimary={cta?.onClick}
+>
 ```
 
 **Default sizes and drag behavior:**
@@ -514,6 +606,115 @@ Structure content top-to-bottom in this order:
 - Always set `showCollapsedStrip` — the collapsed strip is the only affordance when the panel is closed; without it, there's no way to reopen it.
 
 **Quick decision:** Is the panel overlapping a browsable list? → `SlideOut`. Is it embedded alongside a canvas or builder where the user edits something in context? → `SidePanel`.
+
+### Create pattern — surface selection
+
+Full rule, reasoning, and open questions live in `docs/patterns/create.md`. This section is the enforceable subset — tables and hard rules only.
+
+**Create** brings a new object into existence. **Configure** edits the properties of something that already exists. This pattern governs Create only, never Configure.
+
+**The pattern decides the container, never the fields.** A create modal for a worker has the fields a worker needs; a create modal for an API key has the fields an API key needs — neither is "what a create modal looks like." Field count, stage count, and branching are **inputs** to the cascade below; the container is its **output**, never the reverse. Two prototypes for different objects landing on the same surface (e.g. two `ModalDialog` creates with different field counts) is the pattern working correctly, not an inconsistency to fix.
+
+**Gate 0 — does this pattern apply at all?**
+
+| Condition | Why it is excluded | What governs it instead |
+| --- | --- | --- |
+| The object is created by direct manipulation — drag, drop, draw | Dropping the node onto the canvas already created it | Configure pattern (`SidePanel`) |
+| The object is created inside an ongoing agent conversation | The chat is the container; there is no surface to choose | Chat surface |
+| The action edits properties of an existing object | Nothing new comes into existence | Configure pattern |
+
+**Gate 1 — which create mode?** The mode is decided by the affordance the user activates — never inferred.
+
+| Trigger | Mode | Surface |
+| --- | --- | --- |
+| Any standard create affordance | Manual | Run the cascade below |
+| A `Create with AI` affordance | Assisted | `ModalDialog` hosting the chat component → success `ModalDialog`. The chat component is `DS-GAP` — not implemented in this repo yet. |
+| Browse a catalogue — templates, marketplace, presets, starting points | From a source | `ModalDialog variant="content"` for the selection → then the cascade below, pre-filled |
+
+**When Create uses a modal.** `ModalDialog` is not excluded from Create — it has 3 jobs and 1 prohibition:
+
+| Job | Variant | Example |
+| --- | --- | --- |
+| Fill in a standalone create, 5 fields or fewer | `content` | A new entity from its own list view · a user in Admin |
+| Choose from a catalogue | `content` | Pick a template from the marketplace |
+| Converse with an agent | `content` | `Create with AI` |
+| Confirm before an irreversible save | `confirmation` | Publishing a tenant-wide policy |
+
+**Prohibition:** a modal never holds a form whose fields depend on what the modal is covering — if the user has to remember, compare against, or navigate the background to complete it, the surface is `SlideOut`, however few fields it has.
+
+The test that decides it: **can the user ignore this and keep working in the background?**
+
+| Task | Can it be ignored? | Surface |
+| --- | --- | --- |
+| Filling in fields that relate to what is on screen | Yes | `SlideOut` |
+| Filling in fields for a standalone object, 5 or fewer | No | `ModalDialog variant="content"` |
+| Choosing from a catalogue | No | `ModalDialog variant="content"` |
+| Conversing with an agent | No | `ModalDialog variant="content"` |
+| Confirming | No | `ModalDialog variant="confirmation"` |
+
+**The cascade — manual create.** A sequence, not a lookup table: start at step 1, stop at the first "yes."
+
+| Step | Test | Yes | No |
+| --- | --- | --- | --- |
+| 1 | Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation? | Hand-off — the object has its own creation section; Create just navigates there, nothing else is specified | → 2 |
+| 2 | Does the flow branch, or does it have two or more stages? | Full-page wizard + `Stepper` + `StepperNavFooter` | → 3 |
+| 3 | Can the object be created from a single field, AND is a list of the same object type visible on screen? | Inline create row — `DS-GAP`, does not exist in this repo yet | → 4 |
+| 4 | Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at? | `SlideOut type="full-slot"` | → 5 |
+| 5 | More than 5 fields? | Full-page create form | `ModalDialog variant="content"` |
+
+Step 1 is a hand-off, not a surface choice — once the object declares it owns a workspace, Create's job ends at navigating there. Nothing about confirmation, landing, or the surface itself is specified past that point; the object's own creation section owns all of it.
+
+Steps 4–5, stated as one rule: **contextual** (the new object hangs off something on screen) → `SlideOut type="full-slot"`. **Standalone** (nothing on screen is its parent) → `ModalDialog variant="content"` at 5 fields or fewer, a full-page create form above that. The 5-field threshold applies ONLY here (standalone, modal-bound) — never to a `SlideOut`, which grows with its content instead.
+
+**Staged flows — where the line sits.** Staged flows never live in a panel — there is no `Stepper` inside a `SlideOut`.
+
+| Shape of the flow | Surface |
+| --- | --- |
+| One stage | `SlideOut` |
+| Two or more stages, or any branching | Full-page wizard + `Stepper` + `StepperNavFooter` |
+
+`StepperNavFooter` is a page-level component — it never appears inside a `SlideOut`.
+
+**No Sidebar while a full-page create surface is open.** Step 2's wizard and step 5's full-page form both occupy the whole page, so the app's persistent `Sidebar` would otherwise still be there and still clickable — a hazard exactly on these two surfaces, which have the most (a wizard's stages) or the longest (a form that earned a full page) work to lose. Hide the `Sidebar` for the duration; `Header`'s `backButton` and the flow's own `StepperNavFooter` (`Cancel`/`Back`) are the only ways out, and it reappears the moment the flow ends. Does not apply to `SlideOut` or `ModalDialog` — both already sit on a backdrop that blocks the `Sidebar`.
+
+**Second output — is a confirmation required?** Independent of the container, never merged into the cascade above.
+
+| Condition | Confirmation |
+| --- | --- |
+| The user can undo the creation themselves — delete or archive, no external effect | None. Save directly. |
+| The creation cannot be undone, has tenant-wide scope, or triggers effects outside the tenant | `ModalDialog variant="confirmation"` before saving |
+| Assisted create | Always ends in a success `ModalDialog` |
+
+**Confirming that it worked** — separate from the confirmation above, which is about risk. This is about whether the user can tell the create succeeded.
+
+| Situation | Feedback |
+| --- | --- |
+| The created object lands somewhere visible — a list, a widget, the page you return to | The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner. |
+| The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | `useToast().success(...)` — floating, auto-dismissing. See below. |
+| The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
+
+In-flow `AlertBanner` is not the component for the invisible-result case — it's a full-width notice for system-level feedback, not "the thing you just asked for was created." **`Toast` resolves this** (`src/components/ui/toast.tsx`, `useToast()`) — it's a floating placement of the same `AlertBanner`, not a second component, auto-dismissed after 3500ms. `ToastProvider` wraps the whole app once, at the true root (`App()` in `src/App.tsx`) — call `useToast()` from any PM prototype screen with nothing to wire; there is no per-screen `ToastProvider` to remember. See the live demo on the `patterns-create` doc page's Anatomy tab.
+
+**Third output — where the user lands afterwards.** Derived from the container, not a separate decision.
+
+| Surface | After create |
+| --- | --- |
+| Inline create row | Stays in place. The new row appears in the list, ready to create the next one. |
+| `SlideOut` | Closes. The user returns to where they were; the new object appears in context. |
+| `ModalDialog` — standalone create | Closes. The user returns to the list they triggered it from; the new object appears there. |
+| Full-page create form / wizard | Navigates to the created object. |
+| Catalogue modal — source fully defines the object | Closes. Lands as the surface it would have used had the fields been filled by hand. |
+| Assisted create | Success modal → view the object, or create another. |
+
+**Accessibility.** While a create surface is open: focus is trapped inside the `ModalDialog` or `SlideOut`, returns to the trigger element on close, and Esc closes the surface. The primary CTA stays disabled until required fields are filled.
+
+**`DS-GAP` — not yet implemented.** Verified against the component source: `ModalDialog` has no Esc-to-close handler at all, and neither `ModalDialog` nor `SlideOut` trap or return focus today. Until they do, a screen that relies on this behavior gets it by accident, not by contract.
+
+**Entry points — the trigger lives where the collection lives.** If notes are held by a Notes widget, the affordance to add one belongs in that widget's own header, not in the page `Header`. The page `Header` CTA is reserved for the primary object of that screen — on a Worker detail page that is "Run now," not "Add note." A create page also carries no create CTA in its own `Header`: on a full-page create form or wizard, `Header` carries title and `backButton` only — the action completes in `StepperNavFooter`.
+
+**`DS-GAP` — no date field.** There is no `DatePicker` or `Calendar` component in `src/components/ui/`. Any create form whose object needs a date is under-specified until one exists — do not improvise one.
+
+**General overlay stacking rule (applies everywhere, not just Create):** only 1 `ModalDialog` + 1 `SlideOut` active at a time.
 
 ### Confirmation modals — standard composition
 Use `variant="confirmation"` (the default) on `ModalDialog`. Always set `tone` to match the severity of the action:
@@ -836,7 +1037,7 @@ If a screen requires a component that doesn't exist in `src/components/ui/`:
 - Showing two secondary buttons side by side — order is always primary → secondary → tertiary.
 - Using `variant="main"` inside a widget, card, or SlideOut — use `primary` instead (except `EntityHeader`'s AI agent trigger — see Button hierarchy rules).
 - Adding a filter chip before Apply is clicked.
-- Opening a Modal for non-destructive/non-blocking content — use SlideOut instead.
+- Opening a Modal for content the user can safely ignore and keep working in the background — use SlideOut instead. Destructiveness is NOT the test: a catalogue picker and the Create-with-AI chat are both non-destructive and still correctly Modal, because the user can't ignore either one either (see the Create pattern's "when Create uses a modal" test).
 - Showing a loading indicator for operations under 300ms.
 - Showing two loading indicators on the same view simultaneously.
 
@@ -955,6 +1156,22 @@ Never in `ui/`. File must:
 **Status: partially built and running automatically.** `scripts/audit-tokens.cjs` (`npm run audit:tokens`) covers items 1, 5, and 7 below and runs on every PR and push to `main` via `.github/workflows/design-system-checks.yml` (added 2026-08-04) — a PR with a hardcoded hex/rgba, an orphaned component, or a build/type error fails CI automatically. `/ds-health` as a slash command still does not exist — items 2, 3, 4, and 6 need semantic checks the script doesn't do (parsing JSX for raw elements, cross-referencing DS-GAP comments, registry lookups) and haven't been built. This section documents the full intended scope so whoever builds the rest doesn't have to guess:
 
 1. **Token compliance** (no hardcoded hex/rgba in `.tsx`/`.css` files) — ✅ automated, `audit-tokens.cjs`
+1b. **The three primitives screens keep drawing by hand** — ✅ automated (2026-09-08), checks 12-14:
+   a pill-shaped badge is `Tag`, a circular avatar 16-64px is `AvatarCircle`, and a `<button>` that
+   sets its own padding AND a border or background is `Button`. Warnings, not errors — the ratchet
+   holds the line at the count it inherits, measured in INSTANCES so a file already on the list
+   cannot absorb new ones. An icon-only trigger, a tab, a colour swatch and a status dot under 16px
+   are real uses of the raw element and are not counted.
+1c. **The four the People & Access review kept finding** — ✅ automated (2026-09-08), checks 15-18:
+   a tinted 20-48px square with an icon in it is `HighlightIcon`; a `--surface-raised` strip above a
+   divider is the TABLE-HEADER device and does not belong on a card title; `var(--accent)` is a blue
+   tint and must never be a row hover; and a component rendered inside `<SlideOut>` must not add its
+   own horizontal padding. Same ratchet, same instance counting. Checks 15 and 16 read one `style`
+   object at a time rather than a window of lines — a sliding window merges the strip above a list
+   with the icon tile in its first row and reports each as the other. Check 15 skips icon-only
+   `<button>`s (resolved by nearest opening tag, since `[^>]*` breaks on any arrow function in an
+   attribute), and check 16 treats uppercase micro-type or an explicit grid as proof of a real table.
+
 2. Raw HTML elements inside pattern previews — not automated
 3. Experimental component integrity (DS-GAP comment present) — not automated
 4. PM screens registered in `PROTOTYPE_PAGES` — not automated

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, Fragment, useRef, type CSSProperties, type ReactNode } from "react"
 import { createPortal } from "react-dom"
+import { Popover } from "@base-ui/react/popover"
 import { usePageTab, useScrollToHash } from "@/lib/use-page-tab"
 import * as LucideIcons from "lucide-react"
 import PMMichaelTestV1Screen      from "./screens/pm-michael-test-v1"
@@ -51,7 +52,7 @@ import { EntityList, ELIconHighlight, ELAvatar, type EntityListItemData } from "
 import { ModalDialog, type ModalVariant, type ModalTone } from "@/components/ui/modal-dialog"
 import { NotificationItem } from "@/components/ui/notification-item"
 import { NotificationCenter, type NotificationCenterState, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
-import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type RecordAction } from "@/components/ui/record-header"
+import { EntityHeader, type EntityVisual, type EntityHeaderTag, type EntityStateBadge, type RecordField, type FieldProvenance, type AssignedAgent, type SecondaryMetadataItem, type EntityHeaderAction } from "@/components/ui/entity-header"
 import { NextBestActionCard, type NextBestAction } from "@/components/ui/next-best-action-card"
 import { InformativeCard, type InformativeCardState, type InformativeCardSize } from "@/components/ui/informative-card"
 import { Filters, type FilterSlot } from "@/components/ui/filters"
@@ -112,8 +113,19 @@ import VoiceChannelScreen               from "./screens/voice-channel"
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-type SectionId = "home" | "ds-health" | "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-overlay" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
-type SpecModal = "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "record-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
+// Renamed page ids, old → new. A link someone already pasted into Slack or a
+// Jira ticket must keep working: ids end up in ?page= URLs, so renaming one
+// silently breaks every link that was ever shared. Keep entries here forever
+// — they cost one lookup and they are the only thing standing between a
+// rename and a dead link.
+const PAGE_ID_ALIASES: Record<string, string> = {
+  // 2026-09-08 — the component is called Entity Header everywhere now, so the
+  // id matches the name. The old id shipped in links from PR #104 onwards.
+  "record-header": "entity-header",
+}
+
+type SectionId = "home" | "ds-health" | "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breakpoints" | "breadcrumb" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "entity-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | "patterns-list-view" | "patterns-filter" | "patterns-header" | "patterns-nav-depth" | "patterns-loading" | "patterns-feedback" | "patterns-logs" | "patterns-widget-canvas" | "patterns-guardrails" | "patterns-forms" | "patterns-create" | "patterns-slideout" | "patterns-panel-content" | "widget-father" | "widgets" | "home-banner"
+type SpecModal = "next-best-action" | "process-item" | "radio" | "alert-banner" | "app-background" | "avatar" | "badge" | "breadcrumb" | "breakpoints" | "button" | "card-container" | "checkbox" | "chip" | "colors" | "corner-radius" | "elevation" | "empty-state" | "entity-list" | "filters" | "header" | "highlight-card" | "highlight-icon" | "icons" | "informative-card" | "input" | "menu-item" | "modal-dialog" | "notification-center" | "notification-item" | "pagination" | "progress-bar" | "entity-header" | "skeleton" | "spacing" | "spinner" | "stepper" | "stepper-nav-footer" | "scroll-area" | "select" | "sidebar" | "side-panel" | "slide-out" | "switch-tab" | "table" | "tabs" | "tag" | "textarea" | "toast" | "toggle" | "tooltip" | "topbar" | "typography" | null
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 
@@ -227,7 +239,7 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   { id: "checkbox",        label: "Checkbox",          group: "Components",  description: "Binary selection control · 2 sizes · 4 states · optional label and description" },
   { id: "chip",            label: "Chip",              group: "Components",  description: "Pill-shaped selection control · 11 color variants · 2 sizes (M 28px / S 20px) · 4 states · optional person icon · used in filter rows and Slide Out headers" },
   { id: "empty-state",     label: "Empty State",       group: "Components",  description: "Zero-content placeholder. Icon Highlight + title + description + 1–2 CTA buttons. Compact variant for Tables and Cards." },
-  { id: "record-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
+  { id: "entity-header",   label: "Entity Header",     group: "Components",  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and no disclosure — this is a fixed arrangement of slots, not a collapsible card. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a slot in this one. See the Reference tab's Governance canon section for the 4 laws this component enforces." },
   { id: "entity-list",     label: "Entity List",       group: "Components",  description: "High-density list row for entities — conversations, tickets, tasks. Supports icon, avatar, primary/secondary meta, AI insight, tags." },
   { id: "filters",         label: "Filters",           group: "Components",  description: "Horizontal 40px filter bar. 8 state variants · up to 5 filter chips · All Filters · sort controls · grid/list toggle. Token family --fi-*." },
   { id: "header",          label: "Header",            group: "Components",  description: "Page header · title + description + status tag + CTAs + optional back button · 3 sizes: Size L (24px), Size M (18px), Compress (scroll state)" },
@@ -274,11 +286,11 @@ const NAV_SECTIONS: { id: SectionId; label: string; group: string; description: 
   // Patterns — behavioral guides for PMs and engineers
   { id: "patterns-guardrails",  label: "Guardrails",         group: "Patterns", description: "Consolidated rules for AI-generated views · Tokens · Headers · Buttons · 3-dot menu · Sidebar sub-nav · SlideOut composition" },
   { id: "patterns-forms",       label: "Forms",              group: "Patterns", description: "Form composition: when to use wizard vs modal vs slideout · field spacing 16px / section gap 24px · validate on blur · Next disabled while required fields are empty" },
+  { id: "patterns-create",      label: "Create",             group: "Patterns", description: "Which surface a Create flow uses — ModalDialog, SlideOut, or a dedicated view — decided by a 5-step cascade, plus create modes, confirmation, and landing rules" },
   { id: "patterns-slideout",    label: "SlideOut / SidePanel",   group: "Patterns", description: "SlideOut vs SidePanel: when to use each · Shell anatomy · 4 header variants · real examples for detail view, form, and node config · content types · tabs · footer · guardrails" },
   { id: "patterns-panel-content", label: "SlideOut/SidePanel — Content", group: "Patterns", description: "Content vocabulary for panels — AI Summary (8 variants) · Insights (HighlightCard grid) · List Sections · Form fields: Input, Textarea, Select, Toggle · Section Headers" },
   { id: "patterns-list-view",  label: "List View Layout",  group: "Patterns", description: "Mandatory stack: Topbar + Sidebar + EntityList + Pagination · AppBackground always · Side Panel for details · Filters as the single source of truth for the dataset" },
   { id: "patterns-filter",     label: "Filter System",     group: "Patterns", description: "3 layers: Visible Filters → All Filters button → Slideout (full) → Chips (optional) · draft/applied state · Apply resets pagination" },
-  { id: "patterns-overlay",    label: "Overlay Decision",  group: "Patterns", description: "Modal when the user must stop and decide · Slide-out when they can keep exploring · only 1 of each type active at a time" },
   { id: "patterns-header",     label: "Header Sticky",     group: "Patterns", description: "Scroll > 16px → COMPRESSED (60px) · hover 0–24px idle 800ms → filters visible (130px) · 200ms ease-in-out transition" },
   { id: "patterns-nav-depth",  label: "Navigation Depth",  group: "Patterns", description: "Up to 4 layers: Tabs (where?) + SwitchTab (how?) + Filters (what?) + Chips (which quick filter?) · in the max-depth edge case, SwitchTab sits left of Filters (12px gap) to save vertical space · use only when each layer adds real differentiation" },
   { id: "patterns-loading",    label: "Loading States",    group: "Patterns", description: "Spinner → unknown duration · Progress Bar → known progress (%) · Skeleton → known layout · <300ms show nothing · only 1 indicator per view" },
@@ -1612,8 +1624,8 @@ const TOPBAR_SPEC = {
     { name: "searchPlaceholder",  type: "string",   values: ["any string"],              default: '"Search…"',       note: "Center zone trigger label" },
     { name: "onSearchFocus",      type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens Global Search overlay (700×592px)" },
     { name: "actions",          type: "REMOVED",  values: ["— split into secondaryAction + menuActions —"], default: "—", note: "REMOVED. actions[0] was a labelled primary CTA (Message, Export, Contact account) competing with the agent trigger for the same job. In Figma Ask IS the primary CTA; there is no second one. What is left is one optional secondary action and the overflow." },
-    { name: "secondaryAction",  type: "object",   values: ["RecordAction"], default: "undefined", note: "The one optional secondary action, OFF by default — the vast majority of records do not have one. It exists for the edge case where a contextual CTA genuinely belongs in the header. Figma's documentation calls this slot icon-only; its built instance is a labelled secondary button with no icon (Icon=No). Michael chose the instance (2026-09-07), because that is what renders and what the team sees when they inspect the file." },
-    { name: "menuActions",      type: "Array",    values: ["RecordAction[]"], default: "[]", note: "The overflow menu. Destructive and secondary actions ONLY — never a visible button. The header does not define which actions exist; that is configured per entity in Helix Data Studio. The header owns exactly one rule: destructive actions live here." },
+    { name: "secondaryAction",  type: "object",   values: ["EntityHeaderAction"], default: "undefined", note: "The one optional secondary action, OFF by default — the vast majority of records do not have one. It exists for the edge case where a contextual CTA genuinely belongs in the header. Figma's documentation calls this slot icon-only; its built instance is a labelled secondary button with no icon (Icon=No). Michael chose the instance (2026-09-07), because that is what renders and what the team sees when they inspect the file." },
+    { name: "menuActions",      type: "Array",    values: ["EntityHeaderAction[]"], default: "[]", note: "The overflow menu. Destructive and secondary actions ONLY — never a visible button. The header does not define which actions exist; that is configured per entity in Helix Data Studio. The header owns exactly one rule: destructive actions live here." },
     { name: "logo",               type: "ReactNode",values: ["any"],                     default: "4-dot placeholder",note: "Replace with actual isotipo/brand mark" },
     { name: "companyName",        type: "string",   values: ["any string"],              default: '"Company"',       note: "Shown in Sub-group B, truncates" },
     { name: "onCompanyClick",     type: "Function", values: ["() => void"],              default: "undefined",       note: "Opens company selector/Left Menu" },
@@ -2090,6 +2102,7 @@ const MODAL_DIALOG_SPEC = {
     { name: "infoCardState", type: "Variant", values: ["informative","alert","error","success","neutral"], default: "from tone",     note: "Overrides tone for the InformativeCard" },
     { name: "ctaPrimary",    type: "object",  values: ["{ label, destructive?, onClick? }"],               default: "undefined" },
     { name: "ctaSecondary",  type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
+    { name: "ctaTertiary",   type: "object",  values: ["{ label, onClick? }"],                             default: "undefined" },
     { name: "showClose",     type: "Boolean", values: ["true","false"],                                     default: "true" },
     { name: "embedded",      type: "Boolean", values: ["true","false"],                                     default: "false",         note: "Renders inline without overlay — used in docs previews" },
   ],
@@ -2232,25 +2245,25 @@ const NOTIFICATION_CENTER_SPEC = {
 }
 
 // figmaNodeId/figmaUrl intentionally empty — this is a new component, not yet
-// synced from a Figma node. See record-header.tsx's own header comment for the
+// synced from a Figma node. See entity-header.tsx's own header comment for the
 // 3 industry patterns (Salesforce Highlights Panel, HubSpot conditional
 // sections, Next Best Action engine) it's modeled on instead.
 const ENTITY_HEADER_SPEC = {
   name: "Entity Header",
   figmaNodeId: "19815:101548",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=19815-101548",
-  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/record-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
+  description: "Identity card for a Unified Entity Profile — Employee, Customer, Vendor, a repair order, a platform data entity, or any entity type the host defines. It identifies the entity and surfaces what needs attention; it carries no detail, which lives in the tabs below. One shared skeleton for every entity type: there is no variant prop, and NO DISCLOSURE — this is a fixed arrangement of slots, not a collapsible card. The chevron and the two expandable zones an earlier revision had are gone; that content belongs to Overview widgets. NO INSIGHT SECTION: system interpretation reaches this card only as a tag with a tooltip — no descriptive sentences, no scores with drivers, no expandable analysis. The Next Best Action card is a SEPARATE component in its own Card Container (see ui/next-best-action-card), never a second slot in this one. Import name is EntityHeader; the file keeps its old path, src/components/ui/entity-header.tsx, on purpose — the change spec forbids renaming it. See the Reference tab's Governance canon section for the 4 laws this component enforces.",
   properties: [
     { name: "name",           type: "string",   values: ["The entity's display name"], default: "required", note: "A person's name, an account name, or a code. There is NO variant prop and no closed set of entity types — what kind of thing this is arrives as a classification tag instead (see tags)." },
     { name: "visual",         type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product. WATCH OUT: this is the one required object with no fallback, and the card throws if it arrives undefined — which type-checking does not catch here, because this repo runs without strictNullChecks, so a lookup like MY_VISUALS[key] type-checks even for a key that is missing. Build the map exhaustively." },
-    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and caps the visible set at ENTITY_HEADER_TAGS_MAX (6) with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
+    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and caps the visible set at ENTITY_HEADER_TAGS_MAX (TWO, down from six on 2026-09-09) with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. Six saturated the card and, worse, made the TITLE yield instead of the tags. THE CLASSIFICATION KEEPS THE SECOND SLOT whenever there is one, so the two visible tags answer two different questions — what needs attention most, and what kind of thing this is — rather than the same one twice. Figma's instances do the same: its maximum-content card shows one signal, `Partner`, and a +6. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
     { name: "stateBadge",     type: "object",   values: ["{ label, variant: \"success\" | \"informative\" | \"alert\" | \"error\" | \"neutral\", icon? }"], default: "undefined", note: "The entity's overall status — its own slot on the right, before the actions. COLOUR RULE 1 OF 2: full semantic range. There is exactly one, so colour costs nothing and carries real meaning — Active reads success, Degraded reads alert, Blocked and Suspended read error. Max ~19 characters. If several statuses are true at once THE MOST BLOCKING ONE WINS and the rest become signal tags; the component renders the one badge it is given. Never dropped at any width, and never a focus stop: it is status, not a control." },
     { name: "source",         type: "string",   values: ["\"Workday\" | \"Salesforce\" | \"NetSuite\" | \"DMS\" | \"Helix Data Studio\" | ..."], default: "undefined", note: "Which system this record came from. Renders after the title — a Database icon plus the value at 12px Medium, preceded by a bullet separator. ONE ITEM, NEVER TWO: a source is a single fact. Concatenating a second value breaks it — \"Enterprise Account · Midwest Region\" is a category next to a location and neither is a source. A job title, a location, a region, a category or a parent company DESCRIBE or PLACE the entity; they do not say where the data came from, so they belong in tags or secondaryMetadata, or nowhere. An entity created inside the platform itself reads \"Helix Data Studio\"; one with no source omits the prop — the slot is removed, never filled with something else." },
     { name: "description",    type: "string",   values: ["One line of durable context"], default: "undefined (OFF)", note: "OFF by default — most headers do not carry one, and it is an edge case rather than a slot to fill. Ask in this order and stop at the first yes: needs attention now → signal tag; what kind of thing this is → classification tag; current status → stateBadge; a fact someone might act on → secondaryMetadata; durable context none of those captured → this. The one case that justifies it is an opaque code as the title: \"RO-48291\" alone means nothing, so the description says what the record concerns. DURABILITY TEST — if the sentence could change next week it is an activity note and belongs in the Overview. It says what the entity IS, never what is happening to it. One line at 14px Medium, truncated with a Tooltip; it never wraps." },
     { name: "secondaryMetadata", type: "Array", values: ["SecondaryMetadataItem[] — { icon, text, tooltip }"], default: "[]", note: "The compact attribute row under the title. Icon says what KIND of information this is, text is the value, tooltip carries the field label plus context (\"Assigned agent · Manager Agent. Handling this account since Mar 3.\") and shows on hover AND focus, always — even when the text is not truncated. CAPPED AT 6 by the component (SECONDARY_METADATA_MAX), not by trusting the caller: past six it stops being a row and becomes a section. Six is the maximum, not the goal — aim for four. Anything beyond six goes to the Overview, NEVER to a +N chip: an item hidden behind a counter is not discovered, and if it was worth showing it is worth having a place. THE ICON NEVER APPEARS ALONE — Entity List allows icon-only under space pressure, this header does not. What qualifies: counts of Truth Plane facts and Canon Plane documents (counted separately — TR outranks CR), open workflows, the assigned agent tier, access role, tenure, a Bridge ID where policy permits. What does not: anything true of every entity of the same type (a label, not information), and anything describing a conversation rather than the entity. This is NOT recordFields — those carry provenance and a masking state; both exist at once." },
     { name: "assignedAgent",  type: "object | null", values: ["AssignedAgent — { id, name, onOpenChat } | null"], default: "required", note: "This is the `Ask` button, and it is the card's only primary CTA. AIMS OS is agent-first — required as a PROP so every caller has to decide, but the value can be null for an entity that genuinely has none yet: null renders the SAME button, disabled, with a Tooltip explaining why, never a silently missing button. Icon-only, Sparkle glyph, variant=\"main\" — the one confirmed exception to \"never main inside a card\" in the whole design system. It keeps the same Sparkle as the Next Best Action card deliberately (Michael, 2026-09-07): both are AI surfaces, one converses and one transacts. The component never renders the chat UI itself." },
-    { name: "secondaryAction", type: "object",  values: ["RecordAction — { label, variant?, onClick?, disabled?, disabledTooltip?, disableWhenLocked? }"], default: "undefined (OFF)", note: "One optional labelled action beside `Ask`, off by default — most entities do not have one, and a second labelled CTA competes with `Ask`. Boolean in practice: either the entity type has a contextual action or it does not. Anything the page already offers below the header (a tab, a widget CTA) is dead weight here, not a valid action. Disabled by `locked` unless disableWhenLocked is false." },
-    { name: "menuActions",    type: "Array",    values: ["RecordAction[]"], default: "[]", note: "The \"···\" overflow. Secondary and destructive actions only — never the entity's main action, which is either `Ask` or secondaryAction. Empty or omitted removes the trigger. Write actions disable when `locked` is true, each with a Tooltip." },
+    { name: "secondaryAction", type: "object",  values: ["EntityHeaderAction — { label, variant?, onClick?, disabled?, disabledTooltip?, disableWhenLocked? }"], default: "undefined (OFF)", note: "One optional labelled action beside `Ask`, off by default — most entities do not have one, and a second labelled CTA competes with `Ask`. Boolean in practice: either the entity type has a contextual action or it does not. Anything the page already offers below the header (a tab, a widget CTA) is dead weight here, not a valid action. Disabled by `locked` unless disableWhenLocked is false." },
+    { name: "menuActions",    type: "Array",    values: ["EntityHeaderAction[]"], default: "[]", note: "The \"···\" overflow. Secondary and destructive actions only — never the entity's main action, which is either `Ask` or secondaryAction. Empty or omitted removes the trigger. Write actions disable when `locked` is true, each with a Tooltip." },
     { name: "showInformation", type: "Boolean", values: ["true","false"], default: "false", note: "Shows the ⓘ Information trigger. A boolean the caller owns, NOT derived from whether recordFields has anything in it — whether the panel is worth offering is a per-case decision, and the old behaviour made the control vanish whenever the field array happened to be empty. With showInformation but no onInformationOpen the trigger renders disabled with a Tooltip." },
     { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
     { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
@@ -3410,7 +3423,7 @@ const SLIDE_OUT_SPEC = {
     { name: "showTab3",       type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: tab3. Show or hide the third tab." },
     { name: "showSearchBar",  type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: searchBar. Search input field below tabs." },
     { name: "showChips",      type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: chips. Category chip row with overflow + > button." },
-    { name: "showCta",        type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: cta. Secondary + Primary CTA buttons row at the bottom." },
+    { name: "showCta",        type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: cta. Secondary + Primary CTA buttons row at the bottom. Renders for with-variants always; for full-slot only once onCtaPrimary is wired — a full-slot panel has no default footer to show." },
     { name: "showTopButton",  type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: topButton. Edit (pencil) icon in the top-right header." },
     { name: "showClose",      type: "Boolean", values: ["true","false"],   default: "true",       note: "DS prop: close. X close button in the top-right header." },
   ],
@@ -3503,7 +3516,7 @@ function getSpec(id: NonNullable<SpecModal>): AnySpec {
   if (id === "modal-dialog")     return MODAL_DIALOG_SPEC     as AnySpec
   if (id === "notification-item")   return NOTIFICATION_ITEM_SPEC   as AnySpec
   if (id === "notification-center") return NOTIFICATION_CENTER_SPEC as AnySpec
-  if (id === "record-header")       return ENTITY_HEADER_SPEC       as AnySpec
+  if (id === "entity-header")       return ENTITY_HEADER_SPEC       as AnySpec
   if (id === "next-best-action")    return NEXT_BEST_ACTION_SPEC    as unknown as AnySpec
   if (id === "informative-card") return INFORMATIVE_CARD_SPEC as AnySpec
   if (id === "filters")          return FILTERS_SPEC          as AnySpec
@@ -3771,7 +3784,7 @@ function CtrlGroup<T extends string>({ label, options, value, onChange }: {
         {options.map(o => (
           <button key={o.value} onClick={() => onChange(o.value)}
             className={["px-[10px] py-[5px] rounded text-[11px] font-medium transition-colors",
-              value === o.value ? "bg-[#2173ff] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
+              value === o.value ? "bg-[var(--primary)] text-white" : "bg-[var(--ctrl-inactive-bg)] border border-[var(--field-border)] text-[var(--field-label)] hover:border-[var(--field-border-hover)]",
             ].join(" ")}>
             {o.label}
           </button>
@@ -3861,7 +3874,7 @@ function FigmaLogoIcon() {
 }
 
 function FigmaLink({ href }: { href: string }) {
-  // Guard added for RecordHeader — the first component in this catalog with no
+  // Guard added for EntityHeader — the first component in this catalog with no
   // real Figma node yet. Every other spec always has a real href; don't render
   // a "View in Figma" link that goes nowhere.
   if (!href) return null
@@ -9384,7 +9397,8 @@ function SelectPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
               <div className="rounded-[8px] border border-[var(--field-border)] p-[16px] flex flex-col gap-0 divide-y divide-[var(--field-border)]">
                 {[
                   { condition: "open = true",                          icon: "ChevronUp",   note: "Regardless of value" },
-                  { condition: "open = false · value exists",          icon: "X (clear)",   note: "Blue border — click to clear value" },
+                  { condition: "open = false · value exists · onClear", icon: "X (clear)",   note: "Blue border — click to clear value" },
+                  { condition: "open = false · value exists · no onClear", icon: "ChevronDown", note: "Blue border — a clear button with nothing to clear is not rendered" },
                   { condition: "open = false · no value · state=error",icon: "CircleAlert", note: "Red border" },
                   { condition: "open = false · no value · default",    icon: "ChevronDown", note: "Gray border" },
                 ].map(r => (
@@ -12079,261 +12093,6 @@ SECTION_LOGIC
   Single_Select → one active value or neutral "All"
   Date_Presets → resolved as relative ranges at query time
   Sort         → ORDER BY only (does not filter)`} />
-          </PatternCard>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── PatternOverlayPage ────────────────────────────────────────────────────────
-
-function PatternOverlayPage() {
-  const [tab, setTab] = useState<string>("when-to-use")
-  const [modalOpen, setModalOpen] = useState(false)
-  const [slideoutOpen, setSlideoutOpen] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
-  return (
-    <div>
-      <div className="flex flex-col gap-[4px] mb-[28px]">
-        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
-        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Overlay Decision</h1>
-        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
-          Choose between Modal and Slide-out based on the level of interruption required. The wrong choice breaks user flow or under-communicates urgency.
-        </p>
-      </div>
-
-      <PatternTabRow tab={tab} setTab={setTab} />
-
-      {tab === "when-to-use" && (
-        <div className="flex flex-col gap-[24px]">
-          <div className="grid grid-cols-2 gap-[16px]">
-            <PatternCard>
-              <SectionLabel>Modal — Blocking</SectionLabel>
-              <AlertBanner state="error" title="Requires user attention before continuing" className="mb-[4px]" />
-              <div className="flex flex-col gap-[6px]">
-                {["Destructive or irreversible actions (delete, remove)", "Critical confirmations that cannot be ignored", "Forms requiring focused completion (multi-step)", "Actions where background interaction must be disabled"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
-                ))}
-              </div>
-            </PatternCard>
-            <PatternCard>
-              <SectionLabel>Slide-out — Non-blocking</SectionLabel>
-              <AlertBanner state="success" title="User can continue exploring in background" className="mb-[4px]" />
-              <div className="flex flex-col gap-[6px]">
-                {["Entity detail views (user can switch between records)", "Filter configuration panels", "Secondary actions (comments, history, settings)", "Progressive exploration — no decision required"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]"><span style={{ color: "var(--color-surface-success-default)" }}>✓</span><span className="text-[13px] text-[var(--foreground)]">{u}</span></div>
-                ))}
-              </div>
-            </PatternCard>
-          </div>
-          <PatternCard>
-            <SectionLabel>Quick Decision Rule</SectionLabel>
-            <div className="flex flex-col gap-[12px]">
-              <div className="flex items-center gap-[12px] p-[16px] rounded-[8px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                <span className="text-[28px]">❓</span>
-                <div>
-                  <p className="text-[15px] font-semibold text-[var(--foreground)]">Can the user safely ignore this and keep working?</p>
-                  <div className="flex gap-[16px] mt-[6px]">
-                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>NO</span> → Modal</span>
-                    <span className="text-[13px]"><span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>YES</span> → Slide-out</span>
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-                  <thead><tr style={{ borderBottom: "1px solid var(--table-border)" }}>{["Property", "Modal", "Slide-out"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}</tr></thead>
-                  <tbody>
-                    {[
-                      ["Background interaction", "Disabled", "Allowed"],
-                      ["Focus trap", "Yes", "No"],
-                      ["Dismiss without action", "Requires explicit action", "Close button / ESC / click outside"],
-                      ["Priority", "High — blocking", "Medium — contextual"],
-                      ["Max active simultaneously", "1", "1"],
-                      ["Can open on top of other", "Yes, over Slide-out", "No, not over Modal"],
-                    ].map(([prop, modal, slideout]) => (
-                      <tr key={prop} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-                        <td className="px-[12px] py-[8px] font-medium text-[var(--foreground)]">{prop}</td>
-                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{modal}</td>
-                        <td className="px-[12px] py-[8px] text-[var(--field-supporting)]">{slideout}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </PatternCard>
-          <PatternCard>
-            <SectionLabel>Do / Don't</SectionLabel>
-            <div className="grid grid-cols-2 gap-[12px]">
-              {[
-                { type: "do",   text: "Escalate to a confirmation Modal when the user tries to close a Slide-out that has unsaved changes." },
-                { type: "dont", text: "Don't open a Slide-out on top of an active Modal — Modal always wins the stacking order, never the reverse." },
-                { type: "do",   text: "Let a Modal open on top of an active Slide-out when a blocking decision interrupts the flow mid-task." },
-                { type: "dont", text: "Don't let a Slide-out close silently when it holds unsaved changes — always confirm first via Modal." },
-                { type: "do",   text: "Keep exactly one Modal and one Slide-out open at a time — never stack two of the same overlay type." },
-                { type: "dont", text: "Don't use Modal for progressive or exploratory content the user can safely ignore — that's what Slide-out is for." },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
-                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
-                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
-                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
-                </div>
-              ))}
-            </div>
-          </PatternCard>
-        </div>
-      )}
-
-      {tab === "anatomy" && (
-        <div className="flex flex-col gap-[24px]">
-          <div className="grid grid-cols-2 gap-[16px]">
-            <PatternCard>
-              <SectionLabel>Modal — Blocking Overlay</SectionLabel>
-              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
-                Interrupts the workflow. Background interaction is disabled. User must explicitly confirm or cancel.
-              </p>
-              <div className="flex flex-col gap-[6px] mb-[16px]">
-                {["Destructive or irreversible actions", "Critical confirmations", "Multi-step forms requiring focus", "Error states that block flow"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]">
-                    <span style={{ color: "var(--color-surface-error-default)", fontWeight: 700 }}>✕</span>
-                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" onClick={() => setModalOpen(true)}>
-                <LucideIcons.Play size={12} />
-                Try Modal
-              </Button>
-            </PatternCard>
-            <PatternCard>
-              <SectionLabel>Slide-out — Non-blocking Panel</SectionLabel>
-              <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
-                Appears from the right without interrupting. User can still interact with content behind it.
-              </p>
-              <div className="flex flex-col gap-[6px] mb-[16px]">
-                {["Entity detail views", "Filter configuration", "Comments, history, settings", "Progressive exploration — no decision required"].map((u, i) => (
-                  <div key={i} className="flex gap-[8px]">
-                    <span style={{ color: "var(--color-surface-success-default)", fontWeight: 700 }}>✓</span>
-                    <span className="text-[13px] text-[var(--foreground)]">{u}</span>
-                  </div>
-                ))}
-              </div>
-              <Button size="sm" variant="secondary" onClick={() => setSlideoutOpen(true)}>
-                <LucideIcons.Play size={12} />
-                Try Slide-out
-              </Button>
-            </PatternCard>
-          </div>
-
-          <PatternCard>
-            <SectionLabel>Escalation Pattern — Slide-out → Modal</SectionLabel>
-            <div className="flex gap-[8px] items-center mb-[14px]">
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                User edits inside Slide-out with unsaved changes
-              </div>
-              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px]" style={{ background: "var(--color-surface-neutral-default)", border: "0.5px solid var(--field-border)" }}>
-                User tries to close Slide-out
-              </div>
-              <span className="text-[18px]" style={{ color: "var(--primary)" }}>→</span>
-              <div className="flex-1 p-[10px] rounded-[6px] text-[13px] font-semibold" style={{ background: "var(--color-surface-primary-subtle)", border: "0.5px solid var(--primary)", color: "var(--primary)" }}>
-                Confirmation Modal appears on top
-              </div>
-            </div>
-            <Button size="sm" variant="secondary" onClick={() => setConfirmOpen(true)}>
-              <LucideIcons.Play size={12} />
-              Try escalation pattern
-            </Button>
-          </PatternCard>
-
-          {/* Real ModalDialog — delete confirmation */}
-          <ModalDialog
-            isOpen={modalOpen}
-            onClose={() => setModalOpen(false)}
-            variant="confirmation"
-            tone="error"
-            title="Delete workspace member?"
-            description="Sarah Chen will immediately lose access to all workspace resources. This action cannot be undone."
-            ctaPrimary={{ label: "Delete member", destructive: true, onClick: () => setModalOpen(false) }}
-            ctaSecondary={{ label: "Cancel", onClick: () => setModalOpen(false) }}
-          />
-
-          {/* Real ModalDialog — escalation confirmation */}
-          <ModalDialog
-            isOpen={confirmOpen}
-            onClose={() => setConfirmOpen(false)}
-            variant="confirmation"
-            tone="alert"
-            title="Discard unsaved changes?"
-            description="You have unsaved changes in this panel. Closing will discard them permanently."
-            ctaPrimary={{ label: "Discard changes", onClick: () => setConfirmOpen(false) }}
-            ctaSecondary={{ label: "Keep editing", onClick: () => setConfirmOpen(false) }}
-          />
-
-          {/* Real SlideOut — member details */}
-          <SlideOut
-            open={slideoutOpen}
-            onClose={() => setSlideoutOpen(false)}
-            title="Sarah Chen"
-            subtitle="Admin · Platform Team"
-            type="with-variants"
-            size="m"
-          />
-
-        </div>
-      )}
-
-      {tab === "rules" && (
-        <div className="flex flex-col gap-[24px]">
-          <PatternCard>
-            <SectionLabel>Technical Spec (from Figma)</SectionLabel>
-            <PatternRules code={`MODAL_SLIDEOUT_PATTERN
-
-MODAL
-  blocking                = true
-  background_interaction  = disabled
-  focus_trap              = required
-
-  USE when:
-    action_requires_confirmation == true
-    action_is_destructive        == true
-    user_must_complete_flow      == true
-    interaction_complexity == high AND requires_focus == true
-
-SLIDE_OUT
-  blocking                = false
-  background_interaction  = allowed
-  focus_trap              = not required (unless specified)
-
-  USE when:
-    user_views_details              == true
-    interaction_priority            == secondary
-    content_is_contextual           == true
-    interaction_can_be_interrupted  == true
-
-DECISION_LOGIC
-  IF blocking_interaction_required == true → USE MODAL
-  ELSE IF contextual AND non_blocking → USE SLIDE_OUT
-
-STACKING_RULES
-  max simultaneous MODAL    = 1
-  max simultaneous SLIDE_OUT = 1
-  Modal CAN appear on top of Slide-out
-  Slide-out CANNOT open on top of Modal
-
-DISMISS_RULES
-  MODAL:     requires explicit CTA or close action
-  SLIDE_OUT: Close button / ESC / click outside (if non-critical)
-
-UNSAVED_STATE_RULE
-  IF slide_out has unsaved changes AND user attempts close
-  → trigger CONFIRMATION MODAL before closing
-
-ESC_BEHAVIOR
-  MODAL:     closes if safe (no unsaved data); else show confirmation
-  SLIDE_OUT: closes by default; if unsaved → show confirmation modal`} />
           </PatternCard>
         </div>
       )}
@@ -15558,43 +15317,18 @@ function PatternFormsPage() {
         <div className="flex flex-col gap-[24px]">
 
           <PatternCard>
-            <SectionLabel>Form Context Decision Table</SectionLabel>
-            <div className="overflow-x-auto">
-              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
-                    {["Situation", "Form context", "Container"].map(h => (
-                      <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    ["Dedicated page — create or edit a single record", "Full-page form", "ScreenLayout · Header CTAs"],
-                    ["Multi-step process (3+ steps, 8+ total fields)", "Full-page wizard", "ScreenLayout + StepperNavFooter"],
-                    ["Destructive or must-stop action requiring input", "Blocking form", "ModalDialog"],
-                    ["Contextual create / edit (user can continue later)", "Side panel form", "SlideOut"],
-                    ["Quick single-field inline edit", "Inline edit", "Input (no container)"],
-                  ].map(([sit, ctx, comp]) => (
-                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
-                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
-                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ctx}</td>
-                      <td className="px-[12px] py-[10px]">
-                        <span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <SectionLabel>Which container for which situation?</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[640px]">
+              Surface selection — full-page, wizard, ModalDialog, or SlideOut — now lives entirely in the <strong className="text-[var(--foreground)]">Create</strong> pattern page (see "Patterns" in the sidebar), including the exact cascade for a Create flow and when a form belongs in a modal versus a panel. This page covers everything else about composing a form once its container is already chosen: field and section spacing, validation, and CTA placement, below.
+            </p>
           </PatternCard>
 
           <PatternCard>
             <SectionLabel>Do / Don't</SectionLabel>
             <div className="grid grid-cols-2 gap-[12px]">
               {[
-                { type: "do",   text: "Use StepperNavFooter for wizards with 3+ steps — distributes cognitive load and keeps each step focused." },
-                { type: "dont", text: "Don't open a ModalDialog for forms with more than 5 fields — the user needs room. Use SlideOut instead." },
+                { type: "do",   text: "Use StepperNavFooter for wizards — see the Create pattern page's own staged-flows table for exactly which stage/branching shape earns it, rather than a flat step count repeated here." },
+                { type: "dont", text: "Don't apply \"more than 5 fields → SlideOut\" to a Create flow — it's wrong in both directions: a standalone create over 5 fields goes to a dedicated view, and a contextual create goes to SlideOut regardless of field count. See the Create pattern page's own cascade." },
                 { type: "do",   text: "Group related fields into named sections with a 24px gap between groups and a 4px gap between the section label and the first field." },
                 { type: "dont", text: "Don't show validation errors on each keystroke — validate on blur. Clear errors immediately once the field becomes valid." },
                 { type: "do",   text: "Disable Next/Submit when any required field is empty. This pattern is mandatory for all multi-step forms." },
@@ -16213,6 +15947,1298 @@ const [touched, setTouched] = useState<Partial<Record<keyof FormState, boolean>>
             </div>
           </PatternCard>
 
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── PatternCreatePage ─────────────────────────────────────────────────────────
+// Structure mirrors PatternFormsPage on purpose — same header block, same 4
+// hand-rolled tabs (When to Use / Anatomy / Examples / Rules). Content is
+// derived from docs/patterns/create.md, the single source of truth for this
+// pattern; keep the two in sync when the rule changes. The audit that fed
+// that rule lives in docs/patterns/create-audit.md.
+
+// ── Create examples gallery — 6 previewable scenes, built from
+// docs/create-examples.md §2. Tours are 3 or 4 steps depending on whether
+// the scene's own surface is genuinely more than one screen (a two-stage
+// SlideOut, a wizard's confirmation, the catalogue's two sequential modals).
+
+const PG_CTX_TOPBAR_ACTIONS: TopbarAction[] = [
+  { icon: <LucideIcons.Sparkles size={16} />, label: "AI", variant: "primary" },
+  { icon: <LucideIcons.Bell size={16} />, label: "Notifications" },
+  { icon: <LucideIcons.Settings size={16} />, label: "Settings" },
+]
+
+const PG_CTX_WORKERS: EntityListItemData[] = [
+  { id: "w1", title: "Data Sync Worker", iconVariant: "info", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Ran 12m ago" },
+  { id: "w2", title: "Invoice Reconciliation Worker", iconVariant: "purple", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Ran 1h ago" },
+  { id: "w3", title: "Lead Enrichment Worker", iconVariant: "neutral", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Paused", variant: "neutral" }, timestamp: "Ran 2d ago" },
+]
+const PG_CTX_WORKERS_LANDING: EntityListItemData[] = [
+  { id: "w0", title: "Meridian Response Bot", iconVariant: "success", iconName: "Bot", primaryMeta: [{ iconName: "Zap", label: "Automation" }], state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_WORKERS,
+]
+
+const PG_CTX_AUTOMATIONS: EntityListItemData[] = [
+  { id: "a1", title: "New lead → CRM sync", iconVariant: "info", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Last run 8m ago" },
+  { id: "a2", title: "Invoice overdue reminder", iconVariant: "yellow", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Last run 3h ago" },
+  { id: "a3", title: "Weekly digest email", iconVariant: "neutral", iconName: "Zap", state: { label: "Draft", variant: "neutral" }, timestamp: "Never run" },
+]
+const PG_CTX_AUTOMATIONS_LANDING: EntityListItemData[] = [
+  { id: "a0", title: "Lead follow-up", iconVariant: "success", iconName: "Zap", state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_AUTOMATIONS,
+]
+
+const PG_CTX_USERS: EntityListItemData[] = [
+  { id: "u1", title: "Priya Shah", iconVariant: "info", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Admin" }], state: { label: "Active", variant: "success" }, timestamp: "Joined 2024" },
+  { id: "u2", title: "Marcus Tran", iconVariant: "purple", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Editor" }], state: { label: "Active", variant: "success" }, timestamp: "Joined 2024" },
+  { id: "u3", title: "Jordan Lee", iconVariant: "neutral", iconName: "User", primaryMeta: [{ iconName: "Shield", label: "Viewer" }], state: { label: "Invited", variant: "neutral" }, timestamp: "Invited 3d ago" },
+]
+
+const PG_CTX_POLICIES: EntityListItemData[] = [
+  { id: "p1", title: "Data Access Policy", iconVariant: "info", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 2w ago" },
+  { id: "p2", title: "Retention Policy", iconVariant: "purple", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 1mo ago" },
+  { id: "p3", title: "Export Approval Policy", iconVariant: "info", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 3mo ago" },
+  { id: "p4", title: "Vendor Access Policy", iconVariant: "yellow", iconName: "ShieldCheck", state: { label: "Active", variant: "success" }, timestamp: "Updated 4mo ago" },
+  { id: "p5", title: "API Rate Limit Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
+  { id: "p6", title: "Third-Party Sharing Policy", iconVariant: "neutral", iconName: "ShieldCheck", state: { label: "Draft", variant: "neutral" }, timestamp: "Never published" },
+]
+const PG_CTX_POLICIES_LANDING: EntityListItemData[] = [
+  { id: "p0", title: "Data Retention Policy", iconVariant: "yellow", iconName: "ShieldCheck", state: { label: "Pending review", variant: "alert" }, timestamp: "Submitted just now" },
+  ...PG_CTX_POLICIES,
+]
+
+const PG_CTX_TEMPLATES: { id: string; name: string; desc: string; category: string }[] = [
+  { id: "t1", name: "Lead follow-up", desc: "Sends a follow-up email 24h after a new lead is created.", category: "Sales" },
+  { id: "t2", name: "Deal stage reminder", desc: "Pings the owner when a deal sits in one stage for 5+ days.", category: "Sales" },
+  { id: "t3", name: "Invoice reminder", desc: "Notifies the account owner when an invoice is 7 days overdue.", category: "Finance" },
+  { id: "t4", name: "Expense approval routing", desc: "Routes expense reports over $500 to a manager for sign-off.", category: "Finance" },
+  { id: "t5", name: "Weekly digest", desc: "Compiles workspace activity into a Friday summary email.", category: "Reporting" },
+]
+
+const PG_CTX_API_KEYS: EntityListItemData[] = [
+  { id: "k1", title: "Production API Key", iconVariant: "info", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Created 3mo ago" },
+  { id: "k2", title: "Staging API Key", iconVariant: "purple", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Created 1mo ago" },
+  { id: "k3", title: "Analytics Read Key", iconVariant: "yellow", iconName: "KeyRound", state: { label: "Expiring soon", variant: "alert" }, timestamp: "Expires in 5d" },
+  { id: "k4", title: "Legacy Webhook Key", iconVariant: "neutral", iconName: "KeyRound", state: { label: "Revoked", variant: "neutral" }, timestamp: "Revoked 2mo ago" },
+]
+const PG_CTX_API_KEYS_LANDING: EntityListItemData[] = [
+  { id: "k0", title: "Reporting API Key", iconVariant: "success", iconName: "KeyRound", state: { label: "Active", variant: "success" }, timestamp: "Just now" },
+  ...PG_CTX_API_KEYS,
+]
+
+function PgRunRow({ status, time }: { status: "success" | "error"; time: string }) {
+  return (
+    <div className="flex items-center justify-between rounded-[8px] p-[10px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="flex items-center gap-[6px]">
+        <Tag variant={status === "success" ? "success" : "error"} size="sm">{status === "success" ? "Success" : "Failed"}</Tag>
+      </div>
+      <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+    </div>
+  )
+}
+
+function PgNoteRow({ author, time, text, highlighted }: { author: string; time: string; text: string; highlighted?: boolean }) {
+  return (
+    <div className="rounded-[8px] p-[10px]" style={{
+      border: highlighted ? "0.5px solid var(--color-border-success-lighter)" : "0.5px solid var(--field-border)",
+      background: highlighted ? "var(--color-surface-success-more-subtle)" : "transparent",
+    }}>
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold" style={{ color: "var(--foreground)" }}>{author}</span>
+        <span className="text-[10px]" style={{ color: "var(--field-supporting)" }}>{time}</span>
+      </div>
+      <p className="text-[11px] mt-[3px]" style={{ color: "var(--field-supporting)" }}>{text}</p>
+    </div>
+  )
+}
+
+// Gallery row — one case in the Examples gallery. "preview" gets a Launch
+// preview button; "pending" gets a muted tag (exists as a rule, not as a
+// component yet); "info" gets neither (nothing is pending — the pattern
+// deliberately doesn't specify anything further here).
+function PgGalleryRow({ label, surface, note, status, onLaunch }: {
+  label: string; surface: string; note: string
+  status: "preview" | "pending" | "info"
+  onLaunch?: () => void
+}) {
+  return (
+    <div className="flex items-start justify-between gap-[16px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)" }}>
+      <div className="min-w-0">
+        <span className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>{label}</span>
+        <div className="mt-[4px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surface}</span></div>
+        <p className="text-[12px] mt-[6px]" style={{ color: "var(--field-supporting)" }}>{note}</p>
+      </div>
+      {status === "preview" && <Button variant="primary" size="sm" className="shrink-0" onClick={onLaunch}>Launch preview</Button>}
+      {status === "pending" && <Tag variant="secondary" size="sm" className="shrink-0">Pending</Tag>}
+    </div>
+  )
+}
+
+// List-view content body — Filters pinned at the top, the entity list scrolling
+// in the middle, Pagination anchored outside that scroll area at the bottom.
+// The list fills the available width; only the view's own 32px padding limits
+// it — no arbitrary max-w. Shared by every list-view scene so this structure
+// (and its 3 recurring bugs — Pagination inside the scroll, a width cap on the
+// list, and mismatched item counts) can't drift independently per scene again.
+function PgListViewBody({ searchPlaceholder, filterSlots, items, visibleCount = 2 }: {
+  searchPlaceholder: string
+  filterSlots: { placeholder: string }[]
+  items: EntityListItemData[]
+  visibleCount?: number
+}) {
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden px-[32px] py-[28px] gap-[16px]">
+      <Filters searchPlaceholder={searchPlaceholder} slots={filterSlots} />
+      <div className="flex-1 overflow-y-auto flex flex-col gap-[12px]">
+        {items.slice(0, visibleCount).map(item => (
+          <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
+            <EntityList items={[item]} />
+          </CardContainer>
+        ))}
+      </div>
+      <Pagination currentPage={1} totalItems={items.length} itemsPerPage={visibleCount} onPageChange={() => {}} />
+    </div>
+  )
+}
+
+// Forms pattern — section label (11px, uppercase) 4px above its fields, 16px
+// between fields within the section. 24px between sections is the caller's
+// own gap on the parent stack, not this component's concern.
+function PgFormSection({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-[4px]">
+      <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
+      <div className="flex flex-col gap-[16px]">{children}</div>
+    </div>
+  )
+}
+
+// Select is trigger-only — no built-in option list, so a working dropdown has
+// to be composed. Anchored with @base-ui/react's Popover instead of hand-computed
+// getBoundingClientRect() math: whether that math is correct depends on which
+// ancestor happens to carry a transform and whether the surrounding surface
+// portals (SlideOut does, ModalDialog does not always) — four combinations,
+// correct in some, wrong in the rest. Popover.Positioner's `anchor` ref resolves
+// the containing block itself through Floating UI, correctly through transforms
+// and portals alike, and also handles edge collision and flipping for free.
+// z-[10030] clears ModalDialog's z-[10020] and SlideOut's z-[10010] — the
+// popover portals to document.body as a sibling of both, not a descendant.
+function PgInteractiveSelect({ placeholder, options }: { placeholder: string; options: string[] }) {
+  const [open, setOpen] = useState(false)
+  const [value, setValue] = useState<string | undefined>(undefined)
+  const triggerRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <div ref={triggerRef}>
+      <Select
+        placeholder={placeholder}
+        value={value}
+        open={open}
+        onClick={() => setOpen(o => !o)}
+        onClear={() => setValue(undefined)}
+      />
+      <Popover.Root open={open} onOpenChange={setOpen}>
+        <Popover.Portal>
+          <Popover.Positioner anchor={triggerRef} side="bottom" align="start" sideOffset={4} style={{ zIndex: 10030 }}>
+            <Popover.Popup
+              className="flex flex-col rounded-[8px] overflow-hidden"
+              style={{
+                minWidth: 200,
+                background: "var(--surface-floating-default)",
+                border: "0.5px solid var(--color-border-neutral-subtle)",
+                boxShadow: "var(--shadow-elevation-5)",
+              }}
+            >
+              {options.map(opt => (
+                <MenuItem key={opt} label={opt} size="sm" onClick={() => { setValue(opt); setOpen(false) }} />
+              ))}
+            </Popover.Popup>
+          </Popover.Positioner>
+        </Popover.Portal>
+      </Popover.Root>
+    </div>
+  )
+}
+
+// TagInput is a controlled component — this just gives each scene instance its
+// own local tag list so the demo is genuinely interactive, not a static prop.
+function PgInteractiveTagInput({ placeholder }: { placeholder?: string }) {
+  const [tags, setTags] = useState<string[]>([])
+  return (
+    <TagInput
+      tags={tags}
+      onAddTag={t => setTags(ts => [...ts, t])}
+      onRemoveTag={t => setTags(ts => ts.filter(x => x !== t))}
+      placeholder={placeholder}
+    />
+  )
+}
+
+// A catalogue is browsed, not scanned top-to-bottom like a plain list — categories
+// on the left, search, cards on the right. This is a genuinely different shape
+// from the field-form modals (Scene B/B2), which is the point: a catalogue
+// SELECTS an object, it never IS the create form. Composed entirely from real DS
+// components (CardContainer, HighlightIcon, Tag, Input, Button) — no new file.
+function PgCatalogueBrowser({ items, onUse }: {
+  items: { id: string; name: string; desc: string; category: string }[]
+  onUse: () => void
+}) {
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
+  const categories = Array.from(new Set(items.map(t => t.category)))
+  const visible = items.filter(t =>
+    (!activeCategory || t.category === activeCategory) &&
+    t.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const categoryButton = (label: string, count: number, isActive: boolean, onClick: () => void) => (
+    <button
+      key={label}
+      onClick={onClick}
+      className="flex items-center justify-between rounded-[8px] px-[10px] py-[8px] text-[13px] transition-colors"
+      style={{
+        background: isActive ? "var(--color-surface-primary-subtle)" : "transparent",
+        color: isActive ? "var(--primary)" : "var(--foreground)",
+        fontWeight: isActive ? 600 : 400,
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ color: "var(--field-supporting)" }}>{count}</span>
+    </button>
+  )
+
+  return (
+    <div className="flex" style={{ height: 420 }}>
+      <div className="w-[180px] shrink-0 flex flex-col gap-[2px] pr-[16px]" style={{ borderRight: "0.5px solid var(--field-border)" }}>
+        {categoryButton("All templates", items.length, activeCategory === null, () => setActiveCategory(null))}
+        {categories.map(cat => categoryButton(cat, items.filter(t => t.category === cat).length, activeCategory === cat, () => setActiveCategory(cat)))}
+      </div>
+      <div className="flex-1 flex flex-col gap-[14px] pl-[20px] overflow-hidden">
+        <Input leftIcon={<LucideIcons.Search className="w-[14px] h-[14px]" />} placeholder="Search templates…" value={search} onChange={e => setSearch(e.target.value)} />
+        <div className="flex-1 overflow-y-auto grid grid-cols-2 gap-[12px] content-start">
+          {visible.map(t => (
+            <CardContainer key={t.id} size="sm">
+              <div className="flex flex-col gap-[8px]">
+                <HighlightIcon size="md" variant="informative" iconName="Zap" />
+                <span className="text-[14px] font-semibold" style={{ color: "var(--foreground)" }}>{t.name}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{t.category}</span>
+                <p className="text-[12px]" style={{ color: "var(--field-supporting)" }}>{t.desc}</p>
+                <Button variant="secondary" size="sm" onClick={onUse}>Use template</Button>
+              </div>
+            </CardContainer>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Shared shell — Topbar + Sidebar, matching forms-create-page-example.tsx's
+// own composition exactly. `overlay` renders after the row so ModalDialog/
+// SlideOut (both position:fixed, SlideOut also portal-based) stack correctly
+// regardless of nesting — confirmed against modal-dialog.tsx / slide-out.tsx.
+function PgCreateContextShell({ sidebarId, overlay, hideSidebar, children }: { sidebarId: string; overlay?: React.ReactNode; hideSidebar?: boolean; children: React.ReactNode }) {
+  const [activeSidebar, setActiveSidebar] = useState(sidebarId)
+  return (
+    <div className="flex flex-col h-full">
+      <AppBackground />
+      <Topbar workspaceName="Ops Team" companyName="AIMS OS" actions={PG_CTX_TOPBAR_ACTIONS} />
+      <div className="flex flex-1 overflow-hidden">
+        {!hideSidebar && <Sidebar items={DEFAULT_SIDEBAR_ITEMS} activeId={activeSidebar} onItemClick={setActiveSidebar} />}
+        {children}
+      </div>
+      {overlay}
+    </div>
+  )
+}
+
+type PgTourStepDef = { label: string; note: string; content: React.ReactNode }
+type PgPreviewCaseId = "contextual-slideout" | "standalone-modal" | "standalone-modal-apikey" | "standalone-fullpage" | "staged-wizard" | "catalogue"
+
+// Section 1 · "the trigger lives where the collection lives" → SlideOut attaches to the record
+function pgSceneContextualSlideout(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const existingNotes = [
+    { author: "Priya S.", time: "2h ago", text: "Bumped the retry limit to 5 after last week's timeout." },
+    { author: "Marcus T.", time: "1d ago", text: "Confirmed the field mapping matches the new billing schema." },
+  ]
+  const frame = (overlay?: React.ReactNode, isLanding?: boolean) => (
+    <PgCreateContextShell sidebarId="agents" overlay={overlay}>
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Header title="Data Sync Worker" description="Worker · Active" tag={<Tag variant="success" size="sm">Active</Tag>}
+          breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Data Sync Worker" }]} onNavigate={() => {}} />}
+          size="size-l"
+          primaryAction={{ label: "Run now" }} />
+        <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+          <div className="grid grid-cols-[1fr_330px] gap-[20px] items-start max-w-[1040px]">
+            <div className="flex flex-col gap-[12px]">
+              <div className="rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+                <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+                <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Syncs contact records between the CRM and the billing system every 15 minutes.</p>
+              </div>
+              <WidgetFather title="Recent Runs" widthClass="wide" showRefresh showMenu>
+                <div className="flex flex-col gap-[8px]">
+                  <PgRunRow status="success" time="12m ago" />
+                  <PgRunRow status="success" time="27m ago" />
+                  <PgRunRow status="error" time="42m ago" />
+                </div>
+              </WidgetFather>
+            </div>
+            <WidgetFather title="Notes" widthClass="narrow" cta={{ count: 1, type: "hug", primaryLabel: "+ Add note", onPrimary: next }}>
+              <div className="flex flex-col gap-[8px]">
+                {isLanding && <PgNoteRow author="You" time="Just now" text="Reached out to the vendor about the timeout — waiting on their reply." highlighted />}
+                {existingNotes.map(n => <PgNoteRow key={n.author} {...n} />)}
+              </div>
+            </WidgetFather>
+          </div>
+        </div>
+      </main>
+    </PgCreateContextShell>
+  )
+  return [
+    { label: "Trigger visible", note: "The trigger lives inside the Notes widget's own header — the collection it fills — not the page Header, which is reserved for the worker's own primary action, Run now.", content: frame() },
+    { label: "Surface open", note: "SlideOut type=\"full-slot\" — docked, not modal. The record and its existing notes stay visible behind it. Three fields, because that is what a note needs here — a note on a different object would carry different ones.", content: frame(
+      <SlideOut open onClose={back} type="full-slot" size="s" showScrollbar={false}>
+        <div className="flex flex-col gap-[16px] h-full">
+          <span className="text-[16px] font-semibold" style={{ color: "var(--color-text-title)" }}>New note</span>
+          <PgFormSection label="Note">
+            <PgInteractiveSelect placeholder="Category" options={["Incident", "Configuration", "Follow-up"]} />
+            <PgInteractiveTagInput placeholder="Add a tag…" />
+            <Textarea placeholder="Write a note…" />
+          </PgFormSection>
+          <div className="flex-1" />
+          <div className="flex justify-end gap-[8px]">
+            <Button variant="secondary" size="sm" onClick={back}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={next}>Add note</Button>
+          </div>
+        </div>
+      </SlideOut>
+    ) },
+    { label: "Landing", note: "Closes. The new note is the first row of the Notes widget, briefly highlighted — no success banner, the note appearing is the confirmation.", content: frame(undefined, true) },
+  ]
+}
+
+// Section 2 · standalone, ≤5 fields → ModalDialog
+function pgSceneStandaloneModal(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_WORKERS) => {
+    const active = items.filter(w => w.state?.variant === "success").length
+    return (
+      <PgCreateContextShell sidebarId="agents" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Workers" description={`${items.length} workers · ${active} active`} size="size-l"
+            primaryAction={{ label: "New worker", onClick: next }} />
+          <PgListViewBody searchPlaceholder="Search workers…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Owner" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "A standalone entity, from its own list view — 4 fields, because that is what a worker needs. Field count is an input to the cascade, not an output of it.", content: frame() },
+    { label: "Surface open", note: "ModalDialog variant=\"content\" — the user can't ignore this and keep working; nothing on screen is this worker's parent. slotUnstyled: fields sit directly on the modal, no gray wrapper card. Four fields, because that is what a worker needs — see the API key scene for the same modal with two.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="New Worker" description="Add a new AI worker to your team."
+        slot={
+          <PgFormSection label="Worker details">
+            <Input placeholder="Worker name" />
+            <PgInteractiveSelect placeholder="Role" options={["Operator", "Analyst", "Supervisor"]} />
+            <PgInteractiveSelect placeholder="Model" options={["GPT-class", "Claude-class", "Custom"]} />
+            <Input placeholder="Assigned team" />
+          </PgFormSection>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
+      />
+    ) },
+    { label: "Landing", note: "Closes. The user returns to the list; the new worker appears there.", content: frame(undefined, PG_CTX_WORKERS_LANDING) },
+  ]
+}
+
+// Section 2 · the same surface as scene B, a different object — the container
+// is the constant, the content is the variable. See create.md §1b.
+function pgSceneStandaloneModalApiKey(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_API_KEYS) => {
+    const expiring = items.filter(k => k.state?.label === "Expiring soon").length
+    return (
+      <PgCreateContextShell sidebarId="settings" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="API keys" description={`${items.length} keys · ${expiring} expiring`} size="size-l"
+            primaryAction={{ label: "New key", onClick: next }} />
+          <PgListViewBody searchPlaceholder="Search keys…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "The same ModalDialog as the Worker scene — but this object needs two fields, not four.", content: frame() },
+    { label: "Surface open", note: "Same modal, same slotUnstyled, same Forms-pattern spacing. Two fields, because that is what an API key needs. The pattern chose the container; the object chose the fields.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="New API Key" description="Generate a new API key for this workspace."
+        slot={
+          <PgFormSection label="Key details">
+            <Input placeholder="Label" />
+            <PgInteractiveSelect placeholder="Scope" options={["Read", "Read and write", "Admin"]} />
+          </PgFormSection>
+        }
+        ctaPrimary={{ label: "Create", onClick: next }}
+        ctaSecondary={{ label: "Cancel", onClick: back }}
+      />
+    ) },
+    { label: "Landing", note: "Closes, back on the list, the new key as the first row, briefly highlighted.", content: frame(undefined, PG_CTX_API_KEYS_LANDING) },
+  ]
+}
+
+// Section 2 · standalone, >5 fields → Full-page create form
+function pgSceneStandaloneFullPage(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  return [
+    { label: "Trigger visible", note: "Standalone, more than 5 fields — too much for a modal, but only one stage, so no Stepper.", content: (
+      <PgCreateContextShell sidebarId="contacts">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Users" description={`${PG_CTX_USERS.length} users · ${PG_CTX_USERS.filter(u => u.state?.label === "Invited").length} invited`} size="size-l"
+            primaryAction={{ label: "New user", onClick: next }} />
+          <PgListViewBody searchPlaceholder="Search users…" filterSlots={[{ placeholder: "Role" }, { placeholder: "Status" }]} items={PG_CTX_USERS} />
+        </main>
+      </PgCreateContextShell>
+    ) },
+    { label: "Surface open", note: "A create page has no create CTA in its Header — title and backButton only. The action completes in StepperNavFooter at the bottom, the only place the flow can be finished. The Sidebar is gone too, for the same reason: this form only exists as a full page because it earned it by being long — exactly the case where an accidental nav click costs the most.", content: (
+      <PgCreateContextShell sidebarId="contacts" hideSidebar>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New User" description="Add a teammate to this workspace" backButton size="size-l" />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[680px] flex flex-col gap-[24px]">
+              <PgFormSection label="Basic information">
+                <Input placeholder="Full name" />
+                <Input placeholder="Email" />
+                <PgInteractiveSelect placeholder="Role" options={["Admin", "Editor", "Viewer"]} />
+                <PgInteractiveSelect placeholder="Team" options={["Growth", "Platform", "Support"]} />
+              </PgFormSection>
+              <PgFormSection label="Access & details">
+                <PgInteractiveSelect placeholder="Access level" options={["Full access", "Standard", "Restricted"]} />
+                <PgInteractiveSelect placeholder="Manager" options={["Priya Shah", "Marcus Tran", "Jordan Lee"]} />
+                <Input placeholder="Phone number" />
+                <Input placeholder="Location" />
+                <Textarea placeholder="Notes (optional)" />
+              </PgFormSection>
+            </div>
+          </div>
+          <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Create user" onNext={next} />
+        </div>
+      </PgCreateContextShell>
+    ) },
+    { label: "Landing", note: "Navigates to the created object.", content: (
+      <PgCreateContextShell sidebarId="contacts">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Alex Rivera" description="User · Editor" tag={<Tag variant="success" size="sm">Active</Tag>}
+            breadcrumb={<Breadcrumb depth={2} items={[{ label: "Users", href: "users" }, { label: "Alex Rivera" }]} onNavigate={() => {}} />}
+            size="size-l" />
+          <div className="flex-1 overflow-y-auto px-[32px] py-[28px]">
+            <div className="max-w-[680px] rounded-[12px] p-[16px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>Overview</span>
+              <p className="text-[13px] mt-[8px]" style={{ color: "var(--field-supporting)" }}>Editor access, added to the Growth team.</p>
+            </div>
+          </div>
+        </main>
+      </PgCreateContextShell>
+    ) },
+  ]
+}
+
+// Section 3 · two or more stages, or any branching → Full-page wizard. Staged
+// flows never live in a panel — there is no Stepper inside a SlideOut.
+function pgSceneStagedWizard(next: () => void, back: () => void, _onClose: () => void, toast: ReturnType<typeof useToast>): PgTourStepDef[] {
+  const draft = PG_CTX_POLICIES.filter(p => p.state?.label === "Draft").length
+
+  const wizardShell = (stageIndex: number, body: React.ReactNode, footer: React.ReactNode) => (
+    <PgCreateContextShell sidebarId="knowledge" hideSidebar>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
+        <div className="px-[24px] pt-[16px] shrink-0">
+          <Stepper steps={["Scope", "Rules", "Approvals", "Review"].map((label, idx) => ({
+            label,
+            state: idx < stageIndex ? "completed" : idx === stageIndex ? "active" : "default",
+          }))} />
+        </div>
+        <div className="flex-1 overflow-y-auto px-[24px] pt-[16px]">
+          <div className="max-w-[680px] flex flex-col gap-[16px]">{body}</div>
+        </div>
+        {footer}
+      </div>
+    </PgCreateContextShell>
+  )
+
+  return [
+    { label: "Trigger visible", note: "Two or more stages — a full-page wizard, not a SlideOut. Staged flows never live in a panel.", content: (
+      <PgCreateContextShell sidebarId="knowledge">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Policies" description={`${PG_CTX_POLICIES.length} policies · ${draft} draft`} size="size-l"
+            primaryAction={{ label: "New policy", onClick: next }} />
+          <PgListViewBody searchPlaceholder="Search policies…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={PG_CTX_POLICIES} />
+        </main>
+      </PgCreateContextShell>
+    ) },
+    { label: "Stage 1 of 4 — Scope", note: "Full-page wizard — Stepper + StepperNavFooter. The wizard never puts Cancel/Next in the Header; StepperNavFooter owns navigation. The app's Sidebar is gone for the duration — a stray click into Automations or Contacts would silently discard whatever stage the user is on, and this is the surface with the most stages to lose.", content: wizardShell(0,
+      <>
+        <Input placeholder="Policy name" />
+        <PgInteractiveSelect placeholder="Applies to" options={["All tenant workspaces", "This workspace only", "Selected teams"]} />
+      </>,
+      <StepperNavFooter variant="cancel-next" onCancel={back} nextLabel="Next" onNext={next} />
+    ) },
+    { label: "Stage 2 of 4 — Rules", note: "Next now advances the wizard's own stage, not just the tour — the Stepper moves from Scope to Rules.", content: wizardShell(1,
+      <>
+        <PgInteractiveSelect placeholder="Retention period" options={["30 days", "90 days", "1 year", "Indefinite"]} />
+        <Textarea placeholder="Describe what this policy restricts…" />
+      </>,
+      <StepperNavFooter variant="back-next" onBack={back} nextLabel="Next" onNext={next} />
+    ) },
+    { label: "Stage 3 of 4 — Approvals", note: "Same shape, third stage — this is what a 4-stage wizard actually looks like stepping through it, not a single screen standing in for four.", content: wizardShell(2,
+      <>
+        <PgInteractiveSelect placeholder="Approver" options={["Compliance Lead", "Legal", "CTO"]} />
+        <PgInteractiveSelect placeholder="Escalation path" options={["Slack channel", "Email", "Both"]} />
+      </>,
+      <StepperNavFooter variant="back-next" onBack={back} nextLabel="Next" onNext={next} />
+    ) },
+    { label: "Stage 4 of 4 — Review", note: "The last stage reviews what was entered, read-only, before the irreversible step. Next becomes Publish here, not before.", content: wizardShell(3,
+      <div className="rounded-[12px] p-[16px] flex flex-col gap-[10px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+        {[
+          ["Policy name", "Data Retention Policy"],
+          ["Applies to", "All tenant workspaces"],
+          ["Retention period", "1 year"],
+          ["Approver", "Compliance Lead"],
+        ].map(([label, value]) => (
+          <div key={label} className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>{label}</span>
+            <span className="text-[13px]" style={{ color: "var(--foreground)" }}>{value}</span>
+          </div>
+        ))}
+      </div>,
+      <StepperNavFooter variant="back-next" onBack={back} nextLabel="Publish" onNext={next} />
+    ) },
+    { label: "Confirm", note: "The creation is irreversible and tenant-wide — this earns a confirmation, independent of which surface built it. Publishing doesn't make the policy Active immediately — see the next step.", content: (
+      <PgCreateContextShell sidebarId="knowledge" hideSidebar
+        overlay={
+          <ModalDialog isOpen onClose={back} variant="confirmation" tone="warning" iconName="AlertTriangle"
+            title="Publish this policy?"
+            description="This policy applies tenant-wide and cannot be undone once published."
+            ctaPrimary={{ label: "Publish", onClick: () => {
+              toast.success("Policy submitted for Council review", { description: "You'll be notified once it's approved — nothing changed on this screen." })
+              next()
+            } }}
+            ctaSecondary={{ label: "Cancel", onClick: back }}
+          />
+        }>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header title="New Policy" description="Define a governance policy for this workspace" backButton size="size-l" />
+          <div className="px-[24px] pt-[16px] shrink-0">
+            <Stepper steps={[
+              { label: "Scope", state: "completed" },
+              { label: "Rules", state: "completed" },
+              { label: "Approvals", state: "completed" },
+              { label: "Review", state: "active" },
+            ]} />
+          </div>
+        </div>
+      </PgCreateContextShell>
+    ) },
+    { label: "Landing", note: "The result isn't visible yet — a governance policy is a governed action awaiting Council review, exactly §4b's invisible-result case. useToast() already fired when Publish was clicked; the user stays right where they were, on the list.", content: (
+      <PgCreateContextShell sidebarId="knowledge">
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Policies" description={`${PG_CTX_POLICIES_LANDING.length} policies · ${draft} draft`} size="size-l"
+            primaryAction={{ label: "New policy", onClick: () => {} }} />
+          <PgListViewBody searchPlaceholder="Search policies…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Scope" }]} items={PG_CTX_POLICIES_LANDING} />
+        </main>
+      </PgCreateContextShell>
+    ) },
+  ]
+}
+
+// Section 4 · from a catalogue → selection modal, then the pre-filled form.
+// 4 steps, not 3 — the surface here is genuinely two connected screens.
+function pgSceneCatalogue(next: () => void, back: () => void, _onClose: () => void): PgTourStepDef[] {
+  const frame = (overlay?: React.ReactNode, items: EntityListItemData[] = PG_CTX_AUTOMATIONS) => {
+    const draft = items.filter(a => a.state?.label === "Draft").length
+    return (
+      <PgCreateContextShell sidebarId="automations" overlay={overlay}>
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Header title="Automations" description={`${items.length} automations · ${draft} draft`} size="size-l"
+            primaryAction={{ label: "New automation", onClick: next }} />
+          <PgListViewBody searchPlaceholder="Search automations…" filterSlots={[{ placeholder: "Status" }, { placeholder: "Category" }]} items={items} />
+        </main>
+      </PgCreateContextShell>
+    )
+  }
+  return [
+    { label: "Trigger visible", note: "Browsing a catalogue — templates, marketplace, starting points.", content: frame() },
+    { label: "Catalogue open", note: "ModalDialog variant=\"content\" — a selection surface only. Categories + search + a card per template — deliberately not the field-form modal's own shape, so the two read as different surfaces even from a glance. Gate 1: the template already fully defines the automation, so \"Use template\" creates it directly — no second, pre-filled form to click through. The X is the only dismiss; a redundant Cancel button next to it was removed.", content: frame(
+      <ModalDialog isOpen onClose={back} variant="content" slotUnstyled
+        title="Choose a template" description="Start from a template, or build from scratch."
+        slot={<PgCatalogueBrowser items={PG_CTX_TEMPLATES} onUse={next} />}
+      />
+    ) },
+    { label: "Landing", note: "Closes. The user returns to the list; the new automation appears there.", content: frame(undefined, PG_CTX_AUTOMATIONS_LANDING) },
+  ]
+}
+
+const PG_PREVIEW_SCENES: Record<PgPreviewCaseId, (next: () => void, back: () => void, onClose: () => void, toast: ReturnType<typeof useToast>) => PgTourStepDef[]> = {
+  "contextual-slideout": pgSceneContextualSlideout,
+  "standalone-modal": pgSceneStandaloneModal,
+  "standalone-modal-apikey": pgSceneStandaloneModalApiKey,
+  "standalone-fullpage": pgSceneStandaloneFullPage,
+  "staged-wizard": pgSceneStagedWizard,
+  "catalogue": pgSceneCatalogue,
+}
+
+// The didactic bar is the ONLY place that explains the rule — it sits in its
+// own strip above the simulated frame, outside it, in normal flow (not
+// portaled, not floating on top). The simulated product's own copy never
+// explains why a surface was chosen. The single "Close Preview" button is
+// the only exit; the last tour step has no "Next".
+//
+// SlideOut and ModalDialog are `position: fixed` and would otherwise ignore
+// this flex layout entirely, covering the bar regardless of DOM order (they
+// portal to document.body). `transform` on the frame wrapper below gives it
+// a CSS containing block for fixed-position descendants — SlideOut/
+// ModalDialog's `inset-0` resolves against THIS box, which already starts
+// below the bar, instead of the true viewport. That's what keeps the bar in
+// its own strip; no z-index or portal juggling needed for it.
+function PgCreatePreviewTour({ caseId, onClose }: { caseId: PgPreviewCaseId; onClose: () => void }) {
+  const [step, setStep] = useState(0)
+  const next = () => setStep(s => s + 1)
+  const back = () => setStep(s => Math.max(0, s - 1))
+  const toast = useToast()
+  const steps = PG_PREVIEW_SCENES[caseId](next, back, onClose, toast)
+  const i = Math.min(step, steps.length - 1)
+  const current = steps[i]
+
+  return (
+    <div className="fixed inset-0 flex flex-col" style={{ zIndex: 9999 }}>
+      <AppBackground />
+      <div className="shrink-0 flex items-center justify-between gap-[16px] px-[24px] pr-[170px] py-[14px]" style={{ background: "var(--surface)", borderBottom: "1px solid var(--field-border)" }}>
+        <div className="min-w-0">
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--primary)" }}>Step {i + 1} of {steps.length} — {current.label}</span>
+          <p className="text-[13px] mt-[2px]" style={{ color: "var(--field-supporting)" }}>{current.note}</p>
+        </div>
+        <div className="flex gap-[8px] shrink-0">
+          <Button variant="secondary" size="sm" disabled={i === 0} onClick={back}>Back</Button>
+          {i < steps.length - 1 && <Button variant="primary" size="sm" onClick={next}>Next</Button>}
+        </div>
+      </div>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ transform: "translateZ(0)" }}>
+        {current.content}
+      </div>
+      <button
+        onClick={onClose}
+        className="fixed flex items-center gap-[6px] rounded-[6px]"
+        style={{ top: 10, right: 12, zIndex: 10, background: "var(--color-surface-error-more-subtle)", border: "0.5px solid var(--color-status-error-default)", color: "var(--color-status-error-default)", fontSize: 12, fontWeight: 600, padding: "5px 10px" }}
+      >
+        <LucideIcons.X size={12} /> Close Preview
+      </button>
+    </div>
+  )
+}
+
+function PatternCreatePage() {
+  const [tab, setTab] = useState<string>("when-to-use")
+  const [pgPreviewCase, setPgPreviewCase] = useState<PgPreviewCaseId | null>(null)
+  const pgCreateToast = useToast()
+
+  return (
+    <div>
+      {pgPreviewCase && (
+        <PgCreatePreviewTour caseId={pgPreviewCase} onClose={() => setPgPreviewCase(null)} />
+      )}
+
+      <div className="flex flex-col gap-[4px] mb-[28px]">
+        <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: "var(--primary)" }}>Pattern</span>
+        <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Create</h1>
+        <p className="text-[14px] text-[var(--field-supporting)] max-w-[640px]">
+          Which surface to use when a new object comes into existence — ModalDialog, SlideOut, or a full-page form — decided by a cascade, not a single lookup.
+        </p>
+      </div>
+
+      <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
+        {([
+          { id: "when-to-use", label: "When to Use" },
+          { id: "anatomy",     label: "Anatomy"     },
+          { id: "examples",    label: "Examples"    },
+          { id: "rules",       label: "Rules"       },
+        ] as { id: string; label: string }[]).map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className="px-[14px] py-[8px] text-[13px] font-semibold transition-colors"
+            style={{ color: tab === t.id ? "var(--primary)" : "var(--field-supporting)", borderBottom: tab === t.id ? "2px solid var(--primary)" : "2px solid transparent", marginBottom: -1 }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── When to Use ───────────────────────────────────────────────────── */}
+      {tab === "when-to-use" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Scope</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+              <strong className="text-[var(--foreground)]">Create</strong> brings a new object into existence. <strong className="text-[var(--foreground)]">Configure</strong> edits the properties of something that already exists. This pattern governs Create only — it never governs Configure.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>The pattern decides the container, never the fields</SectionLabel>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px] mb-[12px]">
+              This is the single most misread thing about the pattern. <strong className="text-[var(--foreground)]">The fields belong to the object. The container belongs to the pattern.</strong> A create modal for a worker has the fields a worker needs; a create modal for an API key has the fields an API key needs. Neither is "what a create modal looks like."
+            </p>
+            <div className="overflow-x-auto mb-[12px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <tbody>
+                  <tr style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)] w-[220px]">Input to the cascade</td>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">How many mandatory fields the object has, whether the flow has stages, whether it branches</td>
+                  </tr>
+                  <tr>
+                    <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">Output of the cascade</td>
+                    <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">Which container holds them</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+              The fields determine the surface. The surface never determines the fields. Anyone reading an example and copying its field list has inverted the pattern — a prototype for a different object, in the same surface, will look different inside, and that is the pattern working correctly, not an inconsistency. See scenes B and B2 in the Examples tab for the same modal with different fields.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Gate 0 — does this pattern apply at all?</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Run this first. If any row matches, no surface is selected here — a different pattern governs the case.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Condition", "Why it's excluded", "Governed by"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The object is created by direct manipulation — drag, drop, draw", "Dropping the node onto the canvas already created it", "SidePanel (Configure)"],
+                    ["The object is created inside an ongoing agent conversation", "The chat is the container; there's no surface to choose", "Chat surface"],
+                    ["The action edits properties of an existing object", "Nothing new comes into existence", "Configure pattern"],
+                  ].map(([cond, why, gov]) => (
+                    <tr key={cond} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{cond}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{why}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{gov}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong className="text-[var(--foreground)]">Control case.</strong> Dragging a node from the library onto the Workflow Builder canvas is not a create action under this pattern — the SidePanel that opens afterward configures the node that already exists.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Gate 1 — which create mode?</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">The mode is decided by the affordance the user activates — never inferred.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Trigger", "Mode", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Any standard create affordance", "Manual", "Run the cascade below"],
+                    ["A \"Create with AI\" affordance", "Assisted", "ModalDialog hosting the chat component → success ModalDialog"],
+                    ["Browse a catalogue — templates, marketplace, presets, starting points", "From a source", "ModalDialog variant=\"content\" for the selection → then the cascade, pre-filled"],
+                  ].map(([trig, mode, surf]) => (
+                    <tr key={mode} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{trig}</td>
+                      <td className="px-[12px] py-[10px] font-semibold" style={{ color: "var(--primary)" }}>{mode}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{surf}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-col gap-[6px] mt-[12px]">
+              <p className="text-[12px] text-[var(--field-supporting)]"><strong className="text-[var(--foreground)]">Assisted create</strong> — the object is defined through conversation, not form fields; a success ModalDialog confirms what was created, with two exits: view the new object, or create another. The chat component exists in the Figma Design System but is not yet implemented in this repo — this branch is documented, not buildable, until it ships.</p>
+              <p className="text-[12px] text-[var(--field-supporting)]"><strong className="text-[var(--foreground)]">Create from a source</strong> — the catalogue modal is a selection surface only; it never becomes the form. If the source fully defines the object, the object is created directly. If fields remain, the cascade runs with the source's values pre-filled.</p>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>The cascade — manual create</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">A sequence, not a lookup table. Start at step 1. On a yes, stop and take that surface. On a no, move to the next step.</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]"><strong className="text-[var(--foreground)]">Step 1 is a hand-off, not a surface choice.</strong> Once the object type declares it owns a workspace, this pattern's job is done — Create navigates to that object's own creation section, and nothing past that point is specified here.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Step", "Test", "Yes", "No"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["1", "Does the object type declare a workspace of its own — a builder, canvas, or editor where it continues to be built after creation?", "Hand-off — object's own creation section", "→ 2"],
+                    ["2", "Does the flow branch, or does it have two or more stages?", "Full-page wizard + Stepper + StepperNavFooter", "→ 3"],
+                    ["3", "Can the object be created from a single field, AND is a list of the same object type visible on screen?", "Inline create row", "→ 4"],
+                    ["4", "Does the new object attach to something visible on screen — a parent record, a collection inside it, the thing the user is looking at?", "SlideOut type=\"full-slot\"", "→ 5"],
+                    ["5", "More than 5 fields?", "Full-page create form", "ModalDialog variant=\"content\""],
+                  ].map(([step, test, yes, no]) => (
+                    <tr key={step} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{step}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{test}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{yes}</span></td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{no}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Step 3's inline create row has no existing component to render it with yet — it would need to be built in <code>experimental/</code> before this row of the cascade can ship.</p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Steps 4–5 — contextual vs. standalone</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">The split that decides between a panel and a modal, and the one most often gotten wrong.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["", "Contextual create", "Standalone create"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Test", "The new object hangs off something on screen", "Nothing on screen is its parent"],
+                    ["Examples", "A note on a record · a vehicle inside a customer profile · a task in a project", "A new entity from its own list view · a user in Admin · an API key"],
+                    ["Surface", "SlideOut type=\"full-slot\"", "ModalDialog variant=\"content\" (≤5 fields) · full-page create form (6+)"],
+                  ].map(([label, ctx, standalone]) => (
+                    <tr key={label} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] font-semibold text-[var(--foreground)]">{label}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ctx}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{standalone}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              A SlideOut grows — 350px → 450px → half screen → full screen — so no field-count rule is needed on the contextual side. A modal is capped at 900px and can only scroll, which is exactly why the 5-field threshold lives on the standalone side and nowhere else.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Staged flows — where the line sits</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[10px]">
+              Staged flows never live in a panel — there is no Stepper inside a SlideOut.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Shape of the flow", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["One stage", "SlideOut"],
+                    ["Two or more stages, or any branching", "Full-page wizard + Stepper + StepperNavFooter"],
+                  ].map(([shape, surf]) => (
+                    <tr key={shape} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{shape}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surf}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">StepperNavFooter is a page-level component — it never appears inside a SlideOut.</p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>When Create uses a modal</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">ModalDialog is not excluded from Create. It has 3 jobs, and 1 prohibition.</p>
+            <div className="overflow-x-auto mb-[12px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Job", "Variant", "Example"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Fill in a standalone create, 5 fields or fewer", "content", "A new entity from its own list view · a user in Admin"],
+                    ["Choose from a catalogue", "content", "Pick a template from the marketplace"],
+                    ["Converse with an agent", "content", "Create with AI"],
+                    ["Confirm before an irreversible save", "confirmation", "Publishing a tenant-wide policy"],
+                  ].map(([job, variant, ex]) => (
+                    <tr key={job} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{job}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{variant}</span></td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ex}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[12px]">
+              <strong className="text-[var(--foreground)]">Prohibition.</strong> A modal never holds a form whose fields depend on what the modal is covering. If the user has to remember, compare against, or navigate the background to complete it, the surface is SlideOut — however few fields it has.
+            </p>
+            <p className="text-[12px] font-semibold mb-[6px]" style={{ color: "var(--foreground)" }}>The test: can the user ignore this and keep working in the background?</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Task", "Can it be ignored?", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Filling in fields that relate to what's on screen", "Yes", "SlideOut"],
+                    ["Filling in fields for a standalone object, 5 or fewer", "No", "ModalDialog variant=\"content\""],
+                    ["Choosing from a catalogue", "No", "ModalDialog variant=\"content\""],
+                    ["Conversing with an agent", "No", "ModalDialog variant=\"content\""],
+                    ["Confirming", "No", "ModalDialog variant=\"confirmation\""],
+                  ].map(([task, ignorable, surf]) => (
+                    <tr key={task} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{task}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{ignorable}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surf}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Do / Don't</SectionLabel>
+            <div className="grid grid-cols-2 gap-[12px]">
+              {[
+                { type: "do",   text: "Run the cascade top to bottom and stop at the first \"yes\" — never treat two steps as equally applicable." },
+                { type: "dont", text: "Don't open a ModalDialog for a form whose fields depend on the background it's covering — use SlideOut, regardless of field count." },
+                { type: "do",   text: "Treat \"can the user ignore this and keep working?\" as the real test between ModalDialog and SlideOut." },
+                { type: "dont", text: "Don't put StepperNavFooter inside a SlideOut — it's a page-level component, reserved for two or more stages or any branching." },
+                { type: "do",   text: "Put a child collection's create trigger in that collection's own widget header, never in the page Header — the page Header CTA is reserved for the screen's primary object." },
+                { type: "dont", text: "Don't add a global \"+\" affordance to the Topbar — Create is always contextual in v1, entered from a list Header, an EmptyState CTA, or an action in the collection's own widget header." },
+              ].map((item, i) => (
+                <div key={i} className="flex gap-[10px] p-[12px] rounded-[6px]"
+                  style={{ background: item.type === "do" ? "var(--color-surface-success-more-subtle)" : "var(--color-surface-error-more-subtle)", border: `0.5px solid ${item.type === "do" ? "var(--color-border-success-lighter)" : "var(--color-border-error-default)"}` }}>
+                  <span className="text-[12px] font-bold shrink-0" style={{ color: item.type === "do" ? "var(--color-surface-success-default)" : "var(--color-surface-error-default)" }}>{item.type === "do" ? "DO" : "DON'T"}</span>
+                  <span className="text-[13px] text-[var(--foreground)]">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Anatomy ───────────────────────────────────────────────────────── */}
+      {tab === "anatomy" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>After create — confirmation and landing</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[6px]">Both are independent of the container chosen above — never merged into the cascade.</p>
+            <div className="overflow-x-auto mb-[14px]">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Condition", "Confirmation"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The user can undo the creation themselves — delete or archive, no external effect", "None. Save directly."],
+                    ["The creation cannot be undone, has tenant-wide scope, or triggers effects outside the tenant", "ModalDialog variant=\"confirmation\" before saving"],
+                    ["Assisted create", "Always ends in a success ModalDialog"],
+                  ].map(([cond, conf]) => (
+                    <tr key={cond} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{cond}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{conf}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Surface", "After create"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Inline create row", "Stays in place. The new row appears in the list, ready to create the next one."],
+                    ["SlideOut", "Closes. The user returns to where they were; the new object appears in context."],
+                    ["ModalDialog — standalone create", "Closes. The user returns to the list they triggered it from; the new object appears there. It does not navigate away — a standalone create of five fields or fewer is short enough that a user often makes several in a row."],
+                    ["Full-page create form / wizard", "Navigates to the created object."],
+                    ["Catalogue modal — source fully defines the object", "Closes. Lands as the surface it would have used had the fields been filled by hand."],
+                    ["Assisted create", "Success modal → view the object, or create another."],
+                  ].map(([surf, after]) => (
+                    <tr key={surf} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{surf}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{after}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Step 1's hand-off isn't in this table — landing for an object that owns its own workspace is decided by that object's own creation section, not by this pattern.</p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Confirming that it worked</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Separate from the confirmation before saving above, which is about risk. This is about whether the user can tell the create succeeded.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Situation", "Feedback"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["The created object lands somewhere visible — a list, a widget, the page you return to", "The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner."],
+                    ["The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from", "useToast().success(...) — floating, auto-dismissing. See below."],
+                    ["The create was irreversible", "The confirmation modal before saving already carried the weight. The landing does the rest."],
+                  ].map(([sit, feedback]) => (
+                    <tr key={sit} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{sit}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{feedback}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong style={{ color: "var(--foreground)" }}>In-flow AlertBanner is not the component for the invisible-result case.</strong> Its spec defines it as a full-width notice for system-level feedback, and the Feedback pattern page assigns it to persistent in-context state — it occupies layout until dismissed and outlives the moment it was confirming.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--foreground)" }}>Toast resolves this — as a placement, not a second component.</strong> <code style={{ fontSize: 11 }}>useToast()</code> (<code style={{ fontSize: 11 }}>src/components/ui/toast.tsx</code>) renders a real <code style={{ fontSize: 11 }}>AlertBanner</code>, floated top-right and auto-dismissed after 3500ms. <code style={{ fontSize: 11 }}>ToastProvider</code> wraps the whole app once, at the true root — call <code style={{ fontSize: 11 }}>useToast()</code> from any PM prototype screen with nothing to wire first.
+            </p>
+            <div className="flex items-center gap-[12px] mt-[10px] p-[12px] rounded-[8px]" style={{ border: "0.5px solid var(--field-border)", background: "var(--surface)" }}>
+              <Button variant="secondary" size="sm" onClick={() => pgCreateToast.success("Automation submitted for approval", { description: "You'll be notified once Council reviews it — nothing changed on this screen." })}>Try it — the invisible-result case</Button>
+              <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>A governed create with no visible landing — the toast is the only confirmation.</span>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px]">
+              <strong style={{ color: "var(--color-text-alert)" }}>DS-GAP — Date field.</strong> There is no <code style={{ fontSize: 11 }}>DatePicker</code> or <code style={{ fontSize: 11 }}>Calendar</code> component in the repo. Any create whose object needs a date is under-specified until one exists — do not improvise one.
+            </p>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Entry points</SectionLabel>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[8px]">Create is always contextual in v1 — there is no global create affordance.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Entry point", "Component"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["List view", "Header primaryAction, variant=\"main\" — max one per screen"],
+                    ["Empty state", "EmptyState CTA — \"Create your first [Entity]\""],
+                    ["Inside a record, collection held by a widget", "An action in that widget's own header"],
+                  ].map(([entry, comp]) => (
+                    <tr key={entry} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{entry}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{comp}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              <strong style={{ color: "var(--foreground)" }}>The trigger lives where the collection lives.</strong> If notes are held by a Notes widget, the affordance to add one belongs in that widget, not in the page Header. The page Header CTA is reserved for the primary object of that screen — on a Worker detail page that is Run now, not Add note.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">Not in v1: a global "+" in the Topbar. The Topbar accepts a maximum of 3 actions and all 3 are occupied — adding one is a change to the app shell, not to this pattern.</p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Examples ──────────────────────────────────────────────────────── */}
+      {tab === "examples" && (
+        <div className="flex flex-col gap-[24px]">
+          <p className="text-[13px] text-[var(--field-supporting)] max-w-[680px]">
+            Every case below resolves by running the cascade — no exception required. Six cases open a full-screen walkthrough; the rest are documentation rows — they explain the rule in text and don't open a preview, either because the component doesn't exist yet or because this pattern deliberately doesn't specify anything further.
+          </p>
+
+          <PatternCard>
+            <SectionLabel>Creating something that hangs off what you're looking at</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="With the list on screen" surface="Inline create row" status="pending"
+                note="Step 3. No component renders this yet — it needs building in experimental/." />
+              <PgGalleryRow label="No list on screen" surface="SlideOut" status="preview"
+                note="Step 4 — attaches to the record."
+                onLaunch={() => setPgPreviewCase("contextual-slideout")} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Creating something standalone</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="5 fields or fewer — a worker" surface="ModalDialog" status="preview"
+                note="Step 5 — nothing on screen is this object's parent. Four fields, because that is what a worker needs."
+                onLaunch={() => setPgPreviewCase("standalone-modal")} />
+              <PgGalleryRow label="Same modal, a different object — an API key" surface="ModalDialog" status="preview"
+                note="Step 5 — the same surface as the worker scene, with two fields instead of four. The pattern chose the container; the object chose the fields."
+                onLaunch={() => setPgPreviewCase("standalone-modal-apikey")} />
+              <PgGalleryRow label="More than 5" surface="Full-page create form" status="preview"
+                note="Step 5 — the 5-field threshold applies only on the standalone, modal-bound side."
+                onLaunch={() => setPgPreviewCase("standalone-fullpage")} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Creating in stages</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="2 or more stages, or any branching" surface="Full-page wizard" status="preview"
+                note="Step 2 — Stepper + StepperNavFooter. Staged flows never live in a panel — there is no Stepper inside a SlideOut."
+                onLaunch={() => setPgPreviewCase("staged-wizard")} />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Creating from something else</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="From a catalogue" surface="Selection modal → pre-filled form" status="preview"
+                note="Gate 1 — from a source. The catalogue modal is a selection surface only; it never becomes the form."
+                onLaunch={() => setPgPreviewCase("catalogue")} />
+              <PgGalleryRow label="With AI" surface="Chat ModalDialog" status="pending"
+                note="Gate 1 — assisted. Exists in Figma, not yet implemented in this repo." />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>When this pattern doesn't pick a surface</SectionLabel>
+            <div className="flex flex-col gap-[8px]">
+              <PgGalleryRow label="The object has its own creation section" surface="Step 1 — hand-off" status="info"
+                note="Create navigates to the object's own creation section — a builder, canvas, or editor. Nothing about the surface, confirmation, or landing is specified past that point." />
+              <PgGalleryRow label="Dragging onto a canvas · inside an agent conversation · editing properties" surface="Gate 0 — rejected" status="info"
+                note="None of these are Create. Configure (SidePanel) owns the first and third; the chat is already the container for the second." />
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Stress test</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Case", "Path", "Surface"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Create a note, notes list visible in an Overview widget", "Step 3", "Inline create row"],
+                    ["Create a note, no notes list on screen", "Step 4", "SlideOut — it attaches to the record"],
+                    ["Create an entity record from its own list view, 4 fields", "Step 5", "ModalDialog variant=\"content\""],
+                    ["Create an entity record from its own list view, 9 fields", "Step 5", "Full-page create form"],
+                    ["Create a secondary entity from inside its parent's profile", "Step 4", "SlideOut"],
+                    ["Create an entity record, two stages, no branching", "Step 2", "Full-page wizard"],
+                    ["Create a governance policy", "Step 2", "Full-page wizard + Stepper, + confirmation"],
+                    ["Create a workflow", "Step 1", "Hand-off → the workflow builder owns everything past this point"],
+                    ["Create an agent", "Step 1", "Hand-off → the agent's own workspace owns everything past this point"],
+                    ["Add a node to the canvas", "Gate 0", "Rejected — this is Configure"],
+                    ["Add a template from the marketplace, template fully defines the object", "Gate 1 — from a source", "ModalDialog variant=\"content\" → created"],
+                    ["Add a template from the marketplace, fields remain", "Gate 1 → Step 5", "Catalogue modal → ModalDialog, pre-filled — a list of the same type isn't a parent"],
+                    ["Create with AI", "Gate 1 — assisted", "Chat ModalDialog → success modal"],
+                  ].map(([caseName, path, surf], i) => (
+                    <tr key={i} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{caseName}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{path}</td>
+                      <td className="px-[12px] py-[10px]"><span className="text-[11px] font-mono px-[6px] py-[2px] rounded-[3px]" style={{ background: "var(--color-surface-primary-subtle)", color: "var(--primary)" }}>{surf}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </PatternCard>
+
+          <PatternCard>
+            <SectionLabel>Component inventory</SectionLabel>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[13px]" style={{ borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--table-border)" }}>
+                    {["Surface in the cascade", "Status"].map(h => <th key={h} className="px-[12px] py-[8px] text-left font-semibold text-[var(--field-label)]">{h}</th>)}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Full-page create form", "Exists — ScreenLayout + Header composition"],
+                    ["Full-page wizard", "Exists — Stepper + StepperNavFooter"],
+                    ["SlideOut", "Exists. A create panel uses type=\"full-slot\" — no entity header, no filters layout."],
+                    ["ModalDialog variant=\"confirmation\"", "Exists"],
+                    ["ModalDialog variant=\"content\" — catalogue slot, 900px max-width", "Exists. The slot prop already accepts arbitrary content."],
+                    ["Inline create row", "Does not exist yet — needs building in experimental/"],
+                    ["Popover / quick create", "Not emitted by the cascade — do not build"],
+                    ["Chat component (assisted create)", "Exists in Figma, not yet implemented in this repo"],
+                  ].map(([surf, status]) => (
+                    <tr key={surf} style={{ borderBottom: "0.5px solid var(--table-border)" }}>
+                      <td className="px-[12px] py-[10px] text-[var(--foreground)]">{surf}</td>
+                      <td className="px-[12px] py-[10px] text-[var(--field-supporting)]">{status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[10px]">
+              The cascade never selects a popover: step 3 covers the single-field case, step 5's default covers 2–5 fields, and SlideOut size="m" opens at 350px — approximately the width a popover would have. Building one would produce a component no screen imports, which fails the repo's zero-import check.
+            </p>
+          </PatternCard>
+        </div>
+      )}
+
+      {/* ── Rules ─────────────────────────────────────────────────────────── */}
+      {tab === "rules" && (
+        <div className="flex flex-col gap-[24px]">
+          <PatternCard>
+            <SectionLabel>Technical Spec</SectionLabel>
+            <PatternRules code={`CREATE_PATTERN
+
+GATE_0 — does this pattern apply?
+  IF created_by_direct_manipulation      → REJECT, use Configure (SidePanel)
+  IF created_inside_agent_conversation   → REJECT, use Chat surface
+  IF editing_an_existing_object          → REJECT, use Configure
+
+GATE_1 — which create mode?
+  IF trigger == "Create with AI"         → ASSISTED
+  IF trigger == browse_catalogue         → FROM_A_SOURCE
+  ELSE                                    → MANUAL → run CASCADE
+
+CASCADE (manual create — stop at first YES)
+  STEP 1  object_type.owns_workspace()          → HAND-OFF: navigate to the object's own creation section, nothing else specified
+  STEP 2  flow.branches OR flow.stages >= 2     → Full-page wizard + Stepper + StepperNavFooter (never a Stepper inside a SlideOut)
+  STEP 3  object_type.single_field_createable
+            AND list_of_same_type_on_screen     → Inline create row
+  STEP 4  new_object.attaches_to_visible_thing  → SlideOut type="full-slot"
+  STEP 5  field_count > 5                       → Full-page create form
+          ELSE                                  → ModalDialog variant="content"
+
+MODAL_PROHIBITION
+  NEVER host a form whose fields depend on the content it is covering
+  → if true, USE SlideOut regardless of field count
+
+CONFIRMATION (independent of container)
+  IF creation_is_undoable_by_user        → none, save directly
+  IF creation_is_irreversible
+     OR tenant_wide_scope
+     OR external_effects                 → ModalDialog variant="confirmation"
+  IF mode == ASSISTED                    → always ends in success ModalDialog
+
+LANDING (derived from container, not a separate decision)
+  Inline create row            → stays in place, ready for the next create
+  SlideOut                     → closes, user returns to where they were
+  ModalDialog (standalone)     → closes, user returns to the list, new object appears there
+  Full-page create form/wizard → navigates to the created object
+  Catalogue modal (source fully defines it) → closes, lands as if filled by hand
+  Assisted create               → success modal → view object OR create another
+  Hand-off (step 1)             → not this pattern's decision — the object's own creation section owns it`} />
+          </PatternCard>
         </div>
       )}
     </div>
@@ -31100,27 +32126,6 @@ const oktaProv = (syncedAgo: string): FieldProvenance => ({ system: "Okta", syst
 const sfProv = (syncedAgo: string): FieldProvenance => ({ system: "Salesforce", systemAbbr: "SF", modelVersion: "Account v1.8", syncedAgo })
 const nsProv = (syncedAgo: string): FieldProvenance => ({ system: "NetSuite", systemAbbr: "NS", modelVersion: "Customer v4.0", syncedAgo })
 const aribaProv = (syncedAgo: string): FieldProvenance => ({ system: "SAP Ariba", systemAbbr: "AR", modelVersion: "Supplier v1.2", syncedAgo })
-// Epic (EHR) — the healthcare-vertical proof example (Block 3, this pass).
-// Deliberately a DIFFERENT source system + model name than UEP/UCP/UVP: if
-// this still renders through the exact same component with zero changes to
-// record-header.tsx, that's the agnosticism claim demonstrated, not asserted.
-const epicProv = (syncedAgo: string): FieldProvenance => ({ system: "Epic", systemAbbr: "EP", modelVersion: "Chart v4.1", syncedAgo })
-// Insurance vertical (this correction pass) — a claim genuinely spans 2
-// systems of record at once: the claims core (Guidewire) and the policy
-// admin system (Duck Creek). Modeling both, on the SAME record, is the
-// multi-source provenance proof this pass asks for — not just "a new
-// vertical" but "a vertical where Data Provenance has to hold up across
-// more than one source."
-const gwProv = (syncedAgo: string): FieldProvenance => ({ system: "Guidewire", systemAbbr: "GW", modelVersion: "ClaimsCenter v9.0", syncedAgo })
-const dcProv = (syncedAgo: string): FieldProvenance => ({ system: "Duck Creek", systemAbbr: "DC", modelVersion: "Policy v7.2", syncedAgo })
-// Banking vertical (this correction pass) — 3 systems on one borrower: the
-// credit bureau (Experian), the loan origination system (nCino), and core
-// banking (FIS). This is the audit-trail case the brief calls for: every
-// figure a risk exception decision leans on has to be traceable back to
-// which system actually produced it.
-const experianProv = (syncedAgo: string): FieldProvenance => ({ system: "Experian", systemAbbr: "EXP", modelVersion: "Credit v5.0", syncedAgo })
-const ncinoProv = (syncedAgo: string): FieldProvenance => ({ system: "nCino", systemAbbr: "NC", modelVersion: "LOS v3.4", syncedAgo })
-const fisProv = (syncedAgo: string): FieldProvenance => ({ system: "FIS", systemAbbr: "FIS", modelVersion: "Core v2.1", syncedAgo })
 // Automotive vertical (this correction pass) — AIMS OS's own central
 // vertical, per the brief ("raíces en plataformas automotrices, clientes
 // reales del sector"). A repair order draws from the dealer's DMS (CDK
@@ -31131,22 +32136,29 @@ const cdkProv = (syncedAgo: string): FieldProvenance => ({ system: "CDK Global",
 const carfaxProv = (syncedAgo: string): FieldProvenance => ({ system: "Carfax", systemAbbr: "CFX", modelVersion: "History v4.0", syncedAgo })
 const oemProv = (syncedAgo: string): FieldProvenance => ({ system: "OEM Warranty Portal", systemAbbr: "OEM", modelVersion: "Warranty v2.0", syncedAgo })
 
-// This demo page's own scope note (not a component doc — RecordHeader
-// itself never enumerates entity types): UEP/UCP/UVP are the 3 native
-// Work Surfaces entity shapes this card actually ships for. Patient,
-// Claim, Borrower, and Repair Order exist ONLY to prove agnosticism across
-// genuinely different verticals — all 4 chosen for the same profile AIMS
-// OS actually targets: entity + workflow + human intervention + governed
-// multi-source data (healthcare, insurance, banking, and automotive,
-// AIMS OS's own central vertical) — they are demonstration examples, not
-// additional native types, which is why the Playground groups them
-// separately (see the "Work Surfaces" vs. "Other Markets" CtrlGroups).
+// This demo page's own scope note (not a component doc — EntityHeader
+// itself never enumerates entity types): the five examples are the ones
+// Figma validates, and they are chosen to demonstrate agnosticism rather
+// than assert it. An entity type only reads once you see its SOURCE beside
+// it — Employee·Workday, Customer·Salesforce, Repair Order·DMS,
+// Vendor·NetSuite, platform entity·Helix Data Studio — which is why every
+// example carries that pairing and why the three invented verticals that
+// used to sit here (a patient, a policyholder, a loan applicant) were
+// removed: they named a type with no system beside it, so they proved
+// nothing.
 // `RhDemoKey` is this DEMO PAGE's own bookkeeping key (App.tsx's problem),
-// not a prop the component reads — RecordHeader only ever sees `name` +
+// not a prop the component reads — EntityHeader only ever sees `name` +
 // `entityType` + `recordFields`, built from these mocks below.
+// The five examples Figma validates, and only those. An earlier pass added
+// three more — a patient, a policyholder and a loan applicant — to argue the
+// component was market-agnostic. They were invented here, they exist nowhere
+// in the Figma file, and they did not make the argument: `Borrower` on its
+// own says neither which industry nor which kind of record, because an entity
+// type only reads once you see its SOURCE beside it. The five below carry
+// that pairing, which is what actually demonstrates agnosticism.
 type RhDemoKey =
   // People — an avatar, from a photo or initials
-  | "uep" | "patient" | "claim" | "borrower"
+  | "uep"
   // Companies and sites — an avatar, from a brand
   | "ucp" | "uvp"
   // Processes, assets and data — a highlight icon, because there is no face
@@ -31168,9 +32180,6 @@ const RH_VISUAL: Record<RhDemoKey, EntityVisual> = {
   uep:         { kind: "avatar" },
   ucp:         { kind: "avatar" },
   uvp:         { kind: "avatar" },
-  patient:     { kind: "avatar" },
-  claim:       { kind: "avatar" },
-  borrower:    { kind: "avatar" },
   // A repair order is a PROCESS, not a person. Figma's own example, and the
   // reason the icon path exists: RO-48291 has no initials, so an avatar was
   // never available to it.
@@ -31188,11 +32197,13 @@ const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
   // Was the old `statusTag` ("On Leave · Returns Mar 15", neutral, on the
   // left). Figma puts it on the right and colours it `informative`.
   uep:         { label: "On leave",       variant: "informative" },
-  ucp:         { label: "Under review",   variant: "informative" },
-  uvp:         { label: "Active",         variant: "success"     },
-  patient:     { label: "Under review",   variant: "informative" },
-  claim:       { label: "Under review",   variant: "informative" },
-  borrower:    { label: "Active",         variant: "success"     },
+  // NOTE: Figma writes `On leave` on BOTH of these — on a customer account
+  // and on a supplier. It is almost certainly the component's default value
+  // left unchanged when the instance was duplicated, the same class of slip
+  // as the `SC` avatar on Kestrel Dynamics. Taken verbatim because the brief
+  // was to take Figma's states exactly; flagged for Michael to confirm.
+  ucp:         { label: "On leave",       variant: "informative" },
+  uvp:         { label: "On leave",       variant: "informative" },
   repairOrder: { label: "Awaiting parts", variant: "informative" },
 }
 
@@ -31214,24 +32225,22 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
     { role: "signal",         label: "Access review",       tone: "alert" },
     { role: "classification", label: "Employee"                           },
   ],
+  // `Renews in 52d` is a SIGNAL and it stays NEUTRAL — Figma's own example,
+  // and the clearest reading of the colour rule: the test is not the tag's
+  // role, it is whether someone has to do something about it. Fifty-two days
+  // out, nobody does.
   ucp: [
-    { role: "signal",         label: "Renewal at risk",     tone: "alert" },
+    { role: "signal",         label: "Renews in 52d"                      },
     { role: "classification", label: "Customer"                           },
   ],
+  // Figma's long-tag example. The vocabulary is configured per entity in
+  // Helix Data Studio, so a tag can exceed the two-word guideline — it
+  // truncates inside the chip and the full text lives in the tooltip. The
+  // guideline is for whoever configures it, not something the component can
+  // enforce.
   uvp: [
-    { role: "signal",         label: "Renews in 52d"                      },
+    { role: "signal",         label: "Pending compliance recertification" },
     { role: "classification", label: "Vendor"                             },
-  ],
-  patient: [
-    { role: "signal",         label: "Lab result pending",  tone: "alert" },
-    { role: "classification", label: "Patient"                            },
-  ],
-  claim: [
-    { role: "signal",         label: "Claim denied",        tone: "error" },
-    { role: "classification", label: "Policyholder"                       },
-  ],
-  borrower: [
-    { role: "classification", label: "Borrower"                           },
   ],
   // No classification tag, same as dataEntity: the wrench already names the
   // type. `Service customer` used to sit here, left over from when this case
@@ -31244,6 +32253,23 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
   ],
 }
 
+// Figma's maximum-content tag set (Edge cases, 20115:5664) — eight tags on a
+// customer account. This is the ONLY content in the file that overflows the
+// cap of two, which makes it the clearest content for the `+N` chip, so
+// it lives here rather than inline: the Overview's maximum-content example
+// and the Preview's overflow toggle are the same eight tags, not two lists
+// that drift apart.
+const RH_TAGS_OVERFLOW: EntityHeaderTag[] = [
+  { role: "signal",         label: "Renewal at risk",     tone: "alert" },
+  { role: "signal",         label: "Compliance overdue",  tone: "error" },
+  { role: "signal",         label: "Sync failing",        tone: "error" },
+  { role: "signal",         label: "Access review"                      },
+  { role: "signal",         label: "Renews in 52d"                      },
+  { role: "signal",         label: "Contract expiring"                  },
+  { role: "signal",         label: "Pending recertification"            },
+  { role: "classification", label: "Partner"                            },
+]
+
 
 // UEP — the reference variant (brief's own words: "la card de referencia").
 // RECORD fields deliberately follow the brief's literal list (Manager/Access
@@ -31255,7 +32281,7 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
 // figure), nothing further to open beyond its own provenance. Omitted
 // (defaults true) on Manager/Access Role/Department/Owner/Procurement
 // Owner — those stay clickable, opening Data Provenance. See
-// RecordField.hasDestination's own doc comment in record-header.tsx.
+// RecordField.hasDestination's own doc comment in entity-header.tsx.
 const RH_UEP = {
   name: "Sarah Chen", role: "Senior Software Engineer", department: "Engineering", location: "Remote — Austin, TX",
   manager:          { label: "Manager",        icon: LucideIcons.User,        value: "David Kim",                state: "hydrated", provenance: wdProv("2h ago") } satisfies RecordField,
@@ -31269,7 +32295,7 @@ const RH_UEP = {
 // pass — renamed from the generic placeholder "Acme Corp" to a more
 // realistic-sounding customer name.
 const RH_UCP = {
-  name: "Kestrel Systems", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
+  name: "Kestrel Dynamics", segment: "Enterprise", tier: "Tier 1", accountType: "Direct",
   owner:       { label: "Owner",        icon: LucideIcons.User,          value: "Jamie Rivera", state: "hydrated", provenance: sfProv("30m ago") } satisfies RecordField,
   renewalDate: { label: "Renewal Date", icon: LucideIcons.CalendarClock, value: "Sep 2, 2026",  state: "hydrated", provenance: sfProv("30m ago"), hasDestination: false } satisfies RecordField,
   arr:         { label: "ARR",          icon: LucideIcons.DollarSign,    value: "$220,800",     state: "hydrated", provenance: nsProv("6h ago"), hasDestination: false } satisfies RecordField,
@@ -31277,54 +32303,10 @@ const RH_UCP = {
 
 // UVP (Vendor) — EXAMPLE data, not confirmed AIMS OS content.
 const RH_UVP = {
-  name: "Meridian Logistics", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
+  name: "Meridian Supplies", vendorType: "Logistics", contractStatus: "Active", category: "Strategic",
   procurementOwner: { label: "Procurement Owner", icon: LucideIcons.User,         value: "Alex Torres",   state: "hydrated", provenance: aribaProv("4h ago") } satisfies RecordField,
   contractEndDate:  { label: "Contract End",      icon: LucideIcons.CalendarDays, value: "Dec 31, 2026",  state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
   spendYtd:         { label: "Spend YTD",         icon: LucideIcons.DollarSign,   value: "$1.2M",         state: "hydrated", provenance: aribaProv("4h ago"), hasDestination: false } satisfies RecordField,
-}
-
-// Patient (Healthcare) — Block 3 agnosticism proof, EXAMPLE data, not
-// confirmed AIMS OS content. Physician/Insurance are governed facts with a
-// destination (Data Provenance); Blood Type/Admission Date are plain
-// descriptive facts, same "hasDestination: false" rule as any other
-// vertical — nothing about that rule is HR-specific either.
-const RH_PATIENT = {
-  name: "Elena Vasquez", room: "4B-112", careTeam: "Internal Medicine",
-  primaryPhysician: { label: "Primary Physician", icon: LucideIcons.Stethoscope, value: "Dr. Amara Osei", state: "hydrated", provenance: epicProv("20m ago") } satisfies RecordField,
-  insurancePlan:    { label: "Insurance Plan",     icon: LucideIcons.ShieldCheck, value: "BlueCross PPO",  state: "hydrated", provenance: epicProv("1h ago") } satisfies RecordField,
-  bloodType:        { label: "Blood Type",         icon: LucideIcons.Droplet,    value: "O+",             state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
-  admissionDate:    { label: "Admission Date",     icon: LucideIcons.CalendarClock, value: "Aug 14, 2026", state: "hydrated", provenance: epicProv("6h ago"), hasDestination: false } satisfies RecordField,
-}
-
-// Policyholder (Insurance) — second agnosticism proof example, EXAMPLE
-// data, not confirmed AIMS OS content. CONTACT rule (this correction
-// pass) — the entity is the PERSON who holds the policy, never the claim
-// itself. Record fields describe the policyholder's own standing
-// relationship with the carrier (policy, coverage, agent, claims
-// history), never the currently-active claim's own transient facts
-// (those — adjuster, payout amount, date of loss — now live on the
-// Claims Adjudication workflow, see RH_WORKFLOWS.claim /
-// RH_INTERVENTIONS.claim). Still 2 distinct source systems on one
-// record: Duck Creek (policy admin) and Guidewire (claims core, for the
-// person's claims HISTORY, not their one open claim).
-const RH_CLAIM = {
-  name: "Diane Ostrowski", policyType: "Auto — Comprehensive",
-  policyNumber:   { label: "Policy Number",   icon: LucideIcons.FileText,      value: "POL-77-4821",                   state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
-  insuranceAgent: { label: "Insurance Agent", icon: LucideIcons.User,          value: "Marcus Feldman",                state: "hydrated", provenance: dcProv("1h ago") } satisfies RecordField,
-  coverageType:   { label: "Coverage Type",   icon: LucideIcons.ShieldCheck,   value: "Comprehensive",                 state: "hydrated", provenance: dcProv("1h ago"), hasDestination: false } satisfies RecordField,
-  claimsHistory:  { label: "Claims History",  icon: LucideIcons.History,       value: "1 claim in the past 12 months", state: "hydrated", provenance: gwProv("25m ago"), hasDestination: false } satisfies RecordField,
-}
-
-// Borrower / Account (Banking) — third agnosticism proof example, EXAMPLE
-// data, not confirmed AIMS OS content. 3 distinct source systems on one
-// record: Experian (credit bureau), nCino (loan origination), FIS (core
-// banking) — the audit-trail case the brief calls for explicitly.
-const RH_BORROWER = {
-  name: "Jordan Ellis", accountType: "Personal Loan Applicant",
-  creditScore:     { label: "Credit Score",      icon: LucideIcons.Gauge,      value: "712",      state: "hydrated", provenance: experianProv("1d ago"), hasDestination: false } satisfies RecordField,
-  loanOfficer:     { label: "Loan Officer",      icon: LucideIcons.User,       value: "Morgan Blake", state: "hydrated", provenance: ncinoProv("2h ago") } satisfies RecordField,
-  accountNumber:   { label: "Account Number",    icon: LucideIcons.CreditCard, value: "····4821", state: "hydrated", provenance: fisProv("30m ago"), hasDestination: false } satisfies RecordField,
-  requestedAmount: { label: "Requested Amount",  icon: LucideIcons.DollarSign, value: "$45,000",  state: "hydrated", provenance: ncinoProv("2h ago"), hasDestination: false } satisfies RecordField,
 }
 
 // Repair order (Automotive) — Figma's own process-entity example, EXAMPLE
@@ -31372,9 +32354,6 @@ const RH_RECORD_FIELDS: Record<RhDemoKey, RecordField[]> = {
   uep: [RH_UEP.manager, RH_UEP.accessRole, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate],
   ucp: [RH_UCP.owner, RH_UCP.renewalDate, RH_UCP.arr],
   uvp: [RH_UVP.procurementOwner, RH_UVP.contractEndDate, RH_UVP.spendYtd],
-  patient: [RH_PATIENT.primaryPhysician, RH_PATIENT.insurancePlan, RH_PATIENT.bloodType, RH_PATIENT.admissionDate],
-  claim: [RH_CLAIM.policyNumber, RH_CLAIM.insuranceAgent, RH_CLAIM.coverageType, RH_CLAIM.claimsHistory],
-  borrower: [RH_BORROWER.creditScore, RH_BORROWER.loanOfficer, RH_BORROWER.accountNumber, RH_BORROWER.requestedAmount],
   repairOrder: [RH_REPAIR_ORDER.serviceAdvisor, RH_REPAIR_ORDER.vehicleField, RH_REPAIR_ORDER.warrantyStatus, RH_REPAIR_ORDER.lastServiceDate],
 }
 
@@ -31390,9 +32369,6 @@ const RH_SOURCE: Record<RhDemoKey, string> = {
   uep:         "Workday",
   ucp:         "Salesforce",
   uvp:         "NetSuite",
-  patient:     "Epic",
-  claim:       "Guidewire",
-  borrower:    "nCino",
   repairOrder: "DMS",
 }
 
@@ -31404,53 +32380,32 @@ const RH_SOURCE: Record<RhDemoKey, string> = {
 // access role, and tenure. Nothing here is true of every entity of the same
 // type — that would be a label, not information.
 const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
+  // Option B: only the values Figma actually fills in. Its instances carry a
+  // mix of real data and unreplaced template placeholders — `{User-Name}`,
+  // `{Owner-Name}`, `70%`, `4 mins`, a bare `2` — repeated identically across
+  // five different entities. Those come from hidden slots inherited from
+  // Entity List and are not a source of truth, so they are dropped rather
+  // than copied. Rows of two or three are correct: the rule says aim for
+  // four, not fill six.
   dataEntity: [
-    { icon: LucideIcons.Table,          text: "38 tables", tooltip: "Normalized tables · 38 tables feeding this entity." },
-    { icon: LucideIcons.CircleCheckBig, text: "12 facts",  tooltip: "Truth Plane facts · 12 attested facts derived from this entity." },
-    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 ingestion workflows currently running." },
+    { icon: LucideIcons.Table,          text: "38 tables",   tooltip: "Normalized tables · 38 tables feeding this entity." },
+    { icon: LucideIcons.TriangleAlert,  text: "3 failures",  tooltip: "Sync failures · 3 failed ingestion runs in the last 24 hours." },
   ],
   uep: [
-    { icon: LucideIcons.CircleCheckBig, text: "9 facts",   tooltip: "Truth Plane facts · 9 attested facts on this record." },
-    { icon: LucideIcons.FileText,       text: "3 docs",    tooltip: "Canon Plane documents · 3 long-form references. Counted separately from facts: TR outranks CR." },
-    { icon: LucideIcons.Workflow,       text: "3 open",    tooltip: "Open workflows · 3 agentic workflows currently touching this record." },
-    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent when Council confidence drops below 0.65." },
-    { icon: LucideIcons.ShieldCheck,    text: "Admin",     tooltip: "Access role · Admin. Granted through Okta, last reviewed Mar 2026." },
+    { icon: LucideIcons.CircleCheckBig, text: "9 facts",     tooltip: "Truth Plane facts · 9 attested facts on this record." },
+    { icon: LucideIcons.Workflow,       text: "3 open",      tooltip: "Open workflows · 3 agentic workflows currently touching this record." },
   ],
   ucp: [
-    { icon: LucideIcons.CircleCheckBig, text: "14 facts",  tooltip: "Truth Plane facts · 14 attested facts on this account." },
-    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this account." },
-    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Handling this account since Mar 3." },
-    { icon: LucideIcons.CalendarClock,  text: "Since 2021", tooltip: "Customer since · March 2021." },
+    { icon: LucideIcons.FileText,       text: "12 documents", tooltip: "Canon Plane documents · 12 contracts and amendments on file. Counted separately from facts: TR outranks CR." },
+    { icon: LucideIcons.Workflow,       text: "4 open",      tooltip: "Open workflows · 4 agentic workflows currently touching this account." },
   ],
   uvp: [
-    { icon: LucideIcons.CircleCheckBig, text: "6 facts",   tooltip: "Truth Plane facts · 6 attested facts on this supplier." },
-    { icon: LucideIcons.FileText,       text: "5 docs",    tooltip: "Canon Plane documents · 5 contracts and policies on file." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 agentic workflow currently touching this supplier." },
-    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Owns procurement escalations for this supplier." },
-  ],
-  patient: [
-    { icon: LucideIcons.CircleCheckBig, text: "22 facts",  tooltip: "Truth Plane facts · 22 attested facts on this chart." },
-    { icon: LucideIcons.Workflow,       text: "2 open",    tooltip: "Open workflows · 2 agentic workflows currently touching this chart." },
-    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent for anything clinical." },
-    { icon: LucideIcons.ShieldCheck,    text: "Restricted", tooltip: "Access role · Restricted. PHI fields resolve per viewer entitlement at display time." },
-  ],
-  claim: [
-    { icon: LucideIcons.CircleCheckBig, text: "11 facts",  tooltip: "Truth Plane facts · 11 attested facts on this policyholder." },
-    { icon: LucideIcons.FileText,       text: "8 docs",    tooltip: "Canon Plane documents · 8 policy documents and endorsements on file." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 claim workflow currently touching this policyholder." },
-    { icon: LucideIcons.CalendarClock,  text: "Since 2019", tooltip: "Policyholder since · June 2019." },
-  ],
-  borrower: [
-    { icon: LucideIcons.CircleCheckBig, text: "7 facts",   tooltip: "Truth Plane facts · 7 attested facts on this applicant." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 credit application currently in progress." },
-    { icon: LucideIcons.Sparkle,        text: "Manager",   tooltip: "Assigned agent tier · Manager Agent. Credit decisions route to the Council." },
-    { icon: LucideIcons.Link2,          text: "BR-4471",   tooltip: "Bridge ID · BR-4471. The immutable link between this record's Truth facts and their source documents." },
+    { icon: LucideIcons.FileText,       text: "9 documents", tooltip: "Canon Plane documents · 9 contracts and policies on file." },
+    { icon: LucideIcons.Workflow,       text: "2 open",      tooltip: "Open workflows · 2 agentic workflows currently touching this supplier." },
   ],
   repairOrder: [
-    { icon: LucideIcons.CircleCheckBig, text: "5 facts",   tooltip: "Truth Plane facts · 5 attested facts on this repair order." },
-    { icon: LucideIcons.Workflow,       text: "1 open",    tooltip: "Open workflows · 1 parts-procurement workflow currently touching this order." },
-    { icon: LucideIcons.Sparkle,        text: "User PA",   tooltip: "Assigned agent tier · User PA. Escalates to a Manager Agent on warranty disputes." },
-    { icon: LucideIcons.DollarSign,     text: "$4,180",   tooltip: "Authorized amount · $4,180, insurance-approved. Figma's own value for this example." },
+    { icon: LucideIcons.DollarSign,     text: "$4,180",      tooltip: "Authorized amount · $4,180, insurance-approved." },
+    { icon: LucideIcons.Wrench,         text: "7 parts",     tooltip: "Parts on this order · 7, of which 3 are on backorder from the manufacturer." },
   ],
 }
 
@@ -31464,11 +32419,8 @@ const RH_SECONDARY_METADATA: Record<RhDemoKey, SecondaryMetadataItem[]> = {
 const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
   dataEntity:  "Normalized customer entity, resolved from CRM, DMS and the enrichment provider.",
   uep:         "Decision maker for infrastructure purchases across all sites.",
-  ucp:         "Multi-site financial services account, contracted at the parent level.",
+  ucp:         "Five sites across the Midwest, contracted under a single master agreement.",
   uvp:         "Sole supplier for direct materials on the Midwest assembly lines.",
-  patient:     "Long-term cardiology patient, managed jointly with an outside specialist.",
-  claim:       "Commercial policyholder covering a fleet of 40 vehicles.",
-  borrower:    "First-time commercial borrower, no prior facility with the bank.",
   // The one case Figma says JUSTIFIES a description: the title is an opaque
   // code. "RO-48291" alone means nothing, so the description says what the
   // record concerns. Copy is Figma's own.
@@ -31478,8 +32430,8 @@ const RH_PREVIEW_DESCRIPTION: Record<RhDemoKey, string> = {
 // Preview tab only — there is NO contextual CTA any more: `Ask` is the primary
 // action. What is left is the one optional secondary (off by default, because
 // most records do not have one) and the overflow, where destructive lives.
-const RH_PREVIEW_SECONDARY_ACTION: RecordAction = { label: "Log a call", onClick: () => {} }
-const RH_PREVIEW_MENU_ACTIONS: RecordAction[] = [
+const RH_PREVIEW_SECONDARY_ACTION: EntityHeaderAction = { label: "Log a call", onClick: () => {} }
+const RH_PREVIEW_MENU_ACTIONS: EntityHeaderAction[] = [
   { label: "Archive",   onClick: () => {} },
   { label: "Duplicate", onClick: () => {} },
 ]
@@ -31492,7 +32444,7 @@ const RH_PREVIEW_MENU_ACTIONS: RecordAction[] = [
 const RH_NAME: Record<RhDemoKey, string> = {
   dataEntity: "Customer Master",
   uep: RH_UEP.name, ucp: RH_UCP.name, uvp: RH_UVP.name,
-  patient: RH_PATIENT.name, claim: RH_CLAIM.name, borrower: RH_BORROWER.name, repairOrder: RH_REPAIR_ORDER.name,
+  repairOrder: RH_REPAIR_ORDER.name,
 }
 
 // Ley 4 demo — a SECOND Employee record, identical to RH_UEP except one
@@ -31504,7 +32456,7 @@ const RH_UEP_MASKED_ACCESS_ROLE: RecordField = { label: "Access Role", icon: Luc
 const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCESS_ROLE, RH_UEP.departmentDetail, RH_UEP.jobTitle, RH_UEP.startDate]
 
 // Assigned AI agent — one per demo entity, same shape (see AssignedAgent in
-// record-header.tsx). onOpenChat is wired inside EntityHeaderPage below.
+// entity-header.tsx). onOpenChat is wired inside EntityHeaderPage below.
 //
 // Closing pass — every entry is now the SAME generic "AI Assistant" persona,
 // not a per-vertical fictional name ("Renewal Copilot," "Claims Copilot AI",
@@ -31514,7 +32466,7 @@ const RH_UEP_MASKED_FIELDS: RecordField[] = [RH_UEP.manager, RH_UEP_MASKED_ACCES
 // Agent" card and the Workflow SlideOut's own subtitle used to name — the
 // bug wasn't the button itself (that's a real, required-but-nullable
 // component feature, see AssignedAgent's own doc comment in
-// record-header.tsx, and it must stay ACTIVE — disabling it was itself a
+// entity-header.tsx, and it must stay ACTIVE — disabling it was itself a
 // bug from an earlier pass), it was reusing a workflow's own persona for a
 // separate feature. A flat, generic name here is fully decoupled from
 // RH_WORKFLOWS' own `owner` field, so the two can never collide again.
@@ -31523,14 +32475,11 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
   uep: { id: "agent-assistant-uep", name: "AI Assistant" },
   ucp: { id: "agent-assistant-ucp", name: "AI Assistant" },
   uvp: { id: "agent-assistant-uvp", name: "AI Assistant" },
-  patient: { id: "agent-assistant-patient", name: "AI Assistant" },
-  claim: { id: "agent-assistant-claim", name: "AI Assistant" },
-  borrower: { id: "agent-assistant-borrower", name: "AI Assistant" },
   repairOrder: { id: "agent-assistant-repairOrder", name: "AI Assistant" },
 }
 
 // ── Demo SlideOut content — realistic mock data for the 4 wired flows ──────
-// Not exported, not part of the DS component itself — RecordHeader only
+// Not exported, not part of the DS component itself — EntityHeader only
 // exposes onOpen/onAction callbacks (see its own file-header Composition
 // note); every SlideOut instance below is owned by this demo page, same
 // delegation pattern this catalog has used for every prior overlay demo.
@@ -31543,7 +32492,7 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
 // either "actively running" or "stuck on a human" and only the workflow
 // itself knows which.
 // Closing pass — a contact can be impacted by N workflows at once, not just
-// 1 (RH_WORKFLOWS[v] is now an array — see RecordHeader's own WorkflowSummary/
+// 1 (RH_WORKFLOWS[v] is now an array — see EntityHeader's own WorkflowSummary/
 // AgenticSystemInfo doc comment for the N-item disclosure pattern this
 // feeds). `id` is unique per workflow (not per vertical) so the SlideOut
 
@@ -31551,12 +32500,12 @@ const RH_AGENTS: Record<RhDemoKey, { id: string; name: string }> = {
 // AgentDetail / RH_AGENT_DETAILS — REMOVED (closing pass). Backed the "Last
 // Agent" SlideOut (session summary/finding/recommendation), which is gone
 // along with the Agentic System agent card it opened from — see
-// AgenticSystemInfo's own doc comment in record-header.tsx for why.
+// AgenticSystemInfo's own doc comment in entity-header.tsx for why.
 // Recoverable from git history if a future case needs this content model
 // back. // TODO: descartado — valor absorbido en NBA.
 
 // Your Intervention can carry N items per record (see InterventionItem in
-// record-header.tsx). `onReview` isn't wired per-item at the mock-data
+// entity-header.tsx). `onReview` isn't wired per-item at the mock-data
 // level since it needs the item's own id in scope (see rhIntervention
 // below, which builds the real InterventionItem[] and attaches onReview
 // per item — always rhOpenHtlNewTab, HTL never opens a slideout).
@@ -31680,7 +32629,7 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       id: "ucp-nba-1", title: "Assign a proactive check-in call to the agent",
       description: "Usage dipped 12% this month with no support tickets filed — the agent can place a check-in call before renewal season to catch friction early.",
       assignedTo: "Renewal Copilot", assignedToKind: "agent", dueDate: "Aug 25, 2026", status: "Not started",
-      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Kestrel Systems", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
+      task: { kind: "call", contactName: "Jane Doe", contactRole: "VP Operations, Kestrel Dynamics", suggestedNote: "Usage dipped 12% this month with no support tickets filed — worth checking for friction before renewal season.", outcome: "immediate" },
       dynamicInputs: [
         { label: "Call date & time", kind: "text", placeholder: "e.g. Thu, Aug 28 at 10am" },
         { label: "Notes for the agent", kind: "text", placeholder: "e.g. Also mention the upcoming product launch" },
@@ -31701,39 +32650,6 @@ const RH_NBA: Record<RhDemoKey, NbaMock[]> = {
       ],
       contextTag: "Coverage",
       timeAgo: "6h ago",
-    },
-  ],
-  patient: [
-    {
-      id: "patient-nba-1", title: "Schedule a follow-up coagulation panel",
-      description: "Given the flagged Warfarin/Aspirin interaction, a follow-up panel within 48 hours is recommended before discharge.",
-      assignedTo: "Care Coordinator AI", assignedToKind: "agent", dueDate: "Aug 16, 2026", status: "In progress",
-      task: { kind: "call", contactName: "Inpatient Lab Services", contactRole: "4B-112 · Internal Medicine", suggestedNote: "Schedule a follow-up coagulation panel for Elena Vasquez within 48 hours, per the flagged Warfarin/Aspirin interaction — before the next dose if possible.", outcome: "immediate" },
-      dynamicInputs: [{ label: "Priority", kind: "select", placeholder: "Select a priority", options: ["Routine", "Urgent", "STAT"] }],
-      contextTag: "Clinical",
-      timeAgo: "30m ago",
-    },
-  ],
-  claim: [
-    {
-      id: "claim-nba-1", title: "Request the missing parts invoice now",
-      description: "Closing this documentation gap early could shave 3-5 days off the payout timeline once supervisor sign-off clears.",
-      assignedTo: "Claims Copilot AI", assignedToKind: "agent", dueDate: "Aug 6, 2026", status: "Not started",
-      task: { kind: "email", subject: "Missing parts invoice — Claim CLM-48821", bodyPreview: "Hi team,\n\nWe're finishing adjudication on Claim CLM-48821 and the itemized parts-sourcing breakdown from your last estimate is still missing. Could you send that over so we can close out the payout?\n\nThanks,", outcome: "governed" },
-      dynamicInputs: [{ label: "Follow-up reminder", kind: "date", placeholder: "If no response by this date" }],
-      contextTag: "Claims",
-      timeAgo: "2d ago",
-    },
-  ],
-  borrower: [
-    {
-      id: "borrower-nba-1", title: "Assign a co-signer conversation to the agent",
-      description: "Applicants with a similar debt-to-income profile who added a co-signer saw approval odds increase by roughly 30% — the agent can raise it with Jordan directly.",
-      assignedTo: "Underwriting Copilot", assignedToKind: "agent", dueDate: "Aug 14, 2026", status: "Not started",
-      task: { kind: "call", contactName: "Jordan Ellis", contactRole: "Personal Loan Applicant", suggestedNote: "DTI is above the automated approval line — applicants with a similar profile who added a co-signer saw approval odds increase by roughly 30%. Worth raising as an option before the underwriter review.", outcome: "immediate" },
-      dynamicInputs: [{ label: "Best time to reach", kind: "select", placeholder: "Select a time of day", options: ["Morning", "Afternoon", "Evening"] }],
-      contextTag: "Credit",
-      timeAgo: "3h ago",
     },
   ],
   repairOrder: [
@@ -31782,12 +32698,12 @@ function ProvenanceRow({ field }: { field: RecordField }) {
 
 // HeaderContextMenu — REMOVED (closing pass). Backed the "···" menus on
 // Active Workflow (now a direct footer CTA) and Last Agent (now gone
-// entirely — see AgenticSystemInfo's doc comment in record-header.tsx).
+// entirely — see AgenticSystemInfo's doc comment in entity-header.tsx).
 // No SlideOut on this page needs a header overflow menu anymore.
 // Recoverable from git history if a future case needs this pattern back.
 
 // ── Block 3 — full edge-case states gallery ─────────────────────────────────
-// Dev-facing coverage: every state RecordHeader can render, each labeled, so
+// Dev-facing coverage: every state EntityHeader can render, each labeled, so
 // dev doesn't have to guess what "loading" or "no permission" looks like.
 // Every instance below is collapsed (not defaultExpanded) except where a
 // caption specifically calls out the collapsed-tags look — expanding is
@@ -31798,7 +32714,7 @@ function ProvenanceRow({ field }: { field: RecordField }) {
 
 // ── End-to-end flows (this pass) — 2 complete walkthroughs, not loose
 // states. Each step is a real, rendered piece of this same page (a focused
-// RecordHeader instance showing only the zone the step is about — zones
+// EntityHeader instance showing only the zone the step is about — zones
 // are conditional, so recordFields={[]}/agenticSystem={undefined} simply
 // omit the other zones, no special-casing needed — or a button that opens
 // the SAME real SlideOut/ModalDialog used everywhere else on this page).
@@ -31938,7 +32854,7 @@ function NextBestActionCardPage({ openSpec, onNavigate }: { openSpec: (s: SpecMo
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
               Always as the next sibling below <code>EntityHeader</code>, in its own container. See it in place on the Entity Header page, and in a real screen through that page&rsquo;s <em>View screen example</em>.
             </p>
-            <Button variant="secondary" size="sm" onClick={() => onNavigate("record-header")}>Open the Entity Header page</Button>
+            <Button variant="secondary" size="sm" onClick={() => onNavigate("entity-header")}>Open the Entity Header page</Button>
           </section>
 
           <section>
@@ -32101,6 +33017,11 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   const [pvSource,      setPvSource]      = useState(true)
   const [pvMetadata,    setPvMetadata]    = useState(true)
   const [pvTags,        setPvTags]        = useState(true)
+  // Overflow toggle — none of the five validated entities carries more than
+  // two tags, so without this the `+N` chip is documented on the page and
+  // never rendered by it. On, the card takes Figma's eight-tag set and the
+  // chip appears; hovering or focusing it lists the two it is holding.
+  const [pvTagOverflow, setPvTagOverflow] = useState(false)
   const [pvState,       setPvState]       = useState(true)
   const [pvSecondary,   setPvSecondary]   = useState(false)
   const [pvMenu,        setPvMenu]        = useState(true)
@@ -32124,7 +33045,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   // entities (content keyed by whichever one was actually clicked).
   // Last Agent and Pending Decisions are both gone (closing pass) —
   // Agentic System's own agent card was removed (see AgenticSystemInfo's
-  // doc comment in record-header.tsx) and HTL never opens a slideout,
+  // doc comment in entity-header.tsx) and HTL never opens a slideout,
   // full stop (see rhOpenHtlNewTab below) — so neither has state here
   // anymore.
   const [rhOpenVariant, setRhOpenVariant] = useState<RhDemoKey | null>(null)
@@ -32173,6 +33094,14 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   // shared callback for the whole record), same reasoning as Your
   // Intervention above: each NBA needs its own id in scope for the detail
   // SlideOut below to show the right one.
+
+  // Which tags the Preview card actually renders. Classification is dropped
+  // whenever the visual is a highlight icon — that is the rule, not a display
+  // choice: an icon already names the type. It applies to the overflow set
+  // too, which is why the filter sits here rather than beside either source.
+  const pvBaseTags    = pvTagOverflow ? RH_TAGS_OVERFLOW : RH_TAGS[pvKey]
+  const pvVisibleTags = pvIconVisual ? pvBaseTags.filter(t => t.role !== "classification") : pvBaseTags
+
   const rhNextBestActions = (v: RhDemoKey): NextBestAction[] =>
     (RH_NBA[v] ?? []).map(nba => ({
       id: nba.id,
@@ -32257,7 +33186,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             Identity card for a Unified Entity Profile. It identifies the entity you are looking at and surfaces what needs attention — it carries no detail, which lives in the tabs below. Title, source, tags and actions in the first row; secondary metadata (max 6) in the second. One shared skeleton for every entity type — there is no variant prop, and no disclosure: this is a fixed arrangement of slots, not a collapsible card. The Next Best Action card below is a <strong>separate component in its own container</strong>, not part of this one.
           </p>
         </div>
-        <SpecButton onClick={() => openSpec("record-header")} />
+        <SpecButton onClick={() => openSpec("entity-header")} />
       </div>
 
       <div className="flex gap-[4px] mb-[32px] border-b border-[var(--table-border)]">
@@ -32291,7 +33220,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             <EntityHeader
               name={RH_NAME[pvKey]}
               visual={pvIconVisual ? { kind: "icon", icon: LucideIcons.Boxes, variant: "light-blue" } : RH_VISUAL[pvKey]}
-              tags={pvTags ? (pvIconVisual ? RH_TAGS[pvKey].filter(t => t.role !== "classification") : RH_TAGS[pvKey]) : []}
+              tags={pvTags ? pvVisibleTags : []}
               stateBadge={pvState ? RH_STATE_BADGE[pvKey] : undefined}
               source={pvSource ? RH_SOURCE[pvKey] : undefined}
               secondaryMetadata={pvMetadata ? RH_SECONDARY_METADATA[pvKey] : []}
@@ -32320,9 +33249,6 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               onChange={setPvKey}
               options={[
                 { value: "uep", label: "Employee" },
-                { value: "patient", label: "Patient" },
-                { value: "claim", label: "Policyholder" },
-                { value: "borrower", label: "Borrower" },
               ]}
             />
             <CtrlGroup<RhDemoKey>
@@ -32352,6 +33278,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                   ["Icon instead of avatar", pvIconVisual, setPvIconVisual],
                   ["Source",             pvSource,      setPvSource],
                   ["Tags",               pvTags,        setPvTags],
+                  ["More tags than fit", pvTagOverflow, setPvTagOverflow],
                   ["State badge",        pvState,       setPvState],
                   ["Secondary metadata", pvMetadata,    setPvMetadata],
                   ["Description",        pvDescription, setPvDescription],
@@ -32379,10 +33306,12 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               Turn it on elsewhere to see the slot; the copy you get is what that type would legitimately carry.{" "}
               <strong>Assigned agent off</strong> is not a missing button: it renders disabled with a Tooltip, because the prop
               is required and its value may be <code>null</code>.{" "}
-              <strong>Locked</strong> is "you cannot edit this record" — not Figma's <code>Restricted</code>, which is "you
-              cannot see this value" and lives on the field, not the card.{" "}
-              <code>Loading</code>, Figma's third state on the Property&nbsp;1 axis, is a skeleton this component does not
-              implement yet.
+              <strong>Locked</strong> is &ldquo;you cannot edit this record&rdquo; &mdash; a different axis from the
+              card&rsquo;s own <code>state</code>, which is Figma&rsquo;s <code>Property&nbsp;1</code>: <code>loading</code>
+              and <code>restricted</code> are both implemented, each with its own example in the Overview tab.{" "}
+              <strong>More tags than fit</strong> swaps in Figma&rsquo;s eight-tag set so the <code>+N</code> chip renders
+              &mdash; hover or focus it and the hidden labels are listed. It is the one behaviour the five validated
+              entities cannot show on their own, because none of them carries more than two tags.
             </p>
 
             {/* See it applied. Everything above is the component on a stage;
@@ -32410,7 +33339,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                 variant="secondary"
                 size="sm"
                 icon={<LucideIcons.ExternalLink size={14} strokeWidth={1.75} />}
-                onClick={() => openProtoExample("proto-thomas-universal-profile", "record-header", { profile: "ORG-0023" })}
+                onClick={() => openProtoExample("proto-thomas-universal-profile", "entity-header", { profile: "ORG-0023" })}
                 className="shrink-0"
               >
                 View screen example
@@ -32485,8 +33414,10 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer (example)</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">Mock data — not confirmed AIMS OS content.</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UCP — Customer · a signal that stays neutral</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Figma&rsquo;s own customer example, and the clearest reading of the colour rule: <code>Renews in 52d</code> is a <strong>signal</strong> and it is still <strong>neutral</strong>, because the test for a left tag is not its role — it is whether someone has to do something about it. Fifty-two days out, nobody does. Colour it alert and a healthy header starts shouting; do that on every tag and colour stops meaning anything.
+            </p>
             <EntityHeader name={RH_UCP.name} visual={RH_VISUAL.ucp} tags={RH_TAGS.ucp} stateBadge={RH_STATE_BADGE.ucp}
               source={RH_SOURCE.ucp} secondaryMetadata={RH_SECONDARY_METADATA.ucp} recordFields={RH_RECORD_FIELDS.ucp}
               assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
@@ -32495,51 +33426,15 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           </section>
 
           <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor · a signal that stays neutral</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">UVP — Vendor · and Figma&rsquo;s long-tag edge case</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. This is the case for the colour rule: <code>Renews in 52d</code> is a <strong>signal</strong> and it is still <strong>neutral</strong>, because the test for a left tag is not its role — it is whether someone has to do something about it. Fifty-two days out, nobody does. Colour it alert and a healthy header starts shouting; do that six times and colour stops meaning anything.
+              Figma&rsquo;s own vendor example, which doubles as its <strong>long tag</strong> edge case. The tag vocabulary is configured per entity in Helix Data Studio, so a tag can exceed the two-word guideline: <code>Pending compliance recertification</code> truncates inside the chip and the full text lives in the tooltip. <strong>The guideline is for whoever configures the vocabulary, not something the component can enforce</strong> — which is why it truncates gracefully instead of rejecting the value.
             </p>
             <EntityHeader name={RH_UVP.name} visual={RH_VISUAL.uvp} tags={RH_TAGS.uvp} stateBadge={RH_STATE_BADGE.uvp}
               source={RH_SOURCE.uvp} secondaryMetadata={RH_SECONDARY_METADATA.uvp} recordFields={RH_RECORD_FIELDS.uvp}
               assignedAgent={rhAssignedAgent("uvp", RH_UVP.name)}
               showInformation onInformationOpen={() => rhOpenProvenance("uvp")} />
             <NextBestActionCard item={rhNextBestActions("uvp")[0]} className="mt-[12px]" />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Healthcare — Patient · an entity type the DS has never heard of</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Picked to be as unlike the three above as possible: a different source (Epic), a different record shape entirely, and a classification the component has no knowledge of. <strong>Nothing changed in <code>record-header.tsx</code> to support it</strong> — that is the point of one skeleton with no <code>variant</code> prop, and an entity type this file has never heard of is the normal case, not a gap. It also carries Law 4: the <code>Restricted</code> access role in the metadata row is a value that resolves per viewer entitlement at display time, and this component renders whichever state it is handed without ever resolving one itself.
-            </p>
-            <EntityHeader name={RH_PATIENT.name} visual={RH_VISUAL.patient} tags={RH_TAGS.patient} stateBadge={RH_STATE_BADGE.patient}
-              source={RH_SOURCE.patient} secondaryMetadata={RH_SECONDARY_METADATA.patient} recordFields={RH_RECORD_FIELDS.patient}
-              assignedAgent={rhAssignedAgent("patient", RH_PATIENT.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("patient")} />
-            <NextBestActionCard item={rhNextBestActions("patient")[0]} className="mt-[12px]" />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Insurance — Policyholder · the one tag that earns a colour</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. Two left tags, one coloured: <code>Claim denied</code> is blocking, so it reads <strong>error</strong>; <code>Policyholder</code> is a classification and stays neutral no matter what tone the caller passes — the component strips it. Note the state badge is <code>Under review</code> and not a second copy of the signal: the badge answers &ldquo;what is its current status&rdquo;, the signal answers &ldquo;what needs attention&rdquo;, and restating one in the other wastes the row.
-            </p>
-            <EntityHeader name={RH_CLAIM.name} visual={RH_VISUAL.claim} tags={RH_TAGS.claim} stateBadge={RH_STATE_BADGE.claim}
-              source={RH_SOURCE.claim} secondaryMetadata={RH_SECONDARY_METADATA.claim} recordFields={RH_RECORD_FIELDS.claim}
-              assignedAgent={rhAssignedAgent("claim", RH_CLAIM.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("claim")} />
-            <NextBestActionCard item={rhNextBestActions("claim")[0]} className="mt-[12px]" />
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Banking — Borrower · nothing needs attention, and that is the common case</p>
-            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Mock data — not confirmed AIMS OS content. <strong>No signal at all</strong> — one classification tag and a healthy state badge. Most entities, most of the time, have nothing pressing, and inventing a signal to fill the slot is as wrong as omitting one that matters. It also shows the metadata row carrying a Bridge ID, which qualifies because governance requires it be visible, not because it is interesting.
-            </p>
-            <EntityHeader name={RH_BORROWER.name} visual={RH_VISUAL.borrower} tags={RH_TAGS.borrower} stateBadge={RH_STATE_BADGE.borrower}
-              source={RH_SOURCE.borrower} secondaryMetadata={RH_SECONDARY_METADATA.borrower} recordFields={RH_RECORD_FIELDS.borrower}
-              assignedAgent={rhAssignedAgent("borrower", RH_BORROWER.name)}
-              showInformation onInformationOpen={() => rhOpenProvenance("borrower")} />
-            <NextBestActionCard item={rhNextBestActions("borrower")[0]} className="mt-[12px]" />
           </section>
 
           <section>
@@ -32553,6 +33448,105 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               assignedAgent={rhAssignedAgent("repairOrder", RH_REPAIR_ORDER.name)}
               showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
             <NextBestActionCard item={rhNextBestActions("repairOrder")[0]} className="mt-[12px]" />
+          </section>
+
+          {/* ── The edge cases Figma documents ────────────────────────────
+              Five of the ten in `Edge cases` (20115:5664) had no example
+              here, and they are exactly the ones that show the rules under
+              pressure rather than at rest. The clearest symptom: with only
+              two tags per entity, the `+N` overflow chip never rendered
+              anywhere on this page — the documentation described a behaviour
+              the page could not show. Content is Figma's own, verbatim. */}
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · Maximum content — every ceiling reached</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              A long title and more tags than fit, shown so nobody has to guess where the component gives way. <strong>The title wins</strong>: it grows to its ceiling and then truncates with a tooltip, and it is never cut further to make room for tags. The tags are what yield — they collapse into <code>+N</code>, and the hidden ones are reachable from the overflow chip on hover and on focus. The identifier is what the user came to read; a tag can be recovered from the overflow, a cut-off name cannot.
+            </p>
+            <EntityHeader
+              name="Northwind Alliance Industrial Manufacturing Division"
+              visual={{ kind: "avatar" }}
+              source="Salesforce"
+              tags={RH_TAGS_OVERFLOW}
+              stateBadge={{ label: "Under review", variant: "informative" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.CircleCheckBig, text: "12 facts", tooltip: "Truth Plane facts · 12 attested facts on this account." },
+                { icon: LucideIcons.Workflow,       text: "9 open",   tooltip: "Open workflows · 9 agentic workflows currently touching this account." },
+              ]}
+              assignedAgent={rhAssignedAgent("ucp", "Northwind Alliance")}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              <strong>This is the example that brought the tag cap down from six to two</strong> (Michael, 2026-09-09). At six, this card rendered six chips that wrapped onto a second line and held their width, so <strong>the title was what gave way</strong> &mdash; the exact inversion of the documented order (tags to <code>+N</code> first, then source, and only then the title) and the exact thing Figma&rsquo;s DO/DON&rsquo;T frame warns against: <em>&ldquo;don&rsquo;t truncate the title further to keep all tags visible; the identifier is what the user came to read.&rdquo;</em> Figma&rsquo;s own instance of this card never showed six either &mdash; it shows one signal, <code>Partner</code> and a <code>+6</code>.{" "}
+              <strong>One honest caveat.</strong> Figma has no fixed number: its cards show three, two and two visible tags depending on how much room the title and the tags themselves leave. Two is a hard cap standing in for a width calculation this component still does not do &mdash; it lands on Figma&rsquo;s count wherever the row is tight, and one tag short of it where the title is short. Width-driven collapsing has its own ticket.
+            </p>
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · Root entity — nothing above it</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              A tenant or a top-level company does not sit inside anything, so there is no system it was pulled from to name. <strong>Source is off and the slot is removed</strong>, not left as an empty container — and the header stays valid without it. This is the case that proves omitting a prop is a real answer, not a degraded one.
+            </p>
+            <EntityHeader
+              name="Northgate Holdings"
+              visual={{ kind: "avatar" }}
+              tags={[{ role: "classification", label: "Customer" }]}
+              stateBadge={{ label: "On leave", variant: "informative" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.Building2, text: "14 companies", tooltip: "Companies under this holding · 14 subsidiaries roll up to this entity." },
+                { icon: LucideIcons.Workflow,  text: "6 open",       tooltip: "Open workflows · 6 agentic workflows currently touching this group." },
+              ]}
+              assignedAgent={rhAssignedAgent("ucp", "Northgate Holdings")}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · All signals, no classification</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Every tag is something that needs attention. The sort rule says signals come first &mdash; here there is nothing to come after, and no classification because the highlight icon already names the type. The header still reads, and <strong>the density itself is the message</strong>. It is also the case where the two-tag cap costs the most: Figma shows three signals here and a <code>+3</code>, because a short code like <code>RO-51730</code> leaves the row plenty of space. A hard cap cannot know that, so this card shows two and a <code>+4</code>. The title is intact either way, which is the trade the cap exists to make.
+            </p>
+            <EntityHeader
+              name="RO-51730"
+              visual={{ kind: "icon", icon: LucideIcons.Wrench, variant: "error" }}
+              source="DMS"
+              tags={[
+                { role: "signal", label: "Claim denied",     tone: "error" },
+                { role: "signal", label: "54d overdue",      tone: "error" },
+                { role: "signal", label: "Parts backorder",  tone: "alert" },
+                { role: "signal", label: "Warranty expired", tone: "alert" },
+                { role: "signal", label: "Awaiting approval"               },
+                { role: "signal", label: "Reinspection due"                },
+              ]}
+              stateBadge={{ label: "Blocked", variant: "error" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.DollarSign, text: "$7,240",   tooltip: "Authorized amount · $7,240, pending re-approval after the denial." },
+                { icon: LucideIcons.Wrench,     text: "11 parts", tooltip: "Parts on this order · 11, of which 6 are on backorder." },
+              ]}
+              assignedAgent={rhAssignedAgent("repairOrder", "RO-51730")}
+              showInformation onInformationOpen={() => rhOpenProvenance("repairOrder")} />
+          </section>
+
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · Long labels — where each element truncates</p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              Tenants write their own entity names and tag vocabulary, so long strings are not an edge case &mdash; eventually they are the norm. Each element truncates at its own ceiling and hands the full text to a tooltip. <strong>Nothing wraps and nothing abbreviates:</strong> an ellipsis tells the reader there is more, an abbreviation looks like the real value and misleads. Hover the title to see the full identifier.
+            </p>
+            <EntityHeader
+              name="Northgate Automotive Group Southeast Region Holdings"
+              visual={{ kind: "avatar" }}
+              source="Salesforce"
+              tags={[{ role: "signal", label: "Compliance overdue", tone: "error" }]}
+              stateBadge={{ label: "Under review", variant: "informative" }}
+              secondaryMetadata={[
+                { icon: LucideIcons.Workflow,      text: "3 workflows",    tooltip: "Open workflows · 3 agentic workflows currently touching this group." },
+                { icon: LucideIcons.CalendarClock, text: "Since Feb 2017", tooltip: "Customer since · February 2017." },
+                { icon: LucideIcons.ShieldCheck,   text: "Tier 2",         tooltip: "Promotion tier · Tier 2, reviewed annually." },
+                { icon: LucideIcons.Sparkle,       text: "Manager Agent",  tooltip: "Assigned agent tier · Manager Agent. Escalates to Director Agent on contract changes." },
+              ]}
+              assignedAgent={rhAssignedAgent("ucp", "Northgate Automotive Group")}
+              showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              This is also the one example whose metadata row Figma fills in completely, with four real values and no placeholders &mdash; which is what &ldquo;aim for four&rdquo; looks like in practice.
+            </p>
           </section>
 
           {/* Law 4 — PII masking. The States gallery item that used to
@@ -32745,7 +33739,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
             </div>
             <ul className="text-[12px] leading-[1.7] list-disc pl-[18px]" style={{ color: "var(--field-supporting)" }}>
               <li><strong>The test for a left tag is not its role.</strong> It is whether someone has to do something about it. If yes, colour. If no, neutral.</li>
-              <li><strong>Why left tags get only two colours:</strong> there can be six of them. If each picked its own semantic colour, a healthy header would light up in three shades and colour would stop meaning anything.</li>
+              <li><strong>Why left tags get only two colours:</strong> even two visible chips plus a state badge is three coloured things in one row. If each picked its own semantic colour, a healthy header would light up in three shades and colour would stop meaning anything.</li>
               <li><strong>Classification is never coloured, and that is what makes the vocabulary scalable.</strong> A tenant can define a hundred classifications in Helix Data Studio and none of them breaks the visual system, because none of them picks a colour.</li>
               <li><strong>Order:</strong> signals first, sorted by severity, then classification. The component sorts them — pass them in any order.</li>
               <li><strong>If several statuses are true at once, the most blocking one wins</strong> and the rest become signals. The component renders the one badge it is given.</li>
@@ -32843,7 +33837,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Focus order — nine stops, six when nothing is truncated</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[12px] max-w-[720px]">
-              With six tags and six metadata items, one stop per item means a keyboard user presses Tab twenty-five times to get past the header. That is not an inconvenience, it is a barrier. Tags, source and secondary metadata are each ONE stop: Tab enters the group, arrows move inside it, Tab leaves it — the WAI-ARIA composite widget pattern, the same one a toolbar uses.
+              With a tag for every signal and six metadata items, one stop per item means a keyboard user tabs through the lot to get past the header. That is not an inconvenience, it is a barrier. Tags, source and secondary metadata are each ONE stop: Tab enters the group, arrows move inside it, Tab leaves it — the WAI-ARIA composite widget pattern, the same one a toolbar uses.
             </p>
             <div className="rounded-[8px] border border-[var(--table-border)] overflow-hidden mb-[8px]">
               <div className="grid grid-cols-[40px_220px_1fr] bg-[var(--table-header-bg)] border-b border-[var(--table-border)]">
@@ -32953,7 +33947,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                   <li>The layer model — Identity, Context, Metadata, Action</li>
                   <li>Source is one item; secondary metadata caps at 6</li>
                   <li>Text limits — 8 characters short form, 24 long</li>
-                  <li>Tags — max 6 plus overflow</li>
+                  <li>Tags — max 2 visible plus overflow</li>
                   <li>Colour never carries meaning alone</li>
                 </ul>
               </div>
@@ -41028,7 +42022,7 @@ export default function App() {
     if (protoId && PROTOTYPE_PAGES.some(p => p.id === protoId)) {
       setActive(protoId)
     } else if (pageId) {
-      setActive(pageId)
+      setActive(PAGE_ID_ALIASES[pageId] ?? pageId)
     }
   }, [])
 
@@ -41097,6 +42091,7 @@ export default function App() {
   const ActiveProtoComponent = activeProto?.component
 
   return (
+    <ToastProvider>
     <div className={`${theme} flex h-screen overflow-hidden text-[var(--foreground)]`} style={{ background: canvasBg }}>
       <AppNav
         active={active}
@@ -41105,7 +42100,7 @@ export default function App() {
         isDark={isDark} onToggle={() => setIsDark(d => !d)}
       />
       <main className="flex-1 overflow-y-auto">
-        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" || active === "record-header" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
+        <div className={`px-[48px] py-[40px] mx-auto ${active === "entity-list" || active === "filters" || active === "slide-out" || active === "side-panel" || active === "proto-gallery" || active === "entity-header" ? "max-w-[1200px]" : "max-w-[900px]"}`}>
           {active === "home"            && <HomePage />}
           {active === "proto-gallery"   && <PrototypeGalleryPage onOpen={(id) => setActive(id)} />}
           {active === "ds-health"       && <DsHealthPage />}
@@ -41134,7 +42129,6 @@ export default function App() {
           {active === "stepper-nav-footer"  && <StepperNavFooterPage   openSpec={setSpecModal} />}
           {active === "patterns-list-view"  && <PatternListViewPage />}
           {active === "patterns-filter"     && <PatternFilterPage />}
-          {active === "patterns-overlay"    && <PatternOverlayPage />}
           {active === "patterns-header"     && <PatternHeaderPage />}
           {active === "patterns-nav-depth"  && <PatternNavDepthPage />}
           {active === "patterns-loading"    && <PatternLoadingPage />}
@@ -41143,6 +42137,7 @@ export default function App() {
           {active === "patterns-widget-canvas" && <PatternWidgetCanvasPage />}
           {active === "patterns-guardrails"   && <PatternGuardrailsPage />}
           {active === "patterns-forms"        && <PatternFormsPage />}
+          {active === "patterns-create"       && <PatternCreatePage />}
           {active === "patterns-panel-content" && <PatternPanelContentPage />}
           {active === "patterns-slideout"     && <PatternSlideOutPage />}
           {active === "widget-father"         && <WidgetFatherPage />}
@@ -41161,7 +42156,7 @@ export default function App() {
           {active === "modal-dialog"    && <ModalDialogPage       openSpec={setSpecModal} />}
           {active === "notification-item"   && <NotificationItemPage   openSpec={setSpecModal} />}
           {active === "notification-center" && <NotificationCenterPage openSpec={setSpecModal} />}
-          {active === "record-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
+          {active === "entity-header"       && <EntityHeaderPage      openSpec={setSpecModal} openProtoExample={openProtoExample} />}
           {active === "next-best-action"    && <NextBestActionCardPage openSpec={setSpecModal} onNavigate={setActive} />}
           {active === "informative-card" && <InformativeCardPage openSpec={setSpecModal} />}
           {active === "process-item"   && <ProcessItemPage openSpec={setSpecModal} />}
@@ -41226,5 +42221,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </ToastProvider>
   )
 }

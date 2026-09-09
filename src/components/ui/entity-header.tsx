@@ -15,9 +15,14 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *
  * Source of truth: Figma `Design System - AIMS OS`, node 19815:101548. Every
  * rule below is from that section — the Anatomy, Rules, Hierarchy, Focus
- * order, TAG ROLES, TRUNCATION, THE THREE ACTIONS and BEHAVIOUR blocks. The
- * file name stays `record-header.tsx` on purpose: the change spec forbids
- * renaming it.
+ * order, TAG ROLES, TRUNCATION, THE THREE ACTIONS and BEHAVIOUR blocks.
+ *
+ * Renamed from `record-header.tsx` on 2026-09-08. The change spec had frozen
+ * the old file name while the API was still moving; with the component
+ * settled, Michael's call is that it is called Entity Header everywhere —
+ * file, exports and page id. The old page id still resolves, see
+ * PAGE_ID_ALIASES in App.tsx: links to `?page=record-header` were shared
+ * before the rename and must not break.
  *
  * WHAT IT IS
  *
@@ -52,9 +57,10 @@ import { HighlightIcon, type HighlightIconVariant } from "@/components/ui/highli
  *
  * NINE TAB STOPS, SIX WHEN NOTHING IS TRUNCATED. Tags and secondary metadata
  * are each ONE stop, not one per item: Tab enters the group, arrows move
- * inside it, Tab leaves. Six tags plus six metadata items as individual stops
- * would put twenty-five Tab presses between a keyboard user and the page,
- * which is a barrier, not an inconvenience. The title and the description are
+ * inside it, Tab leaves. One stop per item would put a dozen and a half Tab
+ * presses between a keyboard user and the page, which is a barrier, not an
+ * inconvenience. Since the tag cap came down to two, the six-item metadata
+ * row carries most of that argument on its own. The title and the description are
  * stops only when they actually overflow — a value that fits has nothing to
  * reveal.
  *
@@ -234,11 +240,11 @@ export interface AssignedAgent {
 }
 
 // ── Record action (Identity row CTA + overflow) ─────────────────────────────
-export type RecordActionVariant = "primary" | "secondary" | "tertiary"
+export type EntityHeaderActionVariant = "primary" | "secondary" | "tertiary"
 
-export interface RecordAction {
+export interface EntityHeaderAction {
   label: string
-  variant?: RecordActionVariant
+  variant?: EntityHeaderActionVariant
   onClick?: () => void
   /**
    * Explicit disabled override, independent from `locked` — e.g. "no
@@ -323,24 +329,40 @@ export interface EntityHeaderTag {
    * none of them breaks the visual system, because none of them picks a
    * colour.
    *
-   * There can be six of these. If each picked its own semantic colour, a
-   * healthy header would light up in three shades and colour would stop
-   * meaning anything.
+   * Only two of these are ever visible at once. If each picked its own
+   * semantic colour, a healthy header would light up in three shades and
+   * colour would stop meaning anything.
    */
   tone?: "error" | "alert"
   icon?: LucideIcon
 }
 
 /**
- * Six visible, then a `+N` chip. Enforced here rather than by trusting the
+ * TWO visible, then a `+N` chip. Enforced here rather than by trusting the
  * caller, same as `secondaryMetadata`.
  *
  * Tags are the flexible element on the row: show fewer tags and a larger `+N`
  * rather than truncating the title further. The identifier is what the user
  * came to read — a tag can be recovered from the overflow, a cut-off name
  * cannot.
+ *
+ * IT WAS SIX UNTIL 2026-09-09 (Michael), and six was wrong in both directions.
+ * Six chips hold their width, so a dense header spent that width on tags and
+ * truncated the NAME — the exact inversion of the rule the paragraph above
+ * states, and the exact thing Figma's DO/DON'T frame warns against. Six also
+ * saturates the card: at that count the row wraps to a second line and the
+ * chips read as a block of colour rather than as individual signals.
+ *
+ * Two is also what Figma's own maximum-content instance renders — two tags
+ * and a `+6`. The prose said six; the instance never showed six, and the
+ * instance is the one that was designed against a real card.
+ *
+ * This is a hard cap, not a width calculation. Width-driven collapsing (drop
+ * one tag at a time as the row tightens) is still not implemented — but with
+ * the cap at two, the row no longer runs out of room in the first place, so
+ * the title stops paying for it.
  */
-export const ENTITY_HEADER_TAGS_MAX = 6
+export const ENTITY_HEADER_TAGS_MAX = 2
 
 // ── State badge — its own slot, on the right ──────────────────────────────
 // COLOUR, RULE 1 OF 2 — full semantic range. There is exactly one, so colour
@@ -414,7 +436,9 @@ export interface EntityHeaderProps {
   /**
    * Signal and classification tags, in one array. The component sorts them —
    * signals first, coloured before uncoloured, then classification — and caps
-   * the visible set at ENTITY_HEADER_TAGS_MAX with a `+N` chip for the rest.
+   * the visible set at ENTITY_HEADER_TAGS_MAX (two) with a `+N` chip for the
+   * rest. Pass as many as the entity has — the cap is the component's job,
+   * and the hidden ones stay reachable from the chip's Tooltip.
    *
    * Omit or pass an empty array for a record with no signals and no
    * classification: the group is REMOVED, not left empty.
@@ -484,7 +508,7 @@ export interface EntityHeaderProps {
    * `actions[0]` — "Message", "Export", "Contact account" — is gone. Anything
    * that is not this one secondary action belongs in `menuActions`.
    */
-  secondaryAction?: RecordAction
+  secondaryAction?: EntityHeaderAction
   /**
    * The "···" overflow. Destructive and secondary actions ONLY — never a
    * visible button.
@@ -493,7 +517,7 @@ export interface EntityHeaderProps {
    * entity in Helix Data Studio. The header owns exactly one rule: destructive
    * actions live here.
    */
-  menuActions?: RecordAction[]
+  menuActions?: EntityHeaderAction[]
   /**
    * Shows the Information (ⓘ) trigger. A boolean the caller owns, NOT derived
    * from whether `recordFields` has anything in it — whether the panel is
@@ -551,7 +575,7 @@ export interface EntityHeaderProps {
 }
 
 // ── Centralized fallback copy (configurable/centralized, never scattered inline in JSX) ──
-export const RECORD_HEADER_FALLBACKS = {
+export const ENTITY_HEADER_FALLBACKS = {
   /** Tooltip on the agent trigger when assignedAgent is null. */
   noAgentTooltip: "No agent assigned to this record",
   /** Tooltip on Ask. The button's label is one word; this carries the rest. */
@@ -623,10 +647,11 @@ const DROP_METADATA_WIDTH = 320
 
 // ── Focus groups (Figma's FOCUS AND KEYBOARD frame) ────────────────────────
 // Nine tab stops, six when nothing is truncated. The reason it is nine and
-// not twenty-five is Figma's own: with six tags and six metadata items, one
-// stop per item means a keyboard user presses Tab twenty-five times to get
-// past the header and reach the page. That is not an inconvenience, it is a
-// barrier.
+// not eighteen is Figma's own: one stop per item means a keyboard user tabs
+// through every tag and every metadata item to get past the header and reach
+// the page. That is not an inconvenience, it is a barrier. The metadata row
+// is the heavier half of this now — it still holds six items, where the tag
+// group holds two plus the overflow chip.
 //
 // So tags and secondary metadata are each ONE stop: Tab enters the group,
 // arrow keys move inside it, Tab leaves it. This is the WAI-ARIA composite
@@ -786,8 +811,31 @@ function EntityHeader({
       if (a.role !== b.role) return a.role === "signal" ? -1 : 1
       return TONE_RANK[a.tone ?? "none"] - TONE_RANK[b.tone ?? "none"]
     })
-  const visibleTags = orderedTags.slice(0, ENTITY_HEADER_TAGS_MAX)
-  const hiddenTags = orderedTags.slice(ENTITY_HEADER_TAGS_MAX)
+  // THE CLASSIFICATION KEEPS THE LAST VISIBLE SLOT. Read off Figma's own
+  // instances (Edge cases 20115:5664), which are unanimous wherever a
+  // classification exists: maximum content shows `Renewal at risk` + `Partner`
+  // + `+6`, and the long-tag case shows one signal + `Vendor` + `+2`. Neither
+  // one lets signals take both slots.
+  //
+  // It is also the only reading that survives the cap coming down to two. The
+  // sort is severity-first, so with two or more signals a pure slice would
+  // hide the classification every time — and the two tags would then answer
+  // the same question twice ("what needs attention") while leaving "what kind
+  // of thing is this" to nothing. Two slots, two questions.
+  //
+  // A signal still wins the FIRST slot, so nothing outranks the most severe
+  // thing on the card.
+  const classificationIdx = orderedTags.findIndex(t => t.role === "classification")
+  const promoteClassification =
+    classificationIdx >= ENTITY_HEADER_TAGS_MAX && ENTITY_HEADER_TAGS_MAX >= 2
+
+  const visibleTags = promoteClassification
+    ? [...orderedTags.slice(0, ENTITY_HEADER_TAGS_MAX - 1), orderedTags[classificationIdx]]
+    : orderedTags.slice(0, ENTITY_HEADER_TAGS_MAX)
+
+  const hiddenTags = promoteClassification
+    ? orderedTags.filter((_, i) => i !== classificationIdx).slice(ENTITY_HEADER_TAGS_MAX - 1)
+    : orderedTags.slice(ENTITY_HEADER_TAGS_MAX)
 
   // Capped here rather than by trusting the caller — same reasoning as the
   // identity tags cap. Six is the maximum; the overflow goes to the Overview,
@@ -1024,8 +1072,10 @@ function EntityHeader({
                       Colour rule: only signals may be error/alert. Classification
                       is always neutral — enforced above, in orderedTags. */}
                   {/* STOP 3 — ONE stop for the whole tag group. Tab enters it,
-                      arrows move inside it, Tab leaves. Six tags as six stops
-                      would put six presses between the reader and the page. */}
+                      arrows move inside it, Tab leaves. The group is small now
+                      (two tags, the overflow chip, and the state tags), but it
+                      stays one stop: the pattern has to hold for the row that
+                      carries all of them at once. */}
                   {(visibleTags.length > 0 || stateTagCount > 0) && (
                     <div
                       ref={tagGroup.ref}
@@ -1071,14 +1121,14 @@ function EntityHeader({
                         </Tooltip>
                       )}
                       {locked && (
-                        <Tooltip content={RECORD_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
+                        <Tooltip content={ENTITY_HEADER_FALLBACKS.lockedActionTooltip} side="cursor">
                           <span
                             data-roving
                             tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) ? 0 : -1}
                             className={cn("inline-flex shrink-0", FOCUS_RING)}
                           >
                             <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />} className="shrink-0">
-                              {RECORD_HEADER_FALLBACKS.lockedTagLabel}
+                              {ENTITY_HEADER_FALLBACKS.lockedTagLabel}
                             </Tag>
                           </span>
                         </Tooltip>
@@ -1091,14 +1141,14 @@ function EntityHeader({
                           failed. Neutral, never error — the entity exists and
                           is governed, so this is a state and not a failure. */}
                       {state === "restricted" && (
-                        <Tooltip content={RECORD_HEADER_FALLBACKS.restrictedTooltip} side="cursor">
+                        <Tooltip content={ENTITY_HEADER_FALLBACKS.restrictedTooltip} side="cursor">
                           <span
                             data-roving
                             tabIndex={tagGroup.index === visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + (locked ? 1 : 0) ? 0 : -1}
                             className={cn("inline-flex shrink-0", FOCUS_RING)}
                           >
                             <Tag variant="secondary" size="sm" leadingIcon={<EyeOff size={12} strokeWidth={1.75} />} className="shrink-0">
-                              {RECORD_HEADER_FALLBACKS.restrictedTagLabel}
+                              {ENTITY_HEADER_FALLBACKS.restrictedTagLabel}
                             </Tag>
                           </span>
                         </Tooltip>
@@ -1162,7 +1212,7 @@ function EntityHeader({
             {secondaryAction && (() => {
               const lockDisabled = locked && secondaryAction.disableWhenLocked !== false
               const disabled = lockDisabled || Boolean(secondaryAction.disabled)
-              const tooltip = lockDisabled ? RECORD_HEADER_FALLBACKS.lockedActionTooltip : secondaryAction.disabledTooltip
+              const tooltip = lockDisabled ? ENTITY_HEADER_FALLBACKS.lockedActionTooltip : secondaryAction.disabledTooltip
               const btn = (
                 <Button
                   variant="secondary"
@@ -1194,12 +1244,12 @@ function EntityHeader({
                 needs — the tooltip carries the rest. That is also what makes
                 the width-measuring machinery obsolete: there is no long label
                 left to shorten. */}
-            <Tooltip content={assignedAgent ? RECORD_HEADER_FALLBACKS.askTooltip : RECORD_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
+            <Tooltip content={assignedAgent ? ENTITY_HEADER_FALLBACKS.askTooltip : ENTITY_HEADER_FALLBACKS.noAgentTooltip} side="cursor">
               <Button
                 variant="main"
                 size="sm"
                 icon={<Sparkle size={16} strokeWidth={1.75} />}
-                aria-label={assignedAgent ? RECORD_HEADER_FALLBACKS.askTooltip : RECORD_HEADER_FALLBACKS.noAgentTooltip}
+                aria-label={assignedAgent ? ENTITY_HEADER_FALLBACKS.askTooltip : ENTITY_HEADER_FALLBACKS.noAgentTooltip}
                 disabled={!assignedAgent}
                 onClick={assignedAgent ? assignedAgent.onOpenChat : undefined}
               >
@@ -1215,7 +1265,7 @@ function EntityHeader({
               <ActionOverflowMenu
                 items={menuActions}
                 disabled={locked}
-                disabledTooltip={RECORD_HEADER_FALLBACKS.lockedActionTooltip}
+                disabledTooltip={ENTITY_HEADER_FALLBACKS.lockedActionTooltip}
               />
             )}
 
@@ -1312,7 +1362,7 @@ function ActionOverflowMenu({
   disabled,
   disabledTooltip,
 }: {
-  items: RecordAction[]
+  items: EntityHeaderAction[]
   disabled?: boolean
   disabledTooltip?: string
 }) {

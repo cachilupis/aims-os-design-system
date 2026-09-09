@@ -187,6 +187,13 @@ export function SlideOut({
 }: SlideOutProps) {
   const isM = size === "m"
   const isWithVariants = type === "with-variants"
+  // The CTA footer used to be with-variants only, so a full-slot panel had
+  // nowhere to put its main action and every screen put a small secondary
+  // Button under its own title instead — a page-level control masquerading as
+  // body content. full-slot has no DS-default footer, so it opts in by wiring
+  // an action: no existing full-slot call site passes onCtaPrimary, which is
+  // what makes this additive rather than a footer appearing on five screens.
+  const showFooter = showCta && (isWithVariants || (type === "full-slot" && !!onCtaPrimary))
   const isBottom = anchor === "bottom"
 
   // ── Drag-to-resize state ────────────────────────────────────────────────
@@ -575,7 +582,7 @@ export function SlideOut({
       )}
 
       {/* ── CTA footer — DS Button component for correct hover states ─────── */}
-      {isWithVariants && showCta && (
+      {showFooter && (
         <div className="flex gap-[8px] items-center justify-end shrink-0 w-full">
           {showCtaSecondary && (
             <Button
