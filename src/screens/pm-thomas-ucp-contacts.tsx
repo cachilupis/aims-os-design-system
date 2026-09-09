@@ -1,0 +1,828 @@
+/**
+ * UCP — Contacts list.
+ *
+ * The entry point into the Unified Contact Profile. One roster for the three
+ * record types AIMS OS keeps profiles for — People, Employees and Companies —
+ * because the profile behind them is the same surface either way.
+ *
+ * Records arrive through ingestion and account sync, and can also be created
+ * here. The Header's primary CTA names the entity type of the active tab —
+ * Create New Contact on All, then Person / Employee / Company — because a
+ * generic "Create" on a roster of three types does not say what it will make.
+ *
+ * A record created here has no `source`: source is the system a record was
+ * pulled FROM, and per the Entity Header spec the slot is removed rather than
+ * refilled when the entity was created in the platform itself.
+ *
+ * Navigation: Tabs (record type) → Filters. Cards are the only layout in this
+ * version — the DS's SwitchTab is not shown by default and a table view is not
+ * in scope yet. Row click opens the profile; the Eye opens a preview without
+ * leaving the list.
+ */
+
+import { useMemo, useRef, useState } from "react"
+import { ScreenLayout }      from "@/components/layouts/screen-layout"
+import { Header }            from "@/components/ui/header"
+import { Tabs }              from "@/components/ui/tabs"
+import { Filters }           from "@/components/ui/filters"
+import { FiltersSlideout }   from "@/components/ui/filters-slideout"
+import { Menu, MenuItem }    from "@/components/ui/menu-item"
+import { Tag }               from "@/components/ui/tag"
+import { Button }            from "@/components/ui/button"
+import { CardContainer }     from "@/components/ui/card-container"
+import { EntityList }        from "@/components/ui/entity-list"
+import type { EntityListItemData } from "@/components/ui/entity-list"
+import { EmptyState }        from "@/components/ui/empty-state"
+import { Pagination }        from "@/components/ui/pagination"
+import { SlideOut }          from "@/components/ui/slide-out"
+import { ModalDialog }       from "@/components/ui/modal-dialog"
+import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import { Input }             from "@/components/ui/input"
+import { Chip }              from "@/components/ui/chip"
+import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
+import type { DropdownAnchor } from "@/lib/dropdown-anchor"
+import { Sparkle, Send, Plus, Lock, Contact as ContactIcon } from "lucide-react"
+import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
+import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
+import {
+  CONTACTS, CONCIERGE_PROMPTS, PLANE_META,
+  STATUS_TAG, TYPE_ICON, TYPE_LABEL, TYPE_TAG, entityState, restrictionFor,
+  getActivity, getDrives, getFacts,
+} from "./ucpShared"
+import type { UcpContact, UcpEntityType } from "./ucpShared"
+
+const PAGE_SIZE = 10
+
+const TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[] = [
+  { id: "all",       label: "All",       type: "all"      },
+  { id: "customers", label: "Customers", type: "person"   },
+  { id: "employees", label: "Employees", type: "employee" },
+  { id: "companies", label: "Companies", type: "company"  },
+]
+
+/**
+ * The create CTA names what it will make, so it tracks the active tab. On All
+ * the roster is mixed, so the label falls back to the module's own noun and the
+ * form asks for the type.
+ */
+const CREATE_LABEL: Record<string, string> = {
+  all:       "Create New Contact",
+  customers: "Create New Customer",
+  employees: "Create New Employee",
+  companies: "Create New Company",
+}
+
+/** Which fields the create form asks for, per type. Six at most — past that it
+ *  stops being a panel and becomes a page. */
+const CREATE_FIELDS: Record<UcpEntityType, string[]> = {
+  person:   ["Full name", "Title", "Company", "Email", "Phone", "Account owner"],
+  employee: ["Full name", "Role", "Department", "Work email", "Manager", "Access role"],
+  company:  ["Legal name", "Industry", "Headcount", "Account email", "Account owner", "Primary contact"],
+}
+
+type SortKey = "recent" | "name" | "owner"
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "recent", label: "Last interaction" },
+  { key: "name",   label: "Name A\u2192Z"     },
+  { key: "owner",  label: "Owner"             },
+]
+
+
+// ── Roster concierge ──────────────────────────────────────────────────────────
+// DS-GAP: agent chat panel — no chat component exists in src/components/ui/.
+// Composed from SlideOut + Tag + Chip + Input + Button; the bubbles only
+// rearrange existing tokens.
+
+type RosterTurn = { id: string; from: "agent" | "user"; text: string; planes?: ("truth" | "sandbox" | "sources")[] }
+
+function RosterConcierge({ open, onClose, total }: { open: boolean; onClose: () => void; total: number }) {
+  const [turns, setTurns] = useState<RosterTurn[]>([
+    {
+      id: "t1", from: "agent",
+      text: `I'm the Contacts concierge. I can read across all ${total} records in this roster and tell you which ones need a decision — I answer from each record's own planes, never from outside them.`,
+    },
+  ])
+  const [draft, setDraft] = useState("")
+
+  const ask = (question: string) => {
+    if (!question.trim()) return
+    setTurns(prev => [
+      ...prev,
+      { id: `u-${prev.length}`, from: "user", text: question },
+      {
+        id: `a-${prev.length + 1}`, from: "agent",
+        text: "Three records carry an open commitment right now: Meridian Corp (renewal in 12 days), Sandra Torres (migration timeline asked twice, unanswered) and Kestrel Logistics (dormant 80 days since the pilot closed). Open any of them and I'll carry the context over.",
+        planes: ["truth", "sandbox"],
+      },
+    ])
+    setDraft("")
+  }
+
+  return (
+    <SlideOut
+      open={open}
+      onClose={onClose}
+      type="with-variants"
+      size="m"
+      title="Concierge"
+      subtitle={`Contacts · ${total} records`}
+      showIcon
+      iconContent={<Sparkle size={14} />}
+      showStatus
+      statusLabel="Online"
+      showTopButton={false}
+      showTabs={false}
+      showSearchBar={false}
+      showChips={false}
+      showCta={false}
+    >
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {turns.map(turn => (
+            <div
+              key={turn.id}
+              style={{
+                alignSelf: turn.from === "user" ? "flex-end" : "flex-start",
+                maxWidth: "90%", display: "flex", flexDirection: "column", gap: 6,
+              }}
+            >
+              <div
+                style={{
+                  background: turn.from === "user" ? "var(--field-bg)" : "var(--tag-purple-bg)",
+                  border: `1px solid ${turn.from === "user" ? "var(--field-border)" : "var(--tag-purple-bd)"}`,
+                  borderRadius: 10, padding: "10px 12px", fontSize: 12, lineHeight: 1.6,
+                  color: turn.from === "user" ? "var(--foreground)" : "var(--tag-purple-fg)",
+                }}
+              >
+                {turn.text}
+              </div>
+              {turn.planes && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {turn.planes.map(p => (
+                    <Tag key={p} variant={PLANE_META[p].tag} size="sm">{PLANE_META[p].label} plane</Tag>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: "8px 20px 20px", display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 10 }}>
+            {CONCIERGE_PROMPTS.map(p => (
+              <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Input
+              placeholder="Ask about the roster…"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") ask(draft) }}
+            />
+            <Button variant="primary" size="default" icon={<Send size={14} />} iconPosition="alone" aria-label="Send" onClick={() => ask(draft)} />
+          </div>
+        </div>
+      </div>
+    </SlideOut>
+  )
+}
+
+// ── Create panel ──────────────────────────────────────────────────────────────
+// A create form is non-destructive, so it is a SlideOut and not a ModalDialog.
+// No `label` prop on Input — placeholder is the only field hint on desktop.
+
+function CreatePanel({
+  open, onClose, lockedType, onCreate,
+}: {
+  open:        boolean
+  onClose:     () => void
+  /** Set when a type tab is active; null on All, where the user picks. */
+  lockedType:  UcpEntityType | null
+  onCreate:    (type: UcpEntityType) => void
+}) {
+  const [type, setType]     = useState<UcpEntityType>(lockedType ?? "person")
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [tried, setTried]   = useState(false)
+
+  // Reopening on a different tab should follow the tab, not the last pick.
+  const activeType = lockedType ?? type
+  const fields     = CREATE_FIELDS[activeType]
+  const complete   = fields.every(f => (values[f] ?? "").trim().length > 0)
+
+  return (
+    <SlideOut
+      open={open}
+      onClose={onClose}
+      type="with-variants"
+      size="m"
+      title={`New ${TYPE_LABEL[activeType]}`}
+      subtitle={`Contacts · ${fields.length} fields`}
+      showIcon
+      iconContent={<Plus size={14} />}
+      showStatus={false}
+      showTopButton={false}
+      showTabs={false}
+      showSearchBar={false}
+      showChips={false}
+      showCta
+      ctaPrimaryLabel={`Create ${TYPE_LABEL[activeType]}`}
+      ctaSecondaryLabel="Cancel"
+      onCtaPrimary={() => {
+        if (!complete) { setTried(true); return }
+        onCreate(activeType)
+        setValues({})
+        setTried(false)
+      }}
+      onCtaSecondary={onClose}
+    >
+      <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 24 }}>
+        {!lockedType && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>What are you creating?</span>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {(Object.keys(CREATE_FIELDS) as UcpEntityType[]).map(t => (
+                <Chip
+                  key={t}
+                  size="s"
+                  variant={activeType === t ? "primary" : "secondary"}
+                  onClick={() => { setType(t); setValues({}) }}
+                >
+                  {TYPE_LABEL[t]}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {fields.map(field => (
+            <Input
+              key={field}
+              placeholder={field}
+              value={values[field] ?? ""}
+              onChange={e => setValues(v => ({ ...v, [field]: e.target.value }))}
+            />
+          ))}
+        </div>
+
+        <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>
+          A record created here has no source system — its facts start on the Sandbox
+          plane and get promoted as they are verified.
+        </span>
+
+        {tried && !complete && (
+          <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
+            {`Every field is required. ${fields.filter(f => !(values[f] ?? "").trim()).length} still empty.`}
+          </span>
+        )}
+      </div>
+    </SlideOut>
+  )
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+
+export default function PMThomasUcpContactsScreen() {
+  const [openId,     setOpenId]     = useState<string | null>(null)
+  const [tab,        setTab]        = useState("all")
+  const [page,       setPage]       = useState(1)
+  const [pageSize,   setPageSize]   = useState(PAGE_SIZE)
+  const [search,     setSearch]     = useState("")
+
+  // Draft vs. applied — a chip never appears before Apply.
+  // One bag keyed by facet id, not a named useState per filter. The facets are
+  // published by the type now, so the screen cannot know their names ahead of
+  // time — and a `status`/`owner` pair would have to grow a variable every time
+  // a type publishes a field.
+  const [applied,    setApplied]    = useState<Record<string, string>>({})
+  /** Set when a tab change dropped filters, so the reset is explained. */
+  const [clearedOn,  setClearedOn]  = useState<string | null>(null)
+  const [slideOpen,  setSlideOpen]  = useState(false)
+
+  const [sortKey,    setSortKey]    = useState<SortKey>("recent")
+  const [openSlot,   setOpenSlot]   = useState<string | null>(null)
+  const [anchor,     setAnchor]     = useState<DropdownAnchor | null>(null)
+  const dropdown = useDropdownPosition(anchor)
+
+  const [preview,    setPreview]    = useState<UcpContact | null>(null)
+  // El anchor y el "abrir" tienen que cambiar en el MISMO commit. useDropdownPosition
+  // mide el panel en useLayoutEffect y sale temprano si todavía no está montado;
+  // si el anchor se fija en la fase de captura y el panel recién aparece cuando
+  // el onMenuClick burbujea, el efecto ya corrió contra un ref nulo y el flip
+  // nunca se recalcula — el menú se sale por la derecha en vez de alinearse por
+  // el otro borde. Por eso un solo estado lleva las dos cosas, que además es el
+  // uso que documenta el propio helper: el panel se gatea SOLO por el anchor.
+  const pendingAnchor = useRef<DropdownAnchor | null>(null)
+  const [kebab, setKebab] = useState<{ contact: UcpContact; anchor: DropdownAnchor } | null>(null)
+  const kebabDropdown = useDropdownPosition(kebab?.anchor ?? null)
+  const [archiving,  setArchiving]  = useState<UcpContact | null>(null)
+  const [chatOpen,   setChatOpen]   = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
+
+  const activeType = TYPE_TABS.find(t => t.id === tab)?.type ?? "all"
+
+  const facets = useMemo(() => facetsForType(activeType), [activeType])
+
+  /** The tab's rows before any facet is applied — the pool the counts run on. */
+  const inType = useMemo(
+    () => CONTACTS.filter(c => activeType === "all" || c.type === activeType),
+    [activeType],
+  )
+
+  const filtered = useMemo(() => inType.filter(c => {
+    for (const [fid, val] of Object.entries(applied)) {
+      if (val && facetValue(c, fid) !== val) return false
+    }
+    if (search) {
+      const q = search.toLowerCase()
+      if (![c.name, c.subtitle, c.email, c.company, c.owner, c.id].some(f => f.toLowerCase().includes(q))) return false
+    }
+    return true
+  }), [inType, applied, search])
+
+  /**
+   * How many rows an option would leave, with every OTHER facet still applied.
+   * Zero disables the option rather than removing it: if picking "Inactive"
+   * made Owner vanish because no inactive record is Priya's, the viewer would
+   * lose the way back out. The count is the honest version of that — it says
+   * the combination is empty without hiding the road.
+   */
+  const countFor = (facetId: string, option: string): number => {
+    let base = inType
+    for (const [fid, val] of Object.entries(applied)) {
+      if (fid !== facetId && val) base = base.filter(c => facetValue(c, fid) === val)
+    }
+    return base.filter(c => facetValue(c, facetId) === option).length
+  }
+
+  const sorted = useMemo(() => {
+    const rows = [...filtered]
+    if (sortKey === "name")   return rows.sort((a, b) => a.name.localeCompare(b.name))
+    if (sortKey === "owner")  return rows.sort((a, b) => a.owner.localeCompare(b.owner) || a.name.localeCompare(b.name))
+    return rows.sort((a, b) => Date.parse(b.lastInteraction) - Date.parse(a.lastInteraction))
+  }, [filtered, sortKey])
+
+  const paged = sorted.slice((page - 1) * pageSize, page * pageSize)
+
+  const resetPage = () => setPage(1)
+  const hasFilters = Boolean(Object.values(applied).some(Boolean) || search)
+
+  const clearAll = () => {
+    setApplied({})
+    setSearch("")
+    setClearedOn(null)
+    resetPage()
+  }
+
+  const closeSlot = () => { setOpenSlot(null); setAnchor(null) }
+
+  const pickSlot = (facetId: string, value: string) => {
+    setApplied(a => ({ ...a, [facetId]: value }))
+    setClearedOn(null)
+    resetPage()
+    closeSlot()
+  }
+
+  const pickSort = (key: SortKey) => {
+    setSortKey(key)
+    resetPage()
+    closeSlot()
+  }
+
+  // ── Profile view takes over the whole screen ──
+  const open = CONTACTS.find(c => c.id === openId)
+  if (open) {
+    return (
+      <UcpProfileView
+        contact={open}
+        onBack={() => setOpenId(null)}
+        onSidebarItemClick={id => { if (id === "contacts") setOpenId(null) }}
+        // A company's People tab opens one of its records. Navigation stays
+        // here rather than in the profile: the roster owns which record is open.
+        onOpenRecord={c => setOpenId(c.id)}
+      />
+    )
+  }
+
+  const toItem = (c: UcpContact): EntityListItemData => ({
+    id:    c.id,
+    title: c.name,
+    // Una persona lleva avatar; una compañía lleva icono. La pregunta es si la
+    // entidad tiene identidad visual propia — una cara o una marca. Customers y
+    // employees son personas con nombre, y sus iniciales dicen más que un
+    // glifo repetido en diez filas iguales: el icono de tipo era el mismo para
+    // todos los employees, así que no distinguía nada. La clasificación sigue
+    // visible en el tag de la derecha, que es donde vive.
+    //
+    // Las compañías se quedan con el HighlightIcon: no hay logo en el modelo,
+    // y unas iniciales derivadas de una razón social se leen como una persona.
+    ...(c.type === "company"
+      ? { iconName: TYPE_ICON[c.type], iconVariant: "light-blue" as const }
+      : { avatarName: c.name }),
+    // Top row is context plus identifier: the source (one item, always visible,
+    // per the shared content model) and the record ID.
+    primaryMeta: [
+      {
+        iconName: c.source.iconName,
+        label:    c.source.label,
+        tooltip:  `Source · ${c.source.label}. The system this record was pulled from.`,
+      },
+      { iconName: "Hash", label: c.id, tooltip: `Record ID · ${c.id}` },
+      // Only on a record the viewer cannot read through. It belongs on the row
+      // rather than only inside the profile: finding out that a record is
+      // governed after opening it is the version of this that wastes a click.
+      ...(restrictionFor(c)
+        ? [{
+            iconName: "Lock",
+            label:    "Restricted",
+            tooltip:  `Restricted · needs the ${restrictionFor(c)!.scope} scope, which your role does not hold.`,
+          }]
+        : []),
+    ],
+    // Secondary metadata. Four items, values only — no field labels on the row,
+    // because the tooltip is what names the field. The spec puts a job title and
+    // a parent company here explicitly ("NOT A SOURCE… they belong in tags or in
+    // secondary metadata"), and qualifies the rest by whether someone could act
+    // on it or governance needs it visible.
+    secondaryMeta: [
+      {
+        iconName: "Info",
+        label:    c.subtitle,
+        tooltip:  `${c.type === "company" ? "Profile" : "Role"} · ${c.subtitle}`,
+      },
+      {
+        iconName: "UserRound",
+        label:    c.owner,
+        tooltip:  `Account owner · ${c.owner}. Last interaction ${c.lastInteraction}.`,
+      },
+      {
+        iconName: "ShieldCheck",
+        label:    `${getFacts(c).filter(f => f.plane === "truth").length} verified`,
+        tooltip:  `Verified facts · ${getFacts(c).filter(f => f.plane === "truth").length} on the Truth plane of ${getFacts(c).length} total.`,
+      },
+      // The spec names the assigned agent as qualifying metadata, and AIMS OS
+      // is agent-first, so every record has one. An open-items count would sit
+      // better here, but it is only modelled on 7 of the 16 records — printing
+      // "None open" for the other 9 would be false on several of them, so that
+      // number needs a real field before it can go on the row.
+      {
+        iconName: "Bot",
+        label:    c.agent.name,
+        tooltip:  `Assigned agent · ${c.agent.name}. Opens a chat scoped to this record.`,
+      },
+    ],
+    // The row carries the record's Next Best Action, not the agent's summary.
+    // A roster is scanned to decide what to open next, and the recommendation is
+    // what answers that; the agent's read still lives in the Overview widget and
+    // in the Eye preview, where there is room for it.
+    //
+    // The block renders the same purple family the Next Best Action card uses on
+    // the profile, so the row and the card speak the same language. Title,
+    // when, and why — without the rationale it would be an order, not a
+    // proposal. It collapses past 80 characters and View more opens the record,
+    // which is the card's own default path.
+    //
+    // No action, no block: "there is nothing to say when there is nothing to
+    // do." The absence is the signal — a reader scans for purple to find the
+    // records that want a decision.
+    //
+    // `showAiPrefix: false` — EntityList's label is `AI {action}` by default,
+    // which is right when `action` names a category of output ("AI Summary",
+    // "AI Impact"). The Next Best Action is a product concept with a name of its
+    // own, so the prefix renames it: "AI Next Best Action" is a different thing
+    // from what the card below the profile header calls itself. The prefix is
+    // opted out; the label keeps its own styling.
+    //
+    // One short line, so the block neither collapses nor stretches. EntityList
+    // sizes this container from its own content: past `detailThreshold` (80 by
+    // default) it treats the text as long, goes full width and grows a chevron
+    // to expand; under it, the block takes `self-start` and hugs. Every
+    // recommendation here fits in 54 characters or fewer, so the row gets the
+    // hugging card and no disclosure — matching the block inside RecordHeader
+    // on the profile, which carries no chevron either.
+    //
+    // The rationale is deliberately not here. A roster is scanned to decide what
+    // to open next, and the proposal plus its timestamp answers that; the "why"
+    // is a paragraph, and it belongs on the record, where the same
+    // recommendation renders with its full description.
+    aiInsight: c.nba
+      ? {
+          action:       "Next Best Action",
+          showAiPrefix: false,
+          detail:       `${c.nba.title} · ${c.nba.timestamp}`,
+        }
+      : undefined,
+    tags:  [{ label: TYPE_LABEL[c.type] }],
+    state: entityState(c),
+    showMenu:    true,
+    onMenuClick: () => {},
+    actions: [{ label: "Preview", variant: "tertiary", icon: "Eye", onClick: () => setPreview(c) }],
+    onClick: () => setOpenId(c.id),
+  })
+
+  return (
+    <ScreenLayout
+      workspaceName="Acme Corp"
+      userName="Thomas González"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={UCP_SIDEBAR_ITEMS}
+      activeSidebarId="contacts"
+      header={isScrolled => (
+        <Header
+          size={isScrolled ? "compress" : "size-l"}
+          title="Contacts"
+          description="Every person, employee and company AIMS OS keeps a unified profile for."
+          primaryAction={{
+            label:   CREATE_LABEL[tab] ?? CREATE_LABEL.all,
+            icon:    Plus,
+            onClick: () => setCreateOpen(true),
+          }}
+          secondaryAction={{
+            label:   "Ask",
+            icon:    Sparkle,
+            onClick: () => setChatOpen(true),
+          }}
+        />
+      )}
+      pagination={
+        filtered.length > pageSize
+          ? (
+              <Pagination
+                currentPage={page}
+                totalItems={filtered.length}
+                itemsPerPage={pageSize}
+                onPageChange={setPage}
+                onItemsPerPageChange={n => { setPageSize(n); resetPage() }}
+                rowsPerPageOptions={[10, 25, 50]}
+              />
+            )
+          : undefined
+      }
+    >
+      <Tabs
+        className="mb-[24px]"
+        activeId={tab}
+        onChange={id => {
+          // Facets are published per type, so carrying them across a tab change
+          // would keep a filter the new tab cannot answer. They clear — and the
+          // screen says so, because a list that silently resets reads as broken
+          // rather than reset.
+          const had = Object.values(applied).filter(Boolean).length
+          setTab(id)
+          setApplied({})
+          setClearedOn(had > 0 ? (TYPE_TABS.find(t => t.id === id)?.label ?? null) : null)
+          resetPage()
+        }}
+        items={TYPE_TABS.map(t => ({ id: t.id, label: t.label }))}
+      />
+
+      <div className="mb-[24px]" onClickCapture={e => setAnchor(anchorFromEvent(e))}>
+        <Filters
+          showSearch
+          searchPlaceholder="Search by name, company, owner or ID…"
+          searchValue={search}
+          onSearchChange={v => { setSearch(v); resetPage() }}
+          // Which facets are visible is the type's call, not the screen's. The
+          // rest live behind All filters, exactly the layering FILTERS_SPEC
+          // describes — visible is for high frequency, not for importance.
+          slots={facets.filter(f => f.inline).map(f => ({
+            placeholder: f.label,
+            value: applied[f.id],
+            onOpen: () => setOpenSlot(f.id),
+            onRemove: () => {
+              setApplied(a => { const n = { ...a }; delete n[f.id]; return n })
+              resetPage()
+            },
+          }))}
+          showAllFilters
+          onAllFiltersClick={() => setSlideOpen(true)}
+          showClearFilters={hasFilters}
+          onClearFilters={clearAll}
+          showSort
+          sortLabel={SORT_OPTIONS.find(o => o.key === sortKey)?.label}
+          onSortClick={() => setOpenSlot("sort")}
+          showViewToggle={false}
+        />
+      </div>
+
+      {clearedOn && (
+        <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--field-supporting)" }}>
+          <HighlightIcon size="sm" variant="neutral" iconName="Info" />
+          {`Filters cleared — ${clearedOn} publishes a different set of facets.`}
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={ContactIcon}
+          title={hasFilters ? "No contacts found" : "No contacts yet"}
+          description={hasFilters
+            ? "Try adjusting your filters or search term."
+            : "Records arrive through account sync and ingestion, or you can create the first one here."
+          }
+          ctaLabel={hasFilters ? "Clear filters" : (CREATE_LABEL[tab] ?? CREATE_LABEL.all)}
+          onCta={hasFilters ? clearAll : () => setCreateOpen(true)}
+        />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {paged.map(c => (
+            <div key={c.id} onClickCapture={e => { pendingAnchor.current = anchorFromEvent(e) }}>
+              <CardContainer size="sm" className="!p-0 overflow-hidden">
+                <EntityList items={[{ ...toItem(c), onMenuClick: () => {
+                  if (pendingAnchor.current) setKebab({ contact: c, anchor: pendingAnchor.current })
+                } }]} />
+              </CardContainer>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Filter slot dropdowns ── */}
+      {openSlot && anchor && (
+        <>
+          <div className="fixed inset-0 z-[10000]" onClick={closeSlot} />
+          <div ref={dropdown.ref} style={{ position: "fixed", zIndex: 10001, ...dropdown.style }}>
+            <Menu>
+              {openSlot === "sort"
+                ? SORT_OPTIONS.map(option => (
+                    <MenuItem
+                      key={option.key}
+                      size="sm"
+                      label={option.label}
+                      state={sortKey === option.key ? "focus" : "default"}
+                      onClick={() => pickSort(option.key)}
+                    />
+                  ))
+                : facetOptions(inType, openSlot).map(option => {
+                    const n = countFor(openSlot, option)
+                    return (
+                      <MenuItem
+                        key={option}
+                        size="sm"
+                        label={`${option} · ${n}`}
+                        state={n === 0 ? "disabled" : applied[openSlot] === option ? "focus" : "default"}
+                        onClick={() => { if (n > 0) pickSlot(openSlot, option) }}
+                      />
+                    )
+                  })
+              }
+            </Menu>
+          </div>
+        </>
+      )}
+
+      {/* ── Row kebab — Archive + Duplicate are the DS defaults ── */}
+      {kebab && (
+        <>
+          <div className="fixed inset-0 z-[10000]" onClick={() => setKebab(null)} />
+          <div ref={kebabDropdown.ref} style={{ position: "fixed", zIndex: 10001, ...kebabDropdown.style }}>
+            <Menu>
+              <MenuItem size="sm" label="Archive"   leadingIcon={<HighlightIcon size="sm" variant="neutral" iconName="Archive" />}  onClick={() => { setArchiving(kebab.contact); setKebab(null) }} />
+              <MenuItem size="sm" label="Duplicate" leadingIcon={<HighlightIcon size="sm" variant="neutral" iconName="Copy" />}     onClick={() => setKebab(null)} />
+            </Menu>
+          </div>
+        </>
+      )}
+
+      {/* ── All filters ── */}
+      <FiltersSlideout
+        isOpen={slideOpen}
+        onClose={() => setSlideOpen(false)}
+        onApply={() => { resetPage(); setSlideOpen(false) }}
+        onClearAll={clearAll}
+        activeFilters={facets
+          .filter(f => applied[f.id])
+          .map(f => ({
+            label: f.label,
+            value: applied[f.id],
+            onRemove: () => {
+              setApplied(a => { const n = { ...a }; delete n[f.id]; return n })
+              resetPage()
+            },
+          }))}
+      />
+
+      {/* ── Row preview — the profile without leaving the list ── */}
+      <SlideOut
+        open={preview !== null}
+        onClose={() => setPreview(null)}
+        type="with-variants"
+        size="m"
+        title={preview?.name ?? ""}
+        subtitle={preview ? `${TYPE_LABEL[preview.type]} · ${preview.company}` : ""}
+        showIcon
+        iconContent={<Sparkle size={14} />}
+        showStatus={false}
+        showTopButton={false}
+      showTabs={false}
+      showSearchBar={false}
+      showChips={false}
+      showCta={false}
+      >
+        {preview && (
+          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Tag variant={STATUS_TAG[preview.status]} size="sm">{preview.status}</Tag>
+              <Tag variant={TYPE_TAG[preview.type]} size="sm">{TYPE_LABEL[preview.type]}</Tag>
+            </div>
+
+            {/* The same gate as the profile, applied here too. A preview that
+                prints the agent's read, the email and the fact counts of a
+                record whose profile says the values are governed would make the
+                restriction decorative — the panel is the easier door, so it has
+                to be the same door. What survives is directory-level: who owns
+                the record and where it came from. */}
+            {restrictionFor(preview) ? (
+              <div
+                style={{
+                  background: "var(--card-primary-bg)", border: "1px solid var(--field-border)",
+                  borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6,
+                }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+                  <Lock size={13} />
+                  Governed by {restrictionFor(preview)!.scope}
+                </span>
+                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>
+                  {restrictionFor(preview)!.note}
+                </span>
+              </div>
+            ) : (
+              <div
+                // Tokens de card, no de tag — mismo criterio que el bloque de
+                // Next Best Action: --tag-purple-bd es un #a855f7 a full pensado
+                // para delinear un Tag, y a tamaño de superficie se lee como una
+                // caja gritona. El fondo es el mismo valor en ambas familias, así
+                // que el borde era toda la diferencia.
+                style={{
+                  background: "var(--card-purple-bg)", border: "1px solid var(--card-purple-border)",
+                  borderRadius: 8, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--tag-purple-fg)" }}>
+                  {preview.agent.name} · {preview.aiSummary.confidence}% confidence
+                </span>
+                <span style={{ fontSize: 12, color: "var(--tag-purple-fg)", lineHeight: 1.6 }}>
+                  {preview.aiSummary.detail}
+                </span>
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {(restrictionFor(preview)
+                ? [
+                    { label: "Record ID", value: preview.id            },
+                    { label: "Owner",     value: preview.owner         },
+                    { label: "Source",    value: preview.source.label  },
+                  ]
+                : [
+                { label: "Record ID",        value: preview.id                                       },
+                { label: "Owner",            value: preview.owner                                    },
+                { label: "Email",            value: preview.email                                    },
+                { label: "Last interaction", value: preview.lastInteraction                          },
+                { label: "Verified facts",   value: `${getFacts(preview).filter(f => f.plane === "truth").length} on the Truth plane` },
+                { label: "Activity",         value: `${getActivity(preview).length} events`          },
+                { label: "Drives attached",  value: `${getDrives(preview).length} sources`           },
+              ]).map(row => (
+                <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{row.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              variant="primary"
+              size="sm"
+              className="self-start"
+              onClick={() => { setOpenId(preview.id); setPreview(null) }}
+            >
+              Open full profile
+            </Button>
+          </div>
+        )}
+      </SlideOut>
+
+      <ModalDialog
+        isOpen={archiving !== null}
+        onClose={() => setArchiving(null)}
+        tone="warning"
+        iconName="Archive"
+        title={`Archive ${archiving?.name ?? "this contact"}?`}
+        description="The record moves out of active views and its assigned agent stops acting on it. Facts and drives are kept, and you can restore it later."
+        ctaPrimary={{ label: "Archive", onClick: () => setArchiving(null) }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setArchiving(null) }}
+      />
+
+      <CreatePanel
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        lockedType={activeType === "all" ? null : activeType}
+        onCreate={() => setCreateOpen(false)}
+      />
+
+      <RosterConcierge open={chatOpen} onClose={() => setChatOpen(false)} total={CONTACTS.length} />
+    </ScreenLayout>
+  )
+}

@@ -50,11 +50,19 @@ export type EntityListItemData = {
   // detail: string = single-line (collapses when > detailThreshold chars)
   // detail: string[] = bullet list (always collapsible when > 1 item)
   // showLabel: false = icon + detail only, no "AI {action}" label
+  // showAiPrefix: false = render `action` verbatim, without the "AI " prefix.
+  //   The default label is "AI {action}", which reads correctly when `action` is
+  //   a generic category of output — "AI Summary", "AI Impact", "AI Escalated".
+  //   It reads wrong when `action` is a product concept with a name of its own:
+  //   "AI Next Best Action" renames the thing. Those callers turn the prefix off
+  //   and keep the label's styling, instead of turning the whole label off and
+  //   losing it. Defaults to true — every existing caller is unchanged.
   // viewMore: shows "View more →" button in expanded state
   aiInsight?: {
     action:           string
     detail:           string | string[]
     showLabel?:       boolean
+    showAiPrefix?:    boolean
     viewMore?:        boolean
     onViewMore?:      () => void  // called when "View more" is clicked — pair with ModalDialog
     defaultExpanded?: boolean
@@ -414,7 +422,13 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               "flex flex-col gap-[6px] px-[8px] py-[8px] rounded-[8px]",
               !isLong && "self-start"  // adapt to text width when short; full-width when long
             )}
-            style={{ background: "var(--tag-purple-bg)", border: "1px solid var(--tag-purple-bd)" }}
+            // Card tokens, not tag tokens. The background is the same value in
+            // both families, but --tag-purple-bd is a full-strength #a855f7
+            // meant to outline a Tag, and at card size it reads as a loud box
+            // rather than a surface. --card-purple-border is the 20% border the
+            // same block uses inside RecordHeader, so the row and the profile
+            // now render the recommendation as the same object.
+            style={{ background: "var(--card-purple-bg)", border: "1px solid var(--card-purple-border)" }}
             onClick={e => e.stopPropagation()}
           >
             {/* Header row: sparkle · label · inline-text (short/collapsed) · [view more] · chevron */}
@@ -423,9 +437,15 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               {ai.showLabel !== false && (
                 <>
                   <span className="text-[13px] font-semibold whitespace-nowrap" style={{ color: "var(--foreground)" }}>
-                    AI {ai.action}
+                    {ai.showAiPrefix === false ? ai.action : `AI ${ai.action}`}
                   </span>
-                  <span className="text-[13px]" style={{ color: "var(--tag-purple-fg)" }}>·</span>
+                  {/* The separator only exists to divide the label from the
+                      inline detail. When the block is expanded the inline
+                      detail moves out of this row, so the separator was left
+                      dangling at the end of the label with nothing after it. */}
+                  {(!isLong || !aiExpanded) && (
+                    <span className="text-[13px]" style={{ color: "var(--tag-purple-fg)" }}>·</span>
+                  )}
                 </>
               )}
               {/* Inline detail: always shown when short; truncated when long+collapsed */}
