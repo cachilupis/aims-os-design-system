@@ -234,7 +234,7 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 | `name` | Identity | `string` — required |
 | `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
 | `source?` | Identity | `string` — which system the record came from. **One item, never two** |
-| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **2 visible + `+N`**. Pass all of them; the cap is the component's job |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **up to 3 visible + `+N`, fitted to the row**. Pass all of them; the count is the component's job |
 | `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
 | `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
 | `secondaryAction?` | Identity, right | `EntityHeaderAction` — **off by default** |
@@ -272,9 +272,9 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 
 - **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
 - **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
-- **Two visible, then a `+N` chip** (Michael, 2026-09-09 — it was six until then). Six chips wrapped to a second line, saturated the card and, because they held their width, made the **title** truncate instead of the tags. Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
-- **The classification keeps the second visible slot** whenever the entity has one, so the two tags answer two different questions — what needs attention most, and what kind of thing this is. A signal still takes the first slot. Read off Figma's own instances, which never let signals take both.
-- **Two is a hard cap standing in for a width calculation.** Figma has no fixed number — its cards show three, two and two depending on the room the title and the tags leave. Width-driven collapsing is not implemented; until it is, two is the count that never costs the title.
+- **How many are visible is MEASURED, not fixed** (Michael, 2026-09-09). `ENTITY_HEADER_TAGS_MAX` is 3 and it is a **ceiling**: the component gives the title everything it wants up to its 540px limit, subtracts the source and any `Locked`/`Restricted` tag, and fits as many chips as the remainder holds — 3 beside a short code, 2 beside a long name, 1 when the row is tight. Figma does the same; its edge cases render 3, 2 and 2. **Never assume a number at the call site.**
+- **Pass every tag the entity has.** Trimming the array yourself is the one way to break this — the component cannot show a tag it was not given, and the `+N` Tooltip is what makes hiding acceptable in the first place: nothing is lost, only moved.
+- **The classification keeps the last visible slot** whenever the entity has one, so the visible tags answer two different questions — what needs attention most, and what kind of thing this is. A signal still takes the first slot. Read off Figma's own instances, which never let signals take every slot.
 - **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
 - **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
 

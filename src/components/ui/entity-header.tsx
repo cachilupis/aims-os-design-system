@@ -338,31 +338,71 @@ export interface EntityHeaderTag {
 }
 
 /**
- * TWO visible, then a `+N` chip. Enforced here rather than by trusting the
- * caller, same as `secondaryMetadata`.
+ * A CEILING, NOT A COUNT. Three visible at the very most, and fewer whenever
+ * the row is tight — `useTagFit` measures what actually fits and the rest go
+ * to the `+N` chip. Enforced here rather than by trusting the caller, same as
+ * `secondaryMetadata`.
  *
  * Tags are the flexible element on the row: show fewer tags and a larger `+N`
  * rather than truncating the title further. The identifier is what the user
  * came to read — a tag can be recovered from the overflow, a cut-off name
  * cannot.
  *
- * IT WAS SIX UNTIL 2026-09-09 (Michael), and six was wrong in both directions.
- * Six chips hold their width, so a dense header spent that width on tags and
- * truncated the NAME — the exact inversion of the rule the paragraph above
- * states, and the exact thing Figma's DO/DON'T frame warns against. Six also
- * saturates the card: at that count the row wraps to a second line and the
- * chips read as a block of colour rather than as individual signals.
+ * IT WAS SIX, THEN A FLAT TWO, BEFORE LANDING HERE (Michael, 2026-09-09).
+ * Six was wrong: chips hold their width, so a dense header spent it on tags
+ * and truncated the NAME — the exact inversion of the rule above, and the
+ * thing Figma's DO/DON'T frame warns against. Six also saturates the card,
+ * wrapping the row into a block of colour rather than individual signals.
  *
- * Two is also what Figma's own maximum-content instance renders — two tags
- * and a `+6`. The prose said six; the instance never showed six, and the
- * instance is the one that was designed against a real card.
+ * A flat two fixed the title but was wrong in the other direction: it hid a
+ * tag that had room to show. Figma has no fixed number at all — its edge
+ * cases render three, two and two, because it collapses by available space.
+ * The count is an OUTPUT of the layout, not an input to it.
  *
- * This is a hard cap, not a width calculation. Width-driven collapsing (drop
- * one tag at a time as the row tightens) is still not implemented — but with
- * the cap at two, the row no longer runs out of room in the first place, so
- * the title stops paying for it.
+ * Three is the ceiling because that is the most Figma ever shows, and because
+ * past three the chips stop reading as separate signals.
  */
-export const ENTITY_HEADER_TAGS_MAX = 2
+export const ENTITY_HEADER_TAGS_MAX = 3
+
+/** Gap between chips inside the tag group — must match the rendered `gap-[6px]`. */
+const TAG_CHIP_GAP = 6
+/** Gap between title, source and the tag group — must match `gap-[12px]`. */
+const IDENTITY_GAP = 12
+/** The title's own ceiling, from Figma's truncation block. */
+const TITLE_CEILING = 540
+/** The 1px rule between source and tags, plus the 12px gap it adds. */
+const SOURCE_DIVIDER = 1 + IDENTITY_GAP
+/**
+ * A pixel of slack. Chip widths are sub-pixel and `offsetWidth` rounds, so a
+ * set that measures as exactly filling the row can still wrap. Losing one
+ * pixel of budget is cheaper than a chip dropping to a second line.
+ */
+const FIT_SLACK = 2
+
+/**
+ * Which tags are visible at a given count — the ONE place that decides it, so
+ * the measuring pass and the render can never disagree.
+ *
+ * `ordered` is already sorted signals-first-by-severity, then classification.
+ * The rule on top of that: THE CLASSIFICATION KEEPS THE LAST VISIBLE SLOT.
+ * Read off Figma's instances, which never let signals take every slot — its
+ * maximum-content card shows one signal, `Partner` and a `+6`. Without it,
+ * severity ordering would hide the classification on any entity with two or
+ * more signals, and the visible tags would answer "what needs attention"
+ * twice while leaving "what kind of thing is this" to nothing.
+ *
+ * A signal always takes the FIRST slot, so nothing outranks the most severe
+ * thing on the card.
+ */
+function pickTagIndices(ordered: EntityHeaderTag[], count: number): number[] {
+  const take = Math.min(Math.max(count, 0), ordered.length)
+  if (take === 0) return []
+  const head = Array.from({ length: take }, (_, i) => i)
+  if (take < 2) return head
+  const classIdx = ordered.findIndex(t => t.role === "classification")
+  if (classIdx < 0 || classIdx < take) return head
+  return [...head.slice(0, take - 1), classIdx]
+}
 
 // ── State badge — its own slot, on the right ──────────────────────────────
 // COLOUR, RULE 1 OF 2 — full semantic range. There is exactly one, so colour
@@ -712,6 +752,124 @@ function useIsTruncated<T extends HTMLElement>() {
   return { ref, truncated }
 }
 
+/**
+ * HOW MANY TAGS THE ROW ACTUALLY HAS ROOM FOR.
+ *
+ * `ENTITY_HEADER_TAGS_MAX` is a CEILING, not a count — three at the very most,
+ * fewer whenever the row is tight. This is the rule Figma's own cards follow:
+ * its edge cases show three, two and two visible tags, because it collapses by
+ * available space. A fixed number cannot do that. It either wastes room on a
+ * card with a short name, or — the version this component shipped with — lets
+ * the chips hold their width until the TITLE is what truncates, which is the
+ * exact inversion of the documented order and the thing Figma's DO/DON'T frame
+ * warns against.
+ *
+ * ARITHMETIC, NOT SHRINK-AND-SEE. The obvious implementation — render, check
+ * for overflow, drop one, re-render — oscillates: removing a chip gives the
+ * title room to grow, which takes the room back. So the budget is computed
+ * from parts that do NOT depend on how many tags are showing:
+ *
+ *   budget = row width − the title at its natural width (capped) − the source
+ *            − the `Locked`/`Restricted` tags − the gaps between them
+ *
+ * The title is measured at its NATURAL width via `scrollWidth`, which reports
+ * the full string even while the ellipsis is on screen. That is what puts the
+ * tags first in the yielding order: they are fitted into what is left AFTER
+ * the title has been given everything it wants, up to its 540px ceiling.
+ *
+ * Chip widths come from a hidden probe row that renders every candidate at
+ * full size. Measuring the visible chips instead would only ever tell us about
+ * the ones already on screen, which is the wrong question.
+ *
+ * Reaching zero visible tags is a legitimate outcome, not a failure: at that
+ * width the honest thing is one `+N` chip carrying all of them, rather than a
+ * truncated name beside a tag that fits.
+ */
+function useTagFit(opts: {
+  rowRef: React.RefObject<HTMLElement | null>
+  probeRef: React.RefObject<HTMLElement | null>
+  titleRef: React.RefObject<HTMLElement | null>
+  sourceRef: React.RefObject<HTMLElement | null>
+  /** Already sorted — signals by severity, then classification. */
+  tags: EntityHeaderTag[]
+  stacked: boolean
+  /** Serialised tags + title + source: anything whose change moves a width. */
+  signature: string
+}) {
+  const { rowRef, probeRef, titleRef, sourceRef, tags, stacked, signature } = opts
+  const [fit, setFit] = useState(ENTITY_HEADER_TAGS_MAX)
+
+  // The tag array is rebuilt on every render, so it cannot be a dependency
+  // without re-running the effect forever. `signature` is the dependency;
+  // this ref is how the effect reads the current values.
+  const tagsRef = useRef(tags)
+  tagsRef.current = tags
+
+  useLayoutEffect(() => {
+    const row = rowRef.current
+    const probe = probeRef.current
+    const count = tagsRef.current.length
+    if (!row || !probe || count === 0) return
+
+    const measure = () => {
+      const probes = Array.from(probe.children) as HTMLElement[]
+      if (probes.length < count + 1) return
+
+      const chipW = probes.slice(0, count).map(el => el.offsetWidth)
+      const plusW = probes[count].offsetWidth
+      // Whatever follows the `+N` probe is a state tag (`Locked`,
+      // `Restricted`) — always on screen, so it comes off the budget.
+      const stateW = probes
+        .slice(count + 1)
+        .reduce((sum, el) => sum + el.offsetWidth + TAG_CHIP_GAP, 0)
+
+      const titleW = Math.min(titleRef.current?.scrollWidth ?? 0, TITLE_CEILING)
+      const sourceW = sourceRef.current?.offsetWidth ?? 0
+
+      // Everything between the row's edge and the first chip. The source
+      // costs its own width, the gap before it, and — because a rule is drawn
+      // between source and tags — the divider plus a second gap.
+      // Stacked: the title has its own row, so it costs the tags nothing.
+      let budget = row.clientWidth - stateW - FIT_SLACK
+      if (sourceW) budget -= sourceW + IDENTITY_GAP + SOURCE_DIVIDER
+      if (!stacked) budget -= titleW + IDENTITY_GAP
+
+      let best = 0
+      for (let k = Math.min(ENTITY_HEADER_TAGS_MAX, count); k >= 1; k--) {
+        // Same function the render uses, so the chips measured are exactly the
+        // chips that will appear — including the promoted classification,
+        // which is not always among the first k.
+        const idx = pickTagIndices(tagsRef.current, k)
+        const needed =
+          idx.reduce((sum, i) => sum + (chipW[i] ?? 0), 0) +
+          TAG_CHIP_GAP * (idx.length - 1) +
+          (count > idx.length ? plusW + TAG_CHIP_GAP : 0)
+        if (needed <= budget) { best = k; break }
+      }
+      // FLOOR OF ONE — but only in the stacked layout. A bare `+2` with no
+      // chip beside it communicates nothing: the reader has to hover a
+      // counter to learn there is anything to know. So when the row is too
+      // tight for even one chip, show one anyway and let the group wrap.
+      //
+      // Not in the wide layout, and that restriction is the whole point. There
+      // the tag group shares a row with the title, so forcing a chip in is
+      // paid for by the name — the exact trade the yielding order forbids.
+      // Stacked, source and tags have a row to themselves, so a wrap costs
+      // nothing but a few pixels of height.
+      if (best === 0 && stacked) best = 1
+
+      setFit(prev => (prev === best ? prev : best))
+    }
+
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(row)
+    return () => ro.disconnect()
+  }, [rowRef, probeRef, titleRef, sourceRef, stacked, signature])
+
+  return tags.length === 0 ? 0 : fit
+}
+
 // ── Loading skeleton ────────────────────────────────────────────────────────
 // Every width and height below is read from Figma's own `Property 1=Loading`
 // variants (20134:314522 wide, 20152:6818 stacked) — not estimated, and not
@@ -811,31 +969,6 @@ function EntityHeader({
       if (a.role !== b.role) return a.role === "signal" ? -1 : 1
       return TONE_RANK[a.tone ?? "none"] - TONE_RANK[b.tone ?? "none"]
     })
-  // THE CLASSIFICATION KEEPS THE LAST VISIBLE SLOT. Read off Figma's own
-  // instances (Edge cases 20115:5664), which are unanimous wherever a
-  // classification exists: maximum content shows `Renewal at risk` + `Partner`
-  // + `+6`, and the long-tag case shows one signal + `Vendor` + `+2`. Neither
-  // one lets signals take both slots.
-  //
-  // It is also the only reading that survives the cap coming down to two. The
-  // sort is severity-first, so with two or more signals a pure slice would
-  // hide the classification every time — and the two tags would then answer
-  // the same question twice ("what needs attention") while leaving "what kind
-  // of thing is this" to nothing. Two slots, two questions.
-  //
-  // A signal still wins the FIRST slot, so nothing outranks the most severe
-  // thing on the card.
-  const classificationIdx = orderedTags.findIndex(t => t.role === "classification")
-  const promoteClassification =
-    classificationIdx >= ENTITY_HEADER_TAGS_MAX && ENTITY_HEADER_TAGS_MAX >= 2
-
-  const visibleTags = promoteClassification
-    ? [...orderedTags.slice(0, ENTITY_HEADER_TAGS_MAX - 1), orderedTags[classificationIdx]]
-    : orderedTags.slice(0, ENTITY_HEADER_TAGS_MAX)
-
-  const hiddenTags = promoteClassification
-    ? orderedTags.filter((_, i) => i !== classificationIdx).slice(ENTITY_HEADER_TAGS_MAX - 1)
-    : orderedTags.slice(ENTITY_HEADER_TAGS_MAX)
 
   // Capped here rather than by trusting the caller — same reasoning as the
   // identity tags cap. Six is the maximum; the overflow goes to the Overview,
@@ -870,7 +1003,6 @@ function EntityHeader({
   // they sit in the same visual slot, so they are items in the same group
   // rather than extra tab stops.
   const stateTagCount = (locked ? 1 : 0) + (state === "restricted" ? 1 : 0)
-  const tagGroup  = useRovingIndex(visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + stateTagCount)
   const metaGroup = useRovingIndex(visibleMetadata.length)
   // Stops 1 and 8 — only when the value actually overflows.
   const titleTrunc = useIsTruncated<HTMLSpanElement>()
@@ -917,6 +1049,43 @@ function EntityHeader({
     return () => ro.disconnect()
   }, [])
 
+  // Everything the fit has to measure around.
+  const fitRowRef  = useRef<HTMLDivElement>(null)
+  const probeRef   = useRef<HTMLDivElement>(null)
+  const sourceRef  = useRef<HTMLSpanElement>(null)
+
+  // Re-measure whenever a rendered width could have moved. Chip labels and
+  // tones change chip widths; the name and the source change what is left for
+  // them; the state tags take room out of the same row.
+  const fitSignature = [
+    orderedTags.map(t => `${t.role}:${t.tone ?? "none"}:${t.label}`).join("|"),
+    name,
+    source ?? "",
+    locked ? "locked" : "",
+    state,
+  ].join("§")
+
+  const tagFit = useTagFit({
+    rowRef: fitRowRef,
+    probeRef,
+    titleRef: titleTrunc.ref,
+    sourceRef,
+    tags: orderedTags,
+    stacked,
+    signature: fitSignature,
+  })
+
+  // HOW MANY TAGS FIT — measured, not assumed. `tagFit` is the count the row
+  // actually has room for; `pickTagIndices` turns it into which ones. See
+  // useTagFit for the arithmetic and why it is arithmetic rather than a
+  // shrink-and-see loop.
+  const visibleIdx = pickTagIndices(orderedTags, tagFit)
+  const visibleSet = new Set(visibleIdx)
+  const visibleTags = visibleIdx.map(i => orderedTags[i])
+  const hiddenTags = orderedTags.filter((_, i) => !visibleSet.has(i))
+
+  const tagGroup  = useRovingIndex(visibleTags.length + (hiddenTags.length > 0 ? 1 : 0) + stateTagCount)
+
   // ── Loading ─────────────────────────────────────────────────────────────
   // Returns early, but INSIDE the same CardContainer and with the same
   // `rootRef`, so the measurement that decides `stacked` keeps running and
@@ -948,7 +1117,41 @@ function EntityHeader({
           to be "calm and explanatory" and its instance carries nothing
           explanatory at all — opacity alone cannot be told apart from
           loading or failed. Neutral, never error: it is a governed state. */}
-      <div ref={rootRef} className={cn("flex flex-col gap-[16px]", state === "restricted" && "opacity-50")}>
+      <div ref={rootRef} className={cn("relative flex flex-col gap-[16px]", state === "restricted" && "opacity-50")}>
+
+        {/* MEASURING PROBE — every candidate chip at full size, plus a `+N`
+            and whichever state tags are on. Invisible, out of the layout and
+            out of the accessibility tree; it exists only so useTagFit can ask
+            "how wide would this chip be" about chips that are not on screen.
+            Order matters and is the contract with the hook: tags in
+            `orderedTags` order, then `+N`, then the state tags. */}
+        <div
+          ref={probeRef}
+          aria-hidden="true"
+          className="pointer-events-none invisible absolute left-0 top-0 flex items-center gap-[6px] whitespace-nowrap"
+        >
+          {orderedTags.map((t, i) => (
+            <Tag
+              key={`probe-${t.role}-${t.label}-${i}`}
+              variant={t.tone ?? "neutral"}
+              size="sm"
+              leadingIcon={t.icon ? <t.icon size={12} strokeWidth={1.75} /> : undefined}
+            >
+              {t.label}
+            </Tag>
+          ))}
+          <Tag variant="neutral" size="sm">{`+${orderedTags.length}`}</Tag>
+          {locked && (
+            <Tag variant="secondary" size="sm" leadingIcon={<Lock size={12} strokeWidth={1.75} />}>
+              {ENTITY_HEADER_FALLBACKS.lockedTagLabel}
+            </Tag>
+          )}
+          {state === "restricted" && (
+            <Tag variant="secondary" size="sm" leadingIcon={<EyeOff size={12} strokeWidth={1.75} />}>
+              {ENTITY_HEADER_FALLBACKS.restrictedTagLabel}
+            </Tag>
+          )}
+        </div>
 
         {/* ── Identity row — visual · (title · source · tags) · right cluster.
             Cross-axis alignment follows the layout: centered while the left
@@ -977,7 +1180,15 @@ function EntityHeader({
                 order either way; only the wrapping changes. Nothing is hidden
                 and nothing is dropped, which is the whole point of reflowing
                 before yielding. */}
-            <div className={cn("flex gap-[12px] min-w-0", stacked ? "flex-col items-start gap-[6px]" : "items-center")}>
+            {/* THE ROW THE TAG BUDGET IS MEASURED AGAINST. Its width is set
+                by the card, not by its children — the visual and the right
+                cluster are siblings of the column this sits in — so it is a
+                stable thing to divide up, and dropping a tag cannot change
+                it. That is what keeps the fit from oscillating. */}
+            <div
+              ref={fitRowRef}
+              className={cn("flex gap-[12px] min-w-0", stacked ? "flex-col items-start gap-[6px]" : "items-center")}
+            >
               {/* Identity group — title (+ `Locked`). Stays whole in both
                   layouts; in the stacked layout it becomes row 1 on its own. */}
               <div className={cn("flex items-center gap-[12px] min-w-0", stacked && "w-full")}>
@@ -1025,7 +1236,7 @@ function EntityHeader({
                       the title moves to its own row — a row must not open on a
                       dangling punctuation mark. */}
                   {source && (
-                    <span className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
+                    <span ref={sourceRef} className="inline-flex items-center gap-[8px] shrink-0 min-w-0">
                       {!stacked && (
                         <span
                           aria-hidden="true"

@@ -2256,7 +2256,7 @@ const ENTITY_HEADER_SPEC = {
   properties: [
     { name: "name",           type: "string",   values: ["The entity's display name"], default: "required", note: "A person's name, an account name, or a code. There is NO variant prop and no closed set of entity types — what kind of thing this is arrives as a classification tag instead (see tags)." },
     { name: "visual",         type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product. WATCH OUT: this is the one required object with no fallback, and the card throws if it arrives undefined — which type-checking does not catch here, because this repo runs without strictNullChecks, so a lookup like MY_VISUALS[key] type-checks even for a key that is missing. Build the map exhaustively." },
-    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and caps the visible set at ENTITY_HEADER_TAGS_MAX (TWO, down from six on 2026-09-09) with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. Six saturated the card and, worse, made the TITLE yield instead of the tags. THE CLASSIFICATION KEEPS THE SECOND SLOT whenever there is one, so the two visible tags answer two different questions — what needs attention most, and what kind of thing this is — rather than the same one twice. Figma's instances do the same: its maximum-content card shows one signal, `Partner`, and a +6. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
+    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and fits the visible set to the room the row actually has, with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. ENTITY_HEADER_TAGS_MAX (3) is a CEILING, NOT A COUNT: the component measures the title at its natural width, the source and the state tags, and shows however many chips fit in what is left — three on a card with a short code for a title, two where the name is long, one when the row is tight. That is Figma's own behaviour (its edge cases render 3, 2 and 2) and it is what keeps the TITLE from being the thing that yields. THE CLASSIFICATION KEEPS THE LAST VISIBLE SLOT whenever there is one, so the visible tags answer two different questions — what needs attention most, and what kind of thing this is — rather than the same one twice. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
     { name: "stateBadge",     type: "object",   values: ["{ label, variant: \"success\" | \"informative\" | \"alert\" | \"error\" | \"neutral\", icon? }"], default: "undefined", note: "The entity's overall status — its own slot on the right, before the actions. COLOUR RULE 1 OF 2: full semantic range. There is exactly one, so colour costs nothing and carries real meaning — Active reads success, Degraded reads alert, Blocked and Suspended read error. Max ~19 characters. If several statuses are true at once THE MOST BLOCKING ONE WINS and the rest become signal tags; the component renders the one badge it is given. Never dropped at any width, and never a focus stop: it is status, not a control." },
     { name: "source",         type: "string",   values: ["\"Workday\" | \"Salesforce\" | \"NetSuite\" | \"DMS\" | \"Helix Data Studio\" | ..."], default: "undefined", note: "Which system this record came from. Renders after the title — a Database icon plus the value at 12px Medium, preceded by a bullet separator. ONE ITEM, NEVER TWO: a source is a single fact. Concatenating a second value breaks it — \"Enterprise Account · Midwest Region\" is a category next to a location and neither is a source. A job title, a location, a region, a category or a parent company DESCRIBE or PLACE the entity; they do not say where the data came from, so they belong in tags or secondaryMetadata, or nowhere. An entity created inside the platform itself reads \"Helix Data Studio\"; one with no source omits the prop — the slot is removed, never filled with something else." },
     { name: "description",    type: "string",   values: ["One line of durable context"], default: "undefined (OFF)", note: "OFF by default — most headers do not carry one, and it is an edge case rather than a slot to fill. Ask in this order and stop at the first yes: needs attention now → signal tag; what kind of thing this is → classification tag; current status → stateBadge; a fact someone might act on → secondaryMetadata; durable context none of those captured → this. The one case that justifies it is an opaque code as the title: \"RO-48291\" alone means nothing, so the description says what the record concerns. DURABILITY TEST — if the sentence could change next week it is an activity note and belongs in the Overview. It says what the entity IS, never what is happening to it. One line at 14px Medium, truncated with a Tooltip; it never wraps." },
@@ -32197,13 +32197,24 @@ const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
   // Was the old `statusTag` ("On Leave · Returns Mar 15", neutral, on the
   // left). Figma puts it on the right and colours it `informative`.
   uep:         { label: "On leave",       variant: "informative" },
-  // NOTE: Figma writes `On leave` on BOTH of these — on a customer account
-  // and on a supplier. It is almost certainly the component's default value
-  // left unchanged when the instance was duplicated, the same class of slip
-  // as the `SC` avatar on Kestrel Dynamics. Taken verbatim because the brief
-  // was to take Figma's states exactly; flagged for Michael to confirm.
-  ucp:         { label: "On leave",       variant: "informative" },
-  uvp:         { label: "On leave",       variant: "informative" },
+  // Figma writes `On leave` on both of these too — on a customer ACCOUNT and
+  // on a SUPPLIER. A company does not take leave; it was the component's
+  // default left unchanged when the instances were duplicated, the same slip
+  // as the `SC` avatar that sat on Kestrel Dynamics. Confirmed as a Figma
+  // defect and corrected here (Michael, 2026-09-09) rather than copied: an
+  // example that states something impossible teaches the wrong thing about a
+  // slot whose whole job is to be true.
+  //
+  // Each replacement is the state the rest of THAT card already implies —
+  // invented no further than that.
+  //
+  // Kestrel Dynamics: a live account 52 days from renewal. Nothing on the
+  // card says anything is wrong, and `Active` is the healthy case.
+  ucp:         { label: "Active",         variant: "success"     },
+  // Meridian Supplies: its one signal is `Pending compliance recertification`,
+  // so the account IS under review. The badge and the signal now tell one
+  // story instead of two unrelated ones.
+  uvp:         { label: "Under review",   variant: "informative" },
   repairOrder: { label: "Awaiting parts", variant: "informative" },
 }
 
@@ -32255,7 +32266,7 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
 
 // Figma's maximum-content tag set (Edge cases, 20115:5664) — eight tags on a
 // customer account. This is the ONLY content in the file that overflows the
-// cap of two, which makes it the clearest content for the `+N` chip, so
+// ceiling of three, which makes it the clearest content for the `+N` chip, so
 // it lives here rather than inline: the Overview's maximum-content example
 // and the Preview's overflow toggle are the same eight tags, not two lists
 // that drift apart.
@@ -33476,8 +33487,8 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               assignedAgent={rhAssignedAgent("ucp", "Northwind Alliance")}
               showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
-              <strong>This is the example that brought the tag cap down from six to two</strong> (Michael, 2026-09-09). At six, this card rendered six chips that wrapped onto a second line and held their width, so <strong>the title was what gave way</strong> &mdash; the exact inversion of the documented order (tags to <code>+N</code> first, then source, and only then the title) and the exact thing Figma&rsquo;s DO/DON&rsquo;T frame warns against: <em>&ldquo;don&rsquo;t truncate the title further to keep all tags visible; the identifier is what the user came to read.&rdquo;</em> Figma&rsquo;s own instance of this card never showed six either &mdash; it shows one signal, <code>Partner</code> and a <code>+6</code>.{" "}
-              <strong>One honest caveat.</strong> Figma has no fixed number: its cards show three, two and two visible tags depending on how much room the title and the tags themselves leave. Two is a hard cap standing in for a width calculation this component still does not do &mdash; it lands on Figma&rsquo;s count wherever the row is tight, and one tag short of it where the title is short. Width-driven collapsing has its own ticket.
+              <strong>This is the example that made the tag count width-driven</strong> (Michael, 2026-09-09). It used to render six chips that wrapped onto a second line and held their width, so <strong>the title was what gave way</strong> &mdash; the exact inversion of the documented order (tags to <code>+N</code> first, then source, and only then the title) and the exact thing Figma&rsquo;s DO/DON&rsquo;T frame warns against: <em>&ldquo;don&rsquo;t truncate the title further to keep all tags visible; the identifier is what the user came to read.&rdquo;</em>{" "}
+              <strong>Now the count is measured, not fixed.</strong> The title is given everything it wants up to its 540px ceiling, and the tags are fitted into whatever is left. This name is 52 characters, so it takes most of the row and the tags collapse hard &mdash; one or two chips depending on how wide your window is, and <strong>the name renders whole either way</strong>. Widen the window and watch a chip come back; narrow it and watch one go. Compare it with <em>All signals</em> below: same component, same ceiling of three, three chips, because <code>RO-51730</code> leaves the row far more to work with.
             </p>
           </section>
 
@@ -33490,7 +33501,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               name="Northgate Holdings"
               visual={{ kind: "avatar" }}
               tags={[{ role: "classification", label: "Customer" }]}
-              stateBadge={{ label: "On leave", variant: "informative" }}
+              stateBadge={{ label: "Active", variant: "success" }}
               secondaryMetadata={[
                 { icon: LucideIcons.Building2, text: "14 companies", tooltip: "Companies under this holding · 14 subsidiaries roll up to this entity." },
                 { icon: LucideIcons.Workflow,  text: "6 open",       tooltip: "Open workflows · 6 agentic workflows currently touching this group." },
@@ -33502,7 +33513,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · All signals, no classification</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Every tag is something that needs attention. The sort rule says signals come first &mdash; here there is nothing to come after, and no classification because the highlight icon already names the type. The header still reads, and <strong>the density itself is the message</strong>. It is also the case where the two-tag cap costs the most: Figma shows three signals here and a <code>+3</code>, because a short code like <code>RO-51730</code> leaves the row plenty of space. A hard cap cannot know that, so this card shows two and a <code>+4</code>. The title is intact either way, which is the trade the cap exists to make.
+              Every tag is something that needs attention. The sort rule says signals come first &mdash; here there is nothing to come after, and no classification because the highlight icon already names the type. The header still reads, and <strong>the density itself is the message</strong>. It is also the clearest proof that the tag count is measured rather than declared: a short code like <code>RO-51730</code> leaves the row plenty of space, so <strong>three</strong> chips fit here and a <code>+3</code> carries the rest &mdash; against one or two on the long-titled card above, from the same component with the same ceiling. Narrow the window and watch them drop one at a time.
             </p>
             <EntityHeader
               name="RO-51730"
@@ -33947,7 +33958,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                   <li>The layer model — Identity, Context, Metadata, Action</li>
                   <li>Source is one item; secondary metadata caps at 6</li>
                   <li>Text limits — 8 characters short form, 24 long</li>
-                  <li>Tags — max 2 visible plus overflow</li>
+                  <li>Tags — up to 3 visible, fitted to the row, plus overflow</li>
                   <li>Colour never carries meaning alone</li>
                 </ul>
               </div>
