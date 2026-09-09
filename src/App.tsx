@@ -1942,10 +1942,10 @@ const HEADER_SPEC = {
   description: "Page-level header with title, description, status tag, back button, icon highlight, and primary/secondary CTAs. Three size variants: Size L (24px title, full padding), Size M (18px, compact), Compress (scroll-triggered minimal state — title + tag + CTAs, plus the breadcrumb row above the title when one is set; the breadcrumb and tag both survive compress so scrolling never costs you your place or the record's status).",
   properties: [
     { name: "title",           type: "string",  values: ["any string"],                                                                       default: "—",             note: "Required. Always visible in all sizes." },
-    { name: "size",            type: "Variant", values: ["size-l", "size-m", "compress"],                                                     default: "size-l" },
+    { name: "size",            type: "Variant", values: ["size-l (XL only)", "size-m", "compress"], default: "size-l", note: "'size-m' is 18px and it is what you get almost everywhere. 'size-l' is 24px + full padding and RENDERS ONLY AT XL (≥1920px, the DS breakpoint table's `xl` / Wide tier); below that the component downgrades it to 'size-m' on its own. Michael, 2026-09-09: the tall bar is for a Wide screen, and anywhere narrower it spends height at the top of the page, where it costs the content most. Ask for 'size-l' freely — the component decides whether the screen has earned it. MEASURED ON THE VIEWPORT, not a container: this bar always spans the page, and the DS breakpoints are defined in viewport terms. 'compress' is untouched by any of this — it is scroll state, not a size, and the screen still owns it." },
     { name: "description",     type: "string",  values: ["any string"],                                                                       default: "undefined",     note: "Hidden in compress." },
     { name: "tag",             type: "node",    values: ["<Tag />"],                                                                          default: "undefined",     note: "Renders inline after the title. Survives compress — a detail page's status is exactly what you still want to see once you have scrolled." },
-    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. From L2 onwards this is how a page states where it sits: parent plus current page (Workers › Meridian), not the whole path. Survives compress. Never combine with backButton — at L2 the first crumb IS the way back." },
+    { name: "breadcrumb",      type: "node",    values: ["<Breadcrumb />"],                                                                   default: "undefined",     note: "Trail above the title. FROM L3 ONWARDS this is how a page states where it sits: parent plus current page, not the whole path. Survives compress. Never combine with backButton — one affordance, and the depth picks it: L2 is the back arrow with the PARENT as the title (that text is what labels the arrow), L3+ is the breadcrumb, because only there are \"up one level\" and \"back\" different destinations. Revised 2026-09-09; it used to start at L2." },
     { name: "backButton",      type: "Boolean", values: ["true", "false"],                                                                    default: "false",         note: "ArrowLeft button. The ONLY prop that controls back-button visibility. Hidden in compress unless showBackInCompress is also true. Use only in drill-down pages." },
     { name: "onBack",          type: "function", values: ["() => void"],                                                                      default: "undefined",     note: "Click handler for the back button. Never affects visibility — use backButton for that." },
     { name: "showBackInCompress", type: "Boolean", values: ["true", "false"],                                                                 default: "false",         note: "Keeps the back button visible in compress. Requires backButton. Use on long drill-down pages where scrolling would otherwise strand the user." },
@@ -2256,7 +2256,7 @@ const ENTITY_HEADER_SPEC = {
   properties: [
     { name: "name",           type: "string",   values: ["The entity's display name"], default: "required", note: "A person's name, an account name, or a code. There is NO variant prop and no closed set of entity types — what kind of thing this is arrives as a classification tag instead (see tags)." },
     { name: "visual",         type: "object",   values: ["{ kind: \"avatar\" }", "{ kind: \"icon\", icon: LucideIcon, variant?: HighlightIconVariant }"], default: "required", note: "Avatar for companies, people and groups. Highlight icon for everything else — objects, assets, processes, transactions, documents. EXACTLY ONE RENDERS: never both, never neither, which is why this is required and has no default. Initials are NEVER derived from a code, so a code-titled record (RO-48291) can only be an icon. A site inherits its parent company's brand rather than getting its own mark. The icon colour is assigned per entity TYPE and stays the same everywhere in the product. WATCH OUT: this is the one required object with no fallback, and the card throws if it arrives undefined — which type-checking does not catch here, because this repo runs without strictNullChecks, so a lookup like MY_VISUALS[key] type-checks even for a key that is missing. Build the map exhaustively." },
-    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and caps the visible set at ENTITY_HEADER_TAGS_MAX (TWO, down from six on 2026-09-09) with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. Six saturated the card and, worse, made the TITLE yield instead of the tags. THE CLASSIFICATION KEEPS THE SECOND SLOT whenever there is one, so the two visible tags answer two different questions — what needs attention most, and what kind of thing this is — rather than the same one twice. Figma's instances do the same: its maximum-content card shows one signal, `Partner`, and a +6. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
+    { name: "tags",           type: "Array",    values: ["EntityHeaderTag[] — { label, role: \"signal\" | \"classification\", tone?: \"error\" | \"alert\", icon? }"], default: "[]", note: "Signals and classification in one array. The component sorts them — signals first, coloured before uncoloured, then classification — and fits the visible set to the room the row actually has, with a +N chip whose Tooltip carries the hidden labels, so nothing is lost, only moved. ENTITY_HEADER_TAGS_MAX (3) is a CEILING, NOT A COUNT: the component measures the title at its natural width, the source and the state tags, and shows however many chips fit in what is left — three on a card with a short code for a title, two where the name is long, one when the row is tight. That is Figma's own behaviour (its edge cases render 3, 2 and 2) and it is what keeps the TITLE from being the thing that yields. THE CLASSIFICATION KEEPS THE LAST VISIBLE SLOT whenever there is one, so the visible tags answer two different questions — what needs attention most, and what kind of thing this is — rather than the same one twice. COLOUR RULE 2 OF 2: left tags get two colours only — error when blocking or overdue, alert when it needs review, neutral for everything else. The test is not whether it is a signal or a classification; it is whether someone has to do something about it. CLASSIFICATION IS NEVER COLOURED and the component enforces it — a tone passed on a classification tag is stripped. That is what makes the vocabulary scalable: a tenant can define a hundred classifications and none of them picks a colour. A classification only belongs here when the visual is an avatar — a highlight icon already names the type. Omit or pass an empty array and the group is REMOVED, not left empty." },
     { name: "stateBadge",     type: "object",   values: ["{ label, variant: \"success\" | \"informative\" | \"alert\" | \"error\" | \"neutral\", icon? }"], default: "undefined", note: "The entity's overall status — its own slot on the right, before the actions. COLOUR RULE 1 OF 2: full semantic range. There is exactly one, so colour costs nothing and carries real meaning — Active reads success, Degraded reads alert, Blocked and Suspended read error. Max ~19 characters. If several statuses are true at once THE MOST BLOCKING ONE WINS and the rest become signal tags; the component renders the one badge it is given. Never dropped at any width, and never a focus stop: it is status, not a control." },
     { name: "source",         type: "string",   values: ["\"Workday\" | \"Salesforce\" | \"NetSuite\" | \"DMS\" | \"Helix Data Studio\" | ..."], default: "undefined", note: "Which system this record came from. Renders after the title — a Database icon plus the value at 12px Medium, preceded by a bullet separator. ONE ITEM, NEVER TWO: a source is a single fact. Concatenating a second value breaks it — \"Enterprise Account · Midwest Region\" is a category next to a location and neither is a source. A job title, a location, a region, a category or a parent company DESCRIBE or PLACE the entity; they do not say where the data came from, so they belong in tags or secondaryMetadata, or nowhere. An entity created inside the platform itself reads \"Helix Data Studio\"; one with no source omits the prop — the slot is removed, never filled with something else." },
     { name: "description",    type: "string",   values: ["One line of durable context"], default: "undefined (OFF)", note: "OFF by default — most headers do not carry one, and it is an edge case rather than a slot to fill. Ask in this order and stop at the first yes: needs attention now → signal tag; what kind of thing this is → classification tag; current status → stateBadge; a fact someone might act on → secondaryMetadata; durable context none of those captured → this. The one case that justifies it is an opaque code as the title: \"RO-48291\" alone means nothing, so the description says what the record concerns. DURABILITY TEST — if the sentence could change next week it is an activity note and belongs in the Overview. It says what the entity IS, never what is happening to it. One line at 14px Medium, truncated with a Tooltip; it never wraps." },
@@ -2268,6 +2268,7 @@ const ENTITY_HEADER_SPEC = {
     { name: "onInformationOpen", type: "Function", values: ["() => void"], default: "undefined", note: "Opens the Information side panel: where the fields IN THIS HEADER came from — the title, the source, the state. Not the Overview, not the Knowledge tab. It explains what is on screen right now, nothing more. ONE SIDE PANEL AT A TIME: this panel and the Personal Assistant both open on the side, opening one closes the other, and the panel requested last wins — the component delegates both, so enforcing that is the host's job." },
     { name: "recordFields",   type: "Array",    values: ["RecordField[] — { label, icon, provenance, state, value, maskedValue?, hasDestination? }"], default: "undefined", note: "PASSED THROUGH, NOT RENDERED HERE — the Information panel that displays these is built by the host, so this component accepts the array and never reads it. A flat array the host builds directly; there is no per-entity-type field structure inside the component. `provenance` is mandatory on every field (Law 1: no code path renders a value without its origin). `state: \"hydrated\" | \"masked\"` is the SAME field in 2 entitlement states, not 2 field types — whoever renders them renders whichever state they are given and never resolves permissions (Law 4). `hasDestination: false` for a plain descriptive fact (a pure date, a pure figure) — static text, no chevron." },
     { name: "locked",         type: "Boolean",  values: ["true","false"], default: "false", note: "\"You cannot act on or edit this entity.\" Shows a \"Locked\" Tag beside the title and disables secondaryAction plus the overflow's write actions, each with a Tooltip explaining why. `Ask` and the Information panel stay fully interactive — locked does not mean you cannot consult it. NOT the same thing as Figma's `Restricted`, which is \"you cannot see this value\" and lives on the field as RecordField.state === \"masked\". Both coexist." },
+    { name: "compressOnScroll", type: "Boolean", values: ["true", "false"], default: "false", note: "STICKS the card to the top of its scroll container and COMPRESSES it on the way down: the secondaryMetadata row and the description drop, and the visual goes one size down (L to M \u2014 32px to 24px for an avatar, 40px to 32px for a highlight icon). Scrolling back up restores all three at once, without waiting for the top; at the top (\u226416px) the card is always whole. SCROLL DIRECTION, NEVER HOVER (Michael, 2026-09-09): a header that grows under the cursor fires by accident, pushes down the content the reader is in the middle of, and does not exist on a tablet or for a keyboard. Direction is the same signal ScreenLayout computes for the page Header, so the two agree rather than compete. A 4px threshold keeps trackpad jitter from flipping it. IDENTITY NEVER COMPRESSES \u2014 name, visual, source, tags, state badge and the whole right-hand cluster are untouched; it is the second row that goes, never the first. ONE PROP, NOT TWO: sticky and compressed are inseparable, since compressing a card that scrolls out of view does nothing, so binding them removes the half-wired state. WHERE IT BELONGS: a record page whose content scrolls under the header \u2014 a detail view's Overview tab. NOT in a SlideOut, a modal or a widget, none of which has a long scroll to reclaim room from." },
     { name: "state",          type: "Variant",  values: ["default", "loading", "restricted"], default: '"default"', note: "Figma's `Property 1` axis. INDEPENDENT of the reflow — an entity can be loading on a tablet — and an enum rather than three booleans because the options are mutually exclusive. `loading` renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does), never an empty state: saying \"nothing here\" while data is in flight states something untrue. `restricted` renders the card at 50% opacity — Figma's own variant — plus a neutral `Restricted` Tag beside the title with the reason in a Tooltip. The Tag goes BEYOND Figma's instance on purpose (Michael, 2026-09-07): the prose asks this state to be \"calm and explanatory\" and the instance carries nothing explanatory, and opacity on its own cannot be told apart from loading or failed. Never error — the viewer lacks entitlement to the values, the entity exists and is governed, so this is a state and not a failure. Figma's fourth named state, `Minimum`, needs no value here: \"only visual, title and state\" is what you get by passing only those props." },
     { name: "className",      type: "string",   values: ["any string"], default: "undefined", note: "Merged onto the CardContainer." },
     { name: "entityType",     type: "REMOVED",  values: ["— no longer a prop —"], default: "—", note: "REMOVED. In Figma the entity type is a classification TAG, not an icon-plus-label beside the name, and it only appears when the visual is an avatar. Figma's own icon examples (RO-48291, Customer Master) carry signals and no classification at all." },
@@ -32197,13 +32198,24 @@ const RH_STATE_BADGE: Record<RhDemoKey, EntityStateBadge> = {
   // Was the old `statusTag` ("On Leave · Returns Mar 15", neutral, on the
   // left). Figma puts it on the right and colours it `informative`.
   uep:         { label: "On leave",       variant: "informative" },
-  // NOTE: Figma writes `On leave` on BOTH of these — on a customer account
-  // and on a supplier. It is almost certainly the component's default value
-  // left unchanged when the instance was duplicated, the same class of slip
-  // as the `SC` avatar on Kestrel Dynamics. Taken verbatim because the brief
-  // was to take Figma's states exactly; flagged for Michael to confirm.
-  ucp:         { label: "On leave",       variant: "informative" },
-  uvp:         { label: "On leave",       variant: "informative" },
+  // Figma writes `On leave` on both of these too — on a customer ACCOUNT and
+  // on a SUPPLIER. A company does not take leave; it was the component's
+  // default left unchanged when the instances were duplicated, the same slip
+  // as the `SC` avatar that sat on Kestrel Dynamics. Confirmed as a Figma
+  // defect and corrected here (Michael, 2026-09-09) rather than copied: an
+  // example that states something impossible teaches the wrong thing about a
+  // slot whose whole job is to be true.
+  //
+  // Each replacement is the state the rest of THAT card already implies —
+  // invented no further than that.
+  //
+  // Kestrel Dynamics: a live account 52 days from renewal. Nothing on the
+  // card says anything is wrong, and `Active` is the healthy case.
+  ucp:         { label: "Active",         variant: "success"     },
+  // Meridian Supplies: its one signal is `Pending compliance recertification`,
+  // so the account IS under review. The badge and the signal now tell one
+  // story instead of two unrelated ones.
+  uvp:         { label: "Under review",   variant: "informative" },
   repairOrder: { label: "Awaiting parts", variant: "informative" },
 }
 
@@ -32255,7 +32267,7 @@ const RH_TAGS: Record<RhDemoKey, EntityHeaderTag[]> = {
 
 // Figma's maximum-content tag set (Edge cases, 20115:5664) — eight tags on a
 // customer account. This is the ONLY content in the file that overflows the
-// cap of two, which makes it the clearest content for the `+N` chip, so
+// ceiling of three, which makes it the clearest content for the `+N` chip, so
 // it lives here rather than inline: the Overview's maximum-content example
 // and the Preview's overflow toggle are the same eight tags, not two lists
 // that drift apart.
@@ -33035,6 +33047,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   const [pvAgent,       setPvAgent]       = useState(true)
   const [pvLocked,      setPvLocked]      = useState(false)
   const [pvNba,         setPvNba]         = useState(true)
+
   // Closing pass — Playground's own NBA-type selector, decoupled from
   // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
   // modeled" example) shows on the live card below, by pointing at one
@@ -33476,8 +33489,8 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               assignedAgent={rhAssignedAgent("ucp", "Northwind Alliance")}
               showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
-              <strong>This is the example that brought the tag cap down from six to two</strong> (Michael, 2026-09-09). At six, this card rendered six chips that wrapped onto a second line and held their width, so <strong>the title was what gave way</strong> &mdash; the exact inversion of the documented order (tags to <code>+N</code> first, then source, and only then the title) and the exact thing Figma&rsquo;s DO/DON&rsquo;T frame warns against: <em>&ldquo;don&rsquo;t truncate the title further to keep all tags visible; the identifier is what the user came to read.&rdquo;</em> Figma&rsquo;s own instance of this card never showed six either &mdash; it shows one signal, <code>Partner</code> and a <code>+6</code>.{" "}
-              <strong>One honest caveat.</strong> Figma has no fixed number: its cards show three, two and two visible tags depending on how much room the title and the tags themselves leave. Two is a hard cap standing in for a width calculation this component still does not do &mdash; it lands on Figma&rsquo;s count wherever the row is tight, and one tag short of it where the title is short. Width-driven collapsing has its own ticket.
+              <strong>This is the example that made the tag count width-driven</strong> (Michael, 2026-09-09). It used to render six chips that wrapped onto a second line and held their width, so <strong>the title was what gave way</strong> &mdash; the exact inversion of the documented order (tags to <code>+N</code> first, then source, and only then the title) and the exact thing Figma&rsquo;s DO/DON&rsquo;T frame warns against: <em>&ldquo;don&rsquo;t truncate the title further to keep all tags visible; the identifier is what the user came to read.&rdquo;</em>{" "}
+              <strong>Now the count is measured, not fixed.</strong> The title is given everything it wants up to its 540px ceiling, and the tags are fitted into whatever is left. This name is 52 characters, so it takes most of the row and the tags collapse hard &mdash; one or two chips depending on how wide your window is, and <strong>the name renders whole either way</strong>. Widen the window and watch a chip come back; narrow it and watch one go. Compare it with <em>All signals</em> below: same component, same ceiling of three, three chips, because <code>RO-51730</code> leaves the row far more to work with.
             </p>
           </section>
 
@@ -33490,7 +33503,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               name="Northgate Holdings"
               visual={{ kind: "avatar" }}
               tags={[{ role: "classification", label: "Customer" }]}
-              stateBadge={{ label: "On leave", variant: "informative" }}
+              stateBadge={{ label: "Active", variant: "success" }}
               secondaryMetadata={[
                 { icon: LucideIcons.Building2, text: "14 companies", tooltip: "Companies under this holding · 14 subsidiaries roll up to this entity." },
                 { icon: LucideIcons.Workflow,  text: "6 open",       tooltip: "Open workflows · 6 agentic workflows currently touching this group." },
@@ -33502,7 +33515,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Edge case · All signals, no classification</p>
             <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
-              Every tag is something that needs attention. The sort rule says signals come first &mdash; here there is nothing to come after, and no classification because the highlight icon already names the type. The header still reads, and <strong>the density itself is the message</strong>. It is also the case where the two-tag cap costs the most: Figma shows three signals here and a <code>+3</code>, because a short code like <code>RO-51730</code> leaves the row plenty of space. A hard cap cannot know that, so this card shows two and a <code>+4</code>. The title is intact either way, which is the trade the cap exists to make.
+              Every tag is something that needs attention. The sort rule says signals come first &mdash; here there is nothing to come after, and no classification because the highlight icon already names the type. The header still reads, and <strong>the density itself is the message</strong>. It is also the clearest proof that the tag count is measured rather than declared: a short code like <code>RO-51730</code> leaves the row plenty of space, so <strong>three</strong> chips fit here and a <code>+3</code> carries the rest &mdash; against one or two on the long-titled card above, from the same component with the same ceiling. Narrow the window and watch them drop one at a time.
             </p>
             <EntityHeader
               name="RO-51730"
@@ -33546,6 +33559,62 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
               This is also the one example whose metadata row Figma fills in completely, with four real values and no placeholders &mdash; which is what &ldquo;aim for four&rdquo; looks like in practice.
+            </p>
+          </section>
+
+          {/* ── Compress on scroll ───────────────────────────────────────
+              Michael, 2026-09-09. Shipped as `compressOnScroll` after the
+              prototype answered the two questions it was built to answer:
+              the two-bar stack reads fine because the page Header sits
+              OUTSIDE the scroll container, and the un-animated drop is
+              legible because only the second row moves. ── */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--field-supporting)] mb-[4px]">Behaviour &middot; Compress on scroll &mdash; <code>compressOnScroll</code></p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              On a record page the header is the one thing the reader has already finished with by the time they start scrolling, and it keeps its full height anyway &mdash; spending the screen on what they are done with. With this on, the card <strong>sticks to the top of its scroll container</strong> and, on the way down, drops the metadata row and the description and takes the visual down one size, L to M. <strong>Scrolling back up restores all three at once</strong>, without waiting for the top.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              <strong>Scroll direction, never hover.</strong> A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is in the middle of &mdash; and hover exists neither on a tablet nor for a keyboard. Direction is also the signal <code>ScreenLayout</code> already computes for the page <code>Header</code>, so the two agree instead of competing. <strong>Back at the top is always the full card:</strong> nobody who has returned to the top of a record should be looking at a reduced header.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              <strong>Identity never compresses.</strong> Name, visual, source, tags, state badge and the entire right-hand cluster stay exactly as they are &mdash; it is the second row that goes, never the first. One prop rather than two, because sticky and compressed are inseparable: compressing a card that scrolls out of view anyway does nothing, so binding them removes the half-wired state.
+            </p>
+
+            <div
+              className="h-[420px] overflow-y-auto rounded-[12px] p-[16px]"
+              style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}
+            >
+              <EntityHeader
+                compressOnScroll
+                name={RH_UCP.name}
+                visual={RH_VISUAL.ucp}
+                source={RH_SOURCE.ucp}
+                tags={RH_TAGS.ucp}
+                stateBadge={RH_STATE_BADGE.ucp}
+                secondaryMetadata={RH_SECONDARY_METADATA.ucp}
+                assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+                showInformation
+                onInformationOpen={() => rhOpenProvenance("ucp")}
+              />
+              <div className="mt-[12px] flex flex-col gap-[12px]">
+                {[
+                  { t: "Renewal readiness",  d: "Contract value, term and the three approvals still outstanding." },
+                  { t: "Open workflows",     d: "Three agentic workflows are touching this account right now." },
+                  { t: "Recent activity",    d: "Everything that happened on this record in the last 30 days." },
+                  { t: "Linked records",     d: "Sites, contacts and orders that roll up to this account." },
+                  { t: "Documents",          d: "Canon Plane documents attached to this account." },
+                ].map(w => (
+                  <CardContainer key={w.t} size="sm">
+                    <p className="text-[13px] font-semibold" style={{ color: "var(--color-text-title)" }}>{w.t}</p>
+                    <p className="text-[12px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>{w.d}</p>
+                    <div className="h-[64px]" />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              <em>Scroll inside the frame.</em> <strong>Where it belongs:</strong> a record page whose content scrolls under the header &mdash; a detail view&rsquo;s Overview tab. <strong>Where it does not:</strong> a SlideOut, a modal or a widget, none of which has a long scroll to reclaim room from. It is off by default, so a card that has no business sticking simply never asks for it.
             </p>
           </section>
 
@@ -33947,7 +34016,7 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
                   <li>The layer model — Identity, Context, Metadata, Action</li>
                   <li>Source is one item; secondary metadata caps at 6</li>
                   <li>Text limits — 8 characters short form, 24 long</li>
-                  <li>Tags — max 2 visible plus overflow</li>
+                  <li>Tags — up to 3 visible, fitted to the row, plus overflow</li>
                   <li>Colour never carries meaning alone</li>
                 </ul>
               </div>
@@ -36416,7 +36485,7 @@ const BREADCRUMB_SPEC = {
   name: "Breadcrumb",
   figmaNodeId: "18352:45",
   figmaUrl: "https://www.figma.com/design/v6rmYKA2zmyXWOahlxLOeI/Design-System---AIMS-OS?node-id=18352-45",
-  description: "Hierarchical navigation trail, used from L2 onwards inside Header.breadcrumb. Shows the full path from root to the current page with all ancestors clickable. At depth L2, use Header backButton instead — never both.",
+  description: "Hierarchical navigation trail, used FROM L3 ONWARDS inside Header.breadcrumb. Shows the path from root to the current page with all ancestors clickable. At L2 use Header backButton instead, with the PARENT's name as the title so the arrow is labelled — never both, and never a breadcrumb at L2, where \"up\" and \"back\" are the same place. Revised 2026-09-09.",
   properties: [
     { name: "depth",      type: "number",             values: ["2","3","4","4+"],               default: "3",   note: "depth<2 → no breadcrumb · depth=2 → Depth=2 variant · depth=3 → Depth=3 · depth≥4 → Depth=4 (middle items truncated with …)" },
     { name: "items",      type: "BreadcrumbItem[]",   values: ["{ label: string; href?: string }[]"], default: "[]",  note: "items[0] is always 'Home' with href='/'. items[last] is the Selected item (no href)." },
@@ -36456,7 +36525,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
   const [tab, setTab] = useState<"overview" | "playground" | "reference">("overview")
   const [pgDepth, setPgDepth] = useState(3)
   const [bcPreviewOpen, setBcPreviewOpen] = useState(false)
-  const [bcPreviewL3, setBcPreviewL3]     = useState(false)
+  const [bcPreviewLevel, setBcPreviewLevel] = useState<1 | 2 | 3>(1)
 
   const depthItems: Record<number, BreadcrumbItem[]> = {
     2: [{ label: "Home", href: "/" }, { label: "Page Title" }],
@@ -36471,7 +36540,7 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
         <div>
           <h1 className="text-[24px] font-semibold text-[var(--foreground)]">Breadcrumb</h1>
           <p className="text-[14px] text-[var(--field-supporting)] mt-[4px] max-w-[600px]">
-            Hierarchical navigation trail, used from L2 onwards inside <code>Header.breadcrumb</code>. Shows parent plus current page — ancestors clickable, current page not. Never paired with a backButton: from L2 the first crumb IS the way back.
+            Hierarchical navigation trail, used <strong>from L3 onwards</strong> inside <code>Header.breadcrumb</code>. Shows parent plus current page &mdash; ancestors clickable, current page not. Never paired with a backButton: it is one affordance or the other, and the depth picks it. <strong>At L2 they point at the same place</strong>, so L2 keeps the back arrow and puts the PARENT&rsquo;s name in the title, which is what labels it.
           </p>
         </div>
         <SpecButton onClick={() => openSpec("breadcrumb")} />
@@ -36582,22 +36651,23 @@ function BreadcrumbPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                   <LucideIcons.X size={12} /> Close Preview
                 </button>
 
-                {/* L1 / L2+ toggle — centered at top. Under the current pattern the
-                    breadcrumb appears from L2, not L3, so the two states are
-                    "root list, nothing to trace" and "anything deeper". */}
+                {/* Three states, because the pattern has three (revised
+                    2026-09-09): nothing at L1, a back arrow labelled by the
+                    parent at L2, and the breadcrumb only from L3. */}
                 <div className="fixed" style={{ top: 10, left: "50%", transform: "translateX(-50%)", zIndex: 10001 }}>
                   <SwitchTab
                     items={[
-                      { id: "l2", label: "L1 — Root list"    },
-                      { id: "l3", label: "L2+ — Detail view" },
+                      { id: "l1", label: "L1 — Root list"        },
+                      { id: "l2", label: "L2 — Back button"      },
+                      { id: "l3", label: "L3 — Breadcrumb"       },
                     ]}
-                    value={bcPreviewL3 ? "l3" : "l2"}
-                    onChange={(v: string) => setBcPreviewL3(v === "l3")}
+                    value={`l${bcPreviewLevel}`}
+                    onChange={(v: string) => setBcPreviewLevel(Number(v.slice(1)) as 1 | 2 | 3)}
                     size="s"
                   />
                 </div>
 
-                <BreadcrumbExampleScreen showBreadcrumb={bcPreviewL3} />
+                <BreadcrumbExampleScreen level={bcPreviewLevel} />
               </div>
             )}
 
@@ -37108,7 +37178,7 @@ function HeaderPage({ openSpec }: { openSpec: (s: SpecModal) => void }) {
                 <tbody>
                   {[
                     { prop: "title",           type: "string",     def: "—",         desc: "Page title. Required. Always visible." },
-                    { prop: "size",            type: "HeaderSize", def: '"size-l"',   desc: '"size-l" | "size-m" | "compress"' },
+                    { prop: "size",            type: "HeaderSize", def: '"size-l"',   desc: '"size-l" (renders only at XL, \u22651920px \u2014 downgraded to "size-m" below) | "size-m" | "compress"' },
                     { prop: "description",     type: "string",     def: "undefined",  desc: "Subtitle below the title. Hidden in compress." },
                     { prop: "tag",             type: "ReactNode",  def: "undefined",  desc: "Status chip (Tag component). Renders inline after title. Survives compress — a detail view keeps its state visible while scrolled." },
                     { prop: "breadcrumb",      type: "ReactNode",  def: "undefined",  desc: "Breadcrumb trail above the title, for L2+ depth. Survives compress. Never pass this together with backButton — the audit blocks it." },

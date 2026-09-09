@@ -168,7 +168,7 @@ These are checks 15-18. They are written down here too because a check tells you
 
 ### Navigation & headers
 - **NEVER** show `tag` on a list-view `Header` — only on a detail-view Header (single item, one state).
-- **NEVER** combine `Header.breadcrumb` and `backButton` — from L2 it is the breadcrumb; the first crumb IS the way back. `backButton` is only for pages with no hierarchy to express (a creation wizard).
+- **NEVER** combine `Header.breadcrumb` and `backButton` — one affordance, and the depth decides which: **L2 is `backButton` with the PARENT's name as the title; L3+ is the breadcrumb.** `backButton` also covers pages with no hierarchy to express at all (a creation wizard).
 - **NEVER** use `WidgetCanvasSection` or a hand-rolled grid for Overview tabs — always `WidgetCanvasView`.
 - **NEVER** pass the `label` prop to `Input` or `Textarea` in desktop screen files.
 
@@ -249,7 +249,7 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 | `name` | Identity | `string` — required |
 | `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
 | `source?` | Identity | `string` — which system the record came from. **One item, never two** |
-| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **2 visible + `+N`**. Pass all of them; the cap is the component's job |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **up to 3 visible + `+N`, fitted to the row**. Pass all of them; the count is the component's job |
 | `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
 | `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
 | `secondaryAction?` | Identity, right | `EntityHeaderAction` — **off by default** |
@@ -259,11 +259,18 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 | `secondaryMetadata?` | below Identity | `SecondaryMetadataItem[]` — the attribute row, **capped at 6** |
 | `recordFields?` | — | `RecordField[]` — consumed by the host's Information panel, not rendered here |
 | `state?` | whole card | `"default" \| "loading" \| "restricted"` — Figma's `Property 1` axis |
+| `compressOnScroll?` | whole card | `boolean` — **off by default.** Sticks the card and compresses it on scroll down |
 
 **`state` is Figma's `Property 1` axis, and it is independent of the reflow** — an entity can be loading on a tablet, which is why it is one enum and not three booleans.
 - **`loading`** renders a skeleton matching the CURRENT layout (it stacks below 720px exactly as the loaded card does). Pass it while the entity's data is in flight — **never render an empty header, and never withhold the card until data arrives.** Figma's reason: saying "nothing here" while data is in flight states something untrue.
 - **`restricted`** renders the card at 50% opacity plus a neutral `Restricted` tag beside the title, with the reason in a tooltip on hover and on focus. The viewer lacks entitlement to the values; the entity exists and is governed, so **this must never read as an error.** The tag goes beyond Figma's own variant on purpose — opacity alone cannot be told apart from loading or failed. It is a separate thing from `locked` ("you cannot edit" vs "you cannot see") and both can be true at once. `RecordField.state === "masked"` is the same idea applied to one field.
 - **`Minimum`, Figma's fourth named state, needs no value** — "only visual, title and state" is what you get by passing only those props.
+
+**`compressOnScroll` sticks the card and compresses it as the reader scrolls down** (Michael, 2026-09-09). On the way down the `secondaryMetadata` row and the `description` drop and the visual goes one size down, L to M. **Scrolling back up restores all three at once**, and at the top the card is always whole — nobody who has returned to the top of a record should be looking at a reduced header.
+- **Scroll direction, never hover.** A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is mid-sentence in; hover exists neither on a tablet nor for a keyboard. Direction is also what `ScreenLayout` already computes for the page `Header`'s compress, so the two agree instead of competing.
+- **Identity never compresses.** Name, visual, source, tags, state badge and the entire right-hand cluster are untouched. It is the second row that goes, never the first.
+- **One prop, not two.** Sticky and compressed are inseparable — compressing a card that scrolls out of view anyway does nothing — so they are bound together and a caller cannot wire half of it.
+- **Turn it on for a record page whose content scrolls under the header** — a detail view's Overview tab. **Never in a `SlideOut`, a modal or a widget:** none of them has a long scroll to reclaim room from, and a card that sticks inside a panel just eats the panel.
 
 **Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.
 
@@ -287,9 +294,9 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 
 - **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
 - **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
-- **Two visible, then a `+N` chip** (Michael, 2026-09-09 — it was six until then). Six chips wrapped to a second line, saturated the card and, because they held their width, made the **title** truncate instead of the tags. Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
-- **The classification keeps the second visible slot** whenever the entity has one, so the two tags answer two different questions — what needs attention most, and what kind of thing this is. A signal still takes the first slot. Read off Figma's own instances, which never let signals take both.
-- **Two is a hard cap standing in for a width calculation.** Figma has no fixed number — its cards show three, two and two depending on the room the title and the tags leave. Width-driven collapsing is not implemented; until it is, two is the count that never costs the title.
+- **How many are visible is MEASURED, not fixed** (Michael, 2026-09-09). `ENTITY_HEADER_TAGS_MAX` is 3 and it is a **ceiling**: the component gives the title everything it wants up to its 540px limit, subtracts the source and any `Locked`/`Restricted` tag, and fits as many chips as the remainder holds — 3 beside a short code, 2 beside a long name, 1 when the row is tight. Figma does the same; its edge cases render 3, 2 and 2. **Never assume a number at the call site.**
+- **Pass every tag the entity has.** Trimming the array yourself is the one way to break this — the component cannot show a tag it was not given, and the `+N` Tooltip is what makes hiding acceptable in the first place: nothing is lost, only moved.
+- **The classification keeps the last visible slot** whenever the entity has one, so the visible tags answer two different questions — what needs attention most, and what kind of thing this is. A signal still takes the first slot. Read off Figma's own instances, which never let signals take every slot.
 - **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
 - **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
 
@@ -410,18 +417,27 @@ Every entity detail page follows this structure — tabs always in this order:
 3. **Logs** → always the `Table` component following the Logs Table pattern. (See PatternLogsPage.)
 
 Header rules on detail pages:
-- `breadcrumb` with parent + current page — a detail page is L2 or deeper. Never `backButton` alongside it.
-- Always show status `tag` — detail view = one entity, one state.
-- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one.
+- **A detail page reached from its list is L2**, so it carries `backButton` and its `title` is the PARENT's name — not the record's. `breadcrumb` starts at L3. See *Navigation depth* below; never both.
+- Show the status `tag` — detail view = one entity, one state. **Unless an `EntityHeader` is on the page:** it carries the state badge, and the bar above it must not repeat it.
+- Primary action in `Header.primaryAction` — an **action object**, not a `Button`: `{ label, icon?, onClick?, disabled?, priority? }`. Header picks the variant, so a screen never names one. **Again, unless an `EntityHeader` is on the page** — then the record's actions belong to that card and the bar carries none.
 
 ```tsx
-// ✅ Standard detail page structure
+// ✅ L2 detail page, no EntityHeader — the bar carries the record
 <Header
-  title="Meridian"
+  title="Workers"                                   // the PARENT
+  backButton
+  onBack={go}
   tag={<Tag variant="success" size="s">Active</Tag>}
-  breadcrumb={<Breadcrumb depth={2} items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]} onNavigate={go} />}
   size={isScrolled ? "compress" : "size-l"}
   primaryAction={{ label: "Edit", icon: Pencil }}
+/>
+
+// ✅ L2 detail page WITH an EntityHeader — the bar carries navigation only
+<Header
+  title="Workers"
+  backButton
+  onBack={go}
+  size={isScrolled ? "compress" : "size-l"}
 />
 <Tabs items={[
   { id: "overview", label: "Overview" },   // always first
@@ -464,51 +480,73 @@ Maximum 2 navigation layers:
 **24px gap between every navigation layer** — Tabs → SwitchTab → Filters → Chips (nav). Confirmed from Figma DS node 14660-136237.
 24px gap from the last nav element to the first entity card. 12px gap between entity cards.
 
-### Navigation depth — the breadcrumb pattern
+### Navigation depth — back at L2, breadcrumb from L3
 
-**From L2 onwards, a page states where it sits with a breadcrumb inside the `Header`. Not a back arrow.**
+**L2 keeps the `Header` with a `backButton`, and its title names the PARENT. The breadcrumb starts at L3.**
 
-Confirmed by Michael (2026-09-02) after checking how Carbon and Atlassian handle it. Back and breadcrumb answer different questions — back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I") — and that distinction only earns its keep from L3, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place**: the first crumb IS the way back, so an arrow beside it is two affordances pointing at one target, in a 62px header.
+Revised by Michael, 2026-09-09. The previous version of this rule said the opposite — breadcrumb from L2 onwards, never a back arrow — and the reasoning it gave is worth keeping, because it is what makes the revision correct rather than a reversal.
+
+Back and breadcrumb answer different questions. Back is *chronological* ("where did I come from"), breadcrumb is *hierarchical* ("where am I"), and **that distinction only earns its keep from L3**, where "up one level" and "back" are genuinely different destinations. **At L2 they are the same place.** So at L2 you should show one affordance, not two — the only question is which.
+
+The old rule picked the crumb, on the grounds that a bare arrow does not say where it goes while a crumb is labelled. **That argument assumed the `Header` title was the RECORD's name**, which left the arrow orphaned beside it. It no longer holds, because at L2 the title names the parent:
+
+```
+← Universal Profiles
+```
+
+The arrow is now labelled by the text beside it. And where an `EntityHeader` is on the page, this is the only version that does not duplicate: the record's name, state and actions belong to that card, and a crumb naming the record would put its name back in the bar the card sits under.
 
 | Depth | Pattern |
 |---|---|
 | L1 (a list, a home) | No breadcrumb, no back. `Breadcrumb` renders nothing below `depth={2}` anyway |
-| **L2+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
+| **L2** | `Header` with `backButton`, and **`title` = the parent's name** — the list you came from. No `tag`. No CTAs when an `EntityHeader` carries them |
+| **L3+** | `Breadcrumb` in `Header.breadcrumb` — **parent plus current page only**, not the whole path |
 
 ```tsx
+// L2 — a record's detail page, under an EntityHeader
+<Header
+  size={isScrolled ? "compress" : "size-l"}
+  backButton
+  onBack={onBack}
+  title="Universal Profiles"   // the PARENT, never the record
+/>
+
+// L3 — something inside that record
 import { Breadcrumb } from "@/components/ui/breadcrumb"
 
 <Header
   size={isScrolled ? "compress" : "size-l"}
-  title="Meridian"
-  tag={<Tag variant="success" size="sm">Active</Tag>}
+  title="Q3 Compliance Check"
   breadcrumb={
     <Breadcrumb
-      depth={2}
-      items={[{ label: "Workers", href: "workers" }, { label: "Meridian" }]}
+      depth={3}
+      items={[{ label: "Universal Profiles", href: "profiles" }, { label: "Meridian Corp", href: "meridian" }, { label: "Q3 Compliance Check" }]}
       onNavigate={go}
     />
   }
-  primaryAction={{ label: "Run now", onClick: run }}
 />
 ```
 
+**At L2 the title must name the parent, not the record.** This is the whole condition the rule rests on. Name the record there and the arrow loses its label AND the identity is duplicated — both failures at once, which is exactly the state the Universal Profile was in before 2026-09-09.
+
 `Breadcrumb` lives at `src/components/ui/breadcrumb.tsx` — **import it, never hand-roll one.** Ancestors carry `href`; the current page does not.
 
-**What happens on scroll.** The breadcrumb and the tag both survive compress, stacked above the title:
+**What happens on scroll at L3.** The breadcrumb and the tag both survive compress, stacked above the title:
 
 ```
-size-l    Workers › Meridian          ← breadcrumb
-          Meridian  [Active]          ← title + tag
-          Manages … (description)     ← hidden in compress
+size-l    Universal Profiles › Meridian Corp    ← breadcrumb
+          Q3 Compliance Check  [Passed]         ← title + tag
+          Ran 10 Aug … (description)            ← hidden in compress
 
-compress  Workers › Meridian          ← still there
-          Meridian  [Active]          ← still there
+compress  Universal Profiles › Meridian Corp    ← still there
+          Q3 Compliance Check  [Passed]         ← still there
 ```
 
 Compress is **content-driven, not a fixed 60px** — about 48px normally, about 62px with a breadcrumb. That is deliberate: scrolling should never cost you your place in the hierarchy or the record's status. The 4px between the two rows is what keeps them reading as *path + page* instead of one wrapped title.
 
-**Never combine `breadcrumb` and `backButton`.** `backButton` remains for pages with no hierarchy to express — a creation wizard, a standalone flow — where there is a "back" but no "up".
+**Never combine `breadcrumb` and `backButton`.** That has not changed — it is still one affordance or the other, and now the depth decides which. `backButton` also remains for pages with no hierarchy to express at all — a creation wizard, a standalone flow — where there is a "back" but no "up".
+
+**When an `EntityHeader` is on the page, the bar above it carries navigation ONLY** — no `tag`, and no CTAs the card already shows. Identity, state and actions belong to the card; where you are and how to leave belong to the bar. Two identity blocks stacked on one screen is not a hierarchy, it is a duplicate.
 
 ### Panel overlays — PM component selection guide
 
@@ -784,6 +822,7 @@ The `tag` prop renders a chip/badge inline next to the title. Use it only when i
 |---|---|---|
 | **List view** (multiple items, each with its own state) | ❌ Never | A list contains many states simultaneously — a single tag is meaningless and misleading |
 | **Detail view** (one specific item open, e.g. a SlideOut or full-screen detail) | ✅ Yes, show the item's current state | A single item has one state; the tag gives immediate context |
+| **Detail view with an `EntityHeader` on it** | ❌ Never | The card already carries the state badge, one row down. Two badges for one state is a duplicate, not emphasis |
 
 **What goes in the tag:** a status label only — `Active`, `Draft`, `Running`, `Paused`, `Archived`. Never a count (`4 Workers`), never a statistic (`24 Polish`), never a category label.
 
@@ -824,6 +863,15 @@ Chip supports 11 color variants, but **color signals meaning — it is not a sty
 ```
 
 **Rule of thumb:** if you can't name the specific state or outcome the chip represents, it's `primary`/`secondary`. If you need color coding for categories or brands (not status), use Purple or Light Blue — never a semantic color for that.
+
+### Header size — `size-l` is a ceiling, not a setting
+
+**`size="size-l"` renders at 24px ONLY at XL (≥1920px). Below that the component downgrades it to `size-m` (18px) by itself** (Michael, 2026-09-09). The tall bar is for a Wide screen; anywhere narrower it spends height at the top of the page, where it costs the content most.
+
+- **Keep writing `size={isScrolled ? "compress" : "size-l"}`.** Nothing at the call site changes — asking for L is asking for "as large as this screen has earned", and the component decides.
+- 1920px is the DS breakpoint table's `xl` / Wide tier, not a number invented for this.
+- Measured on the **viewport**, not a container — this bar always spans the page, and the breakpoints are defined in viewport terms. (Contrast `EntityHeader`, which measures its own card because it can sit in a narrow panel on a wide screen.)
+- `compress` is untouched: it is scroll state, not a size, and the screen still owns it.
 
 ### Header sticky
 - Scroll == 0 → DEFAULT (full header)
