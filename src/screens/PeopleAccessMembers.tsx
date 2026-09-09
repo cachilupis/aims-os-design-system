@@ -802,7 +802,7 @@ function RolePermissionsPanel({ role }: { role: Role }) {
                     <div style={{ marginLeft: "auto" }}>
                       <button
                         onClick={() => handleRemoveStudio(studio.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--error, #ef4444)", background: "none", border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}
+                        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--error)", background: "none", border: "none", cursor: "pointer", padding: "6px 8px", borderRadius: 6 }}
                         onMouseEnter={e => (e.currentTarget.style.opacity = "0.75")}
                         onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
                       >
@@ -1787,9 +1787,9 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
 
       {/* Assign Role modal */}
       {assignOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }}
+        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
           onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
             <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Role</div>
               <button onClick={() => setAssignOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4 }}><Icons.X size={16} /></button>
@@ -1983,9 +1983,9 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
       <>
         {/* Assign Group modal — shown even on empty state */}
         {assignOpen && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }}
+          <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
             onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
               <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Group</div>
                 <button onClick={() => setAssignOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4 }}><Icons.X size={16} /></button>
@@ -2057,9 +2057,9 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
       )}
       {/* Assign Group modal */}
       {assignOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }}
+        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
           onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
             <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Group</div>
               <button onClick={() => setAssignOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4 }}><Icons.X size={16} /></button>
