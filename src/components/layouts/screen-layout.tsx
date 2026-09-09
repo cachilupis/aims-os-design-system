@@ -126,6 +126,17 @@ export interface ScreenLayoutProps {
    */
   sidebarFooter?: React.ReactNode | ((collapsed: boolean) => React.ReactNode)
   /**
+   * Hide the Sidebar entirely. For full-page CREATE surfaces only — a wizard
+   * or a full-page create form, per the Create pattern in CLAUDE.md: those
+   * occupy the whole page, so a persistent Sidebar sits there still clickable
+   * on exactly the two surfaces with the most work to lose. `Header`'s
+   * backButton and the flow's own StepperNavFooter are then the only ways out.
+   *
+   * Not for SlideOut or ModalDialog — both already sit on a backdrop that
+   * blocks the Sidebar. Default: false.
+   */
+  hideSidebar?: boolean
+  /**
    * Header render prop — receives isScrolled (true when content scrollTop > 16px).
    * Use it to switch between Header size="size-l" (default) and size="compress".
    *
@@ -169,6 +180,7 @@ export function ScreenLayout({
   activeSidebarId,
   onSidebarItemClick,
   sidebarFooter,
+  hideSidebar = false,
   header,
   children,
   pagination,
@@ -197,14 +209,17 @@ export function ScreenLayout({
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Left sidebar — collapsed by default to maximise content area */}
-        <Sidebar
-          items={sidebarItems}
-          activeId={activeSidebarId}
-          defaultCollapsed={true}
-          onItemClick={onSidebarItemClick}
-          footer={sidebarFooter}
-        />
+        {/* Left sidebar — collapsed by default to maximise content area.
+            Absent entirely on a full-page create surface (see hideSidebar). */}
+        {!hideSidebar && (
+          <Sidebar
+            items={sidebarItems}
+            activeId={activeSidebarId}
+            defaultCollapsed={true}
+            onItemClick={onSidebarItemClick}
+            footer={sidebarFooter}
+          />
+        )}
 
         {/* Main column */}
         <div className="flex flex-col flex-1 overflow-hidden">

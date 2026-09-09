@@ -78,7 +78,22 @@ These are the rules most often violated in AI-generated views. Scan this block e
 - **NEVER add anything visual to a `CardContainer` that is not part of the component** — no accent stripes, no coloured top borders, no dividers bolted on. If the card needs to signal something, that is a `Tag`, a `Chip` or a colour variant, not a decoration drawn on top. Use `variant="default"` unless the design genuinely calls for a colour, `size="sm"` for small items (entity rows, selectable cards, items with a CTA inside a SlideOut or Modal), and `variant="dashed"` for empty regions.
 - **`ModalDialog`'s `slot` wraps content in a grey surface (`--modal-slot-bg`) by default** — pass `slotUnstyled` for content that sits directly on the modal. A dialog never puts all of its content in one card; if cards are needed, one per item.
 - **`Input`/`Textarea` have a `label` prop, but the floating label is mobile-only** — on desktop, structure comes from grouping fields under a section label, never a per-field label.
-- **`Select` is a trigger only — it has no options list.** Compose a working dropdown with `@base-ui/react`'s `Popover` (already a dependency), anchored to the trigger — never with hand-computed coordinates.
+- **`Select` is a trigger only — it has no options list.** Pair it with the DS
+  `Menu` positioned by `src/lib/dropdown-anchor.ts` (`anchorFromEvent` +
+  `useDropdownPosition` + a click-catcher) — the same mechanism `Filters` uses.
+  `pm-thomas-widget-builder.tsx`'s `OptionPicker` is the working reference; copy
+  that shape rather than inventing a second one.
+
+  **This used to say "compose with `@base-ui/react`'s Popover", and that does
+  not work** — corrected 2026-09-09. `Select` renders a div, so `Popover.Trigger`
+  had nowhere to attach its ref or handlers, and anchoring a wrapper instead made
+  base-ui read the opening click as an outside click and dismiss the panel on the
+  same tick. Both `select.tsx`'s own docblock and `OptionPicker`'s record the
+  attempt. Do not re-try it.
+
+  If the option list is short and the labels are brief, a `Chip` row is often the
+  better answer than any dropdown — no menu, no positioning, and the choices stay
+  visible.
 
 ### Surfaces, tiles and hovers — the four the audit now catches
 
@@ -1124,7 +1139,11 @@ The screen appears in the "Prototypes" sidebar group and opens full-screen (no D
 1. `npx tsc -b --noEmit` → 0 errors (catches type mistakes)
 2. Take a browser screenshot of the screen on `localhost:5173` → compare against the DS pattern page for the same pattern. TypeScript passing ≠ screen rendering correctly.
 3. Check every tab of the screen in the screenshot: Overview uses `WidgetCanvasSection`, Workers uses `ListViewSection`, Logs shows `Pagination`.
-4. Never push to production without Michael's visual sign-off on localhost first.
+4. Get Michael's visual sign-off **before the PR is merged** — on the PR's own
+   Vercel preview, or on localhost. This used to read "before pushing to
+   production", which stopped being the right gate when the site started
+   following `main` automatically (see *Publishing the site* below): merging
+   IS publishing now, so the review has to happen while the PR is still open.
 
 ---
 
@@ -1148,6 +1167,38 @@ Never in `ui/`. File must:
 **Step 3 — Continue prototyping.** The PM doesn't need to know this happened. The DS-GAP comment is the handoff artifact for Design to audit and officially promote later.
 
 **Upgrade path**: Claude never moves anything from `experimental/` to `ui/` without explicit instruction from Michael (Product Design lead). The upgrade requires a Figma node to be created and reviewed first.
+
+---
+
+## Publishing the site
+
+Three separate places, and merging only reaches the second one:
+
+| Where | What it is | Changes when |
+|---|---|---|
+| A branch | Work in progress | You push to it. Every PR also gets its own **Vercel preview** — that is the link to review |
+| **`main`** | The agreed code | A PR is merged |
+| **The site** — <https://cachilupis.github.io/aims-os-design-system/> | The built HTML/JS on GitHub Pages | Automatically, on every push to `main` |
+
+**A merge to `main` publishes the site.** The `deploy` job in
+`.github/workflows/design-system-checks.yml` builds with `GH_PAGES=true` and
+pushes to the `gh-pages` branch. It is gated on `needs: checks`, so a `main`
+that does not type-check or fails the audit does not publish.
+
+**Do not run `npm run deploy` by hand any more.** It publishes whatever is in
+your **working tree**, not `main` — run it from a feature branch and unmerged
+work goes to the official site with nothing to warn you. The script stays in
+`package.json` for a genuine emergency (CI down and the site must move); if you
+use it, `git checkout main && git pull` first, without exception.
+
+**The deploy build is a second build on purpose.** `checks` builds for Vercel,
+which serves from the domain root; Pages serves from `/aims-os-design-system/`,
+which is what `GH_PAGES=true` switches on. The two outputs are not
+interchangeable, so the artifact cannot be shared between the jobs.
+
+**CI cannot tell you whether a screen looks right** — it type-checks, builds and
+audits. A visually broken screen that compiles will publish. That is what the
+per-PR Vercel preview is for, and why the sign-off moved to before the merge.
 
 ---
 
