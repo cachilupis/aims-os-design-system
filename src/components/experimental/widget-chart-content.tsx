@@ -141,6 +141,15 @@ function grow(i: number, from: "bottom" | "left" | "scale" = "bottom") {
  * a slice, a bar, a funnel stage. Every mark that encodes a value now says the
  * value and its label on hover, through the DS Tooltip so it matches every
  * other tooltip in the product.
+ *
+ * `fill` is how the WRAPPER lays out, and it is the whole trap of this helper.
+ * Tooltip puts a `relative inline-flex` span between the parent and the mark,
+ * so the mark stops being the grid or flex item it was sized as. `w-full` alone
+ * only widens that span — the child inside it is still an inline-flex item and
+ * still shrink-wraps to its content, which is how a funnel row measured 120px
+ * inside a 402px wrapper and collapsed its ProgressBar to zero width. A row
+ * that has to fill needs `block w-full`: `block` is what stops the span
+ * shrink-wrapping, `w-full` is what makes it as wide as the parent.
  */
 function DataPoint({ label, fill, children }: { label: string; fill?: string; children: React.ReactNode }) {
   return <Tooltip content={label} side="cursor" triggerClassName={fill}>{children}</Tooltip>
@@ -346,7 +355,7 @@ function PieChart({ donut = false }: { donut?: boolean }) {
         {parts.map(([label, pct], i) => {
           const g = grow(i, "left")
           return (
-            <DataPoint key={label} fill="w-full" label={`${label} · ${pct}% — ${Math.round(total * pct / 100)} of ${total.toLocaleString()} accounts`}>
+            <DataPoint key={label} fill="block w-full" label={`${label} · ${pct}% — ${Math.round(total * pct / 100)} of ${total.toLocaleString()} accounts`}>
               <div className={g.className} style={{ ...g.style, display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: CAT[i], flexShrink: 0 }} />
                 <span style={{
@@ -390,7 +399,7 @@ function FunnelChart() {
         const prev = i > 0 ? stages[i - 1][1] : null
         const drop = prev ? ` — ${Math.round((1 - n / prev) * 100)}% lost from ${stages[i - 1][0]}` : " — entry stage"
         return (
-          <DataPoint key={label} fill="w-full" label={`${label} · ${n} of ${Math.round(1240 * sh).toLocaleString()} (${pct}%)${drop}`}>
+          <DataPoint key={label} fill="block w-full" label={`${label} · ${n} of ${Math.round(1240 * sh).toLocaleString()} (${pct}%)${drop}`}>
             <div className={g.className} style={{ ...g.style, display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 11, color: SUB, width: 62, flexShrink: 0 }}>{label}</span>
               <ProgressBar
@@ -556,7 +565,7 @@ function MapChart() {
         {regions.map(([label, value, o], i) => {
           const g = grow(i, "left")
           return (
-            <DataPoint key={label} fill="w-full" label={`${label} · ${value} — ${Math.round(o * 100)}% of the strongest region`}>
+            <DataPoint key={label} fill="block w-full" label={`${label} · ${value} — ${Math.round(o * 100)}% of the strongest region`}>
               <div className={g.className} style={{ ...g.style, display: "flex", alignItems: "center", gap: 7, padding: "3px 0" }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: CAT[0], opacity: 0.2 + o * 0.8, flexShrink: 0 }} />
                 <span style={{ fontSize: 11, color: SUB, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
