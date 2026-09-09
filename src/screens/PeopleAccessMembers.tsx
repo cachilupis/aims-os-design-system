@@ -60,6 +60,14 @@ interface Member {
   initials: string; avatarColor: string; department?: string; title?: string
   mfaEnabled: boolean; mfaMethod?: MfaMethod; mfaEnrolledAt?: string
   sessions?: MfaSession[]
+  /**
+   * Studios granted to this person directly, rather than through a group.
+   * Until the invite wizard existed, a member's studio access could ONLY come
+   * from a group, so the invite modal's "Studio access" section chose
+   * something the data had nowhere to put. AppsPanel unions this with the
+   * group-derived set.
+   */
+  studios?: string[]
 }
 
 interface Role {
@@ -1403,7 +1411,9 @@ function StudioPermissionsView({ studioId, onBack }: { studioId: string; onBack:
 
 function AppsPanel({ member }: { member: Member }) {
   const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
-  const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
+  const studioSet = new Set<string>(
+    member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : member.studios ?? [],
+  )
   memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
   const [studios, setStudios] = useState(Array.from(studioSet))
   const [selectedStudio, setSelectedStudio] = useState<string | null>(null)
@@ -3364,69 +3374,83 @@ const INVITE_STUDIO_OPTIONS = [
   { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={13} /> },
 ]
 
-function InviteModal({ onClose, onSend }: {
-  onClose: () => void
-  onSend: (emails: string[], role: MemberRole) => void
+/**
+ * Inviting somebody is a create, it has three stages and it grants access — so
+ * it takes the same surface New Role takes: a full page, a Stepper, and the
+ * StepperNavFooter as the only way to finish. The Create pattern's staged-flows
+ * table is explicit that a Stepper never lives inside a panel, and this used to
+ * be a ModalDialog with five sections stacked in a 560px scroller.
+ *
+ * The third stage is not padding. An invitation leaves the product — it sends
+ * mail to a person who is not here yet and hands them studio access — so what
+ * is about to happen is stated in full before the button that does it.
+ */
+function InviteWizard({ onCancel, onSend }: {
+  onCancel: () => void
+  onSend: (emails: string[], role: MemberRole, studios: string[], groupIds: string[]) => void
 }) {
-  const [emails, setEmails]           = useState<string[]>([])
-  const [role, setRole]               = useState<MemberRole>("Member")
-  const [studios, setStudios]         = useState<string[]>(["governance"])
-  const [groupIds, setGroupIds]       = useState<string[]>([])
-  const [note, setNote]               = useState("")
-  const [done, setDone]               = useState(false)
-
-  const recipientCount = emails.length
+  const [step, setStep]         = useState<0 | 1 | 2>(0)
+  const [emails, setEmails]     = useState<string[]>([])
+  const [role, setRole]         = useState<MemberRole>("Member")
+  const [studios, setStudios]   = useState<string[]>([])
+  const [groupIds, setGroupIds] = useState<string[]>([])
+  const [note, setNote]         = useState("")
 
   function toggleStudio(id: string) {
     setStudios(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
   }
-
   function toggleGroup(id: string) {
     setGroupIds(g => g.includes(id) ? g.filter(x => x !== id) : [...g, id])
   }
 
-  function submit() {
-    if (emails.length === 0) return
-    onSend(emails, role)
-    setDone(true)
-    setTimeout(() => onClose(), 2200)
-  }
+  const isMember = role === "Member"
 
-  const inviteeCount = emails.length
+  // An Admin or an Owner gets every studio by definition, so stage 2 has
+  // nothing it can require of them. A Member invited with no studio and no
+  // group would land in the workspace able to open nothing at all.
+  const canContinue = step === 0 ? emails.length > 0
+                    : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
+                    : true
 
-  // ── Sections. The dialog is 900px wide (the DS modal width) and does not
-  //    scroll itself, so the form scrolls inside the slot. The 12px gutter is
-  //    the same one PermissionsBreakdown needs: CardContainer's hover halo has
-  //    to land somewhere, and a scroll container clips it flat.
-  if (done) return (
-    <ModalDialog
-      isOpen
-      onClose={onClose}
-      tone="success"
-      iconName="MailCheck"
-      title={`${recipientCount} invitation${recipientCount !== 1 ? "s" : ""} sent`}
-      description={`${recipientCount === 1 ? "They'll" : "They'll each"} receive an email with a link to join Avance Financial. Invitations expire in 7 days.`}
-      ctaPrimary={{ label: "Done", onClick: onClose }}
-    />
-  )
+  const steps: StepItem[] = [
+    { label: "People", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Access", state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Review", state: step === 2 ? "active" : "default" },
+  ]
+
+  const effectiveStudios = isMember ? studios : INVITE_STUDIO_OPTIONS.map(s => s.id)
+  const chosenGroups     = GROUPS.filter(g => groupIds.includes(g.id))
 
   return (
-    <ModalDialog
-      isOpen
-      onClose={onClose}
-      variant="content"
-      tone="default"
-      iconName="UserPlus"
-      showClose
-      title="Invite to Avance Financial"
-      description="Invitations are sent by email and expire after 7 days."
-      slotUnstyled
-      slot={
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxHeight: "min(58vh, 560px)", overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title="Invite members"
+          description="Invitations are sent by email and expire after 7 days."
+          backButton
+          onBack={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} />
+      </div>
 
-          {/* 1 · Emails — TagInput is the DS field for exactly this */}
+      {/* ── 1 · People ────────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           <div>
-            <FormSectionLabel hint="Press Enter after each address.">Email addresses</FormSectionLabel>
+            <FormSectionLabel hint="Press Enter after each address. Everyone here gets the same role and the same access.">
+              Email addresses
+            </FormSectionLabel>
             <TagInput
               tags={emails}
               onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
@@ -3436,57 +3460,63 @@ function InviteModal({ onClose, onSend }: {
             />
           </div>
 
-          {/* 2 · Role — one card per option. The title never turns blue: the
-                 card's selected border is what says "chosen", and a coloured
-                 label on top of it says it twice. */}
+          {/* One card per option. The title never turns blue: the card's
+              selected border is what says "chosen", and a coloured label on
+              top of it says it twice. */}
           <div>
             <FormSectionLabel>Role</FormSectionLabel>
             <div role="radiogroup" aria-label="Role" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               {(["Member", "Admin", "Owner"] as MemberRole[]).map(r => (
                 <CardContainer key={r} size="sm" selected={role === r} onClick={() => setRole(r)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                    <Radio value={r} checked={role === r} onChange={() => setRole(r)} size="sm" hideLabel label={r} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>{r}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
-                    {r === "Owner" ? "Full admin + transferable ownership"
-                      : r === "Admin" ? "Manage members, studios & billing"
-                      : "Access assigned studios only"}
+                  <div style={{ pointerEvents: "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <Radio value={r} checked={role === r} size="sm" hideLabel label={r} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>{r}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                      {r === "Owner" ? "Full admin + transferable ownership"
+                        : r === "Admin" ? "Manage members, studios & billing"
+                        : "Access assigned studios only"}
+                    </div>
                   </div>
                 </CardContainer>
               ))}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* 3 · Studio access (Member only) */}
-          {role === "Member" && (
-            <div>
-              <FormSectionLabel hint="Select which studios this member can access. Admins and Owners get all studios automatically.">
-                Studio access
-              </FormSectionLabel>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {INVITE_STUDIO_OPTIONS.map(st => {
-                  const on = studios.includes(st.id)
-                  return (
-                    <CardContainer key={st.id} size="sm" selected={on} onClick={() => toggleStudio(st.id)}>
-                      {/* Pointer-transparent: the card is the only click target.
-                          Three things used to toggle this row — the card, the
-                          Checkbox, and a <label htmlFor> driving the same input
-                          — so a click on the checkbox or its label fired twice
-                          and cancelled out. Only the card's blank padding worked. */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
-                        <Checkbox size="sm" checked={on} id={`studio-${st.id}`} />
-                        <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
-                      </div>
-                    </CardContainer>
-                  )
-                })}
-              </div>
+      {/* ── 2 · Access ────────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <FormSectionLabel hint={isMember
+              ? "Select which studios these people can open."
+              : `${role}s get every studio automatically — there is nothing to choose here.`}>
+              Studio access
+            </FormSectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+              {INVITE_STUDIO_OPTIONS.map(st => {
+                const on = isMember ? studios.includes(st.id) : true
+                return (
+                  <CardContainer
+                    key={st.id}
+                    size="sm"
+                    selected={on}
+                    disabled={!isMember}
+                    onClick={isMember ? () => toggleStudio(st.id) : undefined}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+                      <Checkbox size="sm" checked={on} disabled={!isMember} id={`inv-studio-${st.id}`} />
+                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
+                    </div>
+                  </CardContainer>
+                )
+              })}
             </div>
-          )}
+          </div>
 
-          {/* 4 · Groups */}
           <div>
             <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
               Add to groups
@@ -3497,7 +3527,7 @@ function InviteModal({ onClose, onSend }: {
                 return (
                   <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Checkbox size="sm" checked={on} id={`group-${g.id}`} className="pointer-events-none" />
+                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} className="pointer-events-none" />
                       <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
                       <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</span>
@@ -3518,34 +3548,108 @@ function InviteModal({ onClose, onSend }: {
               })}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* 5 · Personal note — no label prop, this is a desktop screen */}
+      {/* ── 3 · Review ────────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          <div>
+            <FormSectionLabel hint="This is what leaves the product when you send.">
+              Review
+            </FormSectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <InviteReviewRow
+                icon="Mail"
+                variant="informative"
+                label={`${emails.length} recipient${emails.length !== 1 ? "s" : ""}`}
+              >
+                {emails.map(e => <Tag key={e} variant="neutral" size="sm">{e}</Tag>)}
+              </InviteReviewRow>
+
+              <InviteReviewRow icon="UserCog" variant="neutral" label="Role">
+                <Tag variant="neutral" size="sm">{role}</Tag>
+              </InviteReviewRow>
+
+              <InviteReviewRow
+                icon="LayoutGrid"
+                variant="lime"
+                label={isMember ? "Studio access" : `Studio access · every studio, because ${role}s get all of them`}
+              >
+                {effectiveStudios.map(id => (
+                  <Tag key={id} variant={STUDIO_TAG[id] ?? "neutral"} size="sm">
+                    {INVITE_STUDIO_OPTIONS.find(s => s.id === id)?.label ?? id}
+                  </Tag>
+                ))}
+              </InviteReviewRow>
+
+              <InviteReviewRow icon="Users" variant="purple" label="Groups">
+                {chosenGroups.length === 0
+                  ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>None</span>
+                  : chosenGroups.map(g => <Tag key={g.id} variant="neutral" size="sm">{g.name}</Tag>)}
+              </InviteReviewRow>
+            </div>
+          </div>
+
+          {/* No label prop — this is a desktop screen. */}
           <div>
             <FormSectionLabel optional>Personal note</FormSectionLabel>
             <Textarea
               value={note}
               onChange={e => setNote(e.target.value)}
-              placeholder="Welcome to AIMS-OS! We're excited to have you on the team…"
+              placeholder="Welcome to AIMS OS! We're excited to have you on the team…"
               rows={2}
             />
           </div>
-
-          {/* What is about to be sent, stated before the CTA rather than in a
-              footer bar the dialog does not have. */}
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {inviteeCount} recipient{inviteeCount !== 1 ? "s" : ""}
-            {role === "Member" && studios.length > 0 && <span> · {studios.length} studio{studios.length !== 1 ? "s" : ""}</span>}
-            {groupIds.length > 0 && <span> · {groupIds.length} group{groupIds.length !== 1 ? "s" : ""}</span>}
-          </div>
         </div>
-      }
-      ctaSecondary={{ label: "Cancel", onClick: onClose }}
-      ctaPrimary={{
-        label: inviteeCount > 1 ? `Send ${inviteeCount} invitations` : "Send invitation",
-        disabled: inviteeCount === 0,
-        onClick: submit,
-      }}
-    />
+      )}
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2
+              ? (emails.length > 1 ? `Send ${emails.length} invitations` : "Send invitation")
+              : "Next"}
+            nextDisabled={!canContinue}
+            onNext={step === 2
+              ? () => onSend(emails, role, effectiveStudios, groupIds)
+              : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+          />
+        </div>,
+        document.body,
+      )}
+    </ScreenLayout>
+  )
+}
+
+/** One reviewed fact: what it is on the left, the actual values on the right. */
+function InviteReviewRow({ icon, variant, label, children }: {
+  icon: string
+  variant: React.ComponentProps<typeof HighlightIcon>["variant"]
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <CardContainer size="sm">
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <HighlightIcon size="sm" variant={variant} iconName={icon} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 6 }}>
+            {label}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{children}</div>
+        </div>
+      </div>
+    </CardContainer>
   )
 }
 
@@ -4257,7 +4361,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [query, setQuery]               = useState("")
   const [rolesQuery, setRolesQuery]     = useState("")
   const [groupsQuery, setGroupsQuery]   = useState("")
-  const [members, setMembers]           = useState<Member[]>(MEMBERS)
+  const [members, setMembers]           = useState<Member[]>([...MEMBERS])
   const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [detailView, setDetailView]     = useState<DetailView>(null)
   const [previewItem, setPreviewItem]   = useState<DetailView>(null)
@@ -4285,6 +4389,46 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         ? `Assigned to ${assigned.length} member${assigned.length === 1 ? "" : "s"}.`
         : "Assign it to members from their profile whenever you are ready.",
     })
+  }
+
+  function handleInvite(emails: string[], role: MemberRole, studios: string[], groupIds: string[]) {
+    const stamp = Date.now()
+    const invited: Member[] = emails.map((email, i) => ({
+      id: `new-${stamp}-${i}`,
+      name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+      email,
+      role,
+      status: "invited",
+      lastActive: null,
+      joinedAt: new Date().toISOString(),
+      initials: email.slice(0, 2).toUpperCase(),
+      avatarColor: "var(--muted)",
+      mfaEnabled: false,
+      studios,
+    }))
+    setMembers(ms => [...ms, ...invited])
+
+    // The chosen groups have to actually gain these people, or the review step
+    // stated something that never happened. GROUPS is a module fixture read
+    // directly by six call sites, so it is written in place rather than lifted
+    // into state for this one flow — and the new people go into MEMBERS for the
+    // same reason: GroupCard, GroupPreview and the role panels all resolve a
+    // memberId against that fixture, so somebody who exists only in state is
+    // silently dropped by their `.filter(Boolean)`.
+    MEMBERS.push(...invited)
+    GROUPS.forEach(g => {
+      if (groupIds.includes(g.id)) g.memberIds = [...g.memberIds, ...invited.map(m => m.id)]
+    })
+
+    setShowInvite(false)
+    setMainTab("members")
+    setStatusFilter("invited")
+    toast.success(
+      emails.length === 1 ? "Invitation sent" : `${emails.length} invitations sent`,
+      {
+        description: `${emails.length === 1 ? "It expires" : "They expire"} in 7 days. Filtered to Invited so you can see them.`,
+      },
+    )
   }
 
   const counts = useMemo(() => ({
@@ -4349,6 +4493,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   // Detail pages
   if (creatingRole) {
     return <NewRoleWizard onCancel={() => setCreatingRole(false)} onCreate={handleRoleCreate} />
+  }
+
+  if (showInvite) {
+    return <InviteWizard onCancel={() => setShowInvite(false)} onSend={handleInvite} />
   }
 
   if (detailView?.type === "member") {
@@ -4600,28 +4748,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
           />
         )}
       </SlideOut>
-
-      {/* Invite modal */}
-      {showInvite && (
-        <InviteModal
-          onClose={() => setShowInvite(false)}
-          onSend={(emails, role) => {
-            const newMembers: Member[] = emails.map((email, i) => ({
-              id: `new-${Date.now()}-${i}`,
-              name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-              email,
-              role,
-              status: "invited",
-              lastActive: null,
-              joinedAt: new Date().toISOString(),
-              initials: email.slice(0, 2).toUpperCase(),
-              avatarColor: "var(--muted)",
-              mfaEnabled: false,
-            }))
-            setMembers(ms => [...ms, ...newMembers])
-          }}
-        />
-      )}
 
     </ScreenLayout>
   )
