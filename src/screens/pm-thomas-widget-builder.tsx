@@ -815,7 +815,7 @@ export default function PMThomasWidgetBuilderScreen() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                       <StepLabel>Choose entity</StepLabel>
                       <div style={{ marginTop: -8 }}>
-                        <Button variant="secondary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                        <Button variant="tertiary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
                           <LucideIcons.LayoutGrid size={14} />
                           Browse all entities
                         </Button>
@@ -850,7 +850,7 @@ export default function PMThomasWidgetBuilderScreen() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                       <StepLabel>Choose dataset</StepLabel>
                       <div style={{ marginTop: -8 }}>
-                        <Button variant="secondary" size="sm" onClick={() => { setDsQuery(""); setShapeFilter("all"); setShowDatasets(true) }}>
+                        <Button variant="tertiary" size="sm" onClick={() => { setDsQuery(""); setShapeFilter("all"); setShowDatasets(true) }}>
                           <LucideIcons.LayoutGrid size={14} />
                           Browse all datasets
                         </Button>
