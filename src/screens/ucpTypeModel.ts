@@ -40,13 +40,17 @@
  * shape again, in the other direction.
  */
 
-import type { UcpContact } from "./ucpShared"
+import type { MetricVariant, UcpContact } from "./ucpShared"
 
 export interface ProfileWidgetRow {
   label:   string
   value:   string
   icon:    string
-  variant: "success" | "alert" | "informative" | "neutral"
+  variant: MetricVariant
+  /** What this field means, on hover and on focus. A label and a value say
+   *  what it is; the tooltip says why anyone would care. Required, so a new
+   *  field cannot ship without one. */
+  tooltip: string
 }
 
 export interface UcpProfileSpec {
@@ -76,10 +80,14 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
       widget: {
         uid: "organization", title: "Organization",
         rows: [
-          { label: "Industry",     value: industry  ?? "—", icon: "Factory",   variant: "informative" },
-          { label: "Headcount",    value: headcount ?? "—", icon: "Users",     variant: "neutral" },
-          { label: "Headquarters", value: hq        ?? "—", icon: "MapPin",    variant: "neutral" },
-          { label: "Account owner", value: c.owner,         icon: "UserRound", variant: "informative" },
+          { label: "Industry",      value: industry  ?? "—", icon: "Factory",   variant: "informative",
+            tooltip: `Industry · ${industry ?? "not recorded"}. Published by the organization model, and what the risk study benchmarks against.` },
+          { label: "Headcount",     value: headcount ?? "—", icon: "Users",     variant: "neutral",
+            tooltip: `Headcount · ${headcount ?? "not recorded"}. From the account record, not from the people in AIMS — the Connections widget shows those.` },
+          { label: "Headquarters",  value: hq        ?? "—", icon: "MapPin",    variant: "neutral",
+            tooltip: `Headquarters · ${hq ?? "not recorded"}. Where the account is registered, which decides the data residency rules that apply.` },
+          { label: "Account owner", value: c.owner,          icon: "UserRound", variant: "informative",
+            tooltip: `Account owner · ${c.owner}. Holds this relationship on our side; escalations go here first.` },
         ],
       },
     }
@@ -92,10 +100,14 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
       widget: {
         uid: "employment", title: "Employment",
         rows: [
-          { label: "Role",       value: role       ?? "—", icon: "BriefcaseBusiness", variant: "informative" },
-          { label: "Department", value: department ?? "—", icon: "Building2",         variant: "neutral" },
-          { label: "Location",   value: location   ?? "—", icon: "MapPin",            variant: "neutral" },
-          { label: "Manager",    value: c.owner,           icon: "UserRound",         variant: "informative" },
+          { label: "Role",       value: role       ?? "—", icon: "BriefcaseBusiness", variant: "informative",
+            tooltip: `Role · ${role ?? "not recorded"}. Decides which policies and training the Governance study checks for.` },
+          { label: "Department", value: department ?? "—", icon: "Building2",         variant: "neutral",
+            tooltip: `Department · ${department ?? "not recorded"}. From the HR system of record.` },
+          { label: "Location",   value: location   ?? "—", icon: "MapPin",            variant: "neutral",
+            tooltip: `Location · ${location ?? "not recorded"}. Where this person works, which decides the employment rules that apply.` },
+          { label: "Manager",    value: c.owner,           icon: "UserRound",         variant: "informative",
+            tooltip: `Manager · ${c.owner}. Reporting line inside the tenant; approvals route here.` },
         ],
       },
     }
@@ -107,11 +119,15 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
   const account = p.length > 1 ? p[p.length - 1] : c.company
   const dept    = p.length > 2 ? p[1] : undefined
   const rows: ProfileWidgetRow[] = [
-    { label: "Role",    value: role,    icon: "BriefcaseBusiness", variant: "informative" },
-    { label: "Account", value: account, icon: "Building2",         variant: "neutral" },
+    { label: "Role",    value: role,    icon: "BriefcaseBusiness", variant: "informative",
+      tooltip: `Role · ${role}. What this person decides on the account, which is what makes them worth contacting.` },
+    { label: "Account", value: account, icon: "Building2",         variant: "neutral",
+      tooltip: `Account · ${account}. The organization record this contact belongs to.` },
   ]
-  if (dept) rows.push({ label: "Department", value: dept, icon: "Users", variant: "neutral" })
-  rows.push({ label: "Account owner", value: c.owner, icon: "UserRound", variant: "informative" })
+  if (dept) rows.push({ label: "Department", value: dept, icon: "Users", variant: "neutral",
+    tooltip: `Department · ${dept}. Their side of the account, not ours.` })
+  rows.push({ label: "Account owner", value: c.owner, icon: "UserRound", variant: "informative",
+    tooltip: `Account owner · ${c.owner}. Holds this relationship on our side; escalations go here first.` })
 
   return { extraTabs: [], widget: { uid: "account", title: "Account", rows } }
 }

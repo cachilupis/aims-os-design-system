@@ -104,6 +104,12 @@ export interface UcpContact {
   /** AIMS OS is agent-first — every record has one assigned concierge. */
   agent:           { id: string; name: string }
   /**
+   * Declared relationships to other records. Coworkers are derived from
+   * `company` and never written here; this is for the ones no derivation can
+   * reach — a family tie, most of all.
+   */
+  relations?:      UcpRelation[]
+  /**
    * The engine's proposal, rendered as its own card BELOW the header — never
    * inside it. null when there is nothing to do: no action, no card.
    */
@@ -154,6 +160,17 @@ export const STATUS_TAG: Record<UcpStatus, TagVariantLite> = {
 export function entityState(c: UcpContact): { label: string; variant: TagVariantLite } {
   return c.stateBadge ?? { label: c.status, variant: STATUS_TAG[c.status] }
 }
+
+/**
+ * The one definition of a panel body's spacing, for every SlideOut in this
+ * prototype — the same constant the DS keeps in App.tsx under the same name.
+ *
+ * 16px between sections and NO horizontal padding: SlideOut's own `aside` is
+ * already `32px / 24px` and SidePanel's body `24px`, so a panel body that adds
+ * its own 20px lands the content at 44 while the header and the footer stay at
+ * 24. Each half looks right on its own, which is why every panel here had it.
+ */
+export const PANEL_CONTENT_CLASS = "flex flex-col gap-[16px]"
 
 // ── Entitlements ──────────────────────────────────────────────────────────────
 
@@ -338,6 +355,19 @@ export interface UcpConnection {
   name:     string
   relation: string
   icon:     string
+  /** Why this person is on the record. Shown on hover and on focus. */
+  tooltip:  string
+}
+
+/**
+ * A relationship the tenant recorded explicitly — family, and anything else a
+ * derivation cannot know. It points at ANOTHER RECORD by id, never at a name:
+ * a relation to somebody who is not a record in AIMS has no data behind it, so
+ * `getConnections` drops it rather than rendering the label on its own.
+ */
+export interface UcpRelation {
+  id:       string
+  relation: string
 }
 
 // ── Contacts ──────────────────────────────────────────────────────────────────
@@ -388,6 +418,7 @@ export const CONTACTS: UcpContact[] = [
       { iconName: "Bot",         label: "Tier 1",   tooltip: "Assigned agent · Deal Concierge, tier 1. Handling this contact since Jun 9." },
     ],
     agent: { id: "AGT-02", name: "Deal Concierge" },
+    relations: [{ id: "PER-0128", relation: "Family · sister" }],
     nba: null,
     aiSummary: {
       headline: "Technical evaluator, not the economic buyer.",
@@ -413,6 +444,7 @@ export const CONTACTS: UcpContact[] = [
       { iconName: "Bot",         label: "Tier 2",    tooltip: "Assigned agent · People Concierge, tier 2." },
     ],
     agent: { id: "AGT-03", name: "People Concierge" },
+    relations: [{ id: "PER-0091", relation: "Family · sister" }],
     nba: {
       title: "Escalate the overdue performance review",
       timestamp: "6h ago",
@@ -501,6 +533,7 @@ export const CONTACTS: UcpContact[] = [
       { iconName: "KeyRound",    label: "Manager",  tooltip: "Access role · Manager, Operations scope." },
     ],
     agent: { id: "AGT-03", name: "People Concierge" },
+    relations: [{ id: "PER-0112", relation: "Family · sibling" }],
     nba: {
       title: "Clear the three reviews in her queue",
       timestamp: "4h ago",
@@ -528,6 +561,7 @@ export const CONTACTS: UcpContact[] = [
       { iconName: "Bot",         label: "Tier 1",   tooltip: "Assigned agent · Deal Concierge, tier 1." },
     ],
     agent: { id: "AGT-02", name: "Deal Concierge" },
+    relations: [{ id: "EMP-00518", relation: "Family · sibling" }],
     nba: null,
     aiSummary: {
       headline: "Technical gatekeeper, currently unblocked.",
@@ -952,67 +986,176 @@ export function getDrives(c: UcpContact): UcpDrive[] {
 }
 
 export function getConnections(c: UcpContact): UcpConnection[] {
-  if (c.type === "company") {
-    /**
-     * Derived from the roster, not written down. This list used to be four
-     * hardcoded rows returned for every company, which put Sandra Torres and
-     * Sarah Chen — both Meridian Corp records — on Riverbend Auto Group's
-     * profile. Nothing contradicted it while Connections was the only place a
-     * company's people appeared; the type's own People tab now sits one tab
-     * away listing the real ones, and a record cannot say two different things
-     * about itself on the same screen.
-     */
-    const people = CONTACTS
-      .filter(x => x.type !== "company" && x.company === c.name)
-      .map(x => ({
-        id: x.id,
-        name: x.name,
-        relation: `${x.subtitle.split("·")[0].trim()} · ${TYPE_LABEL[x.type].toLowerCase()}`,
-        icon: "UserRound",
-      }))
-    return people.length > 0
-      ? people
-      : [{ id: "owner", name: c.owner, relation: "Account owner", icon: "UserRound" }]
+  /**
+   * Related CONTACTS — people, and only people.
+   *
+   * Michael (2026-09-09): "ese card es de contactos relacionados. Por ejemplo:
+   * familia, compañero de trabajo, etc, pero solo si están dentro del ambiente
+   * de AIMS y se tienen datos."
+   *
+   * So every row here resolves to a record in this roster. A deal, an
+   * organization, a team and the assigned agent were all in this list before
+   * and none of them is a contact: the company is a FIELD on the record (the
+   * Organization widget shows it), the agent is in secondary metadata, and a
+   * deal is not a person. An account owner who is not a record in AIMS — Priya
+   * Nair, Daniel Ruiz — stays a field too, for the same reason: there is
+   * nothing to open.
+   *
+   * Three sources, in this order, deduped by record:
+   *   1. declared relations (family) — the only ones written down
+   *   2. coworkers, derived from `company`
+   *   3. the manager or account owner, when they are a record themselves
+   */
+  const out: UcpConnection[] = []
+  const seen = new Set<string>([c.id])
+  const push = (p: UcpContact, relation: string, tooltip: string) => {
+    if (seen.has(p.id)) return
+    seen.add(p.id)
+    out.push({ id: p.id, name: p.name, relation, icon: TYPE_ICON[p.type], tooltip })
   }
-  if (c.type === "employee") {
-    return [
-      { id: "c1", name: c.owner,        relation: "Manager",              icon: "UserRound" },
-      { id: "c2", name: "Operations",   relation: "Team · 9 members",     icon: "Users"     },
-      { id: "c3", name: c.company,      relation: "Organization",         icon: "Building2" },
-    ]
+
+  // 1. Declared — a relation pointing at a record that does not exist is
+  //    dropped here, which is what keeps "only if it is in AIMS" structural.
+  for (const r of c.relations ?? []) {
+    const p = CONTACTS.find(x => x.id === r.id)
+    if (p) push(p, r.relation, `${r.relation} · ${p.name}. ${TYPE_LABEL[p.type]} record in AIMS, so their own profile opens from here.`)
   }
+
+  // 2. Coworkers — same company, derived. A company's own connections are the
+  //    people who work there, which is the same rule read from the other side.
+  const coworkers = CONTACTS.filter(x => x.type !== "company" && x.company === (c.type === "company" ? c.name : c.company))
+  for (const p of coworkers) {
+    const role = p.subtitle.split("·")[0].trim()
+    push(p, c.type === "company" ? `${role} · ${TYPE_LABEL[p.type].toLowerCase()}` : `Coworker · ${role}`,
+      c.type === "company"
+        ? `Works at ${c.name} · ${role}. One of ${coworkers.length} people on this account.`
+        : `Coworker at ${c.company} · ${role}. Same account, so activity on one can explain the other.`)
+  }
+
+  // 3. The manager or the account owner, only when AIMS holds a record for
+  //    them. `owner` is a name rather than an id in these fixtures, so it is
+  //    matched by name and skipped when there is no match.
+  const owner = CONTACTS.find(x => x.name === c.owner && x.type !== "company")
+  if (owner) {
+    push(owner, c.type === "employee" ? "Manager" : "Account owner",
+      c.type === "employee"
+        ? `Manager · ${owner.name}. Reporting line inside the tenant.`
+        : `Account owner · ${owner.name}. Holds this relationship on our side.`)
+  }
+
+  return out
+}
+
+/**
+ * Governance and Risk studies.
+ *
+ * THE COLOUR COMES FROM THE VALUE, not from the row. Michael (2026-09-09):
+ * "en Risk que los estados negativos usen las variables semánticas de manera
+ * correcta — risk error debería ser rojo." Every variant below is computed
+ * from what the number actually says, so a risk score of 78 is red wherever it
+ * appears and a score of 18 is green, rather than each row carrying a colour
+ * somebody typed once.
+ *
+ * EVERY ROW CARRIES A TOOLTIP. A counter says the number; the tooltip says
+ * what is happening — which is the difference between "0" and "no flags have
+ * been raised since the last scan".
+ */
+/** The semantic range a metric can carry. One union, so the profile's field
+ *  widgets and its study widgets cannot drift into two vocabularies. */
+export type MetricVariant = "success" | "alert" | "informative" | "neutral" | "error"
+
+export interface StudyRow {
+  label:   string
+  value:   string
+  icon:    string
+  variant: MetricVariant
+  tooltip: string
+}
+
+/**
+ * How exposed this record is, derived from what it already says about itself.
+ * A record carrying an `error` signal is not low-risk, and the study saying so
+ * while a tag says otherwise is the screen contradicting itself. Before this,
+ * getRisk ignored its argument and every record read 18 / 100.
+ */
+function riskLevel(c: UcpContact): "high" | "medium" | "low" {
+  if (c.tags.some(t => t.tone === "error"))  return "high"
+  if (c.tags.some(t => t.tone === "alert"))  return "medium"
+  return "low"
+}
+
+export function getRisk(c: UcpContact): StudyRow[] {
+  const level = riskLevel(c)
+  const score = level === "high" ? 78 : level === "medium" ? 54 : 18
+  const flags = level === "high" ? 3  : level === "medium" ? 1  : 0
+  const prior = level === "high" ? 54 : level === "medium" ? 48 : 24
+  const rising = score > prior
+
   return [
-    { id: "c1", name: c.company, relation: "Organization · employer",             icon: "Building2" },
-    { id: "c2", name: c.owner,   relation: "Account owner",                       icon: "UserRound" },
-    { id: "c3", name: "Enterprise Renewal 2026", relation: "Deal · participant",  icon: "Briefcase" },
+    {
+      label: "Risk score", value: `${score} / 100`,
+      icon: rising ? "TrendingUp" : "TrendingDown",
+      variant: score >= 70 ? "error" : score >= 40 ? "alert" : "success",
+      tooltip: `Risk score · ${score} of 100. ${
+        score >= 70 ? "Above the intervention threshold — this record needs an owner this week."
+        : score >= 40 ? "Elevated. Worth watching, not yet blocking."
+        : "Within the normal band for this account type."}`,
+    },
+    {
+      label: "Open flags", value: String(flags),
+      icon: "Flag",
+      variant: flags === 0 ? "neutral" : flags >= 3 ? "error" : "alert",
+      tooltip: flags === 0
+        ? "Open flags · none. Nothing has been raised since the last scan."
+        : `Open flags · ${flags}. Raised by the risk study and still unresolved.`,
+    },
+    {
+      label: "Trend", value: `${prior} → ${score}`,
+      icon: rising ? "ArrowUpRight" : "ArrowDownRight",
+      variant: rising ? (score >= 70 ? "error" : "alert") : "success",
+      tooltip: `Trend · ${prior} to ${score} since the previous scan. ${
+        rising ? "Moving the wrong way." : "Improving."}`,
+    },
+    {
+      label: "Last scan", value: "Aug 27, 2026",
+      icon: "ScanLine", variant: "informative",
+      tooltip: "Last scan · Aug 27, 2026. The risk study runs weekly; anything after this date is not reflected above.",
+    },
   ]
 }
 
-/** Governance study — one row per metric, same shape for every record type. */
-export function getGovernance(c: UcpContact): { label: string; value: string; icon: string; variant: "success" | "alert" | "informative" | "neutral" }[] {
+export function getGovernance(c: UcpContact): StudyRow[] {
+  const openReviews = c.status === "Active" ? 1 : 0
+  const reviewRow: StudyRow = {
+    label: "Open reviews", value: String(openReviews),
+    icon: "ClipboardList",
+    variant: openReviews === 0 ? "neutral" : "alert",
+    tooltip: openReviews === 0
+      ? "Open reviews · none. Nothing is waiting on a governance decision."
+      : `Open reviews · ${openReviews}. Waiting on a governance decision before it can proceed.`,
+  }
+
   return c.type === "employee"
     ? [
-        { label: "Policies signed",  value: "12 of 12",     icon: "FileCheck2",    variant: "success"     },
-        { label: "Open reviews",     value: "1",            icon: "ClipboardList", variant: "alert"       },
-        { label: "Training current", value: "Yes",          icon: "GraduationCap", variant: "success"     },
-        { label: "Last audit",       value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative" },
+        { label: "Policies signed",  value: "12 of 12",     icon: "FileCheck2",    variant: "success",
+          tooltip: "Policies signed · 12 of 12. Every policy this role requires is signed and current." },
+        reviewRow,
+        { label: "Training current", value: "Yes",          icon: "GraduationCap", variant: "success",
+          tooltip: "Training current · yes. No mandatory course is overdue for this role." },
+        { label: "Last audit",       value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative",
+          tooltip: "Last audit · Aug 10, 2026. Governance audits this record quarterly." },
       ]
     : [
-        { label: "Compliance score", value: "94 / 100",     icon: "ShieldCheck",   variant: "success"     },
-        { label: "Open reviews",     value: c.status === "Active" ? "1" : "0", icon: "ClipboardList", variant: c.status === "Active" ? "alert" : "neutral" },
-        { label: "DPA signed",       value: "Yes · v3",     icon: "FileCheck2",    variant: "success"     },
-        { label: "Last audit",       value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative" },
+        { label: "Compliance score", value: "94 / 100",     icon: "ShieldCheck",   variant: "success",
+          tooltip: "Compliance score · 94 of 100. Computed from signed agreements, retention settings and open reviews." },
+        reviewRow,
+        { label: "DPA signed",       value: "Yes · v3",     icon: "FileCheck2",    variant: "success",
+          tooltip: "Data Processing Agreement · v3 signed. Personal data on this record may be processed by agents." },
+        { label: "Last audit",       value: "Aug 10, 2026", icon: "CalendarCheck", variant: "informative",
+          tooltip: "Last audit · Aug 10, 2026. Governance audits this record quarterly." },
       ]
 }
 
-export function getRisk(_c: UcpContact): { label: string; value: string; icon: string; variant: "success" | "alert" | "informative" | "neutral" }[] {
-  return [
-    { label: "Risk score",  value: "18 / 100",     icon: "TrendingDown",   variant: "success"     },
-    { label: "Open flags",  value: "0",            icon: "Flag",           variant: "neutral"     },
-    { label: "Last scan",   value: "Aug 27, 2026", icon: "ScanLine",       variant: "informative" },
-    { label: "Trend",       value: "24 → 18",      icon: "ArrowDownRight", variant: "success"     },
-  ]
-}
 // ── Concierge chat ────────────────────────────────────────────────────────────
 
 export interface ConciergeTurn {

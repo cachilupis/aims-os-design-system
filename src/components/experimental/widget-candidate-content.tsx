@@ -21,12 +21,14 @@
 //
 // The sample data is plausible, never live. Same contract as widget-content.
 
+import { useState } from "react"
 import { Tag } from "@/components/ui/tag"
 import { Chip } from "@/components/ui/chip"
 import { HighlightIcon } from "@/components/ui/highlight-icon"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { ProgressBar } from "@/components/ui/progress-bar"
 import { NextBestActionCard } from "@/components/ui/next-best-action-card"
+import { Button } from "@/components/ui/button"
 import { useWidgetSize } from "@/components/layouts/widget-canvas-view"
 import * as LucideIcons from "lucide-react"
 
@@ -290,20 +292,74 @@ function CompositeStatContent() {
  * that needs a wider layout to be understood is a recommendation that has
  * stopped being one thing.
  */
+const NBA_QUEUE: { title: string; timeAgo: string; description: string }[] = [
+  {
+    title: "Send the renewal timeline Meridian asked for",
+    timeAgo: "30m ago",
+    description: "They raised it on the last two calls without a written answer, and the renewal closes in 12 days.",
+  },
+  {
+    title: "Rebalance the service load across four stores",
+    timeAgo: "5h ago",
+    description: "Tampa North holds 26 of the 41 late repair orders while Brandon runs at 60% bay capacity.",
+  },
+  {
+    title: "Escalate the overdue performance review",
+    timeAgo: "6h ago",
+    description: "Three reviews are waiting on approval and the oldest has been open 12 days, holding two promotion cycles.",
+  },
+]
+
 function NextBestActionWidgetContent() {
   const { isNarrow } = useWidgetSize()
+  const [i, setI] = useState(0)
+  const item = NBA_QUEUE[i]
+  const go = (d: number) => setI(prev => (prev + d + NBA_QUEUE.length) % NBA_QUEUE.length)
+
   return (
-    <NextBestActionCard
-      unstyled
-      size={isNarrow ? "sm" : "default"}
-      item={{
-        id: "nba-sample",
-        title: "Send the renewal timeline Meridian asked for",
-        timeAgo: "30m ago",
-        description: "They raised it on the last two calls without a written answer, and the renewal closes in 12 days.",
-        onViewDetails: () => {},
-      }}
-    />
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/*
+        The carousel controls sit in their own row at the top, right-aligned —
+        the widget's chrome, above the recommendation rather than stacked under
+        it. Michael (2026-09-09) asked for both: a carousel of NBAs, and
+        controls that do not end up at the bottom of the stack.
+
+        A CAROUSEL DOES NOT BREAK "ONE AT A TIME". Figma's rule 2 is that the
+        card never STACKS — the engine has already prioritised, so showing five
+        at once is not trusting it. One visible with a way to page to the next
+        keeps that: the reader still sees one recommendation, and the counter is
+        what says there are others rather than a second card competing with the
+        first.
+      */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6 }}>
+        <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>
+          {i + 1} of {NBA_QUEUE.length}
+        </span>
+        <Button
+          variant="tertiary" size="sm" iconPosition="alone"
+          icon={<LucideIcons.ChevronLeft size={14} strokeWidth={1.75} />}
+          aria-label="Previous recommendation"
+          onClick={() => go(-1)}
+        />
+        <Button
+          variant="tertiary" size="sm" iconPosition="alone"
+          icon={<LucideIcons.ChevronRight size={14} strokeWidth={1.75} />}
+          aria-label="Next recommendation"
+          onClick={() => go(1)}
+        />
+      </div>
+      <NextBestActionCard
+        unstyled
+        size={isNarrow ? "sm" : "default"}
+        item={{
+          id: `nba-${i}`,
+          title: item.title,
+          timeAgo: item.timeAgo,
+          description: item.description,
+          onViewDetails: () => {},
+        }}
+      />
+    </div>
   )
 }
 

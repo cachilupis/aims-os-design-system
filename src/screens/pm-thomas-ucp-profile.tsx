@@ -66,9 +66,11 @@ import { EntityList }        from "@/components/ui/entity-list"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { Skeleton }          from "@/components/ui/skeleton"
+import { Tooltip }           from "@/components/ui/tooltip"
 import { EntityHeader }      from "@/components/ui/entity-header"
 import type { EntityHeaderTag, RecordField, SecondaryMetadataItem } from "@/components/ui/entity-header"
 import { NextBestActionCard } from "@/components/ui/next-best-action-card"
@@ -79,6 +81,7 @@ import type { LucideIcon } from "lucide-react"
 import { specForContact, tabsForContact } from "./ucpTypeModel"
 import type { ProfileWidgetRow } from "./ucpTypeModel"
 import {
+  PANEL_CONTENT_CLASS,
   PLANE_META, PLANE_ORDER, CHANNEL_META, CONCIERGE_PROMPTS,
   CONTACTS,
   TYPE_LABEL, entityState, restrictionFor, getRecordFields,
@@ -86,6 +89,7 @@ import {
   getFacts, getGovernance, getRisk,
 } from "./ucpShared"
 import type {
+  MetricVariant, StudyRow,
   ActivityChannel, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
 } from "./ucpShared"
 
@@ -126,8 +130,18 @@ function StudyWidget({ title, state, children }: { title: string; state: StudySt
   return <>{children}</>
 }
 
-/** Metric rows shared by the Governance and Risk study widgets. */
-function MetricRows({ rows }: { rows: { label: string; value: string; icon: string; variant: "success" | "alert" | "informative" | "neutral" }[] }) {
+/**
+ * Profile Card (catalog type `profile-card` — "key fields of one entity
+ * record"). The type's own fields: label, value, and an icon that says what
+ * KIND of fact it is.
+ *
+ * Every row carries a Tooltip on hover AND on focus. A label plus a value says
+ * what the field is; the tooltip says why it matters — "Headquarters · Tampa,
+ * FL. Where the account is registered, which decides the data residency rules
+ * that apply." The DS asks for this on secondary metadata for the same reason,
+ * and a field row is the same problem: an icon and two words cannot carry it.
+ */
+function MetricRows({ rows }: { rows: ProfileWidgetRow[] }) {
   const { availableHeight } = useWidgetSize()
   // 37px pitch per row now that each carries its own divider, 70px for the
   // widget's title chrome + padding.
@@ -144,29 +158,29 @@ function MetricRows({ rows }: { rows: { label: string; value: string; icon: stri
         // The divider is --color-border-neutral-subtle, the same token the
         // SlideOut and Side Panel use for their internal separators. The last
         // row drops it: a rule under the final item draws a line to nothing.
-        <div
-          key={row.label}
-          style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
-            borderBottom: i === visible.length - 1 ? "none" : "1px solid var(--color-border-neutral-subtle)",
-          }}
-        >
-          <HighlightIcon size="sm" variant={row.variant} iconName={row.icon} />
-          {/* One line, always. A wrapped label turns a 37px row into 55px, and
-              the widget's fixed height then swallows the rows below it. */}
-          <span
-            title={row.label}
+        <Tooltip key={row.label} content={row.tooltip} side="cursor" triggerClassName="block min-w-0 w-full">
+          <div
             style={{
-              fontSize: 12, color: "var(--field-supporting)", flex: 1, minWidth: 0,
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              display: "flex", alignItems: "center", gap: 10, padding: "8px 0",
+              borderBottom: i === visible.length - 1 ? "none" : "1px solid var(--color-border-neutral-subtle)",
             }}
           >
-            {row.label}
-          </span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", whiteSpace: "nowrap" }}>
-            {row.value}
-          </span>
-        </div>
+            <HighlightIcon size="sm" variant={row.variant} iconName={row.icon} />
+            {/* One line, always. A wrapped label turns a 37px row into 55px, and
+                the widget's fixed height then swallows the rows below it. */}
+            <span
+              style={{
+                fontSize: 12, color: "var(--field-supporting)", flex: 1, minWidth: 0,
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}
+            >
+              {row.label}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", whiteSpace: "nowrap" }}>
+              {row.value}
+            </span>
+          </div>
+        </Tooltip>
       ))}
     </div>
   )
@@ -192,13 +206,14 @@ function MetricRows({ rows }: { rows: { label: string; value: string; icon: stri
  * icon on the left takes the space the number needs.
  */
 function StatRowContent({ counters, checked }: {
-  counters: ProfileWidgetRow[]
-  checked?: ProfileWidgetRow
+  counters: StudyRow[]
+  checked?: StudyRow
 }) {
   const { isNarrow } = useWidgetSize()
-  const labelColor: Record<ProfileWidgetRow["variant"], string> = {
+  const labelColor: Record<MetricVariant, string> = {
     success:     "var(--color-text-success)",
     alert:       "var(--color-text-alert)",
+    error:       "var(--color-text-error)",
     informative: "var(--color-text-info)",
     neutral:     "var(--color-text-subtitle)",
   }
@@ -206,40 +221,45 @@ function StatRowContent({ counters, checked }: {
     <div style={{ paddingBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
         {counters.slice(0, 3).map(c => (
-          <div
-            key={c.label}
-            style={{
-              display: "flex",
-              flexDirection: isNarrow ? "column" : "row",
-              alignItems: isNarrow ? "flex-start" : "center",
-              gap: isNarrow ? 8 : 12,
-              padding: "12px 14px", borderRadius: 8, minWidth: 0,
-              border: "1px solid var(--field-border)",
-              background: "var(--widget-bg)",
-            }}
-          >
-            <HighlightIcon size="md" variant={c.variant} iconName={c.icon} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-              <span
-                title={c.label}
-                style={{
-                  fontSize: 10, fontWeight: 500, lineHeight: 1.2, color: labelColor[c.variant],
-                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                }}
-              >
-                {c.label}
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1, color: "var(--color-text-title)", whiteSpace: "nowrap" }}>
-                {c.value}
-              </span>
+          // The tooltip is the point of the hover, not a fallback for
+          // truncation: "0" is not information, "no flags have been raised
+          // since the last scan" is. On focus too, so it is not mouse-only.
+          <Tooltip key={c.label} content={c.tooltip} side="cursor" triggerClassName="block min-w-0 w-full">
+            <div
+              style={{
+                display: "flex",
+                flexDirection: isNarrow ? "column" : "row",
+                alignItems: isNarrow ? "flex-start" : "center",
+                gap: isNarrow ? 8 : 12,
+                padding: "12px 14px", borderRadius: 8, minWidth: 0, height: "100%",
+                border: "1px solid var(--field-border)",
+                background: "var(--widget-bg)",
+              }}
+            >
+              <HighlightIcon size="md" variant={c.variant} iconName={c.icon} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                <span
+                  style={{
+                    fontSize: 10, fontWeight: 500, lineHeight: 1.2, color: labelColor[c.variant],
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}
+                >
+                  {c.label}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 600, lineHeight: 1, color: "var(--color-text-title)", whiteSpace: "nowrap" }}>
+                  {c.value}
+                </span>
+              </div>
             </div>
-          </div>
+          </Tooltip>
         ))}
       </div>
       {checked && (
-        <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
-          {checked.label} · {checked.value}
-        </span>
+        <Tooltip content={checked.tooltip} side="cursor" triggerClassName="block min-w-0">
+          <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+            {checked.label} · {checked.value}
+          </span>
+        </Tooltip>
       )}
     </div>
   )
@@ -248,29 +268,34 @@ function StatRowContent({ counters, checked }: {
 /**
  * Last Activity Widget (catalog id `activity`, class 3 — Heavy, 9 GU).
  *
- * The Overview used to render this slot as a Table with five columns. A Table
- * is its own widget in the catalog, with its own use cases, and column headers
- * on five recent touchpoints are chrome nobody reads. The catalog's Last
- * Activity Widget is the one that fits: *"Chronological feed of customer
- * interaction events — calls, emails, and SMS. Each item shows a channel icon,
- * event metadata, timestamp, and optional alert tags… Internal scroll for
- * overflow."*
+ * THE SAME ANATOMY THE LIBRARY DRAWS, which is the point: this used to be a
+ * list with bottom dividers, a status Tag per row and a tertiary "View full
+ * timeline" button under it — recognisably not the DS widget, which is what
+ * Michael caught (2026-09-09). The catalogued widget is a stack of BORDERED,
+ * CLICKABLE rows: a tinted icon tile, the title, then the time and a chevron
+ * on the right, the description on its own line indented past the tile, and a
+ * metadata row that appears on hover. 4px between rows, and the whole thing
+ * scrolls inside the slot.
+ *
+ * Two deliberate differences from the library's renderer, both because this
+ * one has real data behind it:
+ *   · the tile is HighlightIcon rather than a hand-drawn 26px square — the
+ *     audit's own rule, and it keeps a channel the same colour everywhere
+ *   · the row opens the Activity tab, where this record's full trace lives,
+ *     instead of a SlideOut with sample tabs
  *
  * Communication channels only, which is the widget's own rule — *"Don't mix
  * non-communication activity types in this widget: use Timeline for lifecycle
- * events."* Agent and system events are lifecycle, so they stay on the Activity
- * tab, where the full trace lives. That split is also the honest product
- * answer: this widget says when we last touched the person, the tab says
- * everything that happened to the record.
- *
- * Empty is a real state here. A record whose only events are agent and system
- * ones has genuinely never been contacted, and saying so is more useful than a
- * feed that quietly includes the robot's own work to look busy.
+ * events."* Agent and system events are lifecycle, so they stay on the
+ * Activity tab. Empty is a real state: a record whose only events are the
+ * robot's own has genuinely never been contacted, and saying so is more useful
+ * than a feed padded to look busy.
  */
 const COMMS: ActivityChannel[] = ["call", "email", "meeting"]
 
 function LastActivityContent({ contact, onViewAll }: { contact: UcpContact; onViewAll: () => void }) {
   const { availableHeight } = useWidgetSize()
+  const [hovered, setHovered] = useState<string | null>(null)
   const items = useMemo(
     () => getActivity(contact).filter(a => COMMS.includes(a.channel)),
     [contact],
@@ -287,57 +312,83 @@ function LastActivityContent({ contact, onViewAll }: { contact: UcpContact; onVi
     )
   }
 
-  // 56px pitch per two-line item, 86px for the widget's title chrome, padding
-  // and the footer button.
-  const maxItems = availableHeight ? Math.max(1, Math.floor((availableHeight - 86) / 56)) : items.length
+  // 74px pitch per row (two lines plus its border and the 4px gap), 70px for
+  // the widget's title chrome and padding. Anything past that scrolls inside
+  // the slot rather than being cut — WidgetFather owns that now.
+  const maxItems = availableHeight ? Math.max(1, Math.floor((availableHeight - 70) / 74)) : items.length
 
   return (
-    <div style={{ paddingBottom: 16, display: "flex", flexDirection: "column" }}>
-      {items.slice(0, maxItems).map((a, i, shown) => (
-        <div
-          key={a.id}
-          style={{
-            display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0",
-            borderBottom: i === shown.length - 1 ? "none" : "1px solid var(--color-border-neutral-subtle)",
-          }}
-        >
-          <HighlightIcon size="sm" variant="neutral" iconName={CHANNEL_META[a.channel].icon} />
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+    <div style={{ paddingBottom: 16, display: "flex", flexDirection: "column", gap: 4 }}>
+      {items.slice(0, maxItems).map(a => {
+        const meta = CHANNEL_META[a.channel]
+        const showMeta = hovered === a.id
+        return (
+          <div
+            key={a.id}
+            role="button"
+            tabIndex={0}
+            onClick={onViewAll}
+            onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onViewAll() } }}
+            onMouseEnter={() => setHovered(a.id)}
+            onMouseLeave={() => setHovered(null)}
+            onFocus={() => setHovered(a.id)}
+            onBlur={() => setHovered(null)}
+            className="cursor-pointer rounded-[8px] px-[12px] py-[8px] transition-colors duration-150 hover:bg-[var(--color-surface-neutral-subtle)]"
+            style={{ border: "0.5px solid var(--field-border)" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <HighlightIcon size="sm" variant="neutral" iconName={meta.icon} />
               <span
                 title={a.title}
                 style={{
-                  fontSize: 12, fontWeight: 600, color: "var(--foreground)",
-                  flex: 1, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  fontSize: 13, fontWeight: 500, color: "var(--color-text-title)",
+                  flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}
               >
                 {a.title}
               </span>
-              {/* The alert tag the spec calls for — only when the event carries
-                  something worth flagging, never a status badge on every row. */}
-              {a.state.variant !== "success" && (
-                <Tag variant={a.state.variant} size="sm">{a.state.label}</Tag>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                {/* The alert only — a badge on every row says nothing. */}
+                {a.state.variant === "alert" && <LucideIcons.AlertTriangle size={11} style={{ color: "var(--color-text-alert)" }} />}
+                {a.state.variant === "error" && <LucideIcons.XCircle       size={11} style={{ color: "var(--color-text-error)" }} />}
+                <span style={{ fontSize: 11, color: "var(--color-text-subtitle)", whiteSpace: "nowrap" }}>{a.timestamp}</span>
+                <LucideIcons.ChevronRight size={11} style={{ color: "var(--color-text-subtitle)" }} />
+              </div>
             </div>
-            <span
+            <p
               title={a.meta}
               style={{
-                fontSize: 12, color: "var(--field-supporting)",
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                fontSize: 12, color: "var(--color-text-body)", lineHeight: 1.4, margin: 0,
+                paddingLeft: 34, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}
             >
-              {a.timestamp} · {a.meta}
-            </span>
+              {a.meta}
+            </p>
+            <div style={{
+              paddingLeft: 34,
+              maxHeight: showMeta ? 20 : 0,
+              opacity: showMeta ? 1 : 0,
+              overflow: "hidden",
+              transition: "max-height 200ms ease, opacity 180ms ease",
+            }}>
+              <span style={{ fontSize: 10, color: "var(--color-text-subtitle)" }}>
+                {meta.label} · {a.state.label}
+              </span>
+            </div>
           </div>
-        </div>
-      ))}
-      <Button variant="tertiary" size="sm" className="self-start !px-0 mt-[4px]" onClick={onViewAll}>
-        View full timeline
-      </Button>
+        )
+      })}
     </div>
   )
 }
 
+/**
+ * Connections (catalog type `connections` — related contacts).
+ *
+ * People only, each with the relationship named and a Tooltip saying why they
+ * are here. The data layer resolves every row against the roster, so a name
+ * on this card is always a record you can open.
+ */
 function ConnectionsContent({ contact }: { contact: UcpContact }) {
   const { availableHeight } = useWidgetSize()
   const connections  = getConnections(contact)
@@ -346,16 +397,30 @@ function ConnectionsContent({ contact }: { contact: UcpContact }) {
   const maxRows      = availableHeight ? Math.max(2, Math.floor((availableHeight - 70) / 44)) : 3
   const visible      = connections.slice(0, maxRows)
   const hidden       = connections.length - visible.length
+
+  if (connections.length === 0) {
+    return (
+      <EmptyState
+        compact
+        icon={LucideIcons.Users}
+        title="No related contacts"
+        description="People connected to this record — coworkers, family — appear here once AIMS holds a record for them."
+      />
+    )
+  }
+
   return (
     <div style={{ paddingTop: 4, paddingBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
       {visible.map(c => (
-        <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-          <HighlightIcon size="sm" variant="neutral" iconName={c.icon} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
-            <span style={{ fontSize: 11, color: "var(--field-supporting)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.relation}</span>
+        <Tooltip key={c.id} content={c.tooltip} side="cursor" triggerClassName="block min-w-0 w-full">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <HighlightIcon size="sm" variant="neutral" iconName={c.icon} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+              <span style={{ fontSize: 11, color: "var(--field-supporting)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.relation}</span>
+            </div>
           </div>
-        </div>
+        </Tooltip>
       ))}
       {hidden > 0 && (
         <Button variant="tertiary" size="sm" className="self-start !px-0" onClick={() => {}}>
@@ -449,6 +514,14 @@ const FACT_COLUMNS: TableColumn<UcpFact>[] = [
   },
 ]
 
+/** One icon per knowledge plane, so a plane looks the same wherever it is
+ *  counted. Truth is verified, Sandbox is provisional, Sources is material. */
+const PLANE_ICON: Record<KnowledgePlane, string> = {
+  truth:   "ShieldCheck",
+  sandbox: "FlaskConical",
+  sources: "Files",
+}
+
 function SnapshotTab({ contact }: { contact: UcpContact }) {
   const [plane, setPlane] = useState<KnowledgePlane | "all">("all")
   const facts   = useMemo(() => getFacts(contact), [contact])
@@ -456,25 +529,35 @@ function SnapshotTab({ contact }: { contact: UcpContact }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Plane summary — what the system holds as true about this record, and how sure it is */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-        {PLANE_ORDER.map(p => {
-          const meta  = PLANE_META[p]
-          const count = facts.filter(f => f.plane === p).length
-          return (
-            <CardContainer key={p} variant="default" size="sm">
-              <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <Tag variant={meta.tag} size="sm">{meta.label} plane</Tag>
-                  <span style={{ fontSize: 18, fontWeight: 700, lineHeight: 1, color: "var(--color-text-title)" }}>{count}</span>
-                </div>
-                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.5 }}>{meta.blurb}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)" }}>Confidence {meta.confidence}</span>
-              </div>
-            </CardContainer>
-          )
+      {/*
+        Plane summary — what the system holds as true about this record, and how
+        sure it is. These were three hand-built CardContainers with a Tag, a
+        count and a blurb. That is a KPI card, and the DS has one: Michael's
+        call (2026-09-09) is HighlightCard, laid out by AdaptiveMetricGrid,
+        which is also the pair the panel-content page uses for Key Metrics.
+
+        `label` is the plane, `value` the number of facts, `feedback` its
+        confidence, and `feedbackType` carries the plane's own semantics — the
+        Truth plane reads success at 100%, Sandbox alert at ~80%, Sources
+        informative at ~60%. The blurb moves to the icon's tooltip: it explains
+        the plane rather than this record, so it does not need to be on screen
+        three times.
+      */}
+      <AdaptiveMetricGrid
+        cards={PLANE_ORDER.map(p => {
+          const meta = PLANE_META[p]
+          return {
+            label:        `${meta.label} plane`,
+            value:        facts.filter(f => f.plane === p).length,
+            feedback:     `Confidence ${meta.confidence}`,
+            // HighlightCard's feedback is positive / negative / neutral. Only
+            // the Truth plane is positive; Sandbox is NOT negative — a lower
+            // confidence is how that plane is supposed to work, not a failure.
+            feedbackType: (meta.tag === "success" ? "positive" : "neutral") as "positive" | "neutral",
+            iconName:     PLANE_ICON[p],
+          }
         })}
-      </div>
+      />
 
       {/* Plane filter — a selection toggle, so primary/secondary, not a semantic color */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -577,6 +660,21 @@ function ActivityTab({
 
 // ── Drives ────────────────────────────────────────────────────────────────────
 
+/**
+ * One drive → one glyph and one tint, read by BOTH the row and its preview.
+ * They were two separate expressions before, which is how a Document opened a
+ * preview headed by a hard drive.
+ */
+const DRIVE_ICON: Record<string, string> = {
+  Document: "FileText",
+  Drive:    "HardDrive",
+  Folder:   "Folder",
+}
+const DRIVE_ICON_VARIANT: Record<string, "error" | "yellow" | "light-blue"> = {
+  error: "error",
+  alert: "yellow",
+}
+
 function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
   const drives = useMemo(() => getDrives(contact), [contact])
 
@@ -598,8 +696,8 @@ function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d:
             items={[{
               id:          d.id,
               title:       d.name,
-              iconName:    d.kind === "Document" ? "FileText" : d.kind === "Drive" ? "HardDrive" : "Folder",
-              iconVariant: d.state.variant === "error" ? "error" : d.state.variant === "alert" ? "yellow" : "light-blue",
+              iconName:    DRIVE_ICON[d.kind] ?? "Folder",
+              iconVariant: DRIVE_ICON_VARIANT[d.state.variant] ?? "light-blue",
               primaryMeta: [
                 { iconName: "Cloud",  label: d.provider },
                 { iconName: "Files",  label: d.items    },
@@ -672,7 +770,11 @@ function ConciergeChat({
       showCta={false}
     >
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {/* Vertical padding only, and the 16/-16 pair so the scroller does not
+            clip the message cards' hover glow flat against its edge — the
+            clip-boundary trick from the guardrails, which is net zero so the
+            content still lands on the panel's own 24px. */}
+        <div style={{ flex: 1, overflowY: "auto", paddingTop: 20, paddingBottom: 8, paddingInline: 16, marginInline: -16, display: "flex", flexDirection: "column", gap: 12 }}>
           {turns.map(turn => (
             <div
               key={turn.id}
@@ -708,7 +810,7 @@ function ConciergeChat({
           ))}
         </div>
 
-        <div style={{ padding: "8px 20px 20px", display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
+        <div style={{ paddingTop: 8, paddingBottom: 20, display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 10 }}>
             {CONCIERGE_PROMPTS.map(p => (
               <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
@@ -1021,8 +1123,9 @@ export function UcpProfileView({
         uid: "risk", title: "Risk", colSpan: 1, rowSpan: 4,
         content: (
           <StudyWidget title="Risk" state={contact.risk}>
-            {/* The trend belongs with the counters; the scan date is the date. */}
-            <StatRowContent counters={[risk[0], risk[1], risk[3]]} checked={risk[2]} />
+            {/* Score, flags and trend are the counters; the scan date is the
+                date. getRisk returns them in that order. */}
+            <StatRowContent counters={risk.slice(0, 3)} checked={risk[3]} />
           </StudyWidget>
         ),
       })
@@ -1209,11 +1312,14 @@ export function UcpProfileView({
             and withholds only the value. That is the point of masking: the
             viewer can see that the field exists and is governed, which is a
             different statement from the field not being there. */}
-        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className={PANEL_CONTENT_CLASS}>
           <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>
             {restriction
               ? `Every field on this record, and where it came from. ${restriction.note}`
               : "Every field on this record, and where it came from."}
+          </span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+            Fields
           </span>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {getRecordFields(contact).map((f, i) => (
@@ -1233,6 +1339,26 @@ export function UcpProfileView({
         </div>
       </SlideOut>
 
+      {/*
+        Drives preview.
+
+        Four things Michael caught on 2026-09-09, all of them the same mistake
+        in different places — the panel was drawing its own vocabulary instead
+        of the one the SlideOut/SidePanel — Content page defines:
+
+        · THE ICON MATCHES THE ITEM. It was a hardcoded HardDrive for every
+          preview, so opening a Document showed a drive. Same glyph and same
+          tint as the row it came from, resolved from one map.
+        · NO PADDING OF ITS OWN. SlideOut's panel is already `32px / 24px`; the
+          20px this added landed the content at 44. The canonical page renders
+          its slot with zero horizontal padding for exactly that reason.
+        · THE STATE IS THE PANEL'S, not a Tag in the body. It has a slot —
+          `showStatus` + `statusLabel` — and a Tag on its own line in a column
+          also stretched to the panel width, which is the other half of the
+          same bug (fixed in the component too: Tag is `w-fit` now).
+        · THE DETAIL TABLE IS THE ONE FROM THAT PAGE: a bordered 8px container,
+          rows at `py-8 px-12`, a 120px label column, 1px dividers.
+      */}
       <SlideOut
         open={drivePeek !== null}
         onClose={() => setDrivePeek(null)}
@@ -1241,38 +1367,53 @@ export function UcpProfileView({
         title={drivePeek?.name ?? ""}
         subtitle={drivePeek ? `${drivePeek.kind} · ${drivePeek.provider}` : ""}
         showIcon
-        iconContent={<HardDrive size={14} />}
-        showStatus={false}
+        iconContent={drivePeek ? <HighlightIcon size="sm" variant={DRIVE_ICON_VARIANT[drivePeek.state.variant]} iconName={DRIVE_ICON[drivePeek.kind]} /> : undefined}
+        showStatus
+        statusLabel={drivePeek?.state.label}
         showTopButton={false}
-      showTabs={false}
-      showSearchBar={false}
-      showChips={false}
-      showCta={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
       >
         {drivePeek && (
-          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
-            <Tag variant={drivePeek.state.variant} size="sm">{drivePeek.state.label}</Tag>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {[
-                { label: "Provider",  value: drivePeek.provider },
-                { label: "Contents",  value: drivePeek.items    },
-                { label: "Owner",     value: drivePeek.owner    },
-                { label: "Last sync", value: drivePeek.lastSync },
-                { label: "Scope",     value: drivePeek.scope    },
-              ].map(row => (
-                <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{row.label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{row.value}</span>
-                </div>
-              ))}
+          <div className={PANEL_CONTENT_CLASS}>
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                Details
+              </span>
+              <div className="flex flex-col rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+                {([
+                  ["Provider",  drivePeek.provider],
+                  ["Contents",  drivePeek.items],
+                  ["Owner",     drivePeek.owner],
+                  ["Last sync", drivePeek.lastSync],
+                  ["Scope",     drivePeek.scope],
+                ] as [string, string][]).map(([label, value], i, arr) => (
+                  <div key={label}>
+                    <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
+                      <span className="w-[120px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
+                      <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
+                    </div>
+                    {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+                  </div>
+                ))}
+              </div>
             </div>
-            <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>
-              Drives feed the Sources plane. Anything here can be cited by {contact.agent.name}, but never
-              promoted to Truth without a verification step.
-            </span>
+
+            <div className="flex flex-col gap-[8px]">
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                How this is used
+              </span>
+              <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                Drives feed the Sources plane. Anything here can be cited by {contact.agent.name}, but never
+                promoted to Truth without a verification step.
+              </span>
+            </div>
           </div>
         )}
       </SlideOut>
+
     </ScreenLayout>
   )
 }

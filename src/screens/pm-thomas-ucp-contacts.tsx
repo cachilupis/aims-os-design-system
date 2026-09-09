@@ -45,8 +45,9 @@ import { Sparkle, Send, Plus, Lock, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
+  PANEL_CONTENT_CLASS,
   CONTACTS, CONCIERGE_PROMPTS, PLANE_META,
-  STATUS_TAG, TYPE_ICON, TYPE_LABEL, TYPE_TAG, entityState, restrictionFor,
+  TYPE_ICON, TYPE_LABEL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
 } from "./ucpShared"
 import type { UcpContact, UcpEntityType } from "./ucpShared"
@@ -138,7 +139,7 @@ function RosterConcierge({ open, onClose, total }: { open: boolean; onClose: () 
       showCta={false}
     >
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 20px 8px", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingTop: 20, paddingBottom: 8, paddingInline: 16, marginInline: -16, display: "flex", flexDirection: "column", gap: 12 }}>
           {turns.map(turn => (
             <div
               key={turn.id}
@@ -167,7 +168,7 @@ function RosterConcierge({ open, onClose, total }: { open: boolean; onClose: () 
             </div>
           ))}
         </div>
-        <div style={{ padding: "8px 20px 20px", display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
+        <div style={{ paddingTop: 8, paddingBottom: 20, display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 10 }}>
             {CONCIERGE_PROMPTS.map(p => (
               <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
@@ -236,7 +237,7 @@ function CreatePanel({
       }}
       onCtaSecondary={onClose}
     >
-      <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 24 }}>
+      <div className="flex flex-col gap-[24px]">
         {!lockedType && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>What are you creating?</span>
@@ -712,8 +713,12 @@ export default function PMThomasUcpContactsScreen() {
         title={preview?.name ?? ""}
         subtitle={preview ? `${TYPE_LABEL[preview.type]} · ${preview.company}` : ""}
         showIcon
-        iconContent={<Sparkle size={14} />}
-        showStatus={false}
+        /* The entity's own icon, the same glyph and tint the roster row shows.
+           It was a Sparkle on every preview, which is the AI mark — it says
+           "an agent produced this", not "this is a customer". */
+        iconContent={preview ? <HighlightIcon size="sm" variant={TYPE_TAG[preview.type] === "purple" ? "purple" : TYPE_TAG[preview.type] === "lightBlue" ? "light-blue" : "informative"} iconName={TYPE_ICON[preview.type]} /> : undefined}
+        showStatus
+        statusLabel={preview?.status}
         showTopButton={false}
       showTabs={false}
       showSearchBar={false}
@@ -721,11 +726,7 @@ export default function PMThomasUcpContactsScreen() {
       showCta={false}
       >
         {preview && (
-          <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Tag variant={STATUS_TAG[preview.status]} size="sm">{preview.status}</Tag>
-              <Tag variant={TYPE_TAG[preview.type]} size="sm">{TYPE_LABEL[preview.type]}</Tag>
-            </div>
+          <div className={PANEL_CONTENT_CLASS}>
 
             {/* The same gate as the profile, applied here too. A preview that
                 prints the agent's read, the email and the fact counts of a
