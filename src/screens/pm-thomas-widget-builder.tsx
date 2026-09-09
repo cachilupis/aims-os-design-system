@@ -64,16 +64,30 @@ const ENTITY_SOURCES = [
 
 const FEATURED_ENTITIES = ENTITY_SOURCES.filter(e => e.featured)
 
-// Thom's four datasets. The `shape` is the part that matters: a dataset arrives
-// already aggregated, and its shape is what says whether it is one number, a
-// grouping, or raw rows — which is also why the dataset path never asks for a
-// calculation. That question was answered when the dataset was built.
+// Thom's seven datasets, name and description read straight off his library
+// rather than written fresh — the same rule the entity columns follow.
+//
+// The `shape` is the part that matters: a dataset arrives already aggregated,
+// and its shape says whether it is one number, a grouping, or raw rows — which
+// is also why the dataset path never asks for a calculation. That question was
+// answered when the dataset was built. It is also the only axis his library
+// filters on, so it is the only rail the browser needs.
+//
+// Four are `featured`, matching the four his step shows before "Browse all".
 const PRESET_DATASETS = [
-  { id: "ds-contacts-by-tier", name: "Contacts by Tier", description: "Count of contacts grouped by tier (Gold, Silver, Bronze)", shape: "Grouped",      integration: "Salesforce", governed: true },
-  { id: "ds-deals-pipeline",   name: "Deals Pipeline",   description: "Sum of deal value grouped by stage",                       shape: "Grouped",      integration: "Salesforce", governed: true },
-  { id: "ds-total-mrr",        name: "Total MRR",        description: "Sum of MRR across all active accounts",                    shape: "Single value", integration: "Salesforce", governed: true },
-  { id: "ds-all-contacts",     name: "All Contacts",     description: "Full contact record set — name, email, city, tier",        shape: "Record set",   integration: "Salesforce", governed: true },
+  { id: "ds-contacts-by-tier",   name: "Contacts by Tier",     description: "Count of contacts grouped by tier (Gold, Silver, Bronze)",        shape: "Grouped",      integration: "Salesforce", featured: true },
+  { id: "ds-deals-pipeline",     name: "Deals Pipeline",       description: "Sum of deal value grouped by stage",                              shape: "Grouped",      integration: "Salesforce", featured: true },
+  { id: "ds-total-mrr",          name: "Total MRR",            description: "Sum of MRR across all active accounts",                           shape: "Single value", integration: "Salesforce", featured: true },
+  { id: "ds-all-contacts",       name: "All Contacts",         description: "Full contact record set — name, email, city, tier",               shape: "Record set",   integration: "Salesforce", featured: true },
+  { id: "ds-activities-week",    name: "Activities This Week", description: "Count of activities grouped by type for the current week",        shape: "Grouped",      integration: "Salesforce", featured: false },
+  { id: "ds-deal-value-owner",   name: "Deal Value by Owner",  description: "Total deal value grouped by owner — shows each rep's pipeline",    shape: "Grouped",      integration: "Salesforce", featured: false },
+  { id: "ds-new-accounts-30d",   name: "New Accounts (30d)",   description: "Count of accounts created in the last 30 days",                    shape: "Single value", integration: "Salesforce", featured: false },
 ]
+
+const FEATURED_DATASETS = PRESET_DATASETS.filter(d => d.featured)
+
+/** The shapes a dataset can have — the browser's only filter, same as Thom's. */
+const DATASET_SHAPES: string[] = [...new Set(PRESET_DATASETS.map(d => d.shape))]
 
 /** Every integration the entity list draws from, derived rather than typed out
  *  so adding an entity cannot leave the filter row behind. */
@@ -180,7 +194,7 @@ const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
 }
 
 /**
- * What each governed dataset comes back with.
+ * What each dataset comes back with.
  *
  * A dataset arrives already aggregated, so its columns are the RESULT's
  * columns, not the source entity's: "Contacts by Tier" returns a tier and a
@@ -613,6 +627,9 @@ export default function PMThomasWidgetBuilderScreen() {
   const [colType, setColType]         = useState<ColumnType | "All">("All")
   const [showEntities, setShowEntities] = useState(false)
   const [entQuery, setEntQuery]         = useState("")
+  const [showDatasets, setShowDatasets] = useState(false)
+  const [dsQuery, setDsQuery]           = useState("")
+  const [shapeFilter, setShapeFilter]   = useState("all")
 
   // Search matches the label, the description AND the key — the key is there
   // because someone who knows the data will type `lead_source`, not "Channel
@@ -622,6 +639,18 @@ export default function PMThomasWidgetBuilderScreen() {
     const q = entQuery.trim().toLowerCase()
     return !q || e.label.toLowerCase().includes(q) || e.desc.toLowerCase().includes(q)
   })
+
+  const visibleDatasets = PRESET_DATASETS.filter(d => {
+    if (shapeFilter !== "all" && d.shape !== shapeFilter) return false
+    const q = dsQuery.trim().toLowerCase()
+    return !q || d.name.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
+  })
+
+  /** How many datasets each rail entry would show — the count sits on the row. */
+  const shapeCounts: Record<string, number> = {
+    all: PRESET_DATASETS.length,
+    ...Object.fromEntries(DATASET_SHAPES.map(sh => [sh, PRESET_DATASETS.filter(d => d.shape === sh).length])),
+  }
 
   const visibleColumns = (SOURCE_COLUMN_DEFS[sourceId ?? ""] ?? []).filter(c => {
     if (colType !== "All" && c.type !== colType) return false
@@ -671,7 +700,7 @@ export default function PMThomasWidgetBuilderScreen() {
   const nextEnabled = tab === "data" ? dataComplete : tab === "configure" ? widgetComplete : canSave
 
   const saveHint = !sourceId
-    ? (dataMode === "dataset" ? "Choose a governed dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
+    ? (dataMode === "dataset" ? "Choose a dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
     : !dataComplete
     ? "Finish configuring your data source on the Data tab."
     : !typeId
@@ -764,7 +793,7 @@ export default function PMThomasWidgetBuilderScreen() {
                   <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
                     <OptionCard
                       icon="Database" title="Existing dataset"
-                      description="Use a pre-built, governed query as your starting point."
+                      description="Use a pre-built query as your starting point."
                       selected={dataMode === "dataset"}
                       onSelect={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
                     />
@@ -810,14 +839,36 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 )}
 
+                {/* The same shape as Choose entity above, deliberately: a
+                    heading with the catalogue CTA aligned to its right, four
+                    featured cards, and a line saying what is not shown. The two
+                    data sources are the same kind of decision, so switching
+                    between them should change what you are choosing, never how
+                    the choosing is laid out. */}
                 {dataMode === "dataset" && (
                   <div>
-                    <StepLabel>Governed dataset</StepLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
-                      {PRESET_DATASETS.map(ds => (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <StepLabel>Choose dataset</StepLabel>
+                      <div style={{ marginTop: -8 }}>
+                        <Button variant="secondary" size="sm" onClick={() => { setDsQuery(""); setShapeFilter("all"); setShowDatasets(true) }}>
+                          <LucideIcons.LayoutGrid size={14} />
+                          Browse all datasets
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Padding for the card's hover glow, negative margin to
+                        keep the left edge with everything else in the step. */}
+                    <div style={{
+                      display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10,
+                      padding: 4, margin: -4,
+                    }}>
+                      {FEATURED_DATASETS.map(ds => (
                         <DatasetCard key={ds.id} dataset={ds} selected={sourceId === ds.id} onSelect={() => setSourceId(ds.id)} />
                       ))}
                     </div>
+                    <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: "12px 0 0" }}>
+                      Browse {PRESET_DATASETS.length - FEATURED_DATASETS.length} more datasets in the full library.
+                    </p>
                   </div>
                 )}
 
@@ -889,7 +940,19 @@ export default function PMThomasWidgetBuilderScreen() {
                         icon="Rows3" title="Record set"
                         description="Show raw records — choose which columns to expose."
                         selected={opType === "record_set"}
-                        onSelect={() => { setOpType("record_set"); setGroupers([]) }}
+                        /* Every column, pre-selected — the same default Thom's
+                           prototype lands on ("9 of 9 selected"). A record set
+                           IS the entity's rows, so "all of them" is the answer
+                           far more often than any subset, and starting from
+                           zero made the step a required chore before you could
+                           even see the widget. Deselecting is one click each;
+                           selecting nine was nine. Re-picking the mode keeps
+                           whatever you already chose. */
+                        onSelect={() => {
+                          setOpType("record_set")
+                          setGroupers([])
+                          if (recordColumns.length === 0) setRecordColumns(SOURCE_COLUMNS[sourceId] ?? [])
+                        }}
                       />
                     </div>
                   </div>
@@ -1160,6 +1223,77 @@ export default function PMThomasWidgetBuilderScreen() {
                         source={src}
                         selected={sourceId === src.id}
                         onSelect={() => { selectSource(src.id); setShowEntities(false) }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        }
+      />
+
+      {/* ── Browse all datasets ── */}
+      {/* Structurally identical to Browse all entities above — same modal
+          variant, same search, same left rail, same two-column grid, same
+          select-and-close. Only two things differ, and both are content: the
+          rail filters by SHAPE rather than by source (a dataset's shape is what
+          decides which widget types can draw it, and it is the only axis Thom's
+          library filters on), and each rail row carries its count, because with
+          seven datasets "Record set 1" tells you not to bother looking. */}
+      <ModalDialog
+        isOpen={showDatasets}
+        onClose={() => setShowDatasets(false)}
+        variant="content"
+        showIcon={false}
+        title="Browse all datasets"
+        description="Pick a pre-built query to power your widget."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input
+              size="sm"
+              placeholder="Search datasets…"
+              value={dsQuery}
+              onChange={e => setDsQuery(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+              <div style={{ width: 148, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {["all", ...DATASET_SHAPES].map(sh => (
+                  <Button
+                    key={sh}
+                    variant="tertiary"
+                    size="sm"
+                    className={`justify-between w-full ${shapeFilter === sh ? "!text-[var(--primary)]" : ""}`}
+                    onClick={() => setShapeFilter(sh)}
+                  >
+                    {sh === "all" ? "All shapes" : sh}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{shapeCounts[sh]}</span>
+                      <LucideIcons.ChevronRight size={14} />
+                    </span>
+                  </Button>
+                ))}
+              </div>
+
+              <div style={{
+                flex: 1, minWidth: 0, height: 340, overflowY: "auto",
+                padding: 4, margin: -4,
+              }}>
+                {visibleDatasets.length === 0 ? (
+                  <EmptyState
+                    compact icon={LucideIcons.SearchX}
+                    title="No datasets found"
+                    description="Try a different search term or shape."
+                  />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8 }}>
+                    {visibleDatasets.map(ds => (
+                      <DatasetCard
+                        key={ds.id}
+                        dataset={ds}
+                        selected={sourceId === ds.id}
+                        onSelect={() => { setSourceId(ds.id); setShowDatasets(false) }}
                       />
                     ))}
                   </div>
