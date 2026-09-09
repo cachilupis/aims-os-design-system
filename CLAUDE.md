@@ -475,7 +475,7 @@ The general `ModalDialog` vs. `SlideOut` question — and the multi-step-form ca
 | Use case | `type` prop | Notes |
 |---|---|---|
 | Entity preview (name, status, key metrics, AI summary, recent runs) | `"with-variants"` | Add `showTabs` when content splits into Overview / History / Config |
-| Generic content — a form, a Create flow, anything without an entity header | `"full-slot"` | No built-in header, tabs, chips, or CTA footer — compose them yourself inside `children` |
+| Generic content — a form, a Create flow, anything without an entity header | `"full-slot"` | No built-in header, tabs or chips — compose those inside `children`. It **does** get the CTA footer, but only once `onCtaPrimary` is wired (see below) |
 
 **SlideOut — mandatory props for `type="with-variants"` (entity detail):**
 
@@ -500,6 +500,28 @@ The general `ModalDialog` vs. `SlideOut` question — and the multi-step-form ca
 >
   {slotContent}
 </SlideOut>
+```
+
+**The panel's main action goes in the CTA footer — never a `Button` under the title.**
+`showCta` renders the footer for `with-variants` always, and for `full-slot`
+**once `onCtaPrimary` is wired** (a full-slot panel has no DS-default footer to
+show, so it opts in by supplying an action). Use `showCtaSecondary={false}` when
+there is nothing to cancel.
+
+A preview panel whose "open the full record" action is a small `secondary`
+Button beneath its own title reads as body content, not as the panel's CTA —
+that is how three previews in People & Access hid their only real action. If one
+`SlideOut` hosts several preview types, resolve the label and the handler at the
+call site from whichever is open; the preview component should not own it.
+
+```tsx
+<SlideOut
+  type="full-slot"
+  showCta={!!cta}
+  showCtaSecondary={false}
+  ctaPrimaryLabel={cta?.label}
+  onCtaPrimary={cta?.onClick}
+>
 ```
 
 **Default sizes and drag behavior:**
