@@ -197,7 +197,7 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 | `name` | Identity | `string` — required |
 | `visual` | Identity | `{ kind: "avatar" }` or `{ kind: "icon", icon, variant? }` — **required, exactly one** |
 | `source?` | Identity | `string` — which system the record came from. **One item, never two** |
-| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **capped at 6 + `+N`** |
+| `tags?` | Identity | `EntityHeaderTag[]` — signals + classification, **2 visible + `+N`**. Pass all of them; the cap is the component's job |
 | `stateBadge?` | Identity, right | `{ label, variant, icon? }` — **exactly one**, full semantic range |
 | `showInformation?` | Identity, right | `boolean` — shows the ⓘ trigger |
 | `secondaryAction?` | Identity, right | `EntityHeaderAction` — **off by default** |
@@ -215,7 +215,7 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 
 **Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.
 
-**Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. Six tags plus six metadata items as individual stops would be twenty-five Tab presses to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
+**Nine tab stops, six when nothing is truncated.** Tags and secondary metadata are each **one** stop with a roving tabindex — Tab enters the group, arrows move inside, Tab leaves. One stop per item would mean tabbing through every tag and every metadata item to get past the header. The title and description are stops only when they overflow. This is inside the component; a caller cannot break it, but do not wrap its slots in your own focusable elements.
 
 **The right-hand cluster has a fixed order:** ⓘ Information → state badge → secondary action → `Ask` → `···` menu. That side is fixed and never compressed; the left side is what yields.
 
@@ -235,7 +235,9 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 
 - **The test for a left tag is not its role — it is whether someone has to do something about it.** If yes, colour. If no, neutral. `Renews in 52d` is a signal and stays neutral: 52 days out, nobody has to act.
 - **Order:** signals first, sorted by severity, then classification. The component does this — pass them in any order.
-- **Beyond six, a `+N` chip.** Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **Two visible, then a `+N` chip** (Michael, 2026-09-09 — it was six until then). Six chips wrapped to a second line, saturated the card and, because they held their width, made the **title** truncate instead of the tags. Its Tooltip carries the hidden labels, which is what makes it acceptable for tags to yield before the title: nothing is lost, only moved.
+- **The classification keeps the second visible slot** whenever the entity has one, so the two tags answer two different questions — what needs attention most, and what kind of thing this is. A signal still takes the first slot. Read off Figma's own instances, which never let signals take both.
+- **Two is a hard cap standing in for a width calculation.** Figma has no fixed number — its cards show three, two and two depending on the room the title and the tags leave. Width-driven collapsing is not implemented; until it is, two is the count that never costs the title.
 - **If several statuses are true at once, the most blocking one wins** and the rest become signals. The component renders the one badge it is given.
 - **Not a tag at all:** anything true of every entity in the platform — `Entity`, `Governed`, `Manufacturing`, `Automotive`. That is noise. It belongs in secondary metadata or nowhere.
 
