@@ -107,6 +107,43 @@ These are checks 15-18. They are written down here too because a check tells you
   **zero horizontal padding** in anything rendered as a `SlideOut` child and let
   the component own the margin. Each half looks correct alone, which is why this
   one survived in three previews for months.
+- **A scroll container clips its children's hover glow flat — move the clip
+  boundary, never shrink the card.** `CardContainer`'s dark hover shadow paints
+  *outside* the card (`0 0 4px 1px` white/40 plus `0 0 14px` white/15), and in a
+  350px `SlideOut` the content column is 302px — exactly the card's width. The
+  halo lands on the scroller's edge and is sliced off vertically on both sides.
+
+  The fix is **padding plus an equal negative margin** on the scroller: a scroll
+  container clips at its *padding box*, so the boundary moves out while the
+  content box, the card's width and the card's own padding all stay put.
+  `ScrollArea` does this by default via `crossAxisClipMargin` (16px); apply the
+  same two properties to any other scroller in the path.
+
+  ```tsx
+  <div style={{ flex: 1, overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+  ```
+
+  **`overflow-x: clip` + `overflow-clip-margin` is the obvious answer and does
+  not work** — measured in Chrome, `clip` on one axis beside `auto` on the other
+  computes back to `hidden`, and the clip margin then applies to nothing.
+  `overflow-x: visible` is coerced to `auto` for the same reason and adds a
+  horizontal scrollbar. Do not re-try either.
+
+  This is the one sanctioned exception to "zero horizontal padding inside a
+  `SlideOut` child" above: it is net zero, so content still lands at 24px.
+
+- **Per-studio permission counts are `PermissionsBreakdown`** (local to
+  `PeopleAccessMembers.tsx`, built from `studioPermRows`). One card per studio:
+  chevron, label in `--color-text-title`, the count as a `Tag` in the studio's
+  variant, a bar in its `--hi-*-icon` colour, and on expand the actual
+  permission names from `PERM_TREE`. It is used by the role preview, the member
+  preview's Permissions tab and anywhere else this data appears — a bar that
+  only says "6" cannot be acted on, and three screens drawing it three ways is
+  how the studio colours drifted apart.
+
+  A studio's identity colour comes from its `HighlightIcon` or its `Tag`, never
+  a raw hex dot. A studio *toggle* is selected/unselected, so it is a `Chip`.
+
 - **A status is a `Tag`; a `Chip` is something you can select.** `Chip` is for
   selected/unselected: a filter, a scope toggle, a category switch. An entity's
   state is a `Tag`. Reaching for `Chip` because it looked right is how "Active"
