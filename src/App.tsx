@@ -33046,6 +33046,14 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
   const [pvAgent,       setPvAgent]       = useState(true)
   const [pvLocked,      setPvLocked]      = useState(false)
   const [pvNba,         setPvNba]         = useState(true)
+
+  // ── PROPOSAL · compress on scroll (Michael, 2026-09-09) ──────────────────
+  // Prototype state only. It drives a self-contained scroll stage further
+  // down the Overview tab and touches nothing in the shared component — the
+  // compressed look is produced by omitting two props, which is already how
+  // this card removes a slot.
+  const [ehCompressed, setEhCompressed] = useState(false)
+  const ehLastY = useRef(0)
   // Closing pass — Playground's own NBA-type selector, decoupled from
   // pgVariant: picks which of the 3 modeled types (+ the 1 "not yet
   // modeled" example) shows on the live card below, by pointing at one
@@ -33557,6 +33565,74 @@ function EntityHeaderPage({ openSpec, openProtoExample }: { openSpec: (s: SpecMo
               showInformation onInformationOpen={() => rhOpenProvenance("ucp")} />
             <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
               This is also the one example whose metadata row Figma fills in completely, with four real values and no placeholders &mdash; which is what &ldquo;aim for four&rdquo; looks like in practice.
+            </p>
+          </section>
+
+          {/* ── PROPOSAL, NOT YET IN FIGMA ───────────────────────────────
+              Michael, 2026-09-09. Everything above documents what the
+              component does today; this one section documents something it
+              does NOT do yet, and says so on screen so nobody implements it
+              from this page by mistake. ── */}
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-widest mb-[4px]" style={{ color: "var(--color-text-alert)" }}>
+              Proposal &middot; Compress on scroll &mdash; prototype, not in Figma and not a prop yet
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              On a record page the header is the one thing you have already read by the time you start scrolling &mdash; and it keeps its full height anyway, taking room from the content you scrolled down to reach. The proposal: <strong>scroll down and the metadata row drops</strong>, leaving identity, tags, state and <code>Ask</code>; <strong>scroll back up and it returns</strong>. Nothing else moves, and the right-hand cluster never compresses.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              <strong>Restored by scrolling up, never by hover</strong> &mdash; decided before building it. A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is in the middle of, and hover does not exist on a tablet or for a keyboard. Scroll direction is the same signal the page <code>Header</code> already uses for its own compress, so the two agree instead of competing.
+            </p>
+            <p className="text-[12px] text-[var(--field-supporting)] mb-[16px] max-w-[680px]">
+              <em>Scroll inside the frame below.</em> The metadata is not hidden with CSS &mdash; the stage simply stops passing <code>secondaryMetadata</code>, which is how this card removes any slot. That is also why the prototype needs no change to the shared component: if the interaction is right, the only thing left to add is the axis that decides it.
+            </p>
+
+            <div
+              onScroll={e => {
+                const y = e.currentTarget.scrollTop
+                const last = ehLastY.current
+                // Back at the top is always the full card — never leave a
+                // reader at the top of a record looking at a reduced header.
+                if (y <= 16) setEhCompressed(false)
+                else if (y > last + 4) setEhCompressed(true)
+                else if (y < last - 4) setEhCompressed(false)
+                ehLastY.current = y
+              }}
+              className="h-[420px] overflow-y-auto rounded-[12px] p-[16px]"
+              style={{ background: "var(--canvas)", border: "0.5px solid var(--field-border)" }}
+            >
+              <div className="sticky top-0 z-[2]" style={{ background: "var(--canvas)" }}>
+                <EntityHeader
+                  name={RH_UCP.name}
+                  visual={RH_VISUAL.ucp}
+                  source={RH_SOURCE.ucp}
+                  tags={RH_TAGS.ucp}
+                  stateBadge={RH_STATE_BADGE.ucp}
+                  secondaryMetadata={ehCompressed ? [] : RH_SECONDARY_METADATA.ucp}
+                  assignedAgent={rhAssignedAgent("ucp", RH_UCP.name)}
+                  showInformation
+                  onInformationOpen={() => rhOpenProvenance("ucp")}
+                />
+              </div>
+              <div className="mt-[12px] flex flex-col gap-[12px]">
+                {[
+                  { t: "Renewal readiness",  d: "Contract value, term and the three approvals still outstanding." },
+                  { t: "Open workflows",     d: "Three agentic workflows are touching this account right now." },
+                  { t: "Recent activity",    d: "Everything that happened on this record in the last 30 days." },
+                  { t: "Linked records",     d: "Sites, contacts and orders that roll up to this account." },
+                  { t: "Documents",          d: "Canon Plane documents attached to this account." },
+                ].map(w => (
+                  <CardContainer key={w.t} size="sm">
+                    <p className="text-[13px] font-semibold" style={{ color: "var(--color-text-title)" }}>{w.t}</p>
+                    <p className="text-[12px] mt-[4px]" style={{ color: "var(--field-supporting)" }}>{w.d}</p>
+                    <div className="h-[64px]" />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[12px] text-[var(--field-supporting)] mt-[8px] max-w-[680px]">
+              <strong>Two things to judge here, because they are what decide whether this ships.</strong> First, the header sits inside the scroll area, so making it compress means first making it <em>stick</em> &mdash; and on a real record page the page <code>Header</code> is already stuck above it. Two bars holding the top of the screen is the thing to look at, not the compress itself. Second, the drop is not animated: the row simply goes. If the snap reads badly, the fix belongs in the component, where the row can collapse rather than vanish.
             </p>
           </section>
 
