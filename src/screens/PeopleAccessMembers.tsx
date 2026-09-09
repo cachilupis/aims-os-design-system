@@ -3391,6 +3391,14 @@ function InviteWizard({ onCancel, onSend }: {
 }) {
   const [step, setStep]         = useState<0 | 1 | 2>(0)
   const [emails, setEmails]     = useState<string[]>([])
+  /**
+   * What is typed into the email field but not yet committed to a chip. Next
+   * has to count it: somebody who types one address and reaches straight for
+   * the button has filled the form as far as they can tell, and a CTA that
+   * stays grey there looks broken. TagInput commits on blur, so the address is
+   * a real chip by the time the click lands.
+   */
+  const [emailDraft, setEmailDraft] = useState("")
   const [role, setRole]         = useState<MemberRole>("Member")
   const [studios, setStudios]   = useState<string[]>([])
   const [groupIds, setGroupIds] = useState<string[]>([])
@@ -3408,7 +3416,7 @@ function InviteWizard({ onCancel, onSend }: {
   // An Admin or an Owner gets every studio by definition, so stage 2 has
   // nothing it can require of them. A Member invited with no studio and no
   // group would land in the workspace able to open nothing at all.
-  const canContinue = step === 0 ? emails.length > 0
+  const canContinue = step === 0 ? emails.length > 0 || emailDraft.trim().length > 0
                     : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
                     : true
 
@@ -3455,6 +3463,7 @@ function InviteWizard({ onCancel, onSend }: {
               tags={emails}
               onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
               onRemoveTag={v => setEmails(e => e.filter(x => x !== v))}
+              onDraftChange={setEmailDraft}
               placeholder="name@company.com"
               showAddButton={false}
             />

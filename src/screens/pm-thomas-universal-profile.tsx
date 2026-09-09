@@ -887,7 +887,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
         onTopButtonClick={() => setEntityPreview(null)}
       >
         {entityPreview && (
-          <div style={{ padding: "24px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ padding: "24px 0", display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <HighlightIcon size="lg" variant="informative" iconName="Building2" />
               <div>
