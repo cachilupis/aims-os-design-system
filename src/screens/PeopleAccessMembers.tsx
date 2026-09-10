@@ -21,6 +21,7 @@ import { Checkbox }     from "@/components/ui/checkbox"
 import { Textarea }     from "@/components/ui/textarea"
 import { Input }        from "@/components/ui/input"
 import { EmptyState }   from "@/components/ui/empty-state"
+import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import { useToast }     from "@/components/ui/toast"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
@@ -4573,6 +4574,12 @@ function members_forWizard(query: string) {
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState<"all" | MemberStatus>("all")
+  /**
+   * Which shape the Members list takes. Filters' own toggle calls them
+   * "grid" and "list"; here grid IS the table that has always been there,
+   * so nothing moves for somebody who never touches the control.
+   */
+  const [membersView, setMembersView] = useState<"grid" | "list">("grid")
   const [query, setQuery]               = useState("")
   const [rolesQuery, setRolesQuery]     = useState("")
   const [groupsQuery, setGroupsQuery]   = useState("")
@@ -4718,6 +4725,55 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
   }, [groupsQuery])
 
+  /**
+   * One member in EntityList's shape. The table's six columns have to land
+   * somewhere specific rather than all becoming meta:
+   *
+   *   avatar + title   the person — people get an avatar, never an icon tile
+   *   primaryMeta      the email, always icon + text
+   *   state            the status badge; STATUS_TAG already carries the tone
+   *   timestamp        last active, or when the invitation went out
+   *   secondaryMeta    department · user type · MFA
+   *   tags             the groups they belong to
+   *
+   * EntityList renders `tags` as neutral chips by design, which is why the
+   * GROUPS go there and the user type does not: a group name is a label,
+   * while Owner/Admin/Member is graded by reach and would lose that grading
+   * if it were forced neutral. It keeps its icon + text instead.
+   */
+  function memberAsEntity(m: Member): EntityListItemData {
+    const groups = GROUPS.filter(g => g.memberIds.includes(m.id))
+    const invitePending = m.status === "invited" || m.status === "pending"
+    return {
+      id: m.id,
+      title: m.name,
+      avatarName: m.name,
+      primaryMeta: [{ iconName: "Mail", label: m.email, tooltip: `Email · ${m.email}` }],
+      state: { label: STATUS_LABEL[m.status], variant: STATUS_TAG[m.status] },
+      timestamp: m.lastActive
+        ? formatRelative(m.lastActive)
+        : invitePending ? formatRelative(m.joinedAt) : undefined,
+      secondaryMeta: [
+        ...(m.department ? [{ iconName: "Building2", label: m.department, tooltip: `Department · ${m.department}` }] : []),
+        { iconName: "ShieldCheck", label: m.role, tooltip: `User type · ${m.role}` },
+        {
+          iconName: m.mfaEnabled ? "ShieldCheck" : "ShieldOff",
+          label: m.mfaEnabled ? "MFA on" : "MFA off",
+          tooltip: m.mfaEnabled
+            ? `MFA enabled${m.mfaMethod ? ` · ${MFA_METHOD_LABEL[m.mfaMethod]}` : ""}`
+            : "MFA not enabled",
+        },
+      ],
+      tags: groups.map(g => ({ label: g.name })),
+      // The DS rule for an entity row: the row itself opens the record, and
+      // the Eye is the preview. The table's row-click opens the preview, so
+      // the two views differ here on purpose.
+      actions: [{ label: "Preview", variant: "tertiary", icon: "Eye",
+                  onClick: () => setPreviewItem({ type: "member", member: m }) }],
+      onClick: () => setDetailView({ type: "member", member: m }),
+    }
+  }
+
   function handleRoleChange(id: string, role: MemberRole) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
     setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
@@ -4853,14 +4909,44 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             slots={[statusSlot]}
             showAllFilters={false}
             showSort={false}
-            showViewToggle={false}
+            showViewToggle
+            viewMode={membersView}
+            onViewModeChange={setMembersView}
           />
           {statusMenu}
         </div>
       )}
 
-      {/* Members view */}
-      {mainTab === "members" && (
+      {/* Members view — list */}
+      {mainTab === "members" && membersView === "list" && (
+        <>
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={Icons.UserSearch}
+              title="No members found"
+              description="Try adjusting your filters or search term."
+              ctaLabel="Clear filters"
+              onCta={() => { setQuery(""); setStatusFilter("all") }}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {filtered.map(m => (
+                <CardContainer key={m.id} size="sm" className="!p-0 overflow-hidden">
+                  <EntityList items={[memberAsEntity(m)]} />
+                </CardContainer>
+              ))}
+            </div>
+          )}
+          {filtered.length > 0 && (
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
+              Showing {filtered.length} of {members.length} members
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Members view — grid (the table) */}
+      {mainTab === "members" && membersView === "grid" && (
         <>
           <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
             <div style={{
