@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useToast } from "@/components/ui/toast"
 import * as LucideIcons from "lucide-react"
 import { ScreenLayout }  from "@/components/layouts/screen-layout"
 import type { SidebarItem } from "@/components/ui/sidebar"
@@ -9,7 +10,7 @@ import { WidgetFreshnessBadge } from "@/components/experimental/widget-parts"
 import { WidgetFather } from "@/components/ui/widget-father"
 import { WidgetPreview } from "@/components/experimental/widget-preview"
 import { LIBRARY_SKELETONS, typeIdForLabel, WIDGET_CATALOG, type LibrarySkeleton } from "@/lib/widget-catalog"
-import { savedWidgets } from "@/lib/widget-drafts"
+import { savedWidgets, takeAnnouncement, savedMessage } from "@/lib/widget-drafts"
 import { EmptyState }    from "@/components/ui/empty-state"
 import { CardContainer } from "@/components/ui/card-container"
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
@@ -212,20 +213,46 @@ export default function PMThomasWidgetLibrary() {
     ...WIDGETS,
   ])
   /**
-   * The one just saved, highlighted for a moment so it can be found.
+   * The one just saved: first in the list, and highlighted for a moment.
    *
-   * The Create pattern asks for it "as the first row, briefly highlighted" —
-   * it is first in the array, but the list is sorted by name by default, so
-   * where it lands is wherever its name puts it. Overriding someone's sort to
-   * win an argument with it would be worse than the highlight being the only
-   * half that survives.
+   * This used to be the highlight alone, on the reasoning that pinning a row
+   * would override the reader's sort. It would not — on arrival nobody has
+   * chosen a sort, "by name" is just what the screen opens with, and a new
+   * widget landing somewhere in the C's is exactly the case the Create
+   * pattern's "show it as the first row" exists to prevent. So it is pinned
+   * until the reader actually touches the sort control, and released the
+   * moment they do; that is the point at which an order becomes theirs.
+   *
+   * The pin and the highlight are separate on purpose. The highlight fades
+   * after 2.5s because it is an attention cue; the position does not, because
+   * a row that reshuffles itself out from under someone mid-read is worse
+   * than one that never moved.
    */
+  const [pinnedId] = useState<string | null>(() => savedWidgets()[0]?.id ?? null)
+  const [sortTouched, setSortTouched] = useState(false)
   const [justSaved, setJustSaved] = useState<string | null>(() => savedWidgets()[0]?.id ?? null)
   useEffect(() => {
     if (!justSaved) return
     const t = setTimeout(() => setJustSaved(null), 2500)
     return () => clearTimeout(t)
   }, [justSaved])
+
+  /**
+   * The save happened on the other screen, and "Done" left it with a full page
+   * load — so the builder could not raise this itself. The announcement rides
+   * across in sessionStorage and is consumed exactly once, which is why coming
+   * back to this page later in the session is silent.
+   */
+  const toast = useToast()
+  useEffect(() => {
+    const saved = takeAnnouncement()
+    if (!saved) return
+    const m = savedMessage(saved)
+    toast.success(m.title, { description: m.description })
+    // Mount only: an announcement is a one-shot, and `toast` is a fresh object
+    // each render — listing it here would re-run this on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const governedCount = widgets.filter(w => w.governed).length
   const draftCount    = widgets.filter(w => w.status === "draft").length
@@ -240,7 +267,12 @@ export default function PMThomasWidgetLibrary() {
     return true
   })
 
+  const pin = sortTouched ? null : pinnedId
   const sorted = [...filtered].sort((a, b) => {
+    if (pin) {
+      if (a.id === pin) return -1
+      if (b.id === pin) return 1
+    }
     const d = sortBy === "usage" ? a.usedIn - b.usedIn : a.name.localeCompare(b.name)
     return sortDir === "asc" ? d : -d
   })
@@ -291,7 +323,7 @@ export default function PMThomasWidgetLibrary() {
           setStatus("All"); setCat("All"); setProfile("All"); setSkeleton("All"); setFreshness("All"); setShown(PAGE_SIZE)
         }}
         sortLabel={sortBy}
-        onSortClick={() => setSortDir(d => (d === "asc" ? "desc" : "asc"))}
+        onSortClick={() => { setSortTouched(true); setSortDir(d => (d === "asc" ? "desc" : "asc")) }}
         slots={[
           {
             /* First slot on purpose: "can I put this on a dashboard yet" comes
