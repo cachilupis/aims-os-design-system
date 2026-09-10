@@ -950,6 +950,31 @@ const SCROLL_EPSILON = 4
 
 const TOGGLE_LOCK = 180
 
+/**
+ * Does this card sit inside something that scrolls?
+ *
+ * Asks about the OVERFLOW STYLE only, deliberately — never about
+ * `scrollHeight > clientHeight`. Content height is not settled when the
+ * effect first runs, so a height-based test answers "no" on a container that
+ * is about to scroll, and answers it permanently. Overflow style is set by
+ * the layout and is stable from the first paint.
+ *
+ * `false` means the HOST has pinned this card: `ScreenLayout` renders its
+ * header zone outside the scroll container, and a caller may put the
+ * EntityHeader there instead of in the content. Thom's UCP profile does
+ * exactly that. Such a card is already always-visible, so it needs no sticky
+ * of its own — but it still has to hear the page scroll to compress.
+ */
+function hasScrollableAncestor(el: HTMLElement | null): boolean {
+  let node = el?.parentElement ?? null
+  while (node) {
+    const { overflowY } = getComputedStyle(node)
+    if (overflowY === "auto" || overflowY === "scroll") return true
+    node = node.parentElement
+  }
+  return false
+}
+
 function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement | null>) {
   const [compressed, setCompressed] = useState(false)
   const lastY = useRef(0)
@@ -964,13 +989,21 @@ function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement 
     lastY.current = 0
     lockUntil.current = 0
 
+    // Pinned by the host: no scroller of its own, so any scroll on the page
+    // is the signal. Read once — it is a question about layout, not content.
+    const pinned = !hasScrollableAncestor(ref.current)
+
     const onScroll = (e: Event) => {
       const el = ref.current
       if (!el) return
 
       const target = e.target
       const isDocument = target === document || target === document.documentElement || target === document.body
-      if (!isDocument && !(target instanceof HTMLElement && target.contains(el))) return
+      // Ours when the scroller contains the card. When the card is pinned it
+      // is inside nothing, so the page's scroller is the only one there is
+      // and every scroll is ours.
+      const isOurs = isDocument || pinned || (target instanceof HTMLElement && target.contains(el))
+      if (!isOurs) return
 
       const y = isDocument ? window.scrollY : (target as HTMLElement).scrollTop
       const now = performance.now()
@@ -1211,8 +1244,11 @@ function EntityHeader({
    * `ScreenLayout` the page `Header` lives outside that container, so the two
    * never overlap — they stack.
    */
+  // Nothing to stick when the host has already pinned the card outside the
+  // scroll area — wrapping it then would add a sticky that never engages and
+  // a backdrop-filter over nothing.
   const stick = (node: ReactNode) =>
-    compressOnScroll
+    compressOnScroll && !hostPinned
       ? (
           <div
             className="sticky top-0 z-[2]"
@@ -1227,6 +1263,14 @@ function EntityHeader({
   // the scroll container, so this has to sit after the reflow block that
   // declares it.
   const compressed = useCompressOnScroll(compressOnScroll, rootRef)
+  // Mirrors the hook's own test, for the sticky wrapper below. Measured after
+  // mount, so the first paint wraps and a later one may not — harmless,
+  // because the wrapper is invisible until something scrolls under it.
+  const [hostPinned, setHostPinned] = useState(false)
+  useLayoutEffect(() => {
+    if (!compressOnScroll) return
+    setHostPinned(!hasScrollableAncestor(rootRef.current))
+  }, [compressOnScroll])
 
   // Everything the fit has to measure around.
   const fitRowRef  = useRef<HTMLDivElement>(null)

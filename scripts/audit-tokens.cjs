@@ -87,8 +87,15 @@ function listFiles(dir, exts) {
   return out
 }
 
+// Always POSIX, on every platform. `path.relative` hands back backslashes on
+// Windows, and that separator leaks into three things that have to agree with
+// each other across machines: the finding text a PR quotes, the JSON `--json`
+// feeds the DS Health page, and the `type:file:name` key a waiver in
+// ds-decisions.json is looked up by. A waiver written on Windows silently
+// failed to match on CI — PR #127, 2026-09-10 — because the two sides had
+// spelled the same file differently. One separator, decided here, once.
 function rel(p) {
-  return path.relative(ROOT, p)
+  return path.relative(ROOT, p).split(path.sep).join("/")
 }
 
 /**
@@ -841,6 +848,15 @@ screenFiles.forEach((file) => {
 // false positives.
 const SIDE_PAD_RE = /padding:\s*["'`]\s*[\d.]+(?:px)?\s+(1[6-9]|[2-9]\d)px/
 
+// Where a component's body ends: the next top-level declaration. This has to
+// know about `export function` and `const X = (…) =>` as well as a bare
+// `function`, because a screen file's LAST helper is usually followed by its
+// one `export function …Screen`. Matching only `\nfunction` let that helper's
+// body run to end of file, so the whole page's padding was reported as if it
+// were inside a SlideOut child — four of AdminAuditLog's five hits, and every
+// hit in AdminIntegrations.
+const NEXT_TOP_LEVEL_RE = /\n(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+[A-Z]|\n(?:export\s+)?(?:const|class)\s+[A-Z]/
+
 screenFiles.forEach((file) => {
   const text = fs.readFileSync(file, "utf8")
   if (!/<SlideOut\b/.test(text)) return
@@ -858,10 +874,21 @@ screenFiles.forEach((file) => {
   if (childNames.size === 0) return
 
   const hits = []
+
+  // Inline children count too. AdminAuditLog's detail panel is written straight
+  // inside <SlideOut>…</SlideOut> rather than extracted into a component, and a
+  // name-only pass walked right past it.
+  blocks.forEach((b) => {
+    const blockStart = code.indexOf(b)
+    for (const m of b.matchAll(new RegExp(SIDE_PAD_RE, "g"))) {
+      hits.push(code.slice(0, blockStart + m.index).split("\n").length)
+    }
+  })
+
   childNames.forEach((name) => {
     const start = code.search(new RegExp(`function\\s+${name}\\s*\\(`))
     if (start === -1) return
-    const nextFn = code.slice(start + 1).search(/\nfunction\s+[A-Z]/)
+    const nextFn = code.slice(start + 1).search(NEXT_TOP_LEVEL_RE)
     const body = nextFn === -1 ? code.slice(start) : code.slice(start, start + 1 + nextFn)
     const lineOf = (offset) => code.slice(0, start + offset).split("\n").length
     for (const m of body.matchAll(new RegExp(SIDE_PAD_RE, "g"))) {
@@ -903,16 +930,31 @@ function printSection(title, items, formatter) {
 //
 // Accepted findings stay visible in the report, marked, so nobody forgets
 // they were waived. They are excluded only from the counts the ratchet reads.
+// Separator-insensitive on both sides. rel() above guarantees our side is
+// POSIX, but a waiver is hand-written by whoever made the call, on whatever
+// machine they were sitting at — and a rule that only works if a human types
+// the right slash is a rule that breaks on a Tuesday. PR #127, 2026-09-10: a
+// waiver authored on Windows read `src\\screens\\...`, never matched on CI, and
+// the finding it had already been ruled on went on blocking the push.
+//
+// Declared BEFORE the read below, not after it: the read is inside a try/catch
+// whose only job is a missing file, so a ReferenceError from using `posix` in
+// the temporal dead zone would be swallowed there and every waiver would
+// silently stop working. Caught here by a test, but only because one was run.
+const posix = (k) => k.replace(/\\/g, "/")
+
 const DECISIONS_PATH = path.join(ROOT, "ds-decisions.json")
 let acceptedKeys = new Set()
 try {
   const d = JSON.parse(fs.readFileSync(DECISIONS_PATH, "utf8")).decisions || {}
-  acceptedKeys = new Set(Object.keys(d).filter((k) => d[k].verdict === "accepted"))
+  acceptedKeys = new Set(
+    Object.keys(d).filter((k) => d[k].verdict === "accepted").map(posix)
+  )
 } catch { /* no decisions file — nothing is waived */ }
 
 // Same key shape generate-ds-health.cjs builds: type:file:name, never a line
 // number, so a verdict survives edits above it.
-const findingKey = (w) => [w.type, w.file, w.name].filter(Boolean).join(":")
+const findingKey = (w) => posix([w.type, w.file, w.name].filter(Boolean).join(":"))
 const isAccepted = (w) => acceptedKeys.has(findingKey(w))
 
 // `--json` dumps every finding as structured data and prints nothing else, so
