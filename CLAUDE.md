@@ -84,12 +84,34 @@ These are the rules most often violated in AI-generated views. Scan this block e
   `pm-thomas-widget-builder.tsx`'s `OptionPicker` is the working reference; copy
   that shape rather than inventing a second one.
 
-  **This used to say "compose with `@base-ui/react`'s Popover", and that does
-  not work** — corrected 2026-09-09. `Select` renders a div, so `Popover.Trigger`
-  had nowhere to attach its ref or handlers, and anchoring a wrapper instead made
-  base-ui read the opening click as an outside click and dismiss the panel on the
-  same tick. Both `select.tsx`'s own docblock and `OptionPicker`'s record the
-  attempt. Do not re-try it.
+  **A base-ui Popover also works, and the DS publishes one — half of what
+  this used to say was wrong.** Corrected 2026-09-10, by clicking the real
+  thing on a deployed preview rather than trusting the note.
+
+  The half that is true: `Popover.Trigger render={<Select/>}` cannot be built.
+  `Select` renders a div and base-ui's Trigger has nowhere to attach.
+
+  The half that was wrong: this claimed that anchoring a **wrapper** div
+  instead made base-ui read the opening click as an outside click and dismiss
+  the panel on the same tick. It does not. A wrapper div carrying the ref,
+  with `open` controlled by the trigger's own `onClick`, opens and selects
+  correctly — verified in a plain page, inside a `SlideOut`, and in `Header`'s
+  `aux` slot. `PgInteractiveSelect` in `App.tsx` is that composition, it is
+  live on the Create pattern page's own tour, and it works.
+
+  So there are two sanctioned mechanisms, and the reason to prefer one is
+  consistency, not breakage:
+
+  | Mechanism | Use it for |
+  |---|---|
+  | `dropdown-anchor` + `Menu` | The default. Filter slots, kebab menus, anything a screen positions itself |
+  | wrapper-anchored base-ui `Popover` | A `Select`'s own option list, where Floating UI's collision handling is worth the second mechanism |
+
+  **Why the wrong half is worth this much text:** a rule that forbids what the
+  DS itself publishes does not stop anyone — it sends them to the published
+  example, and then the review argues with them for copying it. That is
+  exactly what happened on PR #127. If a note says something is broken, the
+  cost of checking is one click; pay it before writing the note.
 
   If the option list is short and the labels are brief, a `Chip` row is often the
   better answer than any dropdown — no menu, no positioning, and the choices stay

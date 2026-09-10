@@ -303,12 +303,16 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
  * A searchable option picker: the DS Select as the trigger, the DS Menu as the
  * list, positioned with the repo's own dropdown-anchor helper.
  *
- * CLAUDE.md tells screens to compose Select with a base-ui Popover. That was
- * tried first and does not work here: Select renders a div, and base-ui's
- * Trigger could neither attach to it nor stop reading the click as a dismiss.
- * The pattern the repo actually runs on — anchorFromEvent + useDropdownPosition
- * + a full-screen click-catcher — is what Filters uses, so this matches the
- * codebase instead of introducing a second dropdown mechanism.
+ * A base-ui Popover would also work here — the claim this docblock used to
+ * make, that it was tried and failed, was wrong and is corrected 2026-09-10.
+ * What genuinely fails is only `Popover.Trigger render={<Select/>}`: Select
+ * renders a div with nowhere for the Trigger to attach. A wrapper div as the
+ * anchor is fine.
+ *
+ * dropdown-anchor stays the choice here for a plainer reason — anchorFromEvent
+ * + useDropdownPosition + a full-screen click-catcher is what Filters uses, and
+ * this screen already needs the picker three times (filters, calculations,
+ * group by). One mechanism, one helper.
  *
  * The screen needs this three times (filters, calculations, group by), which is
  * why it is one local helper rather than three inline copies.
