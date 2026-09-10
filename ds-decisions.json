@@ -28,11 +28,17 @@
       "by": "Michael",
       "note": "False positive, and the cause is exact: the check looks for the word \"children\" in a function's first five lines to decide it takes a children prop. StudioPermissionsView's fifth line reads `granted.flatMap(n => [n, ...(n.children ?? [])])` — that is the permission tree's own data shape, not React children. The component takes { studioId, onBack } and renders a whole view: a back button, a header row, a stats strip and the permission tree. The two divs inside it that WERE card-shaped are CardContainer now."
     },
-    "raw-button:src\\screens\\pm-lex-playbooks\\BuilderWizard.tsx": {
+    "raw-button:src/screens/pm-lex-playbooks/BuilderWizard.tsx": {
       "verdict": "accepted",
       "date": "2026-09-10",
       "by": "Claude (pm-Lex/Playbooks)",
       "note": "The wizard's 8-step pill nav (line 544) is a real <button> per-step, each combining a numbered index, a label, and — on one step — an inline Tag sub-badge. SwitchTab is documented for 2-7 items and has no slot for a per-item sub-badge, so it doesn't fit 8 steps with a badge on one of them. This is a deliberate DS-GAP (flagged inline in the code) rather than a Button being avoided out of convenience — a Button here would need variant/size semantics that don't match a step pill. Flagging for @cachilupis to confirm or override; revisit if SwitchTab ever grows an item cap increase or a badge slot."
+    },
+    "hand-rolled-avatar:src/screens/pm-lex-playbooks/config-sections/PhasesActionsSection.tsx": {
+      "verdict": "accepted",
+      "date": "2026-09-10",
+      "by": "Claude (pm-Lex/Playbooks)",
+      "note": "False positive — the check matches any 16-64px circle at 50% radius, but PhaseCard's circle (line 181) is a numbered step index ('1', '2', ...), not a person. AvatarCircle sizes initials and hashes a colour from a person's name; there is no person here to represent, so AvatarCircle doesn't fit. This surfaced only after moving config-sections/ under src/screens/pm-lex-playbooks/, which is the first time this check ran against the file."
     }
   }
 }

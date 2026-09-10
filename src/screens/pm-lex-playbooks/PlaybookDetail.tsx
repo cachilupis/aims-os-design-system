@@ -22,19 +22,19 @@ import { ActivityUsage } from "./ActivityUsage"
 import { VersionsTab } from "./VersionsTab"
 import { HistoryTab } from "./HistoryTab"
 import { CONFIG_SECTIONS, type ConfigSectionId } from "./config-section-labels"
-import { BasicsSection } from "@/components/config-sections/BasicsSection"
-import { KnowledgeSection } from "@/components/config-sections/KnowledgeSection"
-import { MomentSection } from "@/components/config-sections/MomentSection"
-import { HardGatesSection } from "@/components/config-sections/hard-gates"
-import { ObjectiveSuccessSection } from "@/components/config-sections/ObjectiveSuccessSection"
-import { PhasesActionsSection } from "@/components/config-sections/PhasesActionsSection"
-import { TrustControlsSection } from "@/components/config-sections/TrustControlsSection"
+import { BasicsSection } from "./config-sections/BasicsSection"
+import { KnowledgeSection } from "./config-sections/KnowledgeSection"
+import { MomentSection } from "./config-sections/MomentSection"
+import { HardGatesSection } from "./config-sections/hard-gates"
+import { ObjectiveSuccessSection } from "./config-sections/ObjectiveSuccessSection"
+import { PhasesActionsSection } from "./config-sections/PhasesActionsSection"
+import { TrustControlsSection } from "./config-sections/TrustControlsSection"
 import {
   basicsDraftFromPlaybook, knowledgeDraftFromPlaybook, momentDraftFromPlaybook, hardGatesDraftFromPlaybook,
   objectiveSuccessDraftFromPlaybook, phasesActionsDraftFromPlaybook, trustControlsDraftFromPlaybook,
   type BasicsDraft, type KnowledgeDraft, type MomentDraft, type HardGatesDraft, type ObjectiveSuccessDraft,
   type PhasesActionsDraft, type TrustControlsDraft,
-} from "@/components/config-sections/types"
+} from "./config-sections/types"
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
   { id: "playbooks", label: "Playbooks", icon: "BookOpen" },

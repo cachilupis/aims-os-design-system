@@ -28,20 +28,20 @@ import { Button } from "@/components/ui/button"
 import { CardContainer } from "@/components/ui/card-container"
 import { Textarea } from "@/components/ui/textarea"
 
-import { BasicsSection } from "@/components/config-sections/BasicsSection"
-import { KnowledgeSection } from "@/components/config-sections/KnowledgeSection"
-import { MomentSection } from "@/components/config-sections/MomentSection"
-import { HardGatesSection } from "@/components/config-sections/hard-gates"
-import { ObjectiveSuccessSection } from "@/components/config-sections/ObjectiveSuccessSection"
-import { PhasesActionsSection } from "@/components/config-sections/PhasesActionsSection"
-import { TrustControlsSection } from "@/components/config-sections/TrustControlsSection"
+import { BasicsSection } from "./config-sections/BasicsSection"
+import { KnowledgeSection } from "./config-sections/KnowledgeSection"
+import { MomentSection } from "./config-sections/MomentSection"
+import { HardGatesSection } from "./config-sections/hard-gates"
+import { ObjectiveSuccessSection } from "./config-sections/ObjectiveSuccessSection"
+import { PhasesActionsSection } from "./config-sections/PhasesActionsSection"
+import { TrustControlsSection } from "./config-sections/TrustControlsSection"
 import {
   EMPTY_BASICS_DRAFT, EMPTY_KNOWLEDGE_DRAFT, EMPTY_MOMENT_DRAFT, EMPTY_HARD_GATES_DRAFT,
   EMPTY_OBJECTIVE_SUCCESS_DRAFT, EMPTY_PHASES_ACTIONS_DRAFT, EMPTY_TRUST_CONTROLS_DRAFT,
   TENANT_GATE_CATALOG, PREDEFINED_EXIT_CONDITIONS,
   type BasicsDraft, type KnowledgeDraft, type MomentDraft, type HardGatesDraft,
   type ObjectiveSuccessDraft, type PhasesActionsDraft, type TrustControlsDraft,
-} from "@/components/config-sections/types"
+} from "./config-sections/types"
 
 import type { Playbook, PlaybookCategoryTag, TrustMode } from "./playbooks-data"
 

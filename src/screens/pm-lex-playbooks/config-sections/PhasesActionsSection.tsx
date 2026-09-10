@@ -209,17 +209,14 @@ function PhaseCard({ index, phase, onChange, onRemove }: {
           )
         })}
         {(["Email", "SMS"] as const).map(ch => (
-          <button
+          <Chip
             key={ch}
+            size="s"
+            variant={phase.channels.includes(ch) ? "primary" : "secondary"}
             onClick={() => onChange({ channels: phase.channels.includes(ch) ? phase.channels.filter(c => c !== ch) : [...phase.channels, ch] })}
-            style={{
-              fontSize: 11, fontWeight: 500, padding: "3px 8px", borderRadius: 8, cursor: "pointer",
-              border: `1px solid ${phase.channels.includes(ch) ? "var(--primary)" : "var(--field-border)"}`,
-              background: "transparent", color: phase.channels.includes(ch) ? "var(--primary)" : SUB,
-            }}
           >
             {phase.channels.includes(ch) ? `− ${ch}` : `+ ${ch}`}
-          </button>
+          </Chip>
         ))}
       </div>
 
