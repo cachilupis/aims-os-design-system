@@ -1552,32 +1552,41 @@ export default function PMThomasWidgetBuilderScreen() {
       />
 
       {/* ── Saved ──────────────────────────────────────────────────────────
-       *  The success view, and the only place "Create new widget" makes sense:
-       *  the widget is in the catalog, so starting a fresh one cannot lose it. */}
+       *  The success view, and the only place "Create another widget" makes
+       *  sense: the widget is in the catalog, so starting a fresh one cannot
+       *  lose it. */}
       <ModalDialog
         isOpen={!!savedName}
         onClose={() => setSavedName(null)}
         tone="success"
         iconName={savedAsDraft ? "FileClock" : "CircleCheck"}
-        title={savedAsDraft ? `"${savedName}" is saved as a draft` : `"${savedName}" is in the catalog`}
+        /* Copy from Michael, 2026-09-10. The outcome leads and the name is
+           gone: by this point the reader typed that name one screen ago and
+           the sentence has better things to spend its width on — what state
+           the widget is in, and what they can still do about it.
+
+           The draft line is the same sentence in the state that is actually
+           true of a draft. It exists because "Widget published" over an
+           unfinished widget would be the flow's one outright lie. */
+        title={savedAsDraft ? "Draft saved" : "Widget published"}
         description={savedAsDraft
-          ? "It is in the catalog and you can pick it up any time. Finish it to make it available on dashboards."
-          : "Anyone on the workspace can now add it to a dashboard."}
-        /* Done is the primary: finishing is what most people came to do, and
-           it goes to the catalog rather than back to the builder — the widget
-           is saved and the sentence above says where it went, so landing back
-           on the form you just filled in reads as if the save did not take.
-           That is the Create pattern's rule for a full-page create: navigate
-           to where the created object now lives.
+          ? "It's in the catalog, but it can't be added to a dashboard until you finish setting it up."
+          : "It's in the catalog for your whole workspace. You can edit or unpublish it anytime."}
+        /* "View in catalog" is the primary, and it says where it goes — this
+           button navigates to the library rather than dismissing anything.
+           Finishing is what most people came to do, and landing back on the
+           form you just filled in reads as if the save did not take. That is
+           the Create pattern's rule for a full-page create: go to where the
+           created object now lives.
 
            Creating another is the secondary — a real outcome, but the one
            fewer people want, and it is the only place the offer makes sense
            because the current widget is already safe. */
-        ctaPrimary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
+        ctaPrimary={{ label: "View in catalog", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
         /* This path never navigates, so the landing cannot speak for it. It
            takes the announcement here — which also stops the library repeating
            it later in the same session. */
-        ctaSecondary={{ label: "Create new widget", onClick: () => {
+        ctaSecondary={{ label: "Create another widget", onClick: () => {
           const saved = takeAnnouncement()
           if (saved) announce(saved)
           setSavedName(null)
