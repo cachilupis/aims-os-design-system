@@ -1296,6 +1296,7 @@ function MemberDetailPage({
   const [confirmRemove, setConfirmRemove] = useState(false)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
+  const isPending = member.status === "pending"
 
   return (
     <ScreenLayout
@@ -1336,7 +1337,7 @@ function MemberDetailPage({
                   {member.title}{member.title && member.department ? " · " : ""}{member.department}
                 </div>
               )}
-              <Tag variant={isActive ? "success" : member.status === "suspended" ? "alert" : "secondary"}>
+              <Tag variant={isActive ? "success" : isInvited ? "informative" : member.status === "suspended" ? "alert" : "neutral"}>
                 {STATUS_LABEL[member.status]}
               </Tag>
             </div>
@@ -1355,6 +1356,9 @@ function MemberDetailPage({
             {isInvited && (
               <InfoRow icon={<Icons.Send size={14} />}   label="Invite sent" value={formatRelative(member.joinedAt)} />
             )}
+            {isPending && (
+              <InfoRow icon={<Icons.MailX size={14} />}  label="Invitation"  value="Not sent yet" />
+            )}
 
             {/* User Type — read-only */}
             <InfoRow icon={<Icons.ShieldCheck size={14} />} label="User Type" value={member.role} />
@@ -1365,7 +1369,29 @@ function MemberDetailPage({
 
           {/* Action buttons */}
           <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {!isInvited && (
+            {isPending && (
+              <div style={{ padding: "12px", borderRadius: 8, background: "color-mix(in srgb, var(--badge-alert) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--badge-alert) 30%, transparent)", marginBottom: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-alert)", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
+                  <Icons.MailX size={13} /> Invitation not sent
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                  This contact was created without sending an invitation. Send one to give them access.
+                </div>
+              </div>
+            )}
+            {isPending && (
+              <Button variant="primary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => alert(`Invitation sent to ${member.email}`)}>
+                <Icons.Mail size={13} /> Send invitation
+              </Button>
+            )}
+            {isInvited && (
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => alert(`Invite resent to ${member.email}`)}>
+                <Icons.RefreshCw size={13} /> Resend invite
+              </Button>
+            )}
+            {!isInvited && !isPending && (
               <>
                 <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
                   onClick={() => alert(`Password reset email sent to ${member.email}`)}>
@@ -1375,18 +1401,11 @@ function MemberDetailPage({
                   onClick={() => alert(`MFA enrollment reset for ${member.name}`)}>
                   <Icons.ShieldOff size={13} /> Reset MFA
                 </Button>
+                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                  onClick={() => { onToggleSuspend(member.id); onBack() }}>
+                  {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
+                </Button>
               </>
-            )}
-            {isInvited ? (
-              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => alert(`Invite resent to ${member.email}`)}>
-                <Icons.RefreshCw size={13} /> Resend invite
-              </Button>
-            ) : (
-              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => { onToggleSuspend(member.id); onBack() }}>
-                {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
-              </Button>
             )}
             {!confirmRemove ? (
               <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
