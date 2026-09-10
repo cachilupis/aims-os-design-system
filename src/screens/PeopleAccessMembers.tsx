@@ -1357,7 +1357,7 @@ function MemberDetailPage({
               <InfoRow icon={<Icons.Send size={14} />}   label="Invite sent" value={formatRelative(member.joinedAt)} />
             )}
             {isPending && (
-              <InfoRow icon={<Icons.MailX size={14} />}  label="Invitation"  value="Not sent yet" />
+              <InfoRow icon={<Icons.MailX size={14} />}  label="Invitation"  value="Not sent" />
             )}
 
             {/* User Type — read-only */}
@@ -1372,10 +1372,10 @@ function MemberDetailPage({
             {isPending && (
               <div style={{ padding: "12px", borderRadius: 8, background: "color-mix(in srgb, var(--badge-alert) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--badge-alert) 30%, transparent)", marginBottom: 4 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-alert)", marginBottom: 3, display: "flex", alignItems: "center", gap: 6 }}>
-                  <Icons.MailX size={13} /> Invitation not sent
+                  <Icons.MailX size={13} /> Invitation pending
                 </div>
                 <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                  This contact was created without sending an invitation. Send one to give them access.
+                  {member.name} was added without an invitation. Send one now to give them access.
                 </div>
               </div>
             )}
@@ -3556,7 +3556,7 @@ function MemberRow({
         <div style={{ textAlign: "right", flexShrink: 0, minWidth: 100 }}>
           {member.status === "pending" ? (
             <>
-              <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600, marginBottom: 1 }}>No invite sent</div>
+              <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600, marginBottom: 1 }}>Invite not sent</div>
               <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Added {formatRelative(member.joinedAt)}</div>
             </>
           ) : member.status === "invited" ? (
@@ -3635,13 +3635,13 @@ function MemberRow({
           }}>
             {(member.status === "pending"
               ? [
-                  { key: "send-invite",  label: "Send invitation",  icon: Icons.Mail },
-                  { key: "deactivate",   label: "Remove contact",   icon: Icons.Trash2, danger: true },
+                  { key: "send-invite",  label: "Send invitation",      icon: Icons.Mail },
+                  { key: "deactivate",   label: "Remove from workspace", icon: Icons.Trash2, danger: true },
                 ]
               : member.status === "invited"
               ? [
-                  { key: "resend-invite", label: "Resend invitation", icon: Icons.Mail },
-                  { key: "deactivate",    label: "Remove",            icon: Icons.Trash2, danger: true },
+                  { key: "resend-invite", label: "Resend invitation",     icon: Icons.Mail },
+                  { key: "deactivate",    label: "Remove from workspace",  icon: Icons.Trash2, danger: true },
                 ]
               : [
                   { key: "reset-password", label: "Reset password", icon: Icons.KeyRound },
@@ -3841,7 +3841,7 @@ function InviteSlideOut({ onClose, onSend }: {
     : true
 
   const stepItems: StepItem[] = [
-    { label: "Identity", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Who to invite", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
     { label: "Apps",     state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
     { label: "Roles",    state: step === 2 ? "active" : step > 2 ? "completed" : "default" },
     { label: "Groups",   state: step === 3 ? "active" : step > 3 ? "completed" : "default" },
@@ -3969,8 +3969,8 @@ function InviteStepIdentity({
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-          Work emails
-          <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>— press Enter or comma to add multiple</span>
+          Email addresses
+          <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>Press Enter or comma to add more</span>
         </label>
 
         {/* Chips + input field */}
@@ -4006,13 +4006,13 @@ function InviteStepIdentity({
               if (e.key === "Backspace" && emailDraft === "" && emails.length > 0) onRemoveEmail(emails[emails.length - 1])
             }}
             onBlur={() => { if (emailDraft.trim().includes("@")) onAddEmail() }}
-            placeholder={emails.length === 0 ? "name@company.com" : "Add another…"}
+            placeholder={emails.length === 0 ? "name@company.com" : "Add more…"}
             style={{ border: "none", outline: "none", background: "transparent", color: "var(--foreground)", fontSize: 13, fontFamily: "inherit", minWidth: 180, flex: 1 }}
           />
         </div>
         {emails.length > 1 && (
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
-            {emails.length} recipients — all will receive the same access settings.
+            {emails.length} people will receive the same role and permissions.
           </div>
         )}
       </div>
@@ -4333,9 +4333,11 @@ function InviteStepReview({
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.4 }}>
             {sendEmail
               ? emails.length > 1
-                ? `Invite links will be sent to all ${emails.length} recipients. Expire in 7 days.`
-                : `An invite link will be sent to ${emails[0] ?? "the recipient"}. Expires in 7 days.`
-              : "Contact(s) will be created in a pending state. You can send the invitation later from their profile."}
+                ? `Invite links will be sent to all ${emails.length} people and expire in 7 days.`
+                : `An invite link will be sent to ${emails[0] ?? "the recipient"} and expires in 7 days.`
+              : emails.length > 1
+                ? `${emails.length} contacts will be added without an invitation. You can send one later from their profile.`
+                : `${emails[0] ? emails[0].split("@")[0] : "This person"} will be added without an invitation. You can send one later from their profile.`}
           </div>
         </div>
         <Toggle checked={sendEmail} onChange={() => setSendEmail(!sendEmail)} />
