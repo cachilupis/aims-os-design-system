@@ -353,17 +353,7 @@ const STATUS_LABEL: Record<MemberStatus, string> = {
   pending:   "Pending",
   suspended: "Suspended",
 }
-const STATUS_COLOR: Record<MemberStatus, string> = {
-  active:    "var(--badge-success)",
-  invited:   "var(--badge-light-blue)",
-  pending:   "var(--badge-alert)",
-  suspended: "var(--muted-foreground)",
-}
-const USER_TYPE_COLOR: Record<UserType, string> = {
-  "Owner":  "var(--badge-error)",
-  "Admin":  "var(--badge-alert)",
-  "Member": "var(--muted-foreground)",
-}
+
 const USER_TYPE_TAG: Record<UserType, "error" | "alert" | "neutral"> = {
   "Owner":  "error",
   "Admin":  "alert",
