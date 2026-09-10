@@ -1381,18 +1381,29 @@ function MemberDetailPage({
                   })}>
                   <Icons.KeyRound size={13} /> Reset password
                 </Button>
+                {/* When there is nothing to reset the button stays, disabled, and
+                    explains itself. `triggerClassName` is what stops Tooltip
+                    being inline-flex — without it the wrapper shrinks to the
+                    label and this button comes out narrower than its three
+                    neighbours. The button is pointer-transparent so the hover
+                    reaches that wrapper: a disabled button fires no mouse
+                    events, so the tooltip would never open otherwise. */}
                 {member.mfaEnabled ? (
                   <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
                     onClick={() => setConfirmResetMfa(true)}>
                     <Icons.ShieldOff size={13} /> Reset MFA
                   </Button>
                 ) : (
-                  <Tooltip side="cursor" content={`${member.name} has no MFA enrolled, so there is nothing to reset.`}>
-                    <span style={{ display: "block" }}>
-                      <Button variant="secondary" size="sm" disabled style={{ width: "100%", justifyContent: "center" }}>
-                        <Icons.ShieldOff size={13} /> Reset MFA
-                      </Button>
-                    </span>
+                  <Tooltip
+                    side="cursor"
+                    triggerClassName="block w-full"
+                    content={`${member.name} has no MFA enrolled, so there is nothing to reset.`}
+                  >
+                    <Button variant="secondary" size="sm" disabled
+                      className="pointer-events-none"
+                      style={{ width: "100%", justifyContent: "center" }}>
+                      <Icons.ShieldOff size={13} /> Reset MFA
+                    </Button>
                   </Tooltip>
                 )}
               </>
