@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useRef } from "react"
 import { createPortal } from "react-dom"
 import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
@@ -3761,10 +3761,11 @@ function InviteSlideOut({ onClose, onSend }: {
   const TOTAL_STEPS = 5
   const [step, setStep] = useState(0)
 
-  // Step 0 – Identity
-  const [name,     setName]     = useState("")
-  const [email,    setEmail]    = useState("")
-  const [userType, setUserType] = useState<MemberRole>("Member")
+  // Step 0 – Identity: multiple emails + user type
+  const [emails,    setEmails]    = useState<string[]>([])
+  const [emailDraft, setEmailDraft] = useState("")
+  const emailDraftRef = useRef("")
+  const [userType,  setUserType]  = useState<MemberRole>("Member")
 
   // Step 1 – Apps
   const [studios, setStudios] = useState<string[]>([])
@@ -3779,7 +3780,19 @@ function InviteSlideOut({ onClose, onSend }: {
   // Step 4 – Review
   const [sendEmail, setSendEmail] = useState(true)
 
-  const canNext = step === 0 ? email.trim().includes("@") : true
+  function setDraft(v: string) { emailDraftRef.current = v; setEmailDraft(v) }
+
+  function addEmailFromDraft() {
+    const v = emailDraftRef.current.trim().toLowerCase()
+    if (v.includes("@")) { setEmails(prev => prev.includes(v) ? prev : [...prev, v]) }
+    setDraft("")
+  }
+
+  function removeEmail(e: string) { setEmails(prev => prev.filter(x => x !== e)) }
+
+  const canNext = step === 0
+    ? emails.length > 0 || emailDraftRef.current.trim().includes("@")
+    : true
 
   const stepItems: StepItem[] = [
     { label: "Identity", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
@@ -3789,32 +3802,48 @@ function InviteSlideOut({ onClose, onSend }: {
     { label: "Review",   state: step === 4 ? "active" : "default" },
   ]
 
-  function goNext() { if (step < TOTAL_STEPS - 1) setStep(s => s + 1); else sendInvite() }
+  function goNext() {
+    if (step === 0 && emailDraftRef.current.trim().includes("@")) addEmailFromDraft()
+    if (step < TOTAL_STEPS - 1) setStep(s => s + 1)
+    else finalize()
+  }
   function goBack() { setStep(s => s - 1) }
 
-  function sendInvite() {
-    const displayName = name.trim() || email.split("@")[0]
-    const parts = displayName.split(/\s+/).filter(Boolean)
-    const initials = parts.slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?"
-    const member: Member = {
-      id: `inv-${Date.now()}`,
-      name: displayName,
-      email: email.trim().toLowerCase(),
-      role: userType,
-      status: "invited",
-      lastActive: null,
-      joinedAt: new Date().toISOString(),
-      initials,
-      avatarColor: nameToAvatarColor(displayName),
-      title: "", department: "",
-      mfaEnabled: false,
-      sessions: [],
-    }
-    onSend(member)
+  function finalize() {
+    const allEmails = emailDraftRef.current.trim().includes("@") && !emails.includes(emailDraftRef.current.trim().toLowerCase())
+      ? [...emails, emailDraftRef.current.trim().toLowerCase()]
+      : emails
+    allEmails.forEach((em, i) => {
+      const displayName = em.split("@")[0]
+      const parts = displayName.split(/[._-]+/).filter(Boolean)
+      const initials = parts.slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?"
+      const member: Member = {
+        id: `inv-${Date.now()}-${i}`,
+        name: displayName,
+        email: em,
+        role: userType,
+        status: "invited",
+        lastActive: null,
+        joinedAt: new Date().toISOString(),
+        initials,
+        avatarColor: nameToAvatarColor(displayName),
+        title: "", department: "",
+        mfaEnabled: false,
+        sessions: [],
+      }
+      onSend(member)
+    })
     onClose()
   }
 
   const selectedRole = selectedRoleId ? (ROLES.find(r => r.id === selectedRoleId) ?? null) : null
+  const effectiveEmails = emailDraftRef.current.trim().includes("@") && !emails.includes(emailDraftRef.current.trim().toLowerCase())
+    ? [...emails, emailDraftRef.current.trim().toLowerCase()]
+    : emails
+
+  const finalLabel = step === TOTAL_STEPS - 1
+    ? (sendEmail ? `Send invitation${effectiveEmails.length > 1 ? `s (${effectiveEmails.length})` : ""}` : `Create contact${effectiveEmails.length > 1 ? `s (${effectiveEmails.length})` : ""}`)
+    : "Continue"
 
   return createPortal(
     <div style={{
@@ -3843,7 +3872,9 @@ function InviteSlideOut({ onClose, onSend }: {
           <Icons.ArrowLeft size={16} />
         </button>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Invite member</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>
+            {effectiveEmails.length > 1 ? `Invite ${effectiveEmails.length} members` : "Invite member"}
+          </div>
           <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Step {step + 1} of {TOTAL_STEPS}</div>
         </div>
       </div>
@@ -3855,11 +3886,11 @@ function InviteSlideOut({ onClose, onSend }: {
 
       {/* Scrollable step content */}
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
-        {step === 0 && <InviteStepIdentity name={name} setName={setName} email={email} setEmail={setEmail} userType={userType} setUserType={setUserType} />}
+        {step === 0 && <InviteStepIdentity emails={emails} emailDraft={emailDraft} setEmailDraft={setDraft} onAddEmail={addEmailFromDraft} onRemoveEmail={removeEmail} userType={userType} setUserType={setUserType} />}
         {step === 1 && <InviteStepApps studios={studios} setStudios={setStudios} />}
         {step === 2 && <InviteStepRoles selectedRoleId={selectedRoleId} setSelectedRoleId={setSelectedRoleId} />}
         {step === 3 && <InviteStepGroups groupIds={groupIds} setGroupIds={setGroupIds} groupSearch={groupSearch} setGroupSearch={setGroupSearch} />}
-        {step === 4 && <InviteStepReview name={name} email={email} userType={userType} selectedRole={selectedRole} studios={studios} groupIds={groupIds} sendEmail={sendEmail} setSendEmail={setSendEmail} />}
+        {step === 4 && <InviteStepReview emails={effectiveEmails} userType={userType} selectedRole={selectedRole} studios={studios} groupIds={groupIds} sendEmail={sendEmail} setSendEmail={setSendEmail} />}
       </div>
 
       {/* Page-level StepperNavFooter */}
@@ -3868,7 +3899,7 @@ function InviteSlideOut({ onClose, onSend }: {
         cancelLabel="Cancel"
         onCancel={onClose}
         onBack={goBack}
-        nextLabel={step === TOTAL_STEPS - 1 ? "Send invitation" : "Continue"}
+        nextLabel={finalLabel}
         nextDisabled={!canNext}
         onNext={goNext}
       />
@@ -3880,32 +3911,66 @@ function InviteSlideOut({ onClose, onSend }: {
 // ── Step 1: Identity ──────────────────────────────────────────────────────────
 
 function InviteStepIdentity({
-  name, setName, email, setEmail, userType, setUserType,
+  emails, emailDraft, setEmailDraft, onAddEmail, onRemoveEmail, userType, setUserType,
 }: {
-  name: string; setName: (v: string) => void
-  email: string; setEmail: (v: string) => void
+  emails: string[]
+  emailDraft: string; setEmailDraft: (v: string) => void
+  onAddEmail: () => void
+  onRemoveEmail: (e: string) => void
   userType: MemberRole; setUserType: (v: MemberRole) => void
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>Full name <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}>(optional)</span></label>
-        <input
-          value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Maria García"
-          style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", background: "var(--surface)", color: "var(--foreground)", fontSize: 13, outline: "none", fontFamily: "inherit" }}
-          onFocus={e => (e.currentTarget.style.borderColor = "var(--primary)")}
-          onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
-        />
+        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
+          Work emails
+          <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>— press Enter or comma to add multiple</span>
+        </label>
+
+        {/* Chips + input field */}
+        <div
+          style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px", background: "var(--surface)", display: "flex", flexWrap: "wrap", gap: 6, cursor: "text" }}
+          onClick={e => { const inp = (e.currentTarget as HTMLElement).querySelector("input"); inp?.focus() }}
+        >
+          {emails.map(em => (
+            <span key={em} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, padding: "3px 8px", borderRadius: 100, background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)", color: "var(--primary)", fontWeight: 500 }}>
+              {em}
+              <button
+                onClick={ev => { ev.stopPropagation(); onRemoveEmail(em) }}
+                style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", color: "var(--primary)", opacity: 0.6 }}
+              >
+                <Icons.X size={10} />
+              </button>
+            </span>
+          ))}
+          <input
+            type="text"
+            value={emailDraft}
+            onChange={e => {
+              const val = e.target.value
+              if (val.endsWith(",")) {
+                setEmailDraft(val.slice(0, -1))
+                setTimeout(onAddEmail, 0)
+              } else {
+                setEmailDraft(val)
+              }
+            }}
+            onKeyDown={e => {
+              if (e.key === "Enter") { e.preventDefault(); onAddEmail() }
+              if (e.key === "Backspace" && emailDraft === "" && emails.length > 0) onRemoveEmail(emails[emails.length - 1])
+            }}
+            onBlur={() => { if (emailDraft.trim().includes("@")) onAddEmail() }}
+            placeholder={emails.length === 0 ? "name@company.com" : "Add another…"}
+            style={{ border: "none", outline: "none", background: "transparent", color: "var(--foreground)", fontSize: 13, fontFamily: "inherit", minWidth: 180, flex: 1 }}
+          />
+        </div>
+        {emails.length > 1 && (
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
+            {emails.length} recipients — all will receive the same access settings.
+          </div>
+        )}
       </div>
-      <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>Work email</label>
-        <input
-          type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com"
-          style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", background: "var(--surface)", color: "var(--foreground)", fontSize: 13, outline: "none", fontFamily: "inherit" }}
-          onFocus={e => (e.currentTarget.style.borderColor = "var(--primary)")}
-          onBlur={e => (e.currentTarget.style.borderColor = "var(--border)")}
-        />
-      </div>
+
       <div>
         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 8 }}>User type</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -4113,15 +4178,13 @@ function InviteStepGroups({
 // ── Step 4 (was 5): Review ────────────────────────────────────────────────────
 
 function InviteStepReview({
-  name, email, userType, selectedRole, studios, groupIds, sendEmail, setSendEmail,
+  emails, userType, selectedRole, studios, groupIds, sendEmail, setSendEmail,
 }: {
-  name: string; email: string; userType: MemberRole
+  emails: string[]; userType: MemberRole
   selectedRole: Role | null
   studios: string[]; groupIds: string[]
   sendEmail: boolean; setSendEmail: (v: boolean) => void
 }) {
-  const displayName = name.trim() || email.split("@")[0]
-  const initials = displayName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?"
   const selectedGroups = GROUPS.filter(g => groupIds.includes(g.id))
 
   function SummaryRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
@@ -4138,14 +4201,36 @@ function InviteStepReview({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, background: "var(--surface-raised)", borderRadius: 10, marginBottom: 16, border: "1px solid var(--border)" }}>
-        <AvatarCircle name={displayName} initials={initials} colorKey={nameToAvatarColor(displayName)} sizeKey="lg" />
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{displayName}</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{email}</div>
+      {/* Recipients summary */}
+      {emails.length === 1 ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, background: "var(--surface-raised)", borderRadius: 10, marginBottom: 16, border: "1px solid var(--border)" }}>
+          {(() => {
+            const dn = emails[0].split("@")[0]
+            const ini = dn.split(/[._-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?"
+            return <>
+              <AvatarCircle name={dn} initials={ini} colorKey={nameToAvatarColor(dn)} sizeKey="lg" />
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{dn}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{emails[0]}</div>
+              </div>
+              <div style={{ marginLeft: "auto" }}><Chip variant="secondary" size="s">{userType}</Chip></div>
+            </>
+          })()}
         </div>
-        <div style={{ marginLeft: "auto" }}><Chip variant="secondary" size="s">{userType}</Chip></div>
-      </div>
+      ) : (
+        <div style={{ padding: 14, background: "var(--surface-raised)", borderRadius: 10, marginBottom: 16, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+            <Icons.Users size={13} color="var(--muted-foreground)" />
+            {emails.length} recipients
+            <div style={{ marginLeft: "auto" }}><Chip variant="secondary" size="s">{userType}</Chip></div>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+            {emails.map(em => (
+              <span key={em} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 100, background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)", color: "var(--primary)", fontWeight: 500 }}>{em}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <SummaryRow
         icon={<Icons.Shield size={14} />}
@@ -4193,14 +4278,18 @@ function InviteStepReview({
         }
       />
 
-      <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 10, border: `1px solid ${sendEmail ? "color-mix(in srgb, var(--primary) 30%, var(--border))" : "var(--border)"}`, background: sendEmail ? "color-mix(in srgb, var(--primary) 5%, var(--surface))" : "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 32, height: 32, borderRadius: 8, background: sendEmail ? "color-mix(in srgb, var(--primary) 12%, transparent)" : "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Icons.Mail size={14} style={{ color: sendEmail ? "var(--primary)" : "var(--muted-foreground)" }} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Send invitation email</div>
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.4 }}>
-            {sendEmail ? `An invite link will be sent to ${email}. Expires in 7 days.` : "Member will be created in a pending state with no email sent."}
+            {sendEmail
+              ? emails.length > 1
+                ? `Invite links will be sent to all ${emails.length} recipients. Expire in 7 days.`
+                : `An invite link will be sent to ${emails[0] ?? "the recipient"}. Expires in 7 days.`
+              : "Contact(s) will be created in a pending state. You can send the invitation later from their profile."}
           </div>
         </div>
         <Toggle checked={sendEmail} onChange={() => setSendEmail(!sendEmail)} />
