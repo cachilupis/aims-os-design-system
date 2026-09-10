@@ -1182,6 +1182,15 @@ export function UcpProfileView({
               scrolls past is a proposal they never see. */}
           <div style={{ padding: "0 32px 8px" }}>
             <EntityHeader
+              /* Compress on scroll. This card is PINNED by the screen — it
+                 lives in ScreenLayout's header zone, outside the scroll
+                 container — so it was already always-visible and does not
+                 need a sticky of its own. What it was missing is the other
+                 half: on the way down the metadata row and the description
+                 drop and the visual goes L to M, and scrolling back up
+                 restores all three. The component detects the pinning and
+                 skips its own sticky wrapper. */
+              compressOnScroll
               name={contact.name}
               /*
                 AVATAR OR ICON, decided by the type — not hardcoded.
