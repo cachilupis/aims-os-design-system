@@ -1246,18 +1246,20 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 const USER_TYPE_OPTIONS: UserType[] = ["Owner", "Admin", "Member"]
 
 function MemberDetailPage({
-  member, onBack, onToggleSuspend, onRemove, onUpdate,
+  member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
 }: {
   member: Member
   onBack: () => void
   onToggleSuspend: (id: string) => void
   onRemove: (id: string) => void
   onUpdate: (m: Member) => void
+  onSendInvite: (id: string) => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
+  const isPending = member.status === "pending"
 
   return (
     <ScreenLayout
@@ -1337,7 +1339,15 @@ function MemberDetailPage({
 
           {/* Action buttons */}
           <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {isInvited ? (
+            {/* A contact created with the wizard's email toggle off has never
+                been written to. This is where that gets finished — one click,
+                which is the whole point of having been able to defer it. */}
+            {isPending ? (
+              <Button variant="primary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => onSendInvite(member.id)}>
+                <Icons.Send size={13} /> Send invitation
+              </Button>
+            ) : isInvited ? (
               <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
                 onClick={() => alert(`Invite resent to ${member.email}`)}>
                 <Icons.RefreshCw size={13} /> Resend invite
@@ -3810,15 +3820,17 @@ function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: num
 }
 
 function MemberPreview({
-  member, onRoleChange, onToggleSuspend,
+  member, onRoleChange, onToggleSuspend, onSendInvite,
 }: {
   member: Member
   onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
+  onSendInvite: (id: string) => void
 }) {
   const [tab, setTab] = useState(0)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
+  const isPending = member.status === "pending"
 
   // Same shape the role preview shows, so it is the same component — including
   // the expand, which this tab never had.
@@ -3929,7 +3941,9 @@ function MemberPreview({
                 </select>
               </div>
             )}
-            {isInvited ? (
+            {isPending ? (
+              <Button variant="primary" size="sm" onClick={() => onSendInvite(member.id)}>Send invitation</Button>
+            ) : isInvited ? (
               <Button variant="secondary" size="sm" onClick={() => alert(`Invite resent to ${member.email}`)}>Resend invite</Button>
             ) : (
               <Button variant="secondary" size="sm" onClick={() => onToggleSuspend(member.id)}>{isActive ? "Suspend access" : "Reactivate account"}</Button>
@@ -4583,7 +4597,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       toast.success(
         emails.length === 1 ? "Contact created" : `${emails.length} contacts created`,
         {
-          description: `No invitation was sent — send it later from ${emails.length === 1 ? "their profile" : "their profiles"}.${roleNote} Filtered to Pending so you can see ${emails.length === 1 ? "it" : "them"}.`,
+          description: `No invitation was sent — open ${emails.length === 1 ? "the contact" : "a contact"} and click Send invitation when ready.${roleNote} Filtered to Pending so you can see ${emails.length === 1 ? "it" : "them"}.`,
         },
       )
     }
@@ -4639,6 +4653,31 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
     setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
   }
+  /**
+   * The second half of "create without inviting": the invitation that was
+   * deferred goes out now. `joinedAt` doubles as the invite-sent stamp
+   * everywhere this screen reads it, so it moves too — otherwise the row
+   * would date the invite to when the contact was created.
+   */
+  function handleSendInvite(id: string) {
+    const now = new Date().toISOString()
+    const person = members.find(m => m.id === id)
+    // The fixture holds its own copy, and the group and role member lists read
+    // from it — leave it behind and they keep showing Pending forever.
+    const fixtureCopy = MEMBERS.find(m => m.id === id)
+    if (fixtureCopy) { fixtureCopy.status = "invited"; fixtureCopy.joinedAt = now }
+    setMembers(ms => ms.map(m => m.id === id ? { ...m, status: "invited", joinedAt: now } : m))
+    setDetailView(d => d?.type === "member" && d.member.id === id
+      ? { type: "member", member: { ...d.member, status: "invited", joinedAt: now } }
+      : d)
+    setPreviewItem(p => p?.type === "member" && p.member.id === id
+      ? { type: "member", member: { ...p.member, status: "invited", joinedAt: now } }
+      : p)
+    toast.success("Invitation sent", {
+      description: person ? `${person.email} has 7 days to accept.` : "It expires in 7 days.",
+    })
+  }
+
   function handleToggleSuspend(id: string) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, status: m.status === "suspended" ? "active" : "suspended" } : m))
   }
@@ -4667,6 +4706,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         onToggleSuspend={handleToggleSuspend}
         onRemove={handleRemove}
         onUpdate={handleMemberUpdate}
+        onSendInvite={handleSendInvite}
       />
     )
   }
@@ -4893,6 +4933,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             member={previewItem.member}
             onRoleChange={handleRoleChange}
             onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
+            onSendInvite={handleSendInvite}
           />
         )}
         {previewItem?.type === "role" && (
