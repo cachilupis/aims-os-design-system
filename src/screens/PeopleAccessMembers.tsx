@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo } from "react"
 import { createPortal } from "react-dom"
 import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
@@ -9,6 +9,13 @@ import { Button }       from "@/components/ui/button"
 import { Tag }          from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tabs }         from "@/components/ui/tabs"
+import { TagInput }     from "@/components/ui/tag-input"
+import { Radio }        from "@/components/ui/radio"
+import { Checkbox }     from "@/components/ui/checkbox"
+import { Textarea }     from "@/components/ui/textarea"
+import { Input }        from "@/components/ui/input"
+import { EmptyState }   from "@/components/ui/empty-state"
+import { useToast }     from "@/components/ui/toast"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
@@ -50,10 +57,21 @@ interface Member {
   initials: string; avatarColor: string; department?: string; title?: string
   mfaEnabled: boolean; mfaMethod?: MfaMethod; mfaEnrolledAt?: string
   sessions?: MfaSession[]
+  /**
+   * Studios granted to this person directly, rather than through a group.
+   * Until the invite wizard existed, a member's studio access could ONLY come
+   * from a group, so the invite modal's "Studio access" section chose
+   * something the data had nowhere to put. AppsPanel unions this with the
+   * group-derived set.
+   */
+  studios?: string[]
 }
 
 interface Role {
-  id: string; label: string; system: boolean; color: string; desc: string; memberIds: string[]
+  id: string; label: string; system: boolean; desc: string; memberIds: string[]
+  color?: string
+  /** Studios this role can grant permissions in. Empty = not scoped yet. */
+  studios?: string[]
 }
 
 interface Group {
@@ -196,12 +214,12 @@ const PERM_TREE: Record<string, PermNode[]> = {
 // ─── Roles fixture ────────────────────────────────────────────────────────────
 
 const ROLES: Role[] = [
-  { id: "workspace-admin",    label: "Workspace Admin",    system: true,  color: "#6366f1", desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"] },  // audit-ignore: prototype fixture data
-  { id: "developer",          label: "Developer",          system: true,  color: "#10b981", desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"] },  // audit-ignore: prototype fixture data
-  { id: "viewer",             label: "Viewer",             system: true,  color: "#64748b", desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"] },  // audit-ignore: prototype fixture data
-  { id: "agent-builder",      label: "Agent Builder",      system: false, color: "#f97316", desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"] },  // audit-ignore: prototype fixture data
-  { id: "data-steward",       label: "Data Steward",       system: false, color: "#8b5cf6", desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"] },  // audit-ignore: prototype fixture data
-  { id: "compliance-auditor", label: "Compliance Auditor", system: false, color: "#0ea5e9", desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [] },  // audit-ignore: prototype fixture data
+  { id: "workspace-admin",    label: "Workspace Admin",    system: true, desc: "Full control over workspace settings, members, studios, and billing",                     memberIds: ["tg", "mg", "es"], studios: ["governance", "datastudio", "agentic", "admin"] },  // audit-ignore: prototype fixture data
+  { id: "developer",          label: "Developer",          system: true, desc: "Build and deploy integrations, agents, and custom workflows",                            memberIds: ["es", "sb", "dp"], studios: ["agentic", "datastudio"] },  // audit-ignore: prototype fixture data
+  { id: "viewer",             label: "Viewer",             system: true, desc: "Read-only access across all non-sensitive studio content",                               memberIds: ["at", "fw"], studios: ["governance", "datastudio", "agentic", "admin"] },  // audit-ignore: prototype fixture data
+  { id: "agent-builder",      label: "Agent Builder",      system: false, desc: "Create and manage AI workers, agentic networks, and workflow definitions",              memberIds: ["sb", "dp"], studios: ["agentic"] },  // audit-ignore: prototype fixture data
+  { id: "data-steward",       label: "Data Steward",       system: false, desc: "Manage model definitions, governance policies, and data lineage graphs",                memberIds: ["mg"], studios: ["datastudio", "governance"] },  // audit-ignore: prototype fixture data
+  { id: "compliance-auditor", label: "Compliance Auditor", system: false, desc: "Read-only access to audit logs, governance events, data lineage, and access settings", memberIds: [], studios: ["governance", "admin"] },  // audit-ignore: prototype fixture data
 ]
 
 const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number; agentic: number; admin: number; total: number }> = {
@@ -212,11 +230,6 @@ const ROLE_PERM_COUNTS: Record<string, { governance: number; datastudio: number;
   "data-steward":       { governance: 3, datastudio: 3, agentic: 0, admin: 1,  total: 7  },
   "compliance-auditor": { governance: 2, datastudio: 2, agentic: 1, admin: 3,  total: 8  },
 }
-
-const ROLE_COLORS = [
-  "#6366f1", "#10b981", "#f97316", "#0ea5e9", // audit-ignore: preset color swatches for role form
-  "#8b5cf6", "#ef4444", "#f59e0b", "#64748b", // audit-ignore: preset color swatches for role form
-]
 
 // Per-role permission states: what each role directly grants
 const ROLE_PERM_STATES: Record<string, Record<string, PermState>> = {
@@ -360,12 +373,6 @@ const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informa
   governance: "limeGreen",
   datastudio: "purple",
   agentic:    "lightBlue",
-  admin:      "informative",
-}
-const STUDIO_HI: Record<string, "lime" | "purple" | "light-blue" | "informative"> = {
-  governance: "lime",
-  datastudio: "purple",
-  agentic:    "light-blue",
   admin:      "informative",
 }
 const TABLE_CARD = "hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]"
@@ -962,9 +969,9 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
       <div
         onClick={() => setExpanded(e => !e)}
         style={{
-          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
-          padding: "11px 14px", cursor: "pointer", gap: 10, alignItems: "center",
-          background: expanded ? "var(--accent)" : "transparent",
+          display: "grid", gridTemplateColumns: "20px 150px 160px 104px 130px 1fr 96px 60px",
+          padding: "10px 16px", cursor: "pointer", gap: 10, alignItems: "center",
+          background: expanded ? "var(--table-row-hover-bg)" : "transparent",
         }}
         onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
         onMouseLeave={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "transparent" }}
@@ -1010,7 +1017,7 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
 
       {/* Expanded detail */}
       {expanded && (
-        <div style={{ background: "var(--surface-raised)", borderTop: "1px solid var(--border)", padding: "14px 44px 16px" }}>
+        <div style={{ background: "var(--surface-raised)", borderTop: "1px solid var(--border)", padding: "14px 16px 16px 46px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px 20px", marginBottom: 12 }}>
             {[
               { label: "USER ID",        value: ev.userId },
@@ -1086,8 +1093,8 @@ function ActivityPanel() {
       <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
         {/* Header */}
         <div style={{
-          display: "grid", gridTemplateColumns: "20px 150px 160px 90px 130px 1fr 70px 60px",
-          padding: "8px 14px", gap: 10,
+          display: "grid", gridTemplateColumns: "20px 150px 160px 104px 130px 1fr 96px 60px",
+          padding: "10px 16px", gap: 10,
           background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
           fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
         }}>
@@ -1518,7 +1525,9 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
 
 function AppsPanel({ member }: { member: Member }) {
   const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
-  const studioSet = new Set<string>(member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : [])
+  const studioSet = new Set<string>(
+    member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : member.studios ?? [],
+  )
   memberGroups.forEach(g => g.studios.forEach(s => studioSet.add(s)))
   const [studios, setStudios] = useState(Array.from(studioSet))
   const [expandedStudio, setExpandedStudio] = useState<string | null>(null)
@@ -3784,625 +3793,299 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
     </CardContainer>
   )
 }
-
-// ─── Invite slide-out ─────────────────────────────────────────────────────────
-
-const INVITE_STUDIOS = [
-  { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={14} />, desc: "Policy management, data lineage and compliance" },
-  { id: "datastudio", label: "Data Studio",       icon: <Icons.Database size={14} />,    desc: "Model authoring, datasets and schema design" },
-  { id: "agentic",    label: "Agentic Studio",    icon: <Icons.Bot size={14} />,         desc: "AI worker configuration and agentic networks" },
-  { id: "admin",      label: "Admin Console",     icon: <Icons.Settings size={14} />,    desc: "Platform settings, members, billing and integrations" },
-]
-
-const USER_TYPE_CARDS: Array<{ id: MemberRole; title: string; desc: string; icon: React.ReactNode }> = [
-  { id: "Member", title: "Member", desc: "Access to assigned studios only",    icon: <Icons.User size={15} /> },
-  { id: "Admin",  title: "Admin",  desc: "Manage members, studios & billing", icon: <Icons.ShieldCheck size={15} /> },
-  { id: "Owner",  title: "Owner",  desc: "Full admin + transferable ownership", icon: <Icons.Crown size={15} /> },
-]
-
-function InviteSlideOut({ onClose, onSend }: {
-  onClose: () => void
-  onSend: (member: Member) => void
-}) {
-  const TOTAL_STEPS = 5
-  const [step, setStep] = useState(0)
-
-  // Step 0 – Identity: multiple emails + user type
-  const [emails,    setEmails]    = useState<string[]>([])
-  const [emailDraft, setEmailDraft] = useState("")
-  const emailDraftRef = useRef("")
-  const [userType,  setUserType]  = useState<MemberRole>("Member")
-
-  // Step 1 – Apps
-  const [studios, setStudios] = useState<string[]>([])
-
-  // Step 2 – Roles (optional)
-  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
-
-  // Step 3 – Groups
-  const [groupIds,    setGroupIds]    = useState<string[]>([])
-  const [groupSearch, setGroupSearch] = useState("")
-
-  // Step 4 – Review
-  const [sendEmail, setSendEmail] = useState(true)
-
-  function setDraft(v: string) { emailDraftRef.current = v; setEmailDraft(v) }
-
-  function addEmailFromDraft() {
-    const v = emailDraftRef.current.trim().toLowerCase()
-    if (v.includes("@")) { setEmails(prev => prev.includes(v) ? prev : [...prev, v]) }
-    setDraft("")
-  }
-
-  function removeEmail(e: string) { setEmails(prev => prev.filter(x => x !== e)) }
-
-  const canNext = step === 0
-    ? emails.length > 0 || emailDraftRef.current.trim().includes("@")
-    : true
-
-  const stepItems: StepItem[] = [
-    { label: "Who to invite", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
-    { label: "Apps",     state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
-    { label: "Roles",    state: step === 2 ? "active" : step > 2 ? "completed" : "default" },
-    { label: "Groups",   state: step === 3 ? "active" : step > 3 ? "completed" : "default" },
-    { label: "Review",   state: step === 4 ? "active" : "default" },
-  ]
-
-  function goNext() {
-    if (step === 0 && emailDraftRef.current.trim().includes("@")) addEmailFromDraft()
-    if (step < TOTAL_STEPS - 1) setStep(s => s + 1)
-    else finalize()
-  }
-  function goBack() { setStep(s => s - 1) }
-
-  function finalize() {
-    const allEmails = emailDraftRef.current.trim().includes("@") && !emails.includes(emailDraftRef.current.trim().toLowerCase())
-      ? [...emails, emailDraftRef.current.trim().toLowerCase()]
-      : emails
-    allEmails.forEach((em, i) => {
-      const displayName = em.split("@")[0]
-      const parts = displayName.split(/[._-]+/).filter(Boolean)
-      const initials = parts.slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?"
-      const member: Member = {
-        id: `inv-${Date.now()}-${i}`,
-        name: displayName,
-        email: em,
-        role: userType,
-        status: sendEmail ? "invited" : "pending",
-        lastActive: null,
-        joinedAt: new Date().toISOString(),
-        initials,
-        avatarColor: nameToAvatarColor(displayName),
-        title: "", department: "",
-        mfaEnabled: false,
-        sessions: [],
-      }
-      onSend(member)
-    })
-    onClose()
-  }
-
-  const selectedRole = selectedRoleId ? (ROLES.find(r => r.id === selectedRoleId) ?? null) : null
-  const effectiveEmails = emailDraftRef.current.trim().includes("@") && !emails.includes(emailDraftRef.current.trim().toLowerCase())
-    ? [...emails, emailDraftRef.current.trim().toLowerCase()]
-    : emails
-
-  const finalLabel = step === TOTAL_STEPS - 1
-    ? (sendEmail ? `Send invitation${effectiveEmails.length > 1 ? `s (${effectiveEmails.length})` : ""}` : `Create contact${effectiveEmails.length > 1 ? `s (${effectiveEmails.length})` : ""}`)
-    : "Continue"
-
-  return createPortal(
-    <div style={{
-      position: "fixed", inset: 0,
-      background: "var(--background)",
-      zIndex: 9000,
-      display: "flex",
-      flexDirection: "column",
-    }}>
-
-      {/* Page header */}
-      <div style={{
-        padding: "20px 32px 16px",
-        borderBottom: "1px solid var(--border)",
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        flexShrink: 0,
-      }}>
-        <button
-          onClick={onClose}
-          style={{ border: "none", background: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6, display: "flex" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-          onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-        >
-          <Icons.ArrowLeft size={16} />
-        </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>
-            {effectiveEmails.length > 1 ? `Invite ${effectiveEmails.length} members` : "Invite member"}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>Step {step + 1} of {TOTAL_STEPS}</div>
-        </div>
-      </div>
-
-      {/* Page-level Stepper */}
-      <div style={{ padding: "20px 32px 0", flexShrink: 0 }}>
-        <Stepper steps={stepItems} />
-      </div>
-
-      {/* Scrollable step content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
-        {step === 0 && <InviteStepIdentity emails={emails} emailDraft={emailDraft} setEmailDraft={setDraft} onAddEmail={addEmailFromDraft} onRemoveEmail={removeEmail} userType={userType} setUserType={setUserType} />}
-        {step === 1 && <InviteStepApps studios={studios} setStudios={setStudios} />}
-        {step === 2 && <InviteStepRoles selectedRoleId={selectedRoleId} setSelectedRoleId={setSelectedRoleId} />}
-        {step === 3 && <InviteStepGroups groupIds={groupIds} setGroupIds={setGroupIds} groupSearch={groupSearch} setGroupSearch={setGroupSearch} />}
-        {step === 4 && <InviteStepReview emails={effectiveEmails} userType={userType} selectedRole={selectedRole} studios={studios} groupIds={groupIds} sendEmail={sendEmail} setSendEmail={setSendEmail} />}
-      </div>
-
-      {/* Page-level StepperNavFooter */}
-      <StepperNavFooter
-        variant={step === 0 ? "cancel-next" : "back-next"}
-        cancelLabel="Cancel"
-        onCancel={onClose}
-        onBack={goBack}
-        nextLabel={finalLabel}
-        nextDisabled={!canNext}
-        onNext={goNext}
-      />
-    </div>,
-    document.body
-  )
-}
-
-// ── Step 1: Identity ──────────────────────────────────────────────────────────
-
-function InviteStepIdentity({
-  emails, emailDraft, setEmailDraft, onAddEmail, onRemoveEmail, userType, setUserType,
-}: {
-  emails: string[]
-  emailDraft: string; setEmailDraft: (v: string) => void
-  onAddEmail: () => void
-  onRemoveEmail: (e: string) => void
-  userType: MemberRole; setUserType: (v: MemberRole) => void
-}) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 6 }}>
-          Email addresses
-          <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>Press Enter or comma to add more</span>
-        </label>
-
-        {/* Chips + input field */}
-        <div
-          style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "8px 10px", background: "var(--surface)", display: "flex", flexWrap: "wrap", gap: 6, cursor: "text" }}
-          onClick={e => { const inp = (e.currentTarget as HTMLElement).querySelector("input"); inp?.focus() }}
-        >
-          {emails.map(em => (
-            <span key={em} style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, padding: "3px 8px", borderRadius: 100, background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)", color: "var(--primary)", fontWeight: 500 }}>
-              {em}
-              <button
-                onClick={ev => { ev.stopPropagation(); onRemoveEmail(em) }}
-                style={{ border: "none", background: "none", cursor: "pointer", padding: 0, display: "flex", color: "var(--primary)", opacity: 0.6 }}
-              >
-                <Icons.X size={10} />
-              </button>
-            </span>
-          ))}
-          <input
-            type="text"
-            value={emailDraft}
-            onChange={e => {
-              const val = e.target.value
-              if (val.endsWith(",")) {
-                setEmailDraft(val.slice(0, -1))
-                setTimeout(onAddEmail, 0)
-              } else {
-                setEmailDraft(val)
-              }
-            }}
-            onKeyDown={e => {
-              if (e.key === "Enter") { e.preventDefault(); onAddEmail() }
-              if (e.key === "Backspace" && emailDraft === "" && emails.length > 0) onRemoveEmail(emails[emails.length - 1])
-            }}
-            onBlur={() => { if (emailDraft.trim().includes("@")) onAddEmail() }}
-            placeholder={emails.length === 0 ? "name@company.com" : "Add more…"}
-            style={{ border: "none", outline: "none", background: "transparent", color: "var(--foreground)", fontSize: 13, fontFamily: "inherit", minWidth: 180, flex: 1 }}
-          />
-        </div>
-        {emails.length > 1 && (
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 5 }}>
-            {emails.length} people will receive the same role and permissions.
-          </div>
-        )}
-      </div>
-
-      <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", display: "block", marginBottom: 8 }}>User type</label>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {USER_TYPE_CARDS.map(card => {
-            const sel = userType === card.id
-            return (
-              <button key={card.id} onClick={() => setUserType(card.id)} style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                border: `1px solid ${sel ? "var(--primary)" : "var(--border)"}`,
-                borderRadius: 10, cursor: "pointer", textAlign: "left",
-                background: sel ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--surface)",
-              }}>
-                <div style={{ width: 16, height: 16, borderRadius: "50%", flexShrink: 0, border: `2px solid ${sel ? "var(--primary)" : "var(--border)"}`, background: sel ? "var(--primary)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {sel && <div style={{ width: 6, height: 6, borderRadius: "50%", background: "white" }} />}
-                </div>
-                <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: sel ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "center", color: sel ? "var(--primary)" : "var(--muted-foreground)" }}>
-                  {card.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: sel ? "var(--primary)" : "var(--foreground)" }}>{card.title}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{card.desc}</div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Step 1: Apps ──────────────────────────────────────────────────────────────
 
-function InviteStepApps({ studios, setStudios }: {
-  studios: string[]; setStudios: (v: string[]) => void
+const INVITE_STUDIO_OPTIONS = [
+  { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={13} /> },
+  { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={13} /> },
+  { id: "agentic",    label: "Agentic Studio",     icon: <Icons.Bot size={13} /> },
+  { id: "admin",      label: "Admin Console",      icon: <Icons.Settings size={13} /> },
+]
+
+/**
+ * Inviting somebody is a create, it has three stages and it grants access — so
+ * it takes the same surface New Role takes: a full page, a Stepper, and the
+ * StepperNavFooter as the only way to finish. The Create pattern's staged-flows
+ * table is explicit that a Stepper never lives inside a panel, and this used to
+ * be a ModalDialog with five sections stacked in a 560px scroller.
+ *
+ * The third stage is not padding. An invitation leaves the product — it sends
+ * mail to a person who is not here yet and hands them studio access — so what
+ * is about to happen is stated in full before the button that does it.
+ */
+function InviteWizard({ onCancel, onSend }: {
+  onCancel: () => void
+  onSend: (emails: string[], role: MemberRole, studios: string[], groupIds: string[]) => void
 }) {
+  const [step, setStep]         = useState<0 | 1 | 2>(0)
+  const [emails, setEmails]     = useState<string[]>([])
+  /**
+   * What is typed into the email field but not yet committed to a chip. Next
+   * has to count it: somebody who types one address and reaches straight for
+   * the button has filled the form as far as they can tell, and a CTA that
+   * stays grey there looks broken. TagInput commits on blur, so the address is
+   * a real chip by the time the click lands.
+   */
+  const [emailDraft, setEmailDraft] = useState("")
+  const [role, setRole]         = useState<MemberRole>("Member")
+  const [studios, setStudios]   = useState<string[]>([])
+  const [groupIds, setGroupIds] = useState<string[]>([])
+  const [note, setNote]         = useState("")
+
   function toggleStudio(id: string) {
     setStudios(studios.includes(id) ? studios.filter(s => s !== id) : [...studios, id])
   }
+  function toggleGroup(id: string) {
+    setGroupIds(g => g.includes(id) ? g.filter(x => x !== id) : [...g, id])
+  }
+
+  const isMember = role === "Member"
+
+  // An Admin or an Owner gets every studio by definition, so stage 2 has
+  // nothing it can require of them. A Member invited with no studio and no
+  // group would land in the workspace able to open nothing at all.
+  const canContinue = step === 0 ? emails.length > 0 || emailDraft.trim().length > 0
+                    : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
+                    : true
+
+  const steps: StepItem[] = [
+    { label: "People", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Access", state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Review", state: step === 2 ? "active" : "default" },
+  ]
+
+  const effectiveStudios = isMember ? studios : INVITE_STUDIO_OPTIONS.map(s => s.id)
+  const chosenGroups     = GROUPS.filter(g => groupIds.includes(g.id))
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
-        Select which apps this member can access. <span style={{ color: "var(--foreground)" }}>Optional.</span>
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title="Invite members"
+          description="Invitations are sent by email and expire after 7 days."
+          backButton
+          onBackButtonClick={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {INVITE_STUDIOS.map(studio => {
-          const sel = studios.includes(studio.id)
-          return (
-            <button
-              key={studio.id}
-              onClick={() => toggleStudio(studio.id)}
-              style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                border: `1px solid ${sel ? "var(--primary)" : "var(--border)"}`,
-                borderRadius: 10, cursor: "pointer", textAlign: "left",
-                background: sel ? "color-mix(in srgb, var(--primary) 6%, transparent)" : "var(--surface)",
-              }}
-            >
-              <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `2px solid ${sel ? "var(--primary)" : "var(--border)"}`, background: sel ? "var(--primary)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {sel && <Icons.Check size={10} color="white" />}
-              </div>
-              <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: sel ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "center", color: sel ? "var(--primary)" : "var(--muted-foreground)" }}>
-                {studio.icon}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: sel ? "var(--primary)" : "var(--foreground)" }}>{studio.label}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1 }}>{studio.desc}</div>
-              </div>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
-// ── Step 2: Roles ─────────────────────────────────────────────────────────────
-
-function InviteStepRoles({ selectedRoleId, setSelectedRoleId }: {
-  selectedRoleId: string | null
-  setSelectedRoleId: (v: string | null) => void
-}) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
-        Assign a role to grant a preset of permissions. <span style={{ color: "var(--foreground)" }}>Optional.</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        {/* No role option */}
-        <div
-          onClick={() => setSelectedRoleId(null)}
-          style={{
-            border: `1.5px solid ${selectedRoleId === null ? "var(--primary)" : "var(--border)"}`,
-            background: selectedRoleId === null ? "color-mix(in srgb, var(--primary) 6%, var(--surface))" : "var(--surface)",
-            borderRadius: 10, padding: 12, cursor: "pointer", display: "flex", flexDirection: "column", gap: 6,
-            transition: "border-color 0.15s",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: selectedRoleId === null ? "var(--primary)" : "var(--foreground)", flex: 1 }}>No role</span>
-            <Tag variant="secondary" size="sm">None</Tag>
+      {/* ── 1 · People ────────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          <div>
+            <FormSectionLabel hint="Press Enter after each address. Everyone here gets the same role and the same access.">
+              Email addresses
+            </FormSectionLabel>
+            <TagInput
+              tags={emails}
+              onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
+              onRemoveTag={v => setEmails(e => e.filter(x => x !== v))}
+              onDraftChange={setEmailDraft}
+              placeholder="name@company.com"
+              showAddButton={false}
+            />
           </div>
-          <p style={{ fontSize: 12, fontWeight: 500, color: "var(--muted-foreground)", lineHeight: "18px", margin: 0 }}>Member gets access via groups or direct permissions only.</p>
-        </div>
-        {ROLES.map(role => {
-          const sel = selectedRoleId === role.id
-          const counts = ROLE_PERM_COUNTS[role.id]
-          return (
-            <div
-              key={role.id}
-              onClick={() => setSelectedRoleId(role.id)}
-              style={{
-                border: `1.5px solid ${sel ? "var(--primary)" : "var(--border)"}`,
-                background: sel ? "color-mix(in srgb, var(--primary) 6%, var(--surface))" : "var(--surface)",
-                borderRadius: 10, padding: 12, cursor: "pointer", display: "flex", flexDirection: "column", gap: 6,
-                transition: "border-color 0.15s",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 0 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: sel ? "var(--primary)" : "var(--foreground)", flex: 1, minWidth: 0 }}>{role.label}</span>
-                <Tag variant={role.system ? "secondary" : "informative"} size="sm">
-                  {role.system ? "System" : "Custom"}
-                </Tag>
-              </div>
-              <p style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-body)", lineHeight: "18px", margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                {role.desc}
-              </p>
-              {counts && (
-                <div style={{ fontSize: 11, fontWeight: 500, color: sel ? "var(--primary)" : "var(--muted-foreground)", marginTop: "auto" }}>
-                  {counts.total} permissions
-                </div>
-              )}
+
+          {/* One card per option. The title never turns blue: the card's
+              selected border is what says "chosen", and a coloured label on
+              top of it says it twice. */}
+          <div>
+            <FormSectionLabel>Role</FormSectionLabel>
+            <div role="radiogroup" aria-label="Role" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              {(["Member", "Admin", "Owner"] as MemberRole[]).map(r => (
+                <CardContainer key={r} size="sm" selected={role === r} onClick={() => setRole(r)}>
+                  <div style={{ pointerEvents: "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                      <Radio value={r} checked={role === r} size="sm" hideLabel label={r} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "var(--color-text-title)" }}>{r}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                      {r === "Owner" ? "Full admin + transferable ownership"
+                        : r === "Admin" ? "Manage members, studios & billing"
+                        : "Access assigned studios only"}
+                    </div>
+                  </div>
+                </CardContainer>
+              ))}
             </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ── Step 3: Groups ────────────────────────────────────────────────────────────
-
-function InviteStepGroups({
-  groupIds, setGroupIds, groupSearch, setGroupSearch,
-}: {
-  groupIds: string[]; setGroupIds: (v: string[]) => void
-  groupSearch: string; setGroupSearch: (v: string) => void
-}) {
-  const filtered = GROUPS.filter(g => {
-    const q = groupSearch.toLowerCase()
-    return !q || g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q)
-  })
-
-  function toggle(id: string) {
-    setGroupIds(groupIds.includes(id) ? groupIds.filter(g => g !== id) : [...groupIds, id])
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      <div style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
-        Group membership grants shared studio access and permissions. <span style={{ color: "var(--foreground)" }}>Optional.</span>
-      </div>
-      <div style={{ position: "relative" }}>
-        <Icons.Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-        <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Search groups…"
-          style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 8, padding: "8px 12px 8px 30px", background: "var(--surface)", color: "var(--foreground)", fontSize: 12, outline: "none", fontFamily: "inherit" }} />
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {filtered.map(g => {
-          const sel = groupIds.includes(g.id)
-          return (
-            <button key={g.id} onClick={() => toggle(g.id)} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "10px 12px",
-              border: `1px solid ${sel ? "var(--primary)" : "var(--border)"}`,
-              borderRadius: 8, cursor: "pointer", textAlign: "left",
-              background: sel ? "color-mix(in srgb, var(--primary) 8%, transparent)" : "var(--surface)",
-            }}>
-              <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `2px solid ${sel ? "var(--primary)" : "var(--border)"}`, background: sel ? "var(--primary)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {sel && <Icons.Check size={10} color="white" />}
-              </div>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: g.color, flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: sel ? "var(--primary)" : "var(--foreground)" }}>{g.name}</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.3 }}>{g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""} · {g.desc}</div>
-              </div>
-              <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
-                {g.studios.slice(0, 2).map(s => (
-                  <span key={s} style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "1px 5px", border: "1px solid var(--border)", borderRadius: 4 }}>
-                    {s === "governance" ? "Gov" : s === "datastudio" ? "Data" : s === "agentic" ? "Agentic" : "Admin"}
-                  </span>
-                ))}
-              </div>
-            </button>
-          )
-        })}
-        {filtered.length === 0 && (
-          <div style={{ padding: "24px 0", textAlign: "center", fontSize: 12, color: "var(--muted-foreground)" }}>No groups match your search.</div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ── Step 4 (was 5): Review ────────────────────────────────────────────────────
-
-function InviteStepReview({
-  emails, userType, selectedRole, studios, groupIds, sendEmail, setSendEmail,
-}: {
-  emails: string[]; userType: MemberRole
-  selectedRole: Role | null
-  studios: string[]; groupIds: string[]
-  sendEmail: boolean; setSendEmail: (v: boolean) => void
-}) {
-  const selectedGroups = GROUPS.filter(g => groupIds.includes(g.id))
-
-  function SummaryRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
-    return (
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--border)" }}>
-        <div style={{ color: "var(--muted-foreground)", flexShrink: 0, marginTop: 1 }}>{icon}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{label}</div>
-          <div style={{ fontSize: 13, color: "var(--foreground)" }}>{value}</div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-      {/* Recipients summary */}
-      {emails.length === 1 ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16, background: "var(--surface-raised)", borderRadius: 10, marginBottom: 16, border: "1px solid var(--border)" }}>
-          {(() => {
-            const dn = emails[0].split("@")[0]
-            const ini = dn.split(/[._-]+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") || "?"
-            return <>
-              <AvatarCircle name={dn} initials={ini} colorKey={nameToAvatarColor(dn)} sizeKey="lg" />
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>{dn}</div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{emails[0]}</div>
-              </div>
-              <div style={{ marginLeft: "auto" }}><Chip variant="secondary" size="s">{userType}</Chip></div>
-            </>
-          })()}
-        </div>
-      ) : (
-        <div style={{ padding: 14, background: "var(--surface-raised)", borderRadius: 10, marginBottom: 16, border: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-            <Icons.Users size={13} color="var(--muted-foreground)" />
-            {emails.length} recipients
-            <div style={{ marginLeft: "auto" }}><Chip variant="secondary" size="s">{userType}</Chip></div>
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-            {emails.map(em => (
-              <span key={em} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 100, background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)", color: "var(--primary)", fontWeight: 500 }}>{em}</span>
-            ))}
           </div>
         </div>
       )}
 
-      <SummaryRow
-        icon={<Icons.Shield size={14} />}
-        label="Role"
-        value={
-          userType !== "Member"
-            ? `${userType} — full workspace access`
-            : selectedRole
-              ? <span><span style={{ fontWeight: 600 }}>{selectedRole.label}</span>{` · ${ROLE_PERM_COUNTS[selectedRole.id]?.total ?? 0} permissions`}</span>
-              : <span style={{ color: "var(--muted-foreground)" }}>No role assigned</span>
-        }
-      />
-      <SummaryRow
-        icon={<Icons.LayoutGrid size={14} />}
-        label="Apps"
-        value={
-          studios.length === 0
-            ? <span style={{ color: "var(--muted-foreground)" }}>No apps selected</span>
-            : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
-                {studios.map(id => (
-                  <span key={id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 100, background: "color-mix(in srgb, var(--primary) 10%, transparent)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)", color: "var(--primary)", fontWeight: 500 }}>
-                    {STUDIO_META[id]?.label ?? id}
-                  </span>
-                ))}
-              </div>
-            )
-        }
-      />
-      <SummaryRow
-        icon={<Icons.Users size={14} />}
-        label="Groups"
-        value={
-          selectedGroups.length === 0
-            ? <span style={{ color: "var(--muted-foreground)" }}>No groups selected</span>
-            : (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
-                {selectedGroups.map(g => (
-                  <span key={g.id} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 100, background: "var(--surface-raised)", border: "1px solid var(--border)", color: "var(--foreground)" }}>
-                    <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: g.color, marginRight: 4, verticalAlign: "middle" }} />{g.name}
-                  </span>
-                ))}
-              </div>
-            )
-        }
-      />
+      {/* ── 2 · Access ────────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <FormSectionLabel hint={isMember
+              ? "Select which studios these people can open."
+              : `${role}s get every studio automatically — there is nothing to choose here.`}>
+              Studio access
+            </FormSectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+              {INVITE_STUDIO_OPTIONS.map(st => {
+                const on = isMember ? studios.includes(st.id) : true
+                return (
+                  <CardContainer
+                    key={st.id}
+                    size="sm"
+                    selected={on}
+                    disabled={!isMember}
+                    onClick={isMember ? () => toggleStudio(st.id) : undefined}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+                      <Checkbox size="sm" checked={on} disabled={!isMember} id={`inv-studio-${st.id}`} />
+                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          </div>
 
-      <div style={{ marginTop: 16, padding: "12px 14px", borderRadius: 10, border: `1px solid ${sendEmail ? "color-mix(in srgb, var(--primary) 30%, var(--border))" : "var(--border)"}`, background: sendEmail ? "color-mix(in srgb, var(--primary) 5%, var(--surface))" : "var(--surface)", display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 8, background: sendEmail ? "color-mix(in srgb, var(--primary) 12%, transparent)" : "var(--surface-raised)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Icons.Mail size={14} style={{ color: sendEmail ? "var(--primary)" : "var(--muted-foreground)" }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>Send invitation email</div>
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 1, lineHeight: 1.4 }}>
-            {sendEmail
-              ? emails.length > 1
-                ? `Invite links will be sent to all ${emails.length} people and expire in 7 days.`
-                : `An invite link will be sent to ${emails[0] ?? "the recipient"} and expires in 7 days.`
-              : emails.length > 1
-                ? `${emails.length} contacts will be added without an invitation. You can send one later from their profile.`
-                : `${emails[0] ? emails[0].split("@")[0] : "This person"} will be added without an invitation. You can send one later from their profile.`}
+          <div>
+            <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
+              Add to groups
+            </FormSectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {GROUPS.map(g => {
+                const on = groupIds.includes(g.id)
+                return (
+                  <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} className="pointer-events-none" />
+                      <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
+                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</span>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>
+                          {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
+                        </span>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 1, minWidth: 0 }}>
+                        {g.studios.map(st => (
+                          <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
+                            {st === "governance" ? "Gov" : st === "datastudio" ? "Data" : st === "agentic" ? "Agentic" : "Admin"}
+                          </Tag>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
           </div>
         </div>
-        <Toggle checked={sendEmail} onChange={() => setSendEmail(!sendEmail)} />
-      </div>
-    </div>
-  )
-}
+      )}
 
-// ─── Permissions breakdown ────────────────────────────────────────────────────
+      {/* ── 3 · Review ────────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          <div>
+            <FormSectionLabel hint="This is what leaves the product when you send.">
+              Review
+            </FormSectionLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <InviteReviewRow
+                icon="Mail"
+                variant="informative"
+                label={`${emails.length} recipient${emails.length !== 1 ? "s" : ""}`}
+              >
+                {emails.map(e => <Tag key={e} variant="neutral" size="sm">{e}</Tag>)}
+              </InviteReviewRow>
 
-export type StudioPermRow = { id: string; label: string; value: number; max: number; names: string[] }
+              <InviteReviewRow icon="UserCog" variant="neutral" label="Role">
+                <Tag variant="neutral" size="sm">{role}</Tag>
+              </InviteReviewRow>
 
-export function studioPermRows(counts: Record<string, number>): StudioPermRow[] {
-  return STUDIO_TABS.map(studio => {
-    const value = counts[studio.id] ?? 0
-    const leaves = (PERM_TREE[studio.id] ?? []).flatMap(n => n.children?.length ? n.children : [n])
-    return {
-      id: studio.id,
-      label: studio.label,
-      value,
-      max: Math.max(leaves.length, value, 1),
-      names: leaves.slice(0, value).map(n => n.label),
-    }
-  })
-}
+              <InviteReviewRow
+                icon="LayoutGrid"
+                variant="lime"
+                label={isMember ? "Studio access" : `Studio access · every studio, because ${role}s get all of them`}
+              >
+                {effectiveStudios.map(id => (
+                  <Tag key={id} variant={STUDIO_TAG[id] ?? "neutral"} size="sm">
+                    {INVITE_STUDIO_OPTIONS.find(s => s.id === id)?.label ?? id}
+                  </Tag>
+                ))}
+              </InviteReviewRow>
 
-export function PermissionsBreakdown({ rows }: { rows: StudioPermRow[] }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {rows.map(row => <StudioPermBreakdownRow key={row.id} row={row} />)}
-    </div>
-  )
-}
+              <InviteReviewRow icon="Users" variant="purple" label="Groups">
+                {chosenGroups.length === 0
+                  ? <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>None</span>
+                  : chosenGroups.map(g => <Tag key={g.id} variant="neutral" size="sm">{g.name}</Tag>)}
+              </InviteReviewRow>
+            </div>
+          </div>
 
-function StudioPermBreakdownRow({ row }: { row: StudioPermRow }) {
-  const [open, setOpen] = useState(false)
-  const empty = row.value === 0
-  const pct = Math.min((row.value / row.max) * 100, 100)
-  return (
-    <CardContainer size="sm" onClick={empty ? undefined : () => setOpen(o => !o)}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-          {!empty && (open
-            ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
-            : <Icons.ChevronRight size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />)}
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{row.label}</span>
+          {/* No label prop — this is a desktop screen. */}
+          <div>
+            <FormSectionLabel optional>Personal note</FormSectionLabel>
+            <Textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder="Welcome to AIMS OS! We're excited to have you on the team…"
+              rows={2}
+            />
+          </div>
         </div>
-        <Tag variant={empty ? "secondary" : (STUDIO_TAG[row.id] ?? "secondary")} size="sm">{row.value}</Tag>
-      </div>
-      <div style={{ height: 3, borderRadius: 2, background: "var(--field-border)", overflow: "hidden" }}>
+      )}
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
         <div style={{
-          height: "100%", width: `${pct}%`, borderRadius: 2, transition: "width 0.3s",
-          background: empty ? "transparent" : `var(--hi-${(STUDIO_HI[row.id] ?? "neutral").replace("-", "")}-icon)`,
-        }} />
-      </div>
-      {open && row.names.length > 0 && (
-        <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
-          {row.names.map(name => (
-            <li key={name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
-              <Icons.Check size={11} color="var(--badge-success)" style={{ flexShrink: 0 }} />
-              {name}
-            </li>
-          ))}
-        </ul>
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2
+              ? (emails.length > 1 ? `Send ${emails.length} invitations` : "Send invitation")
+              : "Next"}
+            nextDisabled={!canContinue}
+            onNext={step === 2
+              ? () => onSend(emails, role, effectiveStudios, groupIds)
+              : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+          />
+        </div>,
+        document.body,
       )}
+    </ScreenLayout>
+  )
+}
+
+/** One reviewed fact: what it is on the left, the actual values on the right. */
+function InviteReviewRow({ icon, variant, label, children }: {
+  icon: string
+  variant: React.ComponentProps<typeof HighlightIcon>["variant"]
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <CardContainer size="sm">
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        <HighlightIcon size="sm" variant={variant} iconName={icon} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 6 }}>
+            {label}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>{children}</div>
+        </div>
+      </div>
     </CardContainer>
   )
 }
@@ -4427,6 +4110,56 @@ function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: num
           {t}
         </button>
       ))}
+    </div>
+  )
+}
+
+// ─── Permission summary types (used in MemberPreview + RolePreview) ─────────────
+
+interface StudioPermRow {
+  id: string
+  label: string
+  value: number
+  max: number
+  names: string[]
+}
+
+function PermissionsBreakdown({ rows }: { rows: StudioPermRow[] }) {
+  const [open, setOpen] = useState<string | null>(null)
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {rows.map(row => {
+        const empty = row.value === 0
+        const pct   = Math.min((row.value / row.max) * 100, 100)
+        const isOpen = open === row.id
+        return (
+          <CardContainer key={row.id} size="sm" onClick={empty ? undefined : () => setOpen(o => o === row.id ? null : row.id)}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                {!empty && (isOpen
+                  ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />
+                  : <Icons.ChevronRight size={12} color="var(--muted-foreground)" style={{ flexShrink: 0 }} />)}
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{row.label}</span>
+              </div>
+              <Tag variant={empty ? "secondary" : (STUDIO_TAG[row.id] ?? "secondary")} size="sm">{row.value}</Tag>
+            </div>
+            <div style={{ height: 3, borderRadius: 2, background: "var(--field-border)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${pct}%`, borderRadius: 2, transition: "width 0.3s",
+                background: empty ? "transparent" : "var(--primary)" }} />
+            </div>
+            {isOpen && row.names.length > 0 && (
+              <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                {row.names.map(name => (
+                  <li key={name} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
+                    <Icons.Check size={11} color="var(--badge-success)" style={{ flexShrink: 0 }} />
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContainer>
+        )
+      })}
     </div>
   )
 }
@@ -4793,181 +4526,287 @@ function GroupPreview({ group, onViewFull: _onViewFull, onMemberClick }: { group
 
 // ─── Role form modal (create / edit) ─────────────────────────────────────────
 
-function RoleFormModal({ role, onSave, onClose }: {
-  role: Role | null
-  onSave: (saved: Role) => void
-  onClose: () => void
-}) {
-  const isEdit = role !== null
-  const [name, setName]   = useState(role?.label ?? "")
-  const [desc, setDesc]   = useState(role?.desc ?? "")
-  const [color, setColor] = useState(role?.color ?? ROLE_COLORS[0])
-  const [done, setDone]   = useState(false)
-
-  function handleSave() {
-    if (!name.trim()) return
-    const saved: Role = {
-      id: role?.id ?? name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
-      label: name.trim(),
-      system: false,
-      color,
-      desc: desc.trim(),
-      memberIds: role?.memberIds ?? [],
-    }
-    onSave(saved)
-    setDone(true)
-    setTimeout(onClose, 1600)
-  }
-
+/**
+ * A form section's label, hoisted OUT of the modals that use it. Defined inline
+ * it is a new component type on every render, so React throws the subtree away
+ * and rebuilds it each keystroke — which is both wasteful and a real source of
+ * lost state in the siblings around it.
+ */
+function FormSectionLabel({ children, hint, optional }: { children: React.ReactNode; hint?: string; optional?: boolean }) {
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 10002,
-      background: "rgba(0,0,0,0.45)", // audit-ignore: scrim overlay
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{
-        background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 16, width: 480, maxWidth: "95vw",
-        boxShadow: "var(--shadow-elevation-3, 0 16px 48px rgba(0,0,0,.22))", // audit-ignore: rgba fallback
-        overflow: "hidden",
-      }}>
-        {done ? (
-          <div style={{ padding: "48px 40px", textAlign: "center" }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: "50%", margin: "0 auto 16px",
-              background: "color-mix(in srgb, var(--color-text-success) 12%, transparent)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Icons.CheckCircle2 size={26} style={{ color: "var(--color-text-success)" }} />
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 6 }}>
-              Role {isEdit ? "updated" : "created"}
-            </div>
-            <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-              "{name.trim()}" is {isEdit ? "now updated" : "ready to assign to members"}.
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div style={{
-              padding: "20px 24px 16px",
-              borderBottom: "1px solid var(--border)",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-            }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>
-                  {isEdit ? "Edit role" : "New role"}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>
-                  {isEdit ? "Update this custom role's name, description, and color." : "Create a custom role to bundle permissions for specific team members."}
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted-foreground)", padding: 4, borderRadius: 6 }}
-              >
-                <Icons.X size={18} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: "24px 24px 8px" }}>
-              {/* Name */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Role name
-                </label>
-                <input
-                  autoFocus
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="e.g. Risk Analyst"
-                  style={{
-                    width: "100%", boxSizing: "border-box",
-                    padding: "9px 12px", borderRadius: 8,
-                    border: "1px solid var(--border)", background: "var(--background)",
-                    color: "var(--foreground)", fontSize: 14, fontFamily: "inherit", outline: "none",
-                  }}
-                />
-              </div>
-
-              {/* Description */}
-              <div style={{ marginBottom: 18 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Description
-                </label>
-                <textarea
-                  value={desc}
-                  onChange={e => setDesc(e.target.value)}
-                  placeholder="What does this role allow members to do?"
-                  rows={3}
-                  style={{
-                    width: "100%", boxSizing: "border-box",
-                    padding: "9px 12px", borderRadius: 8,
-                    border: "1px solid var(--border)", background: "var(--background)",
-                    color: "var(--foreground)", fontSize: 14, fontFamily: "inherit",
-                    resize: "vertical", outline: "none", lineHeight: 1.5,
-                  }}
-                />
-              </div>
-
-              {/* Color picker */}
-              <div style={{ marginBottom: 8 }}>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--muted-foreground)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                  Role color
-                </label>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  {ROLE_COLORS.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setColor(c)}
-                      title={c}
-                      style={{
-                        width: 30, height: 30, borderRadius: "50%", background: c,
-                        border: color === c ? "3px solid var(--foreground)" : "3px solid transparent",
-                        outline: color === c ? `2px solid ${c}` : "none",
-                        outlineOffset: 2, cursor: "pointer", flexShrink: 0,
-                        transition: "outline 0.12s, border 0.12s",
-                      }}
-                    />
-                  ))}
-                </div>
-                {/* Preview */}
-                <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{
-                    width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0,
-                  }} />
-                  <span style={{
-                    fontSize: 12, fontWeight: 600, padding: "2px 10px", borderRadius: 6,
-                    background: `${color}22`, color: color, border: `1px solid ${color}55`,
-                  }}>
-                    {name.trim() || "Role name"}
-                  </span>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>preview</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{
-              padding: "16px 24px 20px",
-              display: "flex", justifyContent: "flex-end", gap: 10,
-            }}>
-              <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-              <Button
-                variant="primary" size="sm"
-                onClick={handleSave}
-                disabled={!name.trim()}
-              >
-                {isEdit ? "Save changes" : "Create role"}
-              </Button>
-            </div>
-          </>
-        )}
+    <div style={{ marginBottom: hint ? 8 : 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>
+        {children}{optional && <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> (optional)</span>}
       </div>
+      {hint && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>{hint}</div>}
     </div>
   )
+}
+
+/**
+ * Create a role — a full-page wizard, not a modal.
+ *
+ * Assigning members made it six field groups, and the Create cascade sends a
+ * standalone create past five fields to a full-page form; adding stages on top
+ * of that lands on "two or more stages → full-page wizard + Stepper +
+ * StepperNavFooter". So the surface follows from the content, which is the
+ * order the pattern insists on.
+ *
+ * The Sidebar is hidden for the duration (`hideSidebar`) — the pattern's own
+ * rule for full-page create surfaces, and the reason `ScreenLayout` grew the
+ * prop. `Header` carries the title and a backButton only: the flow completes in
+ * the footer, never in a header CTA.
+ *
+ * Three stages, in the order the object needs them:
+ *   1 Details      — what it is
+ *   2 Permissions  — what it grants. Not optional and not deferred to a
+ *                    "default scope": a role that grants nothing is not a role,
+ *                    and scope is decided per permission, in the tree.
+ *   3 Members      — who gets it. The stage that pushed this off a modal.
+ */
+function NewRoleWizard({ onCancel, onCreate }: {
+  onCancel: () => void
+  onCreate: (role: Role, memberIds: string[]) => void
+}) {
+  const [step, setStep]       = useState(0)
+  const [name, setName]       = useState("")
+  const [desc, setDesc]       = useState("")
+  const [basedOn, setBasedOn] = useState<string | null>(null)
+  const [studios, setStudios] = useState<string[]>([])
+  const [activeStudio, setActiveStudio] = useState<string | null>(null)
+  const [overrides, setOverrides]           = useState<PermOverrides>({})
+  const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
+  const [memberIds, setMemberIds] = useState<string[]>([])
+  const [memberQuery, setMemberQuery] = useState("")
+
+  // Picking a source role copies the studios it covers. It does NOT copy
+  // permissions — the fixture holds one shared tree, not a grant list per role,
+  // so claiming otherwise would be a lie the UI cannot back up.
+  function chooseBase(id: string | null) {
+    setBasedOn(id)
+    const src = id ? ROLES.find(r => r.id === id) : null
+    if (src) {
+      setStudios(src.studios ?? [])
+      setActiveStudio((src.studios ?? [])[0] ?? null)
+    }
+  }
+
+  function toggleStudio(id: string) {
+    setStudios(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+      setActiveStudio(cur => next.includes(cur ?? "") ? cur : next[0] ?? null)
+      return next
+    })
+  }
+
+  function togglePermission(id: string, on: boolean) {
+    setOverrides(prev => {
+      const copy = { ...prev }
+      if (on) copy[id] = "g-direct"
+      else delete copy[id]
+      return copy
+    })
+  }
+
+  const grantedCount = Object.values(overrides).filter(v => GRANTED_STATES.includes(v)).length
+  const canContinue  = step === 0 ? name.trim().length > 0
+                     : step === 1 ? studios.length > 0 && grantedCount > 0
+                     : true
+
+  const steps: StepItem[] = [
+    { label: "Details",     state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Permissions", state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Members",     state: step === 2 ? "active" : "default" },
+  ]
+
+  function finish() {
+    onCreate({
+      id: name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      label: name.trim(),
+      system: false,
+      desc: desc.trim(),
+      memberIds,
+      studios,
+    }, memberIds)
+  }
+
+  const shownMembers = members_forWizard(memberQuery)
+
+  return (
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title="New role"
+          description="A role bundles permissions so they can be granted to several people at once."
+          backButton
+          onBackButtonClick={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} />
+      </div>
+
+      {/* ── 1 · Details ───────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
+          <div>
+            <FormSectionLabel>Role name</FormSectionLabel>
+            <Input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Risk Analyst" />
+          </div>
+          <div>
+            <FormSectionLabel optional>Description</FormSectionLabel>
+            <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
+              placeholder="What does this role allow members to do?" />
+          </div>
+          <div>
+            <FormSectionLabel optional hint="Copies which studios that role covers. Permissions are chosen in the next step either way.">
+              Start from
+            </FormSectionLabel>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <Chip size="s" variant={basedOn === null ? "primary" : "secondary"} onClick={() => chooseBase(null)}>Blank</Chip>
+              {ROLES.map(r => (
+                <Chip key={r.id} size="s" variant={basedOn === r.id ? "primary" : "secondary"} onClick={() => chooseBase(r.id)}>
+                  {r.label}
+                </Chip>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2 · Permissions ───────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <FormSectionLabel hint="Pick the studios first — the permissions below are the ones those studios define.">
+              Studio access
+            </FormSectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
+              {INVITE_STUDIO_OPTIONS.map(st => {
+                const on = studios.includes(st.id)
+                return (
+                  <CardContainer key={st.id} size="sm" selected={on} onClick={() => toggleStudio(st.id)}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+                      <Checkbox size="sm" checked={on} id={`wiz-studio-${st.id}`} />
+                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          </div>
+
+          {studios.length === 0 ? (
+            <EmptyState
+              icon={Icons.ShieldQuestion}
+              title="Pick a studio first"
+              description="A role grants permissions inside a studio, so choose at least one above."
+            />
+          ) : (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <FormSectionLabel>Permissions</FormSectionLabel>
+                <Tag variant={grantedCount > 0 ? "success" : "neutral"} size="sm" className="ml-auto">
+                  {grantedCount} granted
+                </Tag>
+              </div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+                {STUDIO_TABS.filter(t => studios.includes(t.id)).map(t => (
+                  <Chip key={t.id} size="s" variant={activeStudio === t.id ? "primary" : "secondary"} onClick={() => setActiveStudio(t.id)}>
+                    {t.label}
+                  </Chip>
+                ))}
+              </div>
+              <CardContainer className="!p-0 overflow-hidden">
+                {(PERM_TREE[activeStudio ?? ""] ?? []).map(n => (
+                  <EditablePermTreeNode
+                    key={n.id}
+                    node={n}
+                    depth={0}
+                    overrides={overrides}
+                    onToggle={togglePermission}
+                    mode="edit"
+                    scopeOverrides={scopeOverrides}
+                    onScopeChange={(id, sc) => setScopeOverrides(prev => ({ ...prev, [id]: sc }))}
+                  />
+                ))}
+              </CardContainer>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 3 · Members ───────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 720 }}>
+          <FormSectionLabel optional hint="You can also assign this role later, from a member's profile.">
+            Assign members
+          </FormSectionLabel>
+          <Input value={memberQuery} onChange={e => setMemberQuery(e.target.value)} placeholder="Search members…" />
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {shownMembers.length === 0 ? (
+              <EmptyState icon={Icons.UserSearch} title="No members found"
+                description="Try a different name or email." />
+            ) : shownMembers.map(m => {
+              const on = memberIds.includes(m.id)
+              return (
+                <CardContainer key={m.id} size="sm" selected={on}
+                  onClick={() => setMemberIds(prev => on ? prev.filter(x => x !== m.id) : [...prev, m.id])}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Checkbox size="sm" checked={on} id={`wiz-member-${m.id}`} className="pointer-events-none" />
+                    <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                      avatarStyle={m.status === "active" ? "text" : "empty"} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{m.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{m.email}</div>
+                    </div>
+                    <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
+                  </div>
+                </CardContainer>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2 ? "Create role" : "Next"}
+            nextDisabled={!canContinue}
+            onNext={step === 2 ? finish : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+          />
+        </div>,
+        document.body,
+      )}
+    </ScreenLayout>
+  )
+}
+
+/** Members the wizard offers, filtered by the search box. */
+function members_forWizard(query: string) {
+  const q = query.trim().toLowerCase()
+  if (!q) return MEMBERS
+  return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
 }
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -4978,7 +4817,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   const [query, setQuery]               = useState("")
   const [rolesQuery, setRolesQuery]     = useState("")
   const [groupsQuery, setGroupsQuery]   = useState("")
-  const [members, setMembers]           = useState<Member[]>(MEMBERS)
+  const [members, setMembers]           = useState<Member[]>([...MEMBERS])
   const [roles, setRoles]               = useState<Role[]>(ROLES)
   const [groups, setGroups]             = useState<Group[]>(GROUPS)
   const [detailView, setDetailView]     = useState<DetailView>(null)
@@ -4989,19 +4828,64 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   // preview component no longer renders its own "open the full thing" button.
   const previewCta =
     previewItem?.type === "member" ? { label: "View full profile", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
-  : previewItem?.type === "role"   ? { label: previewItem.role.system ? "View role" : "Edit role", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
+  : previewItem?.type === "role"   ? { label: "View role", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
   : previewItem?.type === "group"  ? { label: "Manage group", onClick: () => { setDetailView(previewItem); setPreviewItem(null) } }
   : undefined
   const [showInvite, setShowInvite]     = useState(false)
-  const [roleForm, setRoleForm]         = useState<{ role: Role | null } | null>(null)
+  const [creatingRole, setCreatingRole] = useState(false)
+  const toast = useToast()
 
-  function handleRoleSave(saved: Role) {
-    setRoles(prev => {
-      const exists = prev.some(r => r.id === saved.id)
-      return exists ? prev.map(r => r.id === saved.id ? saved : r) : [...prev, saved]
+  function handleRoleCreate(saved: Role, assigned: string[]) {
+    setRoles(prev => [...prev, saved])
+    setCreatingRole(false)
+    // A wizard lands on the object it created (Create pattern), and the toast
+    // confirms the write itself — top-right, gone in 3.5s.
+    setDetailView({ type: "role", role: saved })
+    toast.success(`Role "${saved.label}" created`, {
+      description: assigned.length > 0
+        ? `Assigned to ${assigned.length} member${assigned.length === 1 ? "" : "s"}.`
+        : "Assign it to members from their profile whenever you are ready.",
     })
-    setDetailView(dv => dv?.type === "role" && dv.role.id === saved.id ? { type: "role", role: saved } : dv)
-    setRoleForm(null)
+  }
+
+  function handleInvite(emails: string[], role: MemberRole, studios: string[], groupIds: string[]) {
+    const stamp = Date.now()
+    const invited: Member[] = emails.map((email, i) => ({
+      id: `new-${stamp}-${i}`,
+      name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+      email,
+      role,
+      status: "invited",
+      lastActive: null,
+      joinedAt: new Date().toISOString(),
+      initials: email.slice(0, 2).toUpperCase(),
+      avatarColor: "var(--muted)",
+      mfaEnabled: false,
+      studios,
+    }))
+    setMembers(ms => [...ms, ...invited])
+
+    // The chosen groups have to actually gain these people, or the review step
+    // stated something that never happened. GROUPS is a module fixture read
+    // directly by six call sites, so it is written in place rather than lifted
+    // into state for this one flow — and the new people go into MEMBERS for the
+    // same reason: GroupCard, GroupPreview and the role panels all resolve a
+    // memberId against that fixture, so somebody who exists only in state is
+    // silently dropped by their `.filter(Boolean)`.
+    MEMBERS.push(...invited)
+    GROUPS.forEach(g => {
+      if (groupIds.includes(g.id)) g.memberIds = [...g.memberIds, ...invited.map(m => m.id)]
+    })
+
+    setShowInvite(false)
+    setMainTab("members")
+    setStatusFilter("invited")
+    toast.success(
+      emails.length === 1 ? "Invitation sent" : `${emails.length} invitations sent`,
+      {
+        description: `${emails.length === 1 ? "It expires" : "They expire"} in 7 days. Filtered to Invited so you can see them.`,
+      },
+    )
   }
 
   const counts = useMemo(() => ({
@@ -5080,6 +4964,14 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   }
 
   // Detail pages
+  if (creatingRole) {
+    return <NewRoleWizard onCancel={() => setCreatingRole(false)} onCreate={handleRoleCreate} />
+  }
+
+  if (showInvite) {
+    return <InviteWizard onCancel={() => setShowInvite(false)} onSend={handleInvite} />
+  }
+
   if (detailView?.type === "member") {
     const liveMember = members.find(m => m.id === detailView.member.id) ?? detailView.member
     return (
@@ -5153,7 +5045,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             mainTab === "members"
               ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
               : mainTab === "roles"
-              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setRoleForm({ role: null }) }
+              ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setCreatingRole(true) }
               : { label: "New group",     icon: Icons.FolderPlus }
           }
         />
@@ -5350,17 +5242,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         )}
       </SlideOut>
 
-      {/* Invite slide-out */}
-      {showInvite && (
-        <InviteSlideOut
-          onClose={() => setShowInvite(false)}
-          onSend={member => setMembers(ms => [...ms, member])}
-        />
-      )}
 
-      {roleForm !== null && (
-        <RoleFormModal role={roleForm.role} onSave={handleRoleSave} onClose={() => setRoleForm(null)} />
-      )}
     </ScreenLayout>
   )
 }

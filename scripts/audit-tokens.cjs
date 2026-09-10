@@ -841,6 +841,15 @@ screenFiles.forEach((file) => {
 // false positives.
 const SIDE_PAD_RE = /padding:\s*["'`]\s*[\d.]+(?:px)?\s+(1[6-9]|[2-9]\d)px/
 
+// Where a component's body ends: the next top-level declaration. This has to
+// know about `export function` and `const X = (…) =>` as well as a bare
+// `function`, because a screen file's LAST helper is usually followed by its
+// one `export function …Screen`. Matching only `\nfunction` let that helper's
+// body run to end of file, so the whole page's padding was reported as if it
+// were inside a SlideOut child — four of AdminAuditLog's five hits, and every
+// hit in AdminIntegrations.
+const NEXT_TOP_LEVEL_RE = /\n(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+[A-Z]|\n(?:export\s+)?(?:const|class)\s+[A-Z]/
+
 screenFiles.forEach((file) => {
   const text = fs.readFileSync(file, "utf8")
   if (!/<SlideOut\b/.test(text)) return
@@ -858,10 +867,21 @@ screenFiles.forEach((file) => {
   if (childNames.size === 0) return
 
   const hits = []
+
+  // Inline children count too. AdminAuditLog's detail panel is written straight
+  // inside <SlideOut>…</SlideOut> rather than extracted into a component, and a
+  // name-only pass walked right past it.
+  blocks.forEach((b) => {
+    const blockStart = code.indexOf(b)
+    for (const m of b.matchAll(new RegExp(SIDE_PAD_RE, "g"))) {
+      hits.push(code.slice(0, blockStart + m.index).split("\n").length)
+    }
+  })
+
   childNames.forEach((name) => {
     const start = code.search(new RegExp(`function\\s+${name}\\s*\\(`))
     if (start === -1) return
-    const nextFn = code.slice(start + 1).search(/\nfunction\s+[A-Z]/)
+    const nextFn = code.slice(start + 1).search(NEXT_TOP_LEVEL_RE)
     const body = nextFn === -1 ? code.slice(start) : code.slice(start, start + 1 + nextFn)
     const lineOf = (offset) => code.slice(0, start + offset).split("\n").length
     for (const m of body.matchAll(new RegExp(SIDE_PAD_RE, "g"))) {

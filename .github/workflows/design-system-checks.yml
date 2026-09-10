@@ -47,3 +47,67 @@ jobs:
         run: |
           git fetch --depth=1 origin "${{ github.base_ref }}"
           node scripts/audit-ratchet.cjs FETCH_HEAD
+
+  # ── Publish the GitHub Pages site ─────────────────────────────────────────
+  # The site used to be published by hand, with `npm run deploy` from a laptop.
+  # Two problems, both real rather than theoretical:
+  #
+  #   1. `gh-pages -d dist` publishes the WORKING TREE, not main. Running it
+  #      while on a feature branch puts unmerged work on the official site and
+  #      nothing warns you. On 2026-09-09 that was one command away from
+  #      happening.
+  #   2. It only runs when someone remembers. The site sat a full day behind
+  #      main with six merged PRs of drift, which turns "is this live yet?"
+  #      into a question the team has to ask.
+  #
+  # So the site now follows main, and only main. `needs: checks` is the gate:
+  # a red main does not publish. The review gate moves from "before deploy" to
+  # "before merge", which is where it already happened in practice — every PR
+  # gets its own Vercel preview.
+  deploy:
+    needs: checks
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # Never let two deploys race for the branch. Queue instead of cancelling —
+    # the last push must be the one that ends up live.
+    concurrency:
+      group: gh-pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # GH_PAGES=true is what sets Vite's base to /aims-os-design-system/.
+      # This is a SECOND build on purpose: the checks job builds for Vercel,
+      # which serves from the domain root, so its output has the wrong base
+      # path and cannot be reused here.
+      - name: Build for GitHub Pages
+        run: npm run build
+        env:
+          GH_PAGES: "true"
+
+      # The same tool `npm run deploy` already used, so the published result is
+      # byte-for-byte what a manual deploy produced — only the trigger changed.
+      #
+      # NOTE the identity has no "[bot]" in it, and must not get "corrected" back
+      # to GitHub's canonical `github-actions[bot] <…+github-actions[bot]@…>`:
+      # gh-pages parses --user with a strict RFC address matcher and square
+      # brackets are not legal in an unquoted local-part, so it exits 1 before
+      # doing any work. That is exactly how this job failed on its first run.
+      - name: Publish to gh-pages
+        env:
+          REPO_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+        run: |
+          npx gh-pages \
+            --dist dist \
+            --repo "$REPO_URL" \
+            --user "github-actions <41898282+github-actions@users.noreply.github.com>" \
+            --message "Deploy ${GITHUB_SHA:0:7} from main"
