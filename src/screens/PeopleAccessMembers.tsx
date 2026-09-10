@@ -566,7 +566,7 @@ function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; 
           cursor: hasChildren ? "pointer" : "default",
           background: "transparent",
         }}
-        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
         <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -973,7 +973,7 @@ function AuditRow({ ev, isLast }: { ev: AuditEvent; isLast: boolean }) {
           padding: "10px 16px", cursor: "pointer", gap: 10, alignItems: "center",
           background: expanded ? "var(--table-row-hover-bg)" : "transparent",
         }}
-        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+        onMouseEnter={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
         onMouseLeave={e => { if (!expanded) (e.currentTarget as HTMLElement).style.background = "transparent" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)" }}>
@@ -1587,11 +1587,7 @@ function AppsPanel({ member }: { member: Member }) {
                 padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
                 background: "var(--surface)",
               }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                  background: "var(--surface-raised)", border: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-                }}>{meta.icon}</div>
+                <span style={{ color: "var(--primary)", flexShrink: 0, display: "flex" }}>{meta.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
@@ -1717,14 +1713,10 @@ function AppsPanel({ member }: { member: Member }) {
                   padding: "13px 18px", cursor: isEditingThis ? "default" : "pointer",
                   background: isExpanded ? "color-mix(in srgb, var(--primary) 3%, transparent)" : "transparent",
                 }}
-                onMouseEnter={e => { if (!isExpanded && !isEditingThis) (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { if (!isExpanded && !isEditingThis) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isExpanded ? "color-mix(in srgb, var(--primary) 3%, transparent)" : "transparent" }}
               >
-                <div style={{
-                  width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-                  background: "var(--surface-raised)", border: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)",
-                }}>{meta.icon}</div>
+                <span style={{ color: "var(--primary)", flexShrink: 0, display: "flex" }}>{meta.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 3 }}>{meta.label}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
@@ -1842,7 +1834,7 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
               {filteredUnassigned.map(role => (
                 <button key={role.id} onClick={() => { onAssignRole(role.id); setAssignOpen(false); setRoleSearch("") }}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", border: "none", borderRadius: 8, background: "transparent", cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
                   <div style={{ width: 10, height: 10, borderRadius: "50%", flexShrink: 0, background: role.color }} />
@@ -1867,7 +1859,7 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
           display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", fontSize: 12, fontWeight: 600,
           border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
         }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
           onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
         >
           <Icons.Plus size={13} /> Assign Role
@@ -2038,7 +2030,7 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
                 {filteredUnassigned.map(g => (
                   <button key={g.id} onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}
                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", border: "none", borderRadius: 8, background: "transparent", cursor: "pointer", textAlign: "left" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
                     <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: `${g.color}22`, border: `1px solid ${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontWeight: 700, fontSize: 11 }}>
@@ -2059,7 +2051,7 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
             display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", fontSize: 12, fontWeight: 600,
             border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
           }}
-            onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
             onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
           >
             <Icons.Plus size={13} /> Assign Group
@@ -2112,7 +2104,7 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
               {filteredUnassigned.map(g => (
                 <button key={g.id} onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", border: "none", borderRadius: 8, background: "transparent", cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
                   <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: `${g.color}22`, border: `1px solid ${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontWeight: 700, fontSize: 11 }}>
@@ -2145,7 +2137,7 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
           display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", fontSize: 12, fontWeight: 600,
           border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
         }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--accent)")}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
           onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
         >
           <Icons.Plus size={13} /> Assign Group
@@ -2469,7 +2461,7 @@ function RemoveAccessModal({
         </div>
 
         {/* Resource card */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)", background: "var(--surface-raised)" }}>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
               {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
@@ -2658,7 +2650,7 @@ function ResourcesPanel({ member }: { member: Member }) {
                   padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
                   alignItems: "center",
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2989,7 +2981,6 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick, allRoles, onRem
                 <div style={{ fontSize: 13, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
               </div>
             ) : members.map(m => {
-              const statusColor = STATUS_COLOR[m.status]
               return (
                 <div
                   key={m.id}
@@ -3000,16 +2991,15 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick, allRoles, onRem
                     cursor: onMemberClick ? "pointer" : "default",
                     transition: "background 0.1s",
                   }}
-                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
                 >
                   {/* Avatar */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
-                  }}>{m.initials}</div>
+                  <AvatarCircle
+                    name={m.name}
+                    sizeKey="lg"
+                    avatarStyle={m.status === "active" ? "text" : "empty"}
+                  />
 
                   {/* Name + email */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3023,13 +3013,8 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick, allRoles, onRem
                   </div>
 
                   {/* User type badge */}
-                  <div style={{
-                    minWidth: 72, textAlign: "center", flexShrink: 0,
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
-                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
-                  }}>
-                    {m.role}
+                  <div style={{ minWidth: 72, textAlign: "center", flexShrink: 0 }}>
+                    <Tag size="sm">{m.role}</Tag>
                   </div>
 
                   {/* Last active */}
@@ -3045,29 +3030,16 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick, allRoles, onRem
                   </div>
 
                   {/* MFA badge */}
-                  <div
-                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: m.mfaEnabled
-                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                    }}
-                  >
-                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-                    MFA
+                  <div title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"} style={{ display: "flex", flexShrink: 0 }}>
+                    <Tag variant={m.mfaEnabled ? "success" : "alert"} size="sm">
+                      {m.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                      MFA
+                    </Tag>
                   </div>
 
                   {/* Status */}
-                  <div style={{
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-                    minWidth: 76, textAlign: "center", flexShrink: 0,
-                  }}>
-                    {STATUS_LABEL[m.status]}
+                  <div style={{ minWidth: 76, textAlign: "center", flexShrink: 0 }}>
+                    <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
                   </div>
 
                   {/* Unassign button */}
@@ -3366,7 +3338,6 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
                 <div style={{ fontSize: 13, marginTop: 4 }}>Add members to this group to grant them shared access</div>
               </div>
             ) : groupMembers.map(m => {
-              const statusColor = STATUS_COLOR[m.status]
               return (
                 <div
                   key={m.id}
@@ -3377,16 +3348,15 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
                     cursor: onMemberClick ? "pointer" : "default",
                     transition: "background 0.1s",
                   }}
-                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                  onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
                 >
                   {/* Avatar */}
-                  <div style={{
-                    width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                    background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, color: "#fff",  // audit-ignore: white on colored avatar
-                  }}>{m.initials}</div>
+                  <AvatarCircle
+                    name={m.name}
+                    sizeKey="lg"
+                    avatarStyle={m.status === "active" ? "text" : "empty"}
+                  />
 
                   {/* Name + email */}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -3400,13 +3370,8 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
                   </div>
 
                   {/* User type badge */}
-                  <div style={{
-                    minWidth: 72, textAlign: "center", flexShrink: 0,
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${USER_TYPE_COLOR[m.role]}22`, color: USER_TYPE_COLOR[m.role],
-                    border: `1px solid ${USER_TYPE_COLOR[m.role]}44`,
-                  }}>
-                    {m.role}
+                  <div style={{ minWidth: 72, textAlign: "center", flexShrink: 0 }}>
+                    <Tag size="sm">{m.role}</Tag>
                   </div>
 
                   {/* Last active */}
@@ -3422,29 +3387,16 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
                   </div>
 
                   {/* MFA badge */}
-                  <div
-                    title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 3, flexShrink: 0,
-                      padding: "3px 7px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                      background: m.mfaEnabled
-                        ? "color-mix(in srgb, var(--badge-success) 12%, transparent)"
-                        : "color-mix(in srgb, var(--badge-alert) 12%, transparent)",
-                      color: m.mfaEnabled ? "var(--badge-success)" : "var(--badge-alert)",
-                      border: `1px solid ${m.mfaEnabled ? "color-mix(in srgb, var(--badge-success) 30%, transparent)" : "color-mix(in srgb, var(--badge-alert) 30%, transparent)"}`,
-                    }}
-                  >
-                    {m.mfaEnabled ? <Icons.ShieldCheck size={11} /> : <Icons.ShieldAlert size={11} />}
-                    MFA
+                  <div title={m.mfaEnabled ? `MFA enabled (${m.mfaMethod ?? ""})` : "MFA not enabled"} style={{ display: "flex", flexShrink: 0 }}>
+                    <Tag variant={m.mfaEnabled ? "success" : "alert"} size="sm">
+                      {m.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
+                      MFA
+                    </Tag>
                   </div>
 
                   {/* Status */}
-                  <div style={{
-                    padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 600,
-                    background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44`,
-                    minWidth: 76, textAlign: "center", flexShrink: 0,
-                  }}>
-                    {STATUS_LABEL[m.status]}
+                  <div style={{ minWidth: 76, textAlign: "center", flexShrink: 0 }}>
+                    <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
                   </div>
 
                   {/* Remove button */}
@@ -3525,14 +3477,9 @@ function MemberRow({
         onMouseLeave={() => setHovered(false)}
       >
         {/* Avatar */}
-        <div style={{
-          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-          background: member.status === "active" ? member.avatarColor : "var(--muted)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 12, fontWeight: 700,
-          color: member.status === "active" ? "#fff" : "var(--muted-foreground)",  // audit-ignore
-          opacity: member.status === "suspended" ? 0.5 : 1,
-        }}>{member.initials}</div>
+        <div style={{ opacity: member.status === "suspended" ? 0.5 : 1 }}>
+          <AvatarCircle name={member.name} sizeKey="lg" avatarStyle={member.status === "active" ? "text" : "empty"} />
+        </div>
 
         {/* Name + email */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -3672,7 +3619,7 @@ function MemberRow({
                 cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left",
                 color: danger ? "var(--badge-error)" : "var(--foreground)",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--accent)" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "none" }}
               >
                 <Icon size={13} />
@@ -4285,7 +4232,7 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+      <div style={{ padding: "20px 0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14, flexShrink: 0,
@@ -4326,12 +4273,12 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+      <div style={{ flexShrink: 0 }}>
         <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 0 20px" }}>
         {tab === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{role.desc}</p>
@@ -4373,28 +4320,17 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
                   cursor: onMemberClick ? "pointer" : "default",
                   transition: "background 0.1s", borderRadius: 6,
                 }}
-                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
+                <AvatarCircle name={m.name} sizeKey="md" avatarStyle={m.status === "active" ? "text" : "empty"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {m.title}{m.title && m.department ? " · " : ""}{m.department}
                   </div>
                 </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
-                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
-                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
-                }}>
-                  {STATUS_LABEL[m.status]}
-                </span>
+                <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
               </div>
             ))}
           </div>
@@ -4411,7 +4347,7 @@ function GroupPreview({ group, onViewFull: _onViewFull, onMemberClick }: { group
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Identity header */}
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+      <div style={{ padding: "20px 0 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14, flexShrink: 0,
@@ -4445,12 +4381,12 @@ function GroupPreview({ group, onViewFull: _onViewFull, onMemberClick }: { group
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: "0 20px", flexShrink: 0 }}>
+      <div style={{ flexShrink: 0 }}>
         <PreviewTabBar tabs={["Overview", "Members"]} active={tab} onChange={setTab} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 0 20px" }}>
         {tab === 0 && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.55, margin: 0 }}>{group.desc}</p>
@@ -4493,28 +4429,17 @@ function GroupPreview({ group, onViewFull: _onViewFull, onMemberClick }: { group
                   cursor: onMemberClick ? "pointer" : "default",
                   transition: "background 0.1s", borderRadius: 6,
                 }}
-                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--accent)" }}
+                onMouseEnter={e => { if (onMemberClick) (e.currentTarget as HTMLDivElement).style.background = "var(--el-row-hover)" }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent" }}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                  background: m.status === "active" ? m.avatarColor : "var(--muted)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 700, color: "#fff",  // audit-ignore: prototype fixture data
-                }}>{m.initials}</div>
+                <AvatarCircle name={m.name} sizeKey="md" avatarStyle={m.status === "active" ? "text" : "empty"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.name}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {m.title}{m.title && m.department ? " · " : ""}{m.department}
                   </div>
                 </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 100, flexShrink: 0,
-                  background: `${STATUS_COLOR[m.status]}22`, color: STATUS_COLOR[m.status],
-                  border: `1px solid ${STATUS_COLOR[m.status]}44`,
-                }}>
-                  {STATUS_LABEL[m.status]}
-                </span>
+                <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
               </div>
             ))}
           </div>
