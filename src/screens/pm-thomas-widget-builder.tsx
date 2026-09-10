@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
-import { saveWidget } from "@/lib/widget-drafts"
+import { saveWidget, takeAnnouncement, savedMessage, type SavedWidget } from "@/lib/widget-drafts"
+import { useToast } from "@/components/ui/toast"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
@@ -829,6 +830,12 @@ export default function PMThomasWidgetBuilderScreen() {
     })
   }
 
+  const toast = useToast()
+  function announce(w: SavedWidget) {
+    const m = savedMessage(w)
+    toast.success(m.title, { description: m.description })
+  }
+
   function resetAll() {
     setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
@@ -852,7 +859,11 @@ export default function PMThomasWidgetBuilderScreen() {
           title="Widget Builder"
           description="Connect a data source, pick a chart type, and preview your widget live."
           primaryAction={{
-            label: "Save to catalog",
+            // saveLabel, not a fixed string: this button and the footer's are
+            // the same action, and for a while they disagreed out loud — the
+            // footer said "Save as draft" while this one still said "Save to
+            // catalog" about the very same click.
+            label: saveLabel,
             icon: LucideIcons.Check,
             disabled: !canSave,
             onClick: attemptSave,
@@ -995,7 +1006,7 @@ export default function PMThomasWidgetBuilderScreen() {
                       <EmptyState
                         compact icon={LucideIcons.Filter}
                         title="No filters"
-                        description="The widget will read every record in this entity."
+                        description={`The widget will read every record in this ${dataMode === "dataset" ? "dataset" : "entity"}.`}
                         ctaLabel="Add filter"
                         onCta={() => setDataFilters([{ id: `f-${Date.now()}`, column: "", op: "is", value: "" }])}
                       />
@@ -1563,7 +1574,15 @@ export default function PMThomasWidgetBuilderScreen() {
            fewer people want, and it is the only place the offer makes sense
            because the current widget is already safe. */
         ctaPrimary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
-        ctaSecondary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
+        /* This path never navigates, so the landing cannot speak for it. It
+           takes the announcement here — which also stops the library repeating
+           it later in the same session. */
+        ctaSecondary={{ label: "Create new widget", onClick: () => {
+          const saved = takeAnnouncement()
+          if (saved) announce(saved)
+          setSavedName(null)
+          resetAll()
+        } }}
       />
     </ScreenLayout>
   )
