@@ -1249,8 +1249,6 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
 // ─── Member detail page ───────────────────────────────────────────────────────
 
-const USER_TYPE_OPTIONS: UserType[] = ["Owner", "Admin", "Member"]
-
 function MemberDetailPage({
   member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
 }: {
@@ -3212,8 +3210,8 @@ function MemberRow({
             avatarStyle={member.status === "active" ? "text" : "empty"} />
         </div>
 
-        {/* Name + email */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Name + email — flex 2 against Department's 1; see the header. */}
+        <div style={{ flex: 2, minWidth: 200 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1, marginBottom: 1 }}>
             {member.name}
           </div>
@@ -3223,7 +3221,7 @@ function MemberRow({
         </div>
 
         {/* Department */}
-        <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ flex: 1, minWidth: 100, maxWidth: 220, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {member.department ?? "—"}
         </div>
 
@@ -3888,18 +3886,16 @@ function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: num
   )
 }
 
-function MemberPreview({
-  member, onRoleChange, onToggleSuspend, onSendInvite,
-}: {
-  member: Member
-  onRoleChange: (id: string, role: MemberRole) => void
-  onToggleSuspend: (id: string) => void
-  onSendInvite: (id: string) => void
-}) {
+/**
+ * The preview is read-only. It used to carry an Actions tab with a raw
+ * <select> for the user type and a suspend/invite button; Michael took it out
+ * — those belong to the full profile, which the panel's own CTA opens, and a
+ * raw <select> is not a DS control in the first place.
+ */
+function MemberPreview({ member }: { member: Member }) {
   const [tab, setTab] = useState(0)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
-  const isPending = member.status === "pending"
 
   // Same shape the role preview shows, so it is the same component — including
   // the expand, which this tab never had.
@@ -3943,7 +3939,7 @@ function MemberPreview({
 
       {/* Tabs */}
       <div>
-        <PreviewTabBar tabs={["Overview", "Permissions", "Actions"]} active={tab} onChange={setTab} />
+        <PreviewTabBar tabs={["Overview", "Permissions"]} active={tab} onChange={setTab} />
       </div>
 
       {/* Content */}
@@ -3993,32 +3989,6 @@ function MemberPreview({
           </div>
         )}
 
-        {/* Actions */}
-        {tab === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {!isInvited && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change user type</div>
-                <select
-                  value={member.role}
-                  onChange={e => onRoleChange(member.id, e.target.value as UserType)}
-                  style={{ width: "100%", padding: "8px 10px", fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none", cursor: "pointer" }}
-                >
-                  {USER_TYPE_OPTIONS.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {isPending ? (
-              <Button variant="primary" size="sm" onClick={() => onSendInvite(member.id)}>Send invitation</Button>
-            ) : isInvited ? (
-              <Button variant="secondary" size="sm" onClick={() => alert(`Invite resent to ${member.email}`)}>Resend invite</Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => onToggleSuspend(member.id)}>{isActive ? "Suspend access" : "Reactivate account"}</Button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
@@ -4718,10 +4688,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
   }, [groupsQuery])
 
-  function handleRoleChange(id: string, role: MemberRole) {
-    setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
-    setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
-  }
   /**
    * The second half of "create without inviting": the invitation that was
    * deferred goes out now. `joinedAt` doubles as the invite-sent stamp
@@ -4869,8 +4835,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
               textTransform: "uppercase", letterSpacing: "0.07em",
             }}>
-              <span style={{ flex: 1 }}>Member</span>
-              <span style={{ minWidth: 120 }}>Department</span>
+              {/* 2:1 — Member is the widest column but it does not get to
+                  absorb every spare pixel. It used to be the only flexible
+                  track, so on a wide screen the whole surplus opened up as a
+                  gap between the email and Department. */}
+              <span style={{ flex: 2, minWidth: 200 }}>Member</span>
+              <span style={{ flex: 1, minWidth: 100, maxWidth: 220 }}>Department</span>
               <span style={{ minWidth: 72, textAlign: "center" }}>User Type</span>
               <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
               <span style={{ minWidth: 60, textAlign: "center" }}>MFA</span>
@@ -5001,12 +4971,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         onCtaPrimary={previewCta?.onClick}
       >
         {previewItem?.type === "member" && (
-          <MemberPreview
-            member={previewItem.member}
-            onRoleChange={handleRoleChange}
-            onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
-            onSendInvite={handleSendInvite}
-          />
+          <MemberPreview member={previewItem.member} />
         )}
         {previewItem?.type === "role" && (
           <RolePreview
