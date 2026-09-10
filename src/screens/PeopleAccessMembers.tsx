@@ -25,7 +25,7 @@ import { HighlightIcon } from "@/components/ui/highlight-icon"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MemberStatus = "active" | "invited" | "suspended"
+type MemberStatus = "active" | "invited" | "pending" | "suspended"
 type UserType     = "Admin" | "Owner" | "Member"
 // Legacy alias kept only to avoid cascading rename inside fixture data until full refactor
 type MemberRole   = UserType
@@ -97,6 +97,7 @@ const MEMBERS: Member[] = [
   { id: "lr",  name: "Leo Ramírez",      email: "leo.ramirez@avance.com",      role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-20T00:00:00Z", initials: "LR", avatarColor: "var(--muted-foreground)", title: "Data Engineer",         department: "Engineering",      mfaEnabled: false, sessions: [] },
   { id: "cn",  name: "Clara Nakamura",   email: "clara.nakamura@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-21T00:00:00Z", initials: "CN", avatarColor: "var(--muted-foreground)", title: "Product Manager",       department: "Product",          mfaEnabled: false, sessions: [] },
   { id: "rv",  name: "Roberto Vargas",   email: "roberto.vargas@avance.com",   role: "Member",        status: "invited",   lastActive: null,                   joinedAt: "2026-08-22T00:00:00Z", initials: "RV", avatarColor: "var(--muted-foreground)", title: "Solutions Architect",   department: "Engineering",      mfaEnabled: false, sessions: [] },
+  { id: "nk",  name: "natalia.kim",      email: "natalia.kim@avance.com",      role: "Member",        status: "pending",   lastActive: null,                   joinedAt: "2026-08-25T00:00:00Z", initials: "NK", avatarColor: "var(--muted-foreground)", title: "",                      department: "",                 mfaEnabled: false, sessions: [] },
   { id: "fw",  name: "Fiona Walsh",      email: "fiona.walsh@avance.com",      role: "Member",        status: "suspended", lastActive: "2026-07-14T10:00:00Z", joinedAt: "2025-09-10T00:00:00Z", initials: "FW", avatarColor: "var(--muted-foreground)", title: "Analyst",               department: "Risk & Compliance", mfaEnabled: true,  mfaMethod: "sms",   mfaEnrolledAt: "2025-09-15T00:00:00Z", sessions: [] },
   { id: "ms",  name: "Marcus Silva",     email: "marcus.silva@avance.com",     role: "Member",        status: "suspended", lastActive: "2026-06-30T08:00:00Z", joinedAt: "2025-10-01T00:00:00Z", initials: "MS", avatarColor: "var(--muted-foreground)", title: "Data Scientist",        department: "Analytics",        mfaEnabled: false, sessions: [] },
 ]
@@ -330,16 +331,19 @@ function isLastAdminInRole(memberId: string, roleId: string, allRoles: Role[]): 
 const STATUS_TAG: Record<MemberStatus, "success" | "informative" | "neutral"> = {
   active:    "success",
   invited:   "informative",
+  pending:   "neutral",
   suspended: "neutral",
 }
 const STATUS_LABEL: Record<MemberStatus, string> = {
   active:    "Active",
   invited:   "Invited",
+  pending:   "Pending",
   suspended: "Suspended",
 }
 const STATUS_COLOR: Record<MemberStatus, string> = {
   active:    "var(--badge-success)",
   invited:   "var(--badge-light-blue)",
+  pending:   "var(--badge-alert)",
   suspended: "var(--muted-foreground)",
 }
 const USER_TYPE_COLOR: Record<UserType, string> = {
@@ -3457,7 +3461,7 @@ function GroupResourcesPanel({ groupId }: { groupId: string }) {
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
-type MemberAction = "reset-password" | "reset-mfa" | "suspend" | "unsuspend" | "deactivate" | "update"
+type MemberAction = "reset-password" | "reset-mfa" | "suspend" | "unsuspend" | "deactivate" | "update" | "send-invite" | "resend-invite"
 
 function MemberRow({
   member, onSelect, onAction,
@@ -3529,17 +3533,29 @@ function MemberRow({
           </span>
         </div>
 
-        {/* Last active */}
-        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 88 }}>
-          <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 1 }}>
-            {member.status === "invited" ? "Invite sent" : member.status === "suspended" ? "Suspended" : "Last active"}
-          </div>
-          {member.lastActive ? (
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
+        {/* Last active / invite status */}
+        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 100 }}>
+          {member.status === "pending" ? (
+            <>
+              <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600, marginBottom: 1 }}>No invite sent</div>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Added {formatRelative(member.joinedAt)}</div>
+            </>
+          ) : member.status === "invited" ? (
+            <>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 1 }}>Invite sent</div>
+              <div style={{ fontSize: 11, color: "var(--foreground)" }}>{formatRelative(member.joinedAt)}</div>
+            </>
           ) : (
-            <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>
-              {member.status === "invited" ? formatRelative(member.joinedAt) : "—"}
-            </div>
+            <>
+              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 1 }}>
+                {member.status === "suspended" ? "Suspended" : "Last active"}
+              </div>
+              {member.lastActive ? (
+                <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>—</div>
+              )}
+            </>
           )}
         </div>
 
@@ -3598,15 +3614,26 @@ function MemberRow({
             boxShadow: "0 8px 24px rgba(0,0,0,0.18)", // audit-ignore
             minWidth: 200,
           }}>
-            {[
-              { key: "reset-password", label: "Reset password", icon: Icons.KeyRound },
-              { key: "reset-mfa",      label: "Reset MFA",       icon: Icons.ShieldOff },
-              { key: member.status === "suspended" ? "unsuspend" : "suspend",
-                label: member.status === "suspended" ? "Unsuspend access" : "Suspend access",
-                icon: member.status === "suspended" ? Icons.UserCheck : Icons.UserX,
-              },
-              { key: "deactivate", label: "Deactivate user", icon: Icons.Ban, danger: true },
-            ].map(({ key, label, icon: Icon, danger }) => (
+            {(member.status === "pending"
+              ? [
+                  { key: "send-invite",  label: "Send invitation",  icon: Icons.Mail },
+                  { key: "deactivate",   label: "Remove contact",   icon: Icons.Trash2, danger: true },
+                ]
+              : member.status === "invited"
+              ? [
+                  { key: "resend-invite", label: "Resend invitation", icon: Icons.Mail },
+                  { key: "deactivate",    label: "Remove",            icon: Icons.Trash2, danger: true },
+                ]
+              : [
+                  { key: "reset-password", label: "Reset password", icon: Icons.KeyRound },
+                  { key: "reset-mfa",      label: "Reset MFA",       icon: Icons.ShieldOff },
+                  { key: member.status === "suspended" ? "unsuspend" : "suspend",
+                    label: member.status === "suspended" ? "Unsuspend access" : "Suspend access",
+                    icon: member.status === "suspended" ? Icons.UserCheck : Icons.UserX,
+                  },
+                  { key: "deactivate", label: "Deactivate user", icon: Icons.Ban, danger: true },
+                ]
+            ).map(({ key, label, icon: Icon, danger }) => (
               <button key={key} onClick={e => {
                 e.stopPropagation()
                 setMenuOpen(false)
@@ -3822,7 +3849,7 @@ function InviteSlideOut({ onClose, onSend }: {
         name: displayName,
         email: em,
         role: userType,
-        status: "invited",
+        status: sendEmail ? "invited" : "pending",
         lastActive: null,
         joinedAt: new Date().toISOString(),
         initials,
@@ -4960,6 +4987,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     all:       members.length,
     active:    members.filter(m => m.status === "active").length,
     invited:   members.filter(m => m.status === "invited").length,
+    pending:   members.filter(m => m.status === "pending").length,
     suspended: members.filter(m => m.status === "suspended").length,
   }), [members])
 
@@ -4971,6 +4999,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       { id: "all",       label: "All members", count: counts.all       },
       { id: "active",    label: "Active",      count: counts.active    },
       { id: "invited",   label: "Invited",     count: counts.invited   },
+      { id: "pending",   label: "Pending",     count: counts.pending   },
       { id: "suspended", label: "Suspended",   count: counts.suspended },
     ],
     onChange: (id) => setStatusFilter(id as "all" | MemberStatus),
