@@ -3703,6 +3703,15 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 }
 // ── Step 1: Apps ──────────────────────────────────────────────────────────────
 
+/**
+ * Deliberately loose: something, an @, a domain with a dot. Anything stricter
+ * starts rejecting addresses that are perfectly valid (plus-tags, new TLDs,
+ * long subdomains) and the field's job here is to catch "josjosjdos", not to
+ * be the authority on RFC 5322.
+ */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const isEmail = (v: string) => EMAIL_RE.test(v.trim())
+
 const INVITE_STUDIO_OPTIONS = [
   { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={13} /> },
   { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={13} /> },
@@ -3759,7 +3768,7 @@ function InviteWizard({ onCancel, onSend }: {
   // An Admin or an Owner gets every studio by definition, so stage 2 has
   // nothing it can require of them. A Member invited with no studio and no
   // group would land in the workspace able to open nothing at all.
-  const canContinue = step === 0 ? emails.length > 0 || emailDraft.trim().length > 0
+  const canContinue = step === 0 ? emails.length > 0 || isEmail(emailDraft)
                     : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
                     : true
 
@@ -3817,14 +3826,21 @@ function InviteWizard({ onCancel, onSend }: {
       {step === 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           <div>
-            <FormSectionLabel hint="Press Enter after each address. Everyone here gets the same role and the same access.">
+            <FormSectionLabel hint="Press Enter after each address; Backspace takes the last one back. Everyone here gets the same role and the same access.">
               Email addresses
             </FormSectionLabel>
+            {/* This is a recipient list, not a tag builder. `validate` is what
+                stops it accepting anything typed, and `tagVariant` stops the
+                six-colour cycle — six colours say "these differ from each
+                other", and one address does not differ from the next. */}
             <TagInput
               tags={emails}
               onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
               onRemoveTag={v => setEmails(e => e.filter(x => x !== v))}
               onDraftChange={setEmailDraft}
+              validate={v => isEmail(v) ? null : `"${v}" is not an email address.`}
+              tagVariant="neutral"
+              inlineTags
               placeholder="name@company.com"
               showAddButton={false}
             />

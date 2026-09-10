@@ -44,6 +44,38 @@ export interface TagInputProps {
    * draft into a tag before the click lands.
    */
   onDraftChange?: (draft: string) => void
+  /**
+   * Reject a value before it becomes a chip. Return an error message to
+   * refuse it, or null to accept.
+   *
+   * Without this the field takes anything, which is right for tags and wrong
+   * for a list of email addresses: "josjosjdos" turned into a chip and read
+   * as a label somebody had just invented. A field that accepts nonsense is
+   * announcing that it is a tag builder.
+   */
+  validate?: (value: string) => string | null
+  /**
+   * Render every chip in one variant instead of cycling six colours.
+   *
+   * The cycle is what makes a set of chips read as CATEGORIES — six colours
+   * say these things differ from each other. A list of recipients is one
+   * kind of thing repeated, so it takes one variant, usually "neutral".
+   */
+  tagVariant?: TagVariant
+  /**
+   * Render the committed values INSIDE the field, before the caret, instead of
+   * as a row of tags underneath it.
+   *
+   * A row of tags below the box is the tag-builder shape: the field makes
+   * labels and the labels live somewhere else. For a list of recipients that
+   * reads wrong — Michael, twice — because the addresses ARE the field's
+   * value, not a by-product of it. Every mail client puts them in the box for
+   * the same reason.
+   *
+   * Backspace on an empty caret removes the last one, which is the gesture
+   * people already have for this shape.
+   */
+  inlineTags?: boolean
   className?: string
 }
 
@@ -66,6 +98,9 @@ export function TagInput({
   maxVisibleTags = 8,
   showAddButton = true,
   onDraftChange,
+  validate,
+  tagVariant,
+  inlineTags = false,
   className,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState("")
@@ -75,33 +110,53 @@ export function TagInput({
   const containerRef = useRef<HTMLDivElement>(null)
   /** Escape blurs on purpose after clearing — that blur must not re-commit. */
   const escaping = useRef(false)
+  /** What `validate` said about the last attempted commit. */
+  const [rejected, setRejected] = useState<string | null>(null)
+
+  const shownError = error ?? rejected ?? undefined
 
   const maxReached = tags.length >= maxTags
   const isInputDisabled = disabled || maxReached
 
   const setDraft = useCallback((v: string) => {
     setInputValue(v)
+    // Typing again is the user answering the complaint; keeping it on screen
+    // while they fix the address is just nagging.
+    setRejected(null)
     onDraftChange?.(v)
   }, [onDraftChange])
 
   const commit = useCallback(() => {
     const trimmed = inputValue.trim()
     if (!trimmed) return
+    const problem = validate?.(trimmed) ?? null
+    if (problem) {
+      // Refused: the text stays in the field so it can be corrected rather
+      // than retyped, and the reason sits under it.
+      setRejected(problem)
+      return
+    }
     if (!tags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
       onAddTag(trimmed)
     }
     setDraft("")
-  }, [inputValue, tags, onAddTag, setDraft])
+  }, [inputValue, tags, onAddTag, setDraft, validate])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); commit() }
+    // With the values in the box, Backspace on an empty caret takes the last
+    // one back — the gesture this shape already teaches everywhere else.
+    if (e.key === "Backspace" && inlineTags && inputValue === "" && tags.length > 0) {
+      e.preventDefault()
+      onRemoveTag(tags[tags.length - 1])
+    }
     if (e.key === "Escape") {
       escaping.current = true
       setDraft("")
       setExpanded(false)
       inputRef.current?.blur()
     }
-  }, [commit, setDraft])
+  }, [commit, setDraft, inlineTags, inputValue, tags, onRemoveTag])
 
   // Collapse expanded chip list when clicking outside — DS spec: "Collapse back by clicking away"
   useEffect(() => {
@@ -122,7 +177,7 @@ export function TagInput({
   // ── Border style by state ─────────────────────────────────────────────────
   const borderStyle = isInputDisabled
     ? "1px solid var(--color-border-neutral-lighter)"
-    : error
+    : shownError
     ? "0.5px solid var(--field-border-error)"
     : focused
     ? "1px solid var(--field-border-focus)"
@@ -132,19 +187,42 @@ export function TagInput({
     <div ref={containerRef} className={cn("flex flex-col gap-[8px]", disabled && "opacity-40 pointer-events-none", className)}>
 
       {/* ── Input row ──────────────────────────────────────────────────── */}
-      <div className="flex gap-[12px] items-center" style={{ height: 40 }}>
+      <div className={cn("flex gap-[12px]", inlineTags ? "items-start" : "items-center")}
+        style={inlineTags ? undefined : { height: 40 }}>
 
         {/* Text field */}
         <div
-          className="flex-1 flex items-center rounded-[8px] px-[16px]"
+          className={cn(
+            "flex-1 rounded-[8px] px-[16px]",
+            inlineTags ? "flex flex-wrap items-center gap-[6px] py-[6px]" : "flex items-center",
+          )}
           style={{
-            height: 40,
+            ...(inlineTags ? { minHeight: 40 } : { height: 40 }),
             background: "var(--surface)",
             border: borderStyle,
             cursor: isInputDisabled ? "not-allowed" : "text",
           }}
           onClick={() => !isInputDisabled && inputRef.current?.focus()}
         >
+          {inlineTags && tags.map(tag => (
+            <Tag
+              key={tag}
+              variant={tagVariant ?? TAG_VARIANT_CYCLE[tags.indexOf(tag) % TAG_VARIANT_CYCLE.length]}
+              size="default"
+              trailingIcon={!disabled ? (
+                <button
+                  onClick={e => { e.stopPropagation(); onRemoveTag(tag) }}
+                  className="flex items-center justify-center shrink-0 rounded-[2px] hover:opacity-70 transition-opacity"
+                  style={{ width: 16, height: 16, background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+                  aria-label={`Remove ${tag}`}
+                >
+                  <X size={10} strokeWidth={1.75} />
+                </button>
+              ) : undefined}
+            >
+              {tag}
+            </Tag>
+          ))}
           <input
             ref={inputRef}
             value={inputValue}
@@ -161,8 +239,11 @@ export function TagInput({
               else commit()
             }}
             disabled={isInputDisabled}
-            placeholder={placeholder}
-            className="w-full bg-transparent text-sm font-medium outline-none border-none"
+            placeholder={tags.length > 0 && inlineTags ? "" : placeholder}
+            className={cn(
+              "bg-transparent text-sm font-medium outline-none border-none",
+              inlineTags ? "flex-1 min-w-[140px]" : "w-full",
+            )}
             style={{
               color: "var(--foreground)",
               caretColor: "var(--field-border-focus)",
@@ -192,24 +273,24 @@ export function TagInput({
       </div>
 
       {/* ── Error / max-reached message ────────────────────────────────── */}
-      {error && (
+      {shownError && (
         <p className="text-xs font-medium pl-[2px]" style={{ color: "var(--color-text-error)" }}>
-          {error}
+          {shownError}
         </p>
       )}
-      {maxReached && !error && (
+      {maxReached && !shownError && (
         <p className="text-xs font-medium pl-[2px]" style={{ color: "var(--field-placeholder)" }}>
           Maximum tags reached
         </p>
       )}
 
-      {/* ── Chips ──────────────────────────────────────────────────────── */}
-      {tags.length > 0 && (
+      {/* ── Chips ── inlineTags renders these inside the field instead ──── */}
+      {!inlineTags && tags.length > 0 && (
         <div className="flex flex-col gap-[8px]">
           {/* Chip wrap row */}
           <div className="flex flex-wrap gap-[8px] items-center">
             {visibleTags.map((tag) => {
-              const variant = TAG_VARIANT_CYCLE[tags.indexOf(tag) % TAG_VARIANT_CYCLE.length]
+              const variant = tagVariant ?? TAG_VARIANT_CYCLE[tags.indexOf(tag) % TAG_VARIANT_CYCLE.length]
               return (
                 <Tag
                   key={tag}
