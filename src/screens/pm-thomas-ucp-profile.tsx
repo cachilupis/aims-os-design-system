@@ -55,6 +55,7 @@ import { useWidgetSize }     from "@/components/layouts/widget-canvas-view"
 import type { SidebarItem }  from "@/components/ui/sidebar"
 import { Header }            from "@/components/ui/header"
 import { Tabs }              from "@/components/ui/tabs"
+import { Filters }           from "@/components/ui/filters"
 import { Tag }               from "@/components/ui/tag"
 import { Chip }              from "@/components/ui/chip"
 import { Button }            from "@/components/ui/button"
@@ -75,8 +76,6 @@ import { Skeleton }          from "@/components/ui/skeleton"
 import { Tooltip }           from "@/components/ui/tooltip"
 import { EntityHeader }      from "@/components/ui/entity-header"
 import type { EntityHeaderTag, RecordField, SecondaryMetadataItem } from "@/components/ui/entity-header"
-import { NextBestActionCard } from "@/components/ui/next-best-action-card"
-import type { NextBestAction } from "@/components/ui/next-best-action-card"
 import * as LucideIcons from "lucide-react"
 import { Sparkle, Send, ScanLine, Inbox, HardDrive, FileSearch, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -507,10 +506,24 @@ const PLANE_ICON_VARIANT: Record<KnowledgePlane, HighlightIconVariant> = {
   sources: "informative",
 }
 
+/**
+ * Every knowledge tab gets the `Filters` bar with its search — Michael,
+ * 2026-09-10. NOT the view-mode variant: `showViewToggle` switches between a
+ * card list and a grid, and none of these three has a second view to switch
+ * to. A toggle with one destination is a control that does nothing.
+ *
+ * The search runs over the fields the reader can see. A fact's plane, a
+ * drive's provider, an activity's channel are already the Chip row above the
+ * list; the search is for the value you remember and cannot find by filtering.
+ */
 function SnapshotTab({ contact }: { contact: UcpContact }) {
-  const [plane, setPlane] = useState<KnowledgePlane | "all">("all")
+  const [plane, setPlane]   = useState<KnowledgePlane | "all">("all")
+  const [search, setSearch] = useState("")
   const facts   = useMemo(() => getFacts(contact), [contact])
-  const visible = plane === "all" ? facts : facts.filter(f => f.plane === plane)
+  const q       = search.trim().toLowerCase()
+  const visible = facts
+    .filter(f => plane === "all" || f.plane === plane)
+    .filter(f => q === "" || [f.label, f.value, f.source].some(v => v.toLowerCase().includes(q)))
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -545,6 +558,23 @@ function SnapshotTab({ contact }: { contact: UcpContact }) {
         })}
       />
 
+      <Filters
+        showSearch
+        searchPlaceholder="Search facts by label, value or source…"
+        searchValue={search}
+        onSearchChange={setSearch}
+        /* `Filters` turns ALL THREE of these on by default — the view toggle,
+           the All-filters button and the sort control. Off here, every one:
+           the view toggle switches to a second view none of these tabs has
+           (Michael's "sin view mode variant"), All filters opens a
+           FiltersSlideout that does not exist for them, and sort has nothing
+           wired behind it. A control that cannot do anything is worse than a
+           missing one — it reads as broken rather than as absent. */
+        showViewToggle={false}
+        showAllFilters={false}
+        showSort={false}
+      />
+
       {/* Plane filter — a selection toggle, so primary/secondary, not a semantic color */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <Chip size="s" variant={plane === "all" ? "primary" : "secondary"} onClick={() => setPlane("all")}>
@@ -565,10 +595,12 @@ function SnapshotTab({ contact }: { contact: UcpContact }) {
       {visible.length === 0 ? (
         <EmptyState
           icon={ScanLine}
-          title="No facts on this plane"
-          description="Nothing has been recorded on this plane for this contact yet."
-          ctaLabel="Show all facts"
-          onCta={() => setPlane("all")}
+          title={q ? `No facts for “${search}”` : "No facts on this plane"}
+          description={q
+            ? "Try a shorter term, or clear the search to see every fact on this plane."
+            : "Nothing has been recorded on this plane for this contact yet."}
+          ctaLabel={q ? "Clear search" : "Show all facts"}
+          onCta={() => { if (q) setSearch(""); else setPlane("all") }}
         />
       ) : (
         <Table columns={FACT_COLUMNS} data={visible} size="sm" rowKey={r => r.id} />
@@ -579,17 +611,35 @@ function SnapshotTab({ contact }: { contact: UcpContact }) {
 
 // ── Activity ──────────────────────────────────────────────────────────────────
 
+/** The one place activity rows are filtered — read by the tab and by the
+ *  Pagination total in the parent. */
+function filterActivity(
+  rows: ReturnType<typeof getActivity>,
+  channel: ActivityChannel | "all",
+  search: string,
+): ReturnType<typeof getActivity> {
+  const q = search.trim().toLowerCase()
+  return rows
+    .filter(a => channel === "all" || a.channel === channel)
+    .filter(a => q === "" || [a.title, a.meta, a.timestamp].some(v => v.toLowerCase().includes(q)))
+}
+
 function ActivityTab({
-  contact, channel, onChannelChange, page, pageSize,
+  contact, channel, onChannelChange, search, onSearchChange, page, pageSize,
 }: {
   contact:  UcpContact
   channel:  ActivityChannel | "all"
   onChannelChange: (c: ActivityChannel | "all") => void
+  /** Held by the parent, not here: the parent owns the Pagination and its
+   *  total has to count the same rows this list renders. Two sources for one
+   *  number is how a paginator ends up offering a page that is empty. */
+  search:   string
+  onSearchChange: (value: string) => void
   page:     number
   pageSize: number
 }) {
   const all      = useMemo(() => getActivity(contact), [contact])
-  const filtered = channel === "all" ? all : all.filter(a => a.channel === channel)
+  const filtered = useMemo(() => filterActivity(all, channel, search), [all, channel, search])
   const paged    = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   const items: EntityListItemData[] = paged.map(a => ({
@@ -605,8 +655,27 @@ function ActivityTab({
       : undefined,
   }))
 
+  const q = search.trim().toLowerCase()
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <Filters
+        showSearch
+        searchPlaceholder="Search activity by title, detail or date…"
+        searchValue={search}
+        onSearchChange={onSearchChange}
+        /* `Filters` turns ALL THREE of these on by default — the view toggle,
+           the All-filters button and the sort control. Off here, every one:
+           the view toggle switches to a second view none of these tabs has
+           (Michael's "sin view mode variant"), All filters opens a
+           FiltersSlideout that does not exist for them, and sort has nothing
+           wired behind it. A control that cannot do anything is worse than a
+           missing one — it reads as broken rather than as absent. */
+        showViewToggle={false}
+        showAllFilters={false}
+        showSort={false}
+      />
+
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <Chip size="s" variant={channel === "all" ? "primary" : "secondary"} onClick={() => onChannelChange("all")}>
           All ({all.length})
@@ -626,10 +695,12 @@ function ActivityTab({
       {filtered.length === 0 ? (
         <EmptyState
           icon={Inbox}
-          title="No activity on this channel"
-          description="Try another channel, or clear the filter to see the full timeline."
-          ctaLabel="Clear filter"
-          onCta={() => onChannelChange("all")}
+          title={q ? `No activity for “${search}”` : "No activity on this channel"}
+          description={q
+            ? "Try a shorter term, or clear the search to see the full timeline."
+            : "Try another channel, or clear the filter to see the full timeline."}
+          ctaLabel={q ? "Clear search" : "Clear filter"}
+          onCta={() => { if (q) onSearchChange(""); else onChannelChange("all") }}
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -662,9 +733,15 @@ const DRIVE_ICON_VARIANT: Record<string, "error" | "yellow" | "light-blue"> = {
 }
 
 function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
-  const drives = useMemo(() => getDrives(contact), [contact])
+  const [search, setSearch] = useState("")
+  const all = useMemo(() => getDrives(contact), [contact])
+  const q   = search.trim().toLowerCase()
+  const drives = all.filter(d =>
+    q === "" || [d.name, d.provider, d.owner, d.kind, d.scope].some(v => v.toLowerCase().includes(q)))
 
-  if (drives.length === 0) {
+  // The record genuinely has none — no bar, because there is nothing to search
+  // and a search over an empty list is a control that cannot succeed.
+  if (all.length === 0) {
     return (
       <EmptyState
         icon={HardDrive}
@@ -675,7 +752,34 @@ function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d:
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <Filters
+        showSearch
+        searchPlaceholder="Search drives by name, provider or owner…"
+        searchValue={search}
+        onSearchChange={setSearch}
+        /* `Filters` turns ALL THREE of these on by default — the view toggle,
+           the All-filters button and the sort control. Off here, every one:
+           the view toggle switches to a second view none of these tabs has
+           (Michael's "sin view mode variant"), All filters opens a
+           FiltersSlideout that does not exist for them, and sort has nothing
+           wired behind it. A control that cannot do anything is worse than a
+           missing one — it reads as broken rather than as absent. */
+        showViewToggle={false}
+        showAllFilters={false}
+        showSort={false}
+      />
+
+      {drives.length === 0 ? (
+        <EmptyState
+          icon={HardDrive}
+          title={`No drives for “${search}”`}
+          description="Try a shorter term, or clear the search to see every drive on this record."
+          ctaLabel="Clear search"
+          onCta={() => setSearch("")}
+        />
+      ) : (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {drives.map(d => (
         <CardContainer key={d.id} size="sm" className="!p-0 overflow-hidden">
           <EntityList
@@ -700,6 +804,8 @@ function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d:
           />
         </CardContainer>
       ))}
+      </div>
+      )}
     </div>
   )
 }
@@ -955,6 +1061,7 @@ export function UcpProfileView({
 }) {
   const [tab,        setTab]        = useState("overview")
   const [channel,    setChannel]    = useState<ActivityChannel | "all">("all")
+  const [actSearch,  setActSearch]  = useState("")
   const [actPage,    setActPage]    = useState(1)
   const [actSize,    setActSize]    = useState(ACTIVITY_PAGE_SIZE)
   const [chatOpen,   setChatOpen]   = useState(false)
@@ -973,13 +1080,8 @@ export function UcpProfileView({
   // navigating from one contact to another is a new fetch, not a re-render of
   // the old one.
   const [loading, setLoading] = useState(true)
-  // Dismissing the recommendation hides it for this session only: it stores
-  // nothing and feeds nothing back to the engine, so it comes back on reload.
-  // Re-armed per record for the same reason `loading` is.
-  const [nbaDismissed, setNbaDismissed] = useState(false)
   useEffect(() => {
     setLoading(true)
-    setNbaDismissed(false)
     const timer = setTimeout(() => setLoading(false), 700)
     return () => clearTimeout(timer)
   }, [contact.id])
@@ -1048,30 +1150,16 @@ export function UcpProfileView({
     [contact],
   )
 
-  // The record's one recommendation — singular on purpose. The engine has
-  // already prioritised and discarded, so a second card would not be more
-  // information, it would be less trust in the engine. A record with nothing
-  // to recommend gets `undefined` and no card renders at all: not an empty
-  // card, not a placeholder, the same edge case the roster row handles by
-  // rendering no block. `onDismiss` resolves in place for this session only.
-  const nba = useMemo<NextBestAction | undefined>(
-    () => (contact.nba && !restriction && !nbaDismissed
-      ? {
-          id:            `nba-${contact.id}`,
-          title:         contact.nba.title,
-          timeAgo:       contact.nba.timestamp,
-          description:   contact.nba.rationale ?? contact.nba.timestamp,
-          onViewDetails: openChat,
-          onDismiss:     () => setNbaDismissed(true),
-        }
-      : undefined),
-    [contact, restriction, nbaDismissed],
-  )
+  // The `nba` memo lived here, shaping the record's recommendation for
+  // NextBestActionCard. It went with the card — a memo whose only consumer is
+  // gone is dead code, and `contact.nba` is still read by the roster row.
 
-  const activityCount = useMemo(() => {
-    const all = getActivity(contact)
-    return channel === "all" ? all.length : all.filter(a => a.channel === channel).length
-  }, [contact, channel])
+  // The same filter the tab runs, so the paginator counts the rows the reader
+  // is actually looking at — including the search.
+  const activityCount = useMemo(
+    () => filterActivity(getActivity(contact), channel, actSearch).length,
+    [contact, channel, actSearch],
+  )
 
   const spec = useMemo(() => specForContact(contact), [contact])
 
@@ -1290,25 +1378,23 @@ export function UcpProfileView({
            not exist yet, and the component's own skeleton is what belongs
            there — never an empty header, never withholding the card. */
         state={loading ? "loading" : "default"}
-        /* Disables while the record is locked, which is this prop's
-           default and the right answer here. Export is the one worth
-           saying out loud: it is a read, so the component's "locked means
-           you cannot act on it, not that you cannot consult it" reasoning
-           would let it through — but an export writes the governed values
-           into a file the viewer keeps. Consulting a masked field on
-           screen and extracting it are not the same act. */
-        secondaryAction={{
-          label: "Export record",
-          variant: "secondary",
-          onClick: () => {},
-          disabledTooltip: "This record's values are governed — request the scope to export it",
-        }}
+        /* NO secondaryAction. "Export record" was here and Michael took it out
+           (2026-09-10): it does not apply to this record type. The slot is off
+           by default for exactly this reason — most records have no second
+           action, and the header is better with an empty slot than with a
+           button nobody asked for. `Ask` remains the one CTA. */
         /* Destructive and secondary only — Archive is never one click away. */
         menuActions={[{ label: "Archive", onClick: () => {} }]}
       />
-      {/* One recommendation or none. No card at all for a record with
-          nothing to do — not an empty card, not a placeholder. */}
-      {nba && <NextBestActionCard item={nba} className="mt-[12px]" />}
+      {/* NO Next Best Action card. It sat here, below the header and in its own
+          container, which is where the DS says a recommendation goes. Michael
+          took it out on 2026-09-10 — it does not apply to this flow yet.
+
+          The DATA stays: `contact.nba` still feeds the roster row's own AI
+          insight block, so removing the card here does not remove the
+          recommendation from the prototype, only from this surface. When it
+          comes back it is `NextBestActionCard` again, in its own container,
+          never inside the header. */}
       {/* 24px from the last nav layer to the content, per the DS. */}
       <div className="mt-[16px] mb-[24px]">
         <Tabs
@@ -1337,6 +1423,10 @@ export function UcpProfileView({
               contact={contact}
               channel={channel}
               onChannelChange={c => { setChannel(c); setActPage(1) }}
+              search={actSearch}
+              // Any filter change resets to page 1 — the DS rule, and a search
+              // that leaves you on page 3 of 1 looks like an empty tab.
+              onSearchChange={v => { setActSearch(v); setActPage(1) }}
               page={actPage}
               pageSize={actSize}
             />

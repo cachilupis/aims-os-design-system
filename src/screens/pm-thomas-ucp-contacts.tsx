@@ -27,7 +27,6 @@ import { Tabs }              from "@/components/ui/tabs"
 import { Filters }           from "@/components/ui/filters"
 import { FiltersSlideout }   from "@/components/ui/filters-slideout"
 import { Menu, MenuItem }    from "@/components/ui/menu-item"
-import { Tag }               from "@/components/ui/tag"
 import { Button }            from "@/components/ui/button"
 import { CardContainer }     from "@/components/ui/card-container"
 import { EntityList }        from "@/components/ui/entity-list"
@@ -44,12 +43,12 @@ import { Input }             from "@/components/ui/input"
 import { Chip }              from "@/components/ui/chip"
 import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
-import { Sparkle, Send, Plus, Lock, Contact as ContactIcon } from "lucide-react"
+import { Plus, Lock, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
-  CONTACTS, CONCIERGE_PROMPTS, PLANE_META, PEOPLE_TYPES,
+  CONTACTS, PEOPLE_TYPES,
   TYPE_ICON, TYPE_LABEL, TYPE_PLURAL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
 } from "./ucpShared"
@@ -135,105 +134,12 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ]
 
 
-// ── Roster concierge ──────────────────────────────────────────────────────────
-// DS-GAP: agent chat panel — no chat component exists in src/components/ui/.
-// Composed from SlideOut + Tag + Chip + Input + Button; the bubbles only
-// rearrange existing tokens.
-
-type RosterTurn = { id: string; from: "agent" | "user"; text: string; planes?: ("truth" | "sandbox" | "sources")[] }
-
-function RosterConcierge({ open, onClose, total }: { open: boolean; onClose: () => void; total: number }) {
-  const [turns, setTurns] = useState<RosterTurn[]>([
-    {
-      id: "t1", from: "agent",
-      text: `I'm the Contacts concierge. I can read across all ${total} records in this roster and tell you which ones need a decision — I answer from each record's own planes, never from outside them.`,
-    },
-  ])
-  const [draft, setDraft] = useState("")
-
-  const ask = (question: string) => {
-    if (!question.trim()) return
-    setTurns(prev => [
-      ...prev,
-      { id: `u-${prev.length}`, from: "user", text: question },
-      {
-        id: `a-${prev.length + 1}`, from: "agent",
-        text: "Three records carry an open commitment right now: Meridian Corp (renewal in 12 days), Sandra Torres (migration timeline asked twice, unanswered) and Kestrel Logistics (dormant 80 days since the pilot closed). Open any of them and I'll carry the context over.",
-        planes: ["truth", "sandbox"],
-      },
-    ])
-    setDraft("")
-  }
-
-  return (
-    <SlideOut
-      open={open}
-      onClose={onClose}
-      type="with-variants"
-      size="m"
-      title="Concierge"
-      subtitle={`Contacts · ${total} records`}
-      showIcon
-      iconContent={<Sparkle size={14} />}
-      showStatus
-      statusLabel="Online"
-      showTopButton={false}
-      showTabs={false}
-      showSearchBar={false}
-      showChips={false}
-      showCta={false}
-    >
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingTop: 20, paddingBottom: 8, paddingInline: 16, marginInline: -16, display: "flex", flexDirection: "column", gap: 12 }}>
-          {turns.map(turn => (
-            <div
-              key={turn.id}
-              style={{
-                alignSelf: turn.from === "user" ? "flex-end" : "flex-start",
-                maxWidth: "90%", display: "flex", flexDirection: "column", gap: 6,
-              }}
-            >
-              <div
-                style={{
-                  background: turn.from === "user" ? "var(--field-bg)" : "var(--tag-purple-bg)",
-                  border: `1px solid ${turn.from === "user" ? "var(--field-border)" : "var(--tag-purple-bd)"}`,
-                  borderRadius: 10, padding: "10px 12px", fontSize: 12, lineHeight: 1.6,
-                  color: turn.from === "user" ? "var(--foreground)" : "var(--tag-purple-fg)",
-                }}
-              >
-                {turn.text}
-              </div>
-              {turn.planes && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {turn.planes.map(p => (
-                    <Tag key={p} variant={PLANE_META[p].tag} size="sm">{PLANE_META[p].label} plane</Tag>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div style={{ paddingTop: 8, paddingBottom: 20, display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 10 }}>
-            {CONCIERGE_PROMPTS.map(p => (
-              <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Input
-              placeholder="Ask about the roster…"
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") ask(draft) }}
-            />
-            <Button variant="primary" size="default" icon={<Send size={14} />} iconPosition="alone" aria-label="Send" onClick={() => ask(draft)} />
-          </div>
-        </div>
-      </div>
-    </SlideOut>
-  )
-}
-
+// The roster concierge lived here — a SlideOut chat opened by an `Ask` button
+// in the page Header. Michael took the button out (2026-09-10), and the panel
+// went with it: nothing else could open it, so keeping it would have left an
+// unreachable surface in the file and an unused import behind it. The record's
+// own concierge is untouched — it opens from the Entity Header's `Ask`, which
+// is a different thing: that one answers about one record from its own planes.
 // ── Create panel ──────────────────────────────────────────────────────────────
 // A create form is non-destructive, so it is a SlideOut and not a ModalDialog.
 // No `label` prop on Input — placeholder is the only field hint on desktop.
@@ -409,7 +315,6 @@ export default function PMThomasUcpContactsScreen() {
   const [kebab, setKebab] = useState<{ contact: UcpContact; anchor: DropdownAnchor } | null>(null)
   const kebabDropdown = useDropdownPosition(kebab?.anchor ?? null)
   const [archiving,  setArchiving]  = useState<UcpContact | null>(null)
-  const [chatOpen,   setChatOpen]   = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
   const activeType = ALL_TYPE_TABS.find(t => t.id === tab)?.type ?? "all"
@@ -637,11 +542,6 @@ export default function PMThomasUcpContactsScreen() {
             label:   CREATE_LABEL[tab] ?? CREATE_LABEL.all,
             icon:    Plus,
             onClick: () => setCreateOpen(true),
-          }}
-          secondaryAction={{
-            label:   "Ask",
-            icon:    Sparkle,
-            onClick: () => setChatOpen(true),
           }}
         />
       )}
@@ -977,7 +877,6 @@ export default function PMThomasUcpContactsScreen() {
         onCreate={() => setCreateOpen(false)}
       />
 
-      <RosterConcierge open={chatOpen} onClose={() => setChatOpen(false)} total={CONTACTS.length} />
     </ScreenLayout>
   )
 }
