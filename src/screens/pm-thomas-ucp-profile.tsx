@@ -58,6 +58,7 @@ import { Tabs }              from "@/components/ui/tabs"
 import { Filters }           from "@/components/ui/filters"
 import { Tag }               from "@/components/ui/tag"
 import { Chip }              from "@/components/ui/chip"
+import { SwitchTab }         from "@/components/ui/switch-tab"
 import { Button }            from "@/components/ui/button"
 import { Input }             from "@/components/ui/input"
 import { Table }             from "@/components/ui/table"
@@ -84,6 +85,7 @@ import type { ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
+  DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
   CONTACTS,
   AVATAR_TYPES, TYPE_ICON, TYPE_LABEL, entityState, restrictionFor, getRecordFields,
@@ -1059,31 +1061,67 @@ const DRIVE_ICON_VARIANT: Record<string, "error" | "yellow" | "light-blue"> = {
  */
 type Shelf = "documents" | "sandbox" | "truth"
 
+/** Governance's "Modificar" buckets, resolved from a drive's last sync. The
+ *  fixtures write it as "Today, 06:00" or "Aug 4, 2026", so both shapes are
+ *  read — the same parser the Activity separators use would be overkill for
+ *  six rows, but the buckets are the ones Governance offers, in its order. */
+function modifiedBucket(lastSync: string): string {
+  if (/^Today/i.test(lastSync))     return "Today"
+  if (/^Yesterday/i.test(lastSync)) return "Yesterday"
+  const d = new Date(lastSync.split("·")[0].trim())
+  if (Number.isNaN(d.getTime())) return "Older"
+  const days = Math.round((new Date("2026-09-10").getTime() - d.getTime()) / 86_400_000)
+  if (days <= 7)  return "Last 7 days"
+  if (days <= 30) return "Last 30 days"
+  return "Older"
+}
+
 function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
-  const [shelf,    setShelf]    = useState<Shelf>("documents")
+  const [shelf,    setShelf]    = useState<Shelf>("sandbox")
   const [search,   setSearch]   = useState("")
-  const [kind,     setKind]     = useState<string | undefined>(undefined)
-  const [provider, setProvider] = useState<string | undefined>(undefined)
-  const [status,   setStatus]   = useState<string | undefined>(undefined)
+  /** Drives — Governance's two: Modificar and Todos los departamentos. */
+  const [modified,   setModified]   = useState<string | undefined>(undefined)
+  const [department, setDepartment] = useState<string | undefined>(undefined)
+  /** Truth Plane — Estado · Nivel de riesgo · Atención requerida. */
+  const [status,     setStatus]     = useState<string | undefined>(undefined)
+  const [risk,       setRisk]       = useState<string | undefined>(undefined)
+  const [attention,  setAttention]  = useState<string | undefined>(undefined)
+  /** Sandbox — Todos los estados · Todos los ámbitos. */
+  const [claimState, setClaimState] = useState<string | undefined>(undefined)
+  const [scope,      setScope]      = useState<string | undefined>(undefined)
 
   const allDrives = useMemo(() => getDrives(contact), [contact])
   const facts     = useMemo(() => getFacts(contact), [contact])
   const q         = search.trim().toLowerCase()
 
   const drives = allDrives
-    .filter(d => q === "" || [d.name, d.provider, d.owner, d.kind, d.scope].some(v => v.toLowerCase().includes(q)))
-    .filter(d => !kind     || d.kind === kind)
-    .filter(d => !provider || d.provider === provider)
-    .filter(d => !status   || d.state.label === status)
+    .filter(d => q === "" || [d.name, d.provider, d.owner, d.kind, d.scope, d.department].some(v => v.toLowerCase().includes(q)))
+    .filter(d => !department || d.department === department)
+    // "Modificar" reads the drive's own last sync, which is the only date it
+    // has — the same field the row shows, so the filter and the row agree.
+    .filter(d => !modified || modifiedBucket(d.lastSync) === modified)
 
   const factsOn = (plane: KnowledgePlane) => facts
     .filter(f => f.plane === plane)
     .filter(f => q === "" || [f.label, f.value, f.source].some(v => v.toLowerCase().includes(q)))
 
+  const truthFacts = factsOn("truth")
+    .filter(f => !status    || f.status === status)
+    .filter(f => !risk      || f.risk === risk)
+    .filter(f => !attention || f.attention.includes(attention))
+
+  const sandboxFacts = factsOn("sandbox")
+    .filter(f => !claimState || f.state === claimState)
+    .filter(f => !scope      || f.scope === scope)
+
   const sourceFacts  = factsOn("sources")
-  const shelfFacts   = shelf === "sandbox" ? factsOn("sandbox") : factsOn("truth")
-  const hasFilters   = q !== "" || !!kind || !!provider || !!status
-  const clearAll = () => { setSearch(""); setKind(undefined); setProvider(undefined); setStatus(undefined) }
+  const shelfFacts   = shelf === "sandbox" ? sandboxFacts : truthFacts
+  const hasFilters   = q !== "" || !!modified || !!department || !!status || !!risk || !!attention || !!claimState || !!scope
+  const clearAll = () => {
+    setSearch(""); setModified(undefined); setDepartment(undefined)
+    setStatus(undefined); setRisk(undefined); setAttention(undefined)
+    setClaimState(undefined); setScope(undefined)
+  }
 
   /** Michael's three chips, in his order and with his labels (2026-09-10):
    *  Sandbox · Truth Plane · Drives. "Drives" rather than "Documents" because
@@ -1122,58 +1160,55 @@ function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: 
         ]}
       />
 
-      <Filters
-        showSearch
-        searchPlaceholder={shelf === "documents"
-          ? "Search drives by name, provider or owner…"
-          : "Search claims by label, value or source…"}
-        searchValue={search}
-        onSearchChange={setSearch}
-        /* The document filters only exist on the document shelf — a claim has
-           no provider, and offering the control anyway would be offering one
-           that cannot narrow anything. */
-        slots={shelf === "documents" ? [
-          {
-            placeholder: "Type",
-            value:       kind,
-            options:     Array.from(new Set(allDrives.map(d => d.kind))).sort(),
-            onSelect:    setKind,
-            onRemove:    () => setKind(undefined),
-          },
-          {
-            placeholder: "Provider",
-            value:       provider,
-            options:     Array.from(new Set(allDrives.map(d => d.provider))).sort(),
-            onSelect:    setProvider,
-            onRemove:    () => setProvider(undefined),
-          },
-          {
-            placeholder: "Status",
-            value:       status,
-            options:     Array.from(new Set(allDrives.map(d => d.state.label))).sort(),
-            onSelect:    setStatus,
-            onRemove:    () => setStatus(undefined),
-          },
-        ] : []}
-        showClearFilters={hasFilters}
-        onClearFilters={clearAll}
-        showViewToggle={false}
-        showAllFilters={false}
-        showSort={false}
-      />
+      {/*
+        THE SHELF SELECTOR IS A SwitchTab, TO THE LEFT OF THE FILTERS
+        (Michael, 2026-09-10) — because each shelf brings a DIFFERENT filter
+        set, and a chip row that changes the controls beside it reads as the
+        page rearranging itself. A segmented control reads as "I am in this
+        one", which is what makes the filters next to it obviously its own.
 
-      {/* The shelf selector — a selection toggle, so Chip, primary/secondary. */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        {SHELVES.map(sh => (
-          <Chip
-            key={sh.id}
-            size="s"
-            variant={shelf === sh.id ? "primary" : "secondary"}
-            onClick={() => setShelf(sh.id)}
-          >
-            {sh.label} ({sh.count})
-          </Chip>
-        ))}
+        The filter sets are Governance's, read off the real views rather than
+        invented: Drives filters by Modificar and department, Truth Plane by
+        Estado / Nivel de riesgo / Atención requerida, Sandbox by state and
+        ámbito. Their UI is not copied — these are DS `Filters` slots.
+      */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <SwitchTab
+          size="s"
+          value={shelf}
+          onChange={id => { setShelf(id as Shelf); clearAll() }}
+          aria-label="Knowledge shelf"
+          items={SHELVES.map(sh => ({ id: sh.id, label: `${sh.label} (${sh.count})` }))}
+        />
+        <div style={{ flex: 1, minWidth: 320 }}>
+          <Filters
+            showSearch
+            searchPlaceholder={
+              shelf === "documents" ? "Search drives by name, provider or owner…"
+              : shelf === "sandbox" ? "Search claims by label, value or source…"
+              : "Search facts by label, value or source…"}
+            searchValue={search}
+            onSearchChange={setSearch}
+            slots={
+              shelf === "documents" ? [
+                { placeholder: "Modified",   value: modified,   options: DRIVE_MODIFIED_OPTIONS,                        onSelect: setModified,   onRemove: () => setModified(undefined) },
+                { placeholder: "Department", value: department, options: Array.from(new Set(allDrives.map(d => d.department))).sort(), onSelect: setDepartment, onRemove: () => setDepartment(undefined) },
+              ] : shelf === "sandbox" ? [
+                { placeholder: "State", value: claimState, options: SANDBOX_STATES, onSelect: setClaimState, onRemove: () => setClaimState(undefined) },
+                { placeholder: "Scope", value: scope,      options: SANDBOX_SCOPES, onSelect: setScope,      onRemove: () => setScope(undefined) },
+              ] : [
+                { placeholder: "Status",    value: status,    options: TRUTH_STATUSES, onSelect: setStatus,    onRemove: () => setStatus(undefined) },
+                { placeholder: "Risk",      value: risk,      options: RISK_LEVELS,    onSelect: setRisk,      onRemove: () => setRisk(undefined) },
+                { placeholder: "Attention", value: attention, options: ATTENTION_FLAGS, onSelect: setAttention, onRemove: () => setAttention(undefined) },
+              ]
+            }
+            showClearFilters={hasFilters}
+            onClearFilters={clearAll}
+            showViewToggle={false}
+            showAllFilters={false}
+            showSort={false}
+          />
+        </div>
       </div>
 
       {shelf === "documents" ? (

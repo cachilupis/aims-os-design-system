@@ -364,6 +364,37 @@ export const PLANE_META: Record<KnowledgePlane, {
 
 export const PLANE_ORDER: KnowledgePlane[] = ["truth", "sandbox", "sources"]
 
+/**
+ * ── The Governance vocabulary ──────────────────────────────────────────────
+ *
+ * Read off the real Governance views on 2026-09-10 (Fuentes/Drive, Plano de
+ * verdad, Sandbox), not invented for this prototype. Michael's instruction was
+ * to take the FILTER INFORMATION and leave their UI alone, so these are the
+ * option sets, translated to the language this screen is in:
+ *
+ *   Drives       Modificar → All · Today · Yesterday · Last 7 days ·
+ *                Last 30 days · Older     +  Todos los departamentos
+ *   Truth Plane  Estado → Verified · Pending review · Due to expire
+ *                Nivel de riesgo → Low · Medium · High
+ *                Atención requerida → Due to expire · Needs review ·
+ *                Has proposals
+ *   Sandbox      Todos los estados → Active · Archived
+ *                Todos los ámbitos → Private · Shared · Workspace ·
+ *                Department · System
+ *
+ * ONE DIFFERENCE WORTH KNOWING: in Governance these filter a list of PLANES —
+ * "BK Ramos 08-07-26 · Hechos: 6 · Propuestas: 244 · Riesgo bajo". Here the
+ * shelves list the facts and claims of ONE record, so the same vocabulary is
+ * applied one level down, to the items themselves. The words are theirs; the
+ * scope is this record's.
+ */
+export const DRIVE_MODIFIED_OPTIONS = ["Today", "Yesterday", "Last 7 days", "Last 30 days", "Older"]
+export const TRUTH_STATUSES         = ["Verified", "Pending review", "Due to expire"]
+export const RISK_LEVELS            = ["Low", "Medium", "High"]
+export const ATTENTION_FLAGS        = ["Due to expire", "Needs review", "Has proposals"]
+export const SANDBOX_STATES         = ["Active", "Archived"]
+export const SANDBOX_SCOPES         = ["Private", "Shared", "Workspace", "Department", "System"]
+
 export interface UcpFact {
   id:         string
   label:      string
@@ -371,6 +402,13 @@ export interface UcpFact {
   plane:      KnowledgePlane
   source:     string
   verifiedAt: string
+  /** Governance's own three axes, filled by `getFacts` — see `governFact`. */
+  status:     string
+  risk:       string
+  attention:  string[]
+  /** Sandbox's two: what state the claim is in and how far it reaches. */
+  state:      string
+  scope:      string
 }
 
 // ── Activity ──────────────────────────────────────────────────────────────────
@@ -527,6 +565,8 @@ export function withinPeriod(at: Date | null, periodLabel: string | undefined, n
 export interface UcpDrive {
   id:       string
   name:     string
+  /** Governance's "Todos los departamentos" filter runs on this. */
+  department: string
   kind:     "Drive" | "Folder" | "Document"
   provider: string
   items:    string
@@ -1219,9 +1259,59 @@ export const CONTACTS: UcpContact[] = [
 const COMPANY_SIZE = (c: UcpContact) => c.subtitle.split(" · ")[1] ?? "—"
 const FIRST_FIELD  = (c: UcpContact) => c.subtitle.split(" · ")[0] ?? "—"
 
+/**
+ * Governance's three axes, applied to one fact.
+ *
+ * DERIVED, and only from things the fact already says about itself — its plane
+ * and when it was last verified. That is the honest version: a Truth fact
+ * verified last month is verified; one that has gone stale is due to expire;
+ * a Sandbox claim has not been reviewed yet. Nothing here is a number somebody
+ * made up to fill a filter.
+ *
+ * The staleness window is 60 days, which is the same order as the Risk study's
+ * own "older than 90 days" freshness rule on this record.
+ */
+const KNOWLEDGE_NOW = new Date("2026-09-10")
+
+function governFact(f: Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">): UcpFact {
+  const verified = new Date(f.verifiedAt)
+  const days = Number.isNaN(verified.getTime())
+    ? 0
+    : Math.round((KNOWLEDGE_NOW.getTime() - verified.getTime()) / 86_400_000)
+  const stale = days > 60
+
+  const status = f.plane === "truth" ? (stale ? "Due to expire" : "Verified")
+    : f.plane === "sandbox" ? "Pending review"
+    : "Verified"
+
+  const risk = f.plane === "truth" ? (stale ? "Medium" : "Low")
+    : f.plane === "sandbox" ? (stale ? "High" : "Medium")
+    : "Low"
+
+  const attention = [
+    ...(stale ? ["Due to expire"] : []),
+    ...(f.plane === "sandbox" ? ["Needs review"] : []),
+    // A claim whose source is a document has something to promote FROM, which
+    // is what a proposal is in Governance's sense.
+    ...(f.source.startsWith("Shared Drive") || f.source.includes("Studio") ? ["Has proposals"] : []),
+  ]
+
+  return {
+    ...f,
+    status, risk, attention,
+    state: "Active",
+    // Where the claim reaches. A fact sourced from a shared drive or a studio
+    // is workspace-wide; anything read off this record's own traffic is
+    // private to it.
+    scope: f.source.startsWith("Shared Drive") || f.source.includes("Studio") ? "Workspace"
+      : f.source.includes("CRM") || f.source.includes("Workday") || f.source.includes("Billing") ? "Department"
+      : "Private",
+  }
+}
+
 export function getFacts(c: UcpContact): UcpFact[] {
   if (c.type === "company") {
-    return [
+    return ([
       { id: "f1", label: "Legal entity",        value: `${c.name}, Inc.`,           plane: "truth",   source: "Contract · countersigned",            verifiedAt: "Aug 4, 2026"  },
       { id: "f2", label: "Industry",            value: FIRST_FIELD(c),              plane: "truth",   source: "Account record · CRM sync",           verifiedAt: "Aug 4, 2026"  },
       { id: "f3", label: "Headcount",           value: COMPANY_SIZE(c),             plane: "truth",   source: "Account record · CRM sync",           verifiedAt: "Aug 4, 2026"  },
@@ -1233,10 +1323,10 @@ export function getFacts(c: UcpContact): UcpFact[] {
       { id: "f9", label: "Master agreement",    value: `MSA_${c.name.split(" ")[0]}_2026.pdf`, plane: "sources", source: "Shared Drive · Legal",     verifiedAt: "Aug 4, 2026"  },
       { id: "f10", label: "Security questionnaire", value: "SIG Lite, 214 responses", plane: "sources", source: "Shared Drive · Security",           verifiedAt: "Jul 28, 2026" },
       { id: "f11", label: "Org chart",          value: "Slide deck, 3 levels deep",  plane: "sources", source: "Shared Drive · Accounts",            verifiedAt: "May 12, 2026" },
-    ]
+    ] as Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">[]).map(governFact)
   }
   if (c.type === "employee") {
-    return [
+    return ([
       { id: "f1", label: "Full name",       value: c.name,                    plane: "truth",   source: "Workday · HRIS sync",        verifiedAt: "Sep 1, 2026"  },
       { id: "f2", label: "Role",            value: FIRST_FIELD(c),            plane: "truth",   source: "Workday · HRIS sync",        verifiedAt: "Sep 1, 2026"  },
       { id: "f3", label: "Work email",      value: c.email,                   plane: "truth",   source: "Identity provider · SSO",    verifiedAt: "Sep 1, 2026"  },
@@ -1246,9 +1336,9 @@ export function getFacts(c: UcpContact): UcpFact[] {
       { id: "f7", label: "Working pattern", value: "Prefers async review over live meetings", plane: "sandbox", source: "Team retro — Jul 22", verifiedAt: "Jul 22, 2026" },
       { id: "f8", label: "Signed policies", value: "12 of 12, latest Data Handling v2.1", plane: "sources", source: "Governance Studio",  verifiedAt: "Aug 6, 2026"  },
       { id: "f9", label: "Review history",  value: "6 quarters, all completed on time",  plane: "sources", source: "Shared Drive · People", verifiedAt: "Jul 20, 2026" },
-    ]
+    ] as Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">[]).map(governFact)
   }
-  return [
+  return ([
     { id: "f1", label: "Full name",        value: c.name,                     plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "Aug 28, 2026" },
     { id: "f2", label: "Title",            value: FIRST_FIELD(c),             plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "Aug 28, 2026" },
     { id: "f3", label: "Company",          value: c.company,                  plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "Aug 28, 2026" },
@@ -1259,7 +1349,7 @@ export function getFacts(c: UcpContact): UcpFact[] {
     { id: "f8", label: "Channel preference", value: "Responds fastest to email before 9am ET", plane: "sandbox", source: "Interaction history", verifiedAt: "Aug 28, 2026" },
     { id: "f9", label: "Governance addendum", value: "Addendum_v3_redlined.pdf", plane: "sources", source: "Shared Drive · Legal",     verifiedAt: "Aug 28, 2026" },
     { id: "f10", label: "Meeting transcripts", value: "4 calls, Jun–Aug 2026",  plane: "sources", source: "Communication Hub",        verifiedAt: "Aug 28, 2026" },
-  ]
+  ] as Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">[]).map(governFact)
 }
 
 export function getActivity(c: UcpContact): UcpActivity[] {
@@ -1379,32 +1469,32 @@ export function getDrives(c: UcpContact): UcpDrive[] {
   const slug = c.company.split(" ")[0]
   return [
     {
-      id: "d1", name: `${slug} — Legal`, kind: "Folder", provider: "Google Drive",
+      id: "d1", department: "Legal", name: `${slug} — Legal`, kind: "Folder", provider: "Google Drive",
       items: "24 documents", owner: "Legal Ops", lastSync: "Today, 06:00",
       scope: "Shared with 3 networks", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d2", name: `${slug} — Security & Compliance`, kind: "Folder", provider: "SharePoint",
+      id: "d2", department: "Security", name: `${slug} — Security & Compliance`, kind: "Folder", provider: "SharePoint",
       items: "61 documents", owner: "Security", lastSync: "Today, 06:00",
       scope: "Shared with 2 networks", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d3", name: `MSA_${slug}_2026.pdf`, kind: "Document", provider: "Google Drive",
+      id: "d3", department: "Legal", name: `MSA_${slug}_2026.pdf`, kind: "Document", provider: "Google Drive",
       items: "1 document", owner: "Legal Ops", lastSync: "Aug 4, 2026",
       scope: "Attached to this record only", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d4", name: `${slug} — Meeting transcripts`, kind: "Folder", provider: "Communication Hub",
+      id: "d4", department: "Communications", name: `${slug} — Meeting transcripts`, kind: "Folder", provider: "Communication Hub",
       items: "18 transcripts", owner: c.owner, lastSync: "Sep 2, 2026",
       scope: "Attached to this record only", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d5", name: "Revenue — Account plans", kind: "Drive", provider: "Box",
+      id: "d5", department: "Revenue Ops", name: "Revenue — Account plans", kind: "Drive", provider: "Box",
       items: "412 documents", owner: "Revenue Ops", lastSync: "Aug 30, 2026",
       scope: "Shared with 6 networks", state: { label: "Partial access", variant: "alert" },
     },
     {
-      id: "d6", name: `${slug} — Archive 2024`, kind: "Folder", provider: "SharePoint",
+      id: "d6", department: "Legal", name: `${slug} — Archive 2024`, kind: "Folder", provider: "SharePoint",
       items: "137 documents", owner: "Legal Ops", lastSync: "Failed Aug 26, 2026",
       scope: "Shared with 1 network", state: { label: "Sync failed", variant: "error" },
     },
