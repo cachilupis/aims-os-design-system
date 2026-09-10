@@ -35,7 +35,13 @@ import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MemberStatus = "active" | "invited" | "suspended"
+/**
+ * `pending` is a person who exists but has never been invited — the invite
+ * wizard's "Send invitation email" toggle turned off. It is NOT `invited`
+ * with the mail still in flight: nothing was sent and nothing will be until
+ * somebody sends it from the profile.
+ */
+type MemberStatus = "active" | "invited" | "pending" | "suspended"
 type UserType     = "Admin" | "Owner" | "Member"
 // Legacy alias kept only to avoid cascading rename inside fixture data until full refactor
 type MemberRole   = UserType
@@ -320,11 +326,15 @@ const STUDIO_META: Record<string, { label: string; color: string; icon: React.Re
 const STATUS_TAG: Record<MemberStatus, "success" | "informative" | "neutral"> = {
   active:    "success",
   invited:   "informative",
+  // Informative is for something in flight; nothing is outstanding on a
+  // pending contact, so it reads neutral like Suspended does.
+  pending:   "neutral",
   suspended: "neutral",
 }
 const STATUS_LABEL: Record<MemberStatus, string> = {
   active:    "Active",
   invited:   "Invited",
+  pending:   "Pending",
   suspended: "Suspended",
 }
 // Graded by reach, not by risk: the more a type can do, the louder the tag.
@@ -1135,17 +1145,23 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
             {!isInvited && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
-                {!confirmReset ? (
-                  <Button variant="secondary" size="sm" onClick={() => setConfirmReset(true)}>Reset MFA enrollment</Button>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 12, color: "var(--badge-error)", fontWeight: 600 }}>
-                      Remove their MFA device? They'll re-enroll on next login.
-                    </span>
-                    <Button variant="warning" size="sm" onClick={() => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) }}>Yes, reset</Button>
-                    <Button variant="secondary" size="sm" onClick={() => setConfirmReset(false)}>Cancel</Button>
-                  </div>
-                )}
+                {/* Same question, same component, same copy as the profile
+                    card's Reset MFA — this used to be an inline row of
+                    buttons, which is a confirmation UI invented by hand. */}
+                <Button variant="secondary" size="sm" onClick={() => setConfirmReset(true)}>Reset MFA enrollment</Button>
+                <ModalDialog
+                  isOpen={confirmReset}
+                  onClose={() => setConfirmReset(false)}
+                  tone="warning"
+                  iconName="ShieldOff"
+                  title={`Reset MFA for ${member.name}?`}
+                  description={`Their current ${member.mfaMethod ? MFA_METHOD_LABEL[member.mfaMethod] : "second factor"} stops working immediately. They will be asked to enrol a new one the next time they sign in.`}
+                  ctaPrimary={{ label: "Reset MFA", destructive: true, onClick: () => {
+                    onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined })
+                    setConfirmReset(false)
+                  } }}
+                  ctaSecondary={{ label: "Cancel", onClick: () => setConfirmReset(false) }}
+                />
               </div>
             )}
           </div>
@@ -1236,18 +1252,30 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 const USER_TYPE_OPTIONS: UserType[] = ["Owner", "Admin", "Member"]
 
 function MemberDetailPage({
-  member, onBack, onToggleSuspend, onRemove, onUpdate,
+  member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
 }: {
   member: Member
   onBack: () => void
   onToggleSuspend: (id: string) => void
   onRemove: (id: string) => void
   onUpdate: (m: Member) => void
+  onSendInvite: (id: string) => void
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [confirmResetMfa, setConfirmResetMfa] = useState(false)
+  const toast = useToast()
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
+  const isPending = member.status === "pending"
+  /**
+   * Somebody who has never signed in has no password to reset and no MFA
+   * device to clear, so those two controls are not "disabled" for them —
+   * they do not apply at all, and a greyed-out button would invite the
+   * question anyway. The Security tab already hides its own MFA reset on the
+   * same test.
+   */
+  const hasSignedIn = isActive || member.status === "suspended"
 
   return (
     <ScreenLayout
@@ -1325,9 +1353,70 @@ function MemberDetailPage({
           {/* Divider after info */}
           <div style={{ height: 1, background: "var(--border)" }} />
 
+          {/* Clearing somebody's second factor locks them out until they
+              enrol again, so it is a question — and the DS answer to a
+              question is ModalDialog, not an inline row of buttons. */}
+          <ModalDialog
+            isOpen={confirmResetMfa}
+            onClose={() => setConfirmResetMfa(false)}
+            tone="warning"
+            iconName="ShieldOff"
+            title={`Reset MFA for ${member.name}?`}
+            description={`Their current ${member.mfaMethod ? MFA_METHOD_LABEL[member.mfaMethod] : "second factor"} stops working immediately. They will be asked to enrol a new one the next time they sign in.`}
+            ctaPrimary={{ label: "Reset MFA", destructive: true, onClick: () => {
+              onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined })
+              setConfirmResetMfa(false)
+              toast.success("MFA reset", { description: `${member.name} will enrol a new device on next sign-in.` })
+            } }}
+            ctaSecondary={{ label: "Cancel", onClick: () => setConfirmResetMfa(false) }}
+          />
+
           {/* Action buttons */}
           <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
-            {isInvited ? (
+            {hasSignedIn && (
+              <>
+                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                  onClick={() => toast.success("Password reset link sent", {
+                    description: `${member.email} has one hour to use it.`,
+                  })}>
+                  <Icons.KeyRound size={13} /> Reset password
+                </Button>
+                {/* When there is nothing to reset the button stays, disabled, and
+                    explains itself. `triggerClassName` is what stops Tooltip
+                    being inline-flex — without it the wrapper shrinks to the
+                    label and this button comes out narrower than its three
+                    neighbours. The button is pointer-transparent so the hover
+                    reaches that wrapper: a disabled button fires no mouse
+                    events, so the tooltip would never open otherwise. */}
+                {member.mfaEnabled ? (
+                  <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                    onClick={() => setConfirmResetMfa(true)}>
+                    <Icons.ShieldOff size={13} /> Reset MFA
+                  </Button>
+                ) : (
+                  <Tooltip
+                    side="cursor"
+                    triggerClassName="block w-full"
+                    content={`${member.name} has no MFA enrolled, so there is nothing to reset.`}
+                  >
+                    <Button variant="secondary" size="sm" disabled
+                      className="pointer-events-none"
+                      style={{ width: "100%", justifyContent: "center" }}>
+                      <Icons.ShieldOff size={13} /> Reset MFA
+                    </Button>
+                  </Tooltip>
+                )}
+              </>
+            )}
+            {/* A contact created with the wizard's email toggle off has never
+                been written to. This is where that gets finished — one click,
+                which is the whole point of having been able to defer it. */}
+            {isPending ? (
+              <Button variant="primary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => onSendInvite(member.id)}>
+                <Icons.Send size={13} /> Send invitation
+              </Button>
+            ) : isInvited ? (
               <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
                 onClick={() => alert(`Invite resent to ${member.email}`)}>
                 <Icons.RefreshCw size={13} /> Resend invite
@@ -3146,13 +3235,15 @@ function MemberRow({
         {/* Last active */}
         <div style={{ textAlign: "right", flexShrink: 0, minWidth: 88 }}>
           <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 1 }}>
-            {member.status === "invited" ? "Invite sent" : member.status === "suspended" ? "Suspended" : "Last active"}
+            {member.status === "invited" ? "Invite sent"
+              : member.status === "pending" ? "Not invited"
+              : member.status === "suspended" ? "Suspended" : "Last active"}
           </div>
           {member.lastActive ? (
             <div style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{formatRelative(member.lastActive)}</div>
           ) : (
             <div style={{ fontSize: 12, color: "var(--muted-foreground)", fontStyle: "italic" }}>
-              {member.status === "invited" ? formatRelative(member.joinedAt) : "—"}
+              {member.status === "invited" || member.status === "pending" ? formatRelative(member.joinedAt) : "—"}
             </div>
           )}
         </div>
@@ -3387,7 +3478,10 @@ const INVITE_STUDIO_OPTIONS = [
  */
 function InviteWizard({ onCancel, onSend }: {
   onCancel: () => void
-  onSend: (emails: string[], role: MemberRole, studios: string[], groupIds: string[]) => void
+  onSend: (
+    emails: string[], role: MemberRole, studios: string[], groupIds: string[],
+    roleId: string | null, sendEmail: boolean,
+  ) => void
 }) {
   const [step, setStep]         = useState<0 | 1 | 2>(0)
   const [emails, setEmails]     = useState<string[]>([])
@@ -3402,6 +3496,10 @@ function InviteWizard({ onCancel, onSend }: {
   const [role, setRole]         = useState<MemberRole>("Member")
   const [studios, setStudios]   = useState<string[]>([])
   const [groupIds, setGroupIds] = useState<string[]>([])
+  /** A permission preset, not the user type above it. Optional by design. */
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
+  const [groupQuery, setGroupQuery]         = useState("")
+  const [sendEmail, setSendEmail]           = useState(true)
   const [note, setNote]         = useState("")
 
   function toggleStudio(id: string) {
@@ -3428,6 +3526,24 @@ function InviteWizard({ onCancel, onSend }: {
 
   const effectiveStudios = isMember ? studios : INVITE_STUDIO_OPTIONS.map(s => s.id)
   const chosenGroups     = GROUPS.filter(g => groupIds.includes(g.id))
+  const selectedRole     = ROLES.find(r => r.id === selectedRoleId) ?? null
+
+  const sendDescription = emails.length === 1
+    ? `An invite link will be sent to ${emails[0]}. Expires in 7 days.`
+    : `Invite links will be sent to all ${emails.length} recipients. Expire in 7 days.`
+  const notSendingDescription =
+    "Contact(s) will be created in a pending state. You can send the invitation later from their profile."
+
+  const finishLabel = sendEmail
+    ? (emails.length > 1 ? `Send invitations (${emails.length})` : "Send invitation")
+    : (emails.length > 1 ? `Create contacts (${emails.length})`  : "Create contact")
+
+  // Same filter the Groups tab runs, so the two behave identically.
+  const shownGroups = (() => {
+    const q = groupQuery.trim().toLowerCase()
+    if (!q) return GROUPS
+    return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+  })()
 
   return (
     <ScreenLayout
@@ -3473,8 +3589,10 @@ function InviteWizard({ onCancel, onSend }: {
               selected border is what says "chosen", and a coloured label on
               top of it says it twice. */}
           <div>
-            <FormSectionLabel>Role</FormSectionLabel>
-            <div role="radiogroup" aria-label="Role" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <FormSectionLabel hint="What these people are in the workspace. A role preset, chosen next, is a separate thing.">
+              User type
+            </FormSectionLabel>
+            <div role="radiogroup" aria-label="User type" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
               {(["Member", "Admin", "Owner"] as MemberRole[]).map(r => (
                 <CardContainer key={r} size="sm" selected={role === r} onClick={() => setRole(r)}>
                   <div style={{ pointerEvents: "none" }}>
@@ -3530,8 +3648,20 @@ function InviteWizard({ onCancel, onSend }: {
             <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
               Add to groups
             </FormSectionLabel>
+            <div style={{ marginBottom: 8 }}>
+              <Input value={groupQuery} onChange={e => setGroupQuery(e.target.value)} placeholder="Search groups…" />
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {GROUPS.map(g => {
+              {shownGroups.length === 0 && (
+                <EmptyState
+                  icon={Icons.Users}
+                  title="No groups found"
+                  description="Try adjusting your search term."
+                  ctaLabel="Clear search"
+                  onCta={() => setGroupQuery("")}
+                />
+              )}
+              {shownGroups.map(g => {
                 const on = groupIds.includes(g.id)
                 return (
                   <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
@@ -3557,6 +3687,48 @@ function InviteWizard({ onCancel, onSend }: {
               })}
             </div>
           </div>
+
+          {/*
+            A role is a preset of permissions, which is why it sits beside
+            studios and groups rather than being a step of its own: all three
+            answer "what can this person reach". Thom's spec had it as its own
+            stage marked Optional — a stage nobody has to complete is a
+            section.
+          */}
+          <div>
+            <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
+              Assign a role
+            </FormSectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
+                <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                    Member gets access via groups or direct permissions only.
+                  </span>
+                </div>
+              </CardContainer>
+              {ROLES.map(r => {
+                const on = selectedRoleId === r.id
+                return (
+                  <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
+                    <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.label}</span>
+                        <Tag variant={r.system ? "secondary" : "informative"} size="sm">
+                          {r.system ? "System" : "Custom"}
+                        </Tag>
+                      </div>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>{r.desc}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)" }}>
+                        {ROLE_PERM_COUNTS[r.id]?.total ?? 0} permissions
+                      </span>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -3576,8 +3748,22 @@ function InviteWizard({ onCancel, onSend }: {
                 {emails.map(e => <Tag key={e} variant="neutral" size="sm">{e}</Tag>)}
               </InviteReviewRow>
 
-              <InviteReviewRow icon="UserCog" variant="neutral" label="Role">
+              <InviteReviewRow icon="UserCog" variant="neutral" label="User type">
                 <Tag variant="neutral" size="sm">{role}</Tag>
+              </InviteReviewRow>
+
+              <InviteReviewRow icon="ShieldCheck" variant="informative" label="Role">
+                {selectedRole
+                  ? (
+                    <Tag variant="neutral" size="sm">
+                      {selectedRole.label} · {ROLE_PERM_COUNTS[selectedRole.id]?.total ?? 0} permissions
+                    </Tag>
+                  )
+                  : (
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      No role — access comes from groups and direct permissions only
+                    </span>
+                  )}
               </InviteReviewRow>
 
               <InviteReviewRow
@@ -3600,16 +3786,34 @@ function InviteWizard({ onCancel, onSend }: {
             </div>
           </div>
 
-          {/* No label prop — this is a desktop screen. */}
-          <div>
-            <FormSectionLabel optional>Personal note</FormSectionLabel>
-            <Textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Welcome to AIMS OS! We're excited to have you on the team…"
-              rows={2}
+          {/*
+            Creating the person and inviting them are two different acts, and
+            this is where they separate. Off means the contact exists in a
+            pending state with nothing sent — a real requirement, not a
+            preference, so the CTA below renames itself to match.
+          */}
+          <CardContainer size="sm">
+            <Toggle
+              checked={sendEmail}
+              onChange={setSendEmail}
+              label="Send invitation email"
+              description={sendEmail ? sendDescription : notSendingDescription}
             />
-          </div>
+          </CardContainer>
+
+          {/* No label prop — this is a desktop screen. Nothing goes out when
+              the toggle is off, so there is nowhere for a note to be read. */}
+          {sendEmail && (
+            <div>
+              <FormSectionLabel optional>Personal note</FormSectionLabel>
+              <Textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Welcome to AIMS OS! We're excited to have you on the team…"
+                rows={2}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -3625,12 +3829,10 @@ function InviteWizard({ onCancel, onSend }: {
             cancelLabel="Cancel"
             onCancel={onCancel}
             onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
-            nextLabel={step === 2
-              ? (emails.length > 1 ? `Send ${emails.length} invitations` : "Send invitation")
-              : "Next"}
+            nextLabel={step === 2 ? finishLabel : "Next"}
             nextDisabled={!canContinue}
             onNext={step === 2
-              ? () => onSend(emails, role, effectiveStudios, groupIds)
+              ? () => onSend(emails, role, effectiveStudios, groupIds, selectedRoleId, sendEmail)
               : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
           />
         </div>,
@@ -3687,15 +3889,17 @@ function PreviewTabBar({ tabs, active, onChange }: { tabs: string[]; active: num
 }
 
 function MemberPreview({
-  member, onRoleChange, onToggleSuspend,
+  member, onRoleChange, onToggleSuspend, onSendInvite,
 }: {
   member: Member
   onRoleChange: (id: string, role: MemberRole) => void
   onToggleSuspend: (id: string) => void
+  onSendInvite: (id: string) => void
 }) {
   const [tab, setTab] = useState(0)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
+  const isPending = member.status === "pending"
 
   // Same shape the role preview shows, so it is the same component — including
   // the expand, which this tab never had.
@@ -3806,7 +4010,9 @@ function MemberPreview({
                 </select>
               </div>
             )}
-            {isInvited ? (
+            {isPending ? (
+              <Button variant="primary" size="sm" onClick={() => onSendInvite(member.id)}>Send invitation</Button>
+            ) : isInvited ? (
               <Button variant="secondary" size="sm" onClick={() => alert(`Invite resent to ${member.email}`)}>Resend invite</Button>
             ) : (
               <Button variant="secondary" size="sm" onClick={() => onToggleSuspend(member.id)}>{isActive ? "Suspend access" : "Reactivate account"}</Button>
@@ -4400,14 +4606,19 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     })
   }
 
-  function handleInvite(emails: string[], role: MemberRole, studios: string[], groupIds: string[]) {
+  function handleInvite(
+    emails: string[], role: MemberRole, studios: string[], groupIds: string[],
+    roleId: string | null, sendEmail: boolean,
+  ) {
     const stamp = Date.now()
     const invited: Member[] = emails.map((email, i) => ({
       id: `new-${stamp}-${i}`,
       name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
       email,
       role,
-      status: "invited",
+      // Invited means a link is out there and can be accepted. Pending means
+      // the person exists and nobody has been told yet.
+      status: sendEmail ? "invited" : "pending",
       lastActive: null,
       joinedAt: new Date().toISOString(),
       initials: email.slice(0, 2).toUpperCase(),
@@ -4429,21 +4640,43 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       if (groupIds.includes(g.id)) g.memberIds = [...g.memberIds, ...invited.map(m => m.id)]
     })
 
+    // A role chosen in the wizard has to actually hold these people, for the
+    // same reason the groups do — the review step said so. The Role objects
+    // are shared between the ROLES fixture and this screen's state, so
+    // mutating one updates both; setRoles only forces the re-render.
+    const assignedRole = roleId ? ROLES.find(r => r.id === roleId) : undefined
+    if (assignedRole) {
+      assignedRole.memberIds = [...assignedRole.memberIds, ...invited.map(m => m.id)]
+      setRoles(rs => [...rs])
+    }
+
     setShowInvite(false)
     setMainTab("members")
-    setStatusFilter("invited")
-    toast.success(
-      emails.length === 1 ? "Invitation sent" : `${emails.length} invitations sent`,
-      {
-        description: `${emails.length === 1 ? "It expires" : "They expire"} in 7 days. Filtered to Invited so you can see them.`,
-      },
-    )
+    setStatusFilter(sendEmail ? "invited" : "pending")
+
+    const roleNote = assignedRole ? ` Role: ${assignedRole.label}.` : ""
+    if (sendEmail) {
+      toast.success(
+        emails.length === 1 ? "Invitation sent" : `${emails.length} invitations sent`,
+        {
+          description: `${emails.length === 1 ? "It expires" : "They expire"} in 7 days.${roleNote} Filtered to Invited so you can see them.`,
+        },
+      )
+    } else {
+      toast.success(
+        emails.length === 1 ? "Contact created" : `${emails.length} contacts created`,
+        {
+          description: `No invitation was sent — open ${emails.length === 1 ? "the contact" : "a contact"} and click Send invitation when ready.${roleNote} Filtered to Pending so you can see ${emails.length === 1 ? "it" : "them"}.`,
+        },
+      )
+    }
   }
 
   const counts = useMemo(() => ({
     all:       members.length,
     active:    members.filter(m => m.status === "active").length,
     invited:   members.filter(m => m.status === "invited").length,
+    pending:   members.filter(m => m.status === "pending").length,
     suspended: members.filter(m => m.status === "suspended").length,
   }), [members])
 
@@ -4455,6 +4688,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       { id: "all",       label: "All members", count: counts.all       },
       { id: "active",    label: "Active",      count: counts.active    },
       { id: "invited",   label: "Invited",     count: counts.invited   },
+      { id: "pending",   label: "Pending",     count: counts.pending   },
       { id: "suspended", label: "Suspended",   count: counts.suspended },
     ],
     onChange: (id) => setStatusFilter(id as "all" | MemberStatus),
@@ -4488,6 +4722,34 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
     setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
   }
+  /**
+   * The second half of "create without inviting": the invitation that was
+   * deferred goes out now. `joinedAt` doubles as the invite-sent stamp
+   * everywhere this screen reads it, so it moves too — otherwise the row
+   * would date the invite to when the contact was created.
+   */
+  function handleSendInvite(id: string) {
+    const now = new Date().toISOString()
+    const person = members.find(m => m.id === id)
+    // The fixture holds its own copy, and the group and role member lists read
+    // from it — leave it behind and they keep showing Pending forever.
+    const fixtureCopy = MEMBERS.find(m => m.id === id)
+    if (fixtureCopy) { fixtureCopy.status = "invited"; fixtureCopy.joinedAt = now }
+    setMembers(ms => ms.map(m => m.id === id ? { ...m, status: "invited", joinedAt: now } : m))
+    setDetailView(d => d?.type === "member" && d.member.id === id
+      ? { type: "member", member: { ...d.member, status: "invited", joinedAt: now } }
+      : d)
+    setPreviewItem(p => p?.type === "member" && p.member.id === id
+      ? { type: "member", member: { ...p.member, status: "invited", joinedAt: now } }
+      : p)
+    // Say where they went. Sending from a list filtered to Pending drops the
+    // row out of view, and an empty list with no explanation reads as a bug.
+    // The filter is the user's — the toast explains, it does not reset it.
+    toast.success("Invitation sent", {
+      description: `${person ? `${person.email} has` : "They have"} 7 days to accept. Moved to Invited.`,
+    })
+  }
+
   function handleToggleSuspend(id: string) {
     setMembers(ms => ms.map(m => m.id === id ? { ...m, status: m.status === "suspended" ? "active" : "suspended" } : m))
   }
@@ -4516,6 +4778,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         onToggleSuspend={handleToggleSuspend}
         onRemove={handleRemove}
         onUpdate={handleMemberUpdate}
+        onSendInvite={handleSendInvite}
       />
     )
   }
@@ -4742,6 +5005,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             member={previewItem.member}
             onRoleChange={handleRoleChange}
             onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
+            onSendInvite={handleSendInvite}
           />
         )}
         {previewItem?.type === "role" && (
