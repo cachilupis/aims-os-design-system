@@ -60,10 +60,10 @@ export interface HeaderProps {
   breadcrumb?: React.ReactNode
   /** Shows an ArrowLeft back-navigation button. This is the ONLY thing that controls visibility. Hidden in compress unless showBackInCompress is also true. Do not combine with `breadcrumb`. */
   backButton?: boolean
-  /** When true, keep the back button visible even in compress mode. */
+  /** Click handler for the back button. Never affects visibility — use backButton for that. */
+  onBack?: () => void
+  /** Keep the back button visible in compress mode (requires backButton={true}). */
   showBackInCompress?: boolean
-  /** onClick handler for the back button. */
-  onBackButtonClick?: () => void
   /** Optional Lucide icon shown in a HighlightIcon (size sm). Hidden in compress. */
   icon?: LucideIcon
   /** HighlightIcon color variant for the icon slot. Defaults to "informative". */
@@ -252,8 +252,8 @@ export function Header({
   tag,
   breadcrumb,
   backButton = false,
+  onBack,
   showBackInCompress = false,
-  onBackButtonClick,
   icon: Icon,
   iconVariant = "informative",
   primaryAction,
@@ -288,7 +288,7 @@ export function Header({
               iconPosition="alone"
               aria-label="Back"
               className="mt-[3px]"
-              onClick={onBackButtonClick}
+              onClick={onBack}
               icon={<ArrowLeft size={16} strokeWidth={1.75} style={{ color: "var(--header-back-icon)" }} />}
             />
           )}

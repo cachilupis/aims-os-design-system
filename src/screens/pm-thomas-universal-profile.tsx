@@ -630,7 +630,7 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
           <Header
             size={isScrolled ? "compress" : "size-l"}
             backButton
-            onBackButtonClick={onBack}
+            onBack={onBack}
             title="Universal Profiles"
           />
         </div>

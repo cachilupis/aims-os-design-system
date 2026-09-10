@@ -1862,7 +1862,7 @@ export default function PMThomasComposableDashboardsScreen() {
             description={overlayView ? undefined : headerDesc}
             backButton={headerBack}
             showBackInCompress={headerBack}
-            onBackButtonClick={onHeaderBack}
+            onBack={onHeaderBack}
             aux={headerAux}
             secondaryAction={headerSecondary}
             primaryAction={headerPrimary}

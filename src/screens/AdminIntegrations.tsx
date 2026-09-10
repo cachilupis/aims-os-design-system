@@ -1177,7 +1177,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           description="Integrations"
           backButton
           showBackInCompress
-          onBackButtonClick={() => setDetailView(null)}
+          onBack={() => setDetailView(null)}
           secondaryAction={{ label: "Ask AI", icon: Icons.Sparkles }}
           primaryAction={detailView.status === "error"
             ? { label: "Re-authenticate", icon: Icons.RefreshCw, onClick: () => handleAction(detailView.id, "reauth") }
@@ -1196,7 +1196,7 @@ export function AdminIntegrationsScreen({ onNavigate }: { onNavigate?: (id: stri
           description={`${CATALOG.length} integrations available to connect`}
           backButton
           showBackInCompress
-          onBackButtonClick={() => setTab("connected")}
+          onBack={() => setTab("connected")}
         />
       ) : (
         <Header

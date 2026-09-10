@@ -177,7 +177,7 @@ export function BreadcrumbExampleScreen({ level }: { level: 1 | 2 | 3 }) {
                 description="Securely store, manage, and organize your documents and folders"
                 size="size-l"
                 backButton={level === 2}
-                onBackButtonClick={() => {}}
+                onBack={() => {}}
                 tag={<Tag variant="informative" size="sm">Status</Tag>}
                 // The chevron this example used to carry sat AFTER the label — a CTA that
                 // opens a menu. HeaderAction has no trailing-icon option on purpose: a menu

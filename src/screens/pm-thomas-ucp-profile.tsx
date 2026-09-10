@@ -1168,7 +1168,7 @@ export function UcpProfileView({
             title="Contacts"
             backButton
             showBackInCompress
-            onBackButtonClick={() => onBack?.()}
+            onBack={() => onBack?.()}
           />
           {/* Pinned: ScreenLayout's header zone is outside the scroll
               container. 32px sides so the edges line up with the content

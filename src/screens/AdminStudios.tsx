@@ -903,7 +903,7 @@ function StudioDetailScreen({
           title={studio.name}
           description={studio.description}
           backButton={!isScrolled}
-          onBackButtonClick={onBack}
+          onBack={onBack}
         />
       )}
     >

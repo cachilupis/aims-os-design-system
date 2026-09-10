@@ -3805,7 +3805,7 @@ function InviteWizard({ onCancel, onSend }: {
           title="Invite members"
           description="Invitations are sent by email and expire after 7 days."
           backButton
-          onBackButtonClick={onCancel}
+          onBack={onCancel}
         />
       )}
     >
@@ -4645,7 +4645,7 @@ function NewRoleWizard({ onCancel, onCreate }: {
           title="New role"
           description="A role bundles permissions so they can be granted to several people at once."
           backButton
-          onBackButtonClick={onCancel}
+          onBack={onCancel}
         />
       )}
     >
