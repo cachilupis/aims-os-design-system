@@ -21,6 +21,7 @@
  */
 
 import { useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { ScreenLayout }      from "@/components/layouts/screen-layout"
 import { Header }            from "@/components/ui/header"
 import { Tabs }              from "@/components/ui/tabs"
@@ -36,16 +37,20 @@ import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { ModalDialog }       from "@/components/ui/modal-dialog"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { Tooltip }           from "@/components/ui/tooltip"
 import { Checkbox }          from "@/components/ui/checkbox"
 import { AiSummaryWidget }   from "@/components/experimental/ai-summary-widget"
 import { Input }             from "@/components/ui/input"
 import { Select }            from "@/components/ui/select"
 import { RadioGroup }        from "@/components/ui/radio"
+import { Stepper }           from "@/components/ui/stepper"
+import type { StepItem }     from "@/components/ui/stepper"
+import { StepperNavFooter }  from "@/components/ui/stepper-nav-footer"
+import { Tag }               from "@/components/ui/tag"
 import { InformativeCard }   from "@/components/ui/informative-card"
 import { useToast }          from "@/components/ui/toast"
-import { Chip }              from "@/components/ui/chip"
-import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
+import { anchorFromElement, anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
 import { Plus, Lock, Trash2, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
@@ -136,7 +141,7 @@ const CREATE_LABEL: Record<string, string> = {
  * phone nobody has yet and an owner nobody has decided are both normal states
  * for a record created the moment somebody appears in an inbox.
  */
-type CreateFieldKind = "text" | "select" | "phones"
+type CreateFieldKind = "text" | "select" | "search" | "phones"
 
 interface CreateField {
   key:       string
@@ -152,7 +157,7 @@ const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
     { key: "email",    label: "Email",         kind: "text"                                        },
     { key: "phones",   label: "Phone",         kind: "phones", optional: true                      },
     { key: "location", label: "Location",      kind: "select", options: CREATE_LOCATIONS           },
-    { key: "owner",    label: "Account owner", kind: "select", options: CREATE_OWNERS, optional: true },
+    { key: "owner",    label: "Account owner", kind: "search", options: CREATE_OWNERS, optional: true },
   ],
   employee: [
     { key: "name",       label: "Full name",  kind: "text"                                  },
@@ -166,7 +171,7 @@ const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
     { key: "email",    label: "Account email", kind: "text"                                        },
     { key: "phones",   label: "Phone",         kind: "phones", optional: true                      },
     { key: "location", label: "Headquarters",  kind: "select", options: CREATE_LOCATIONS           },
-    { key: "owner",    label: "Account owner", kind: "select", options: CREATE_OWNERS, optional: true },
+    { key: "owner",    label: "Account owner", kind: "search", options: CREATE_OWNERS, optional: true },
   ],
   // A create form asks what the OBJECT needs, never what the pattern needs.
   // Nothing about these two is person-shaped, and that is the whole reason
@@ -175,7 +180,7 @@ const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
   policy: [
     { key: "name",   label: "Policy name",    kind: "text"                              },
     { key: "scope",  label: "Scope",          kind: "text"                              },
-    { key: "owner",  label: "Owner",          kind: "select", options: CREATE_OWNERS    },
+    { key: "owner",  label: "Owner",          kind: "search", options: CREATE_OWNERS    },
     { key: "from",   label: "Effective date", kind: "text"                              },
     { key: "cycle",  label: "Review cycle",   kind: "text",   optional: true            },
   ],
@@ -184,9 +189,24 @@ const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
     { key: "kind",      label: "Type",         kind: "text"                              },
     { key: "location",  label: "Assigned site", kind: "select", options: CREATE_LOCATIONS },
     { key: "acquired",  label: "Acquired",     kind: "text"                              },
-    { key: "custodian", label: "Custodian",    kind: "select", options: CREATE_OWNERS, optional: true },
+    { key: "custodian", label: "Custodian",    kind: "search", options: CREATE_OWNERS, optional: true },
   ],
 }
+
+/**
+ * The types this flow offers, and it is two of the five.
+ *
+ * One reason covers all three exclusions: none of them is a person somebody
+ * meets and types in. An employee arrives from Workday, a policy is authored
+ * in Governance, a fleet asset comes off the DMS sync. They keep their roster
+ * tabs — the records exist and are governed — and lose the claim that a form
+ * called "New contact" is where they come from. Employee went last, on
+ * Michael's instruction (2026-09-10); the other two went with the modal.
+ *
+ * Their field lists stay in CREATE_FIELDS for whenever they get a create
+ * surface of their own. Nothing here offers one.
+ */
+const CREATABLE_TYPES: UcpEntityType[] = ["person", "company"]
 
 type SortKey = "recent" | "name" | "owner"
 
@@ -205,104 +225,137 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 // is a different thing: that one answers about one record from its own planes.
 // ── Create ────────────────────────────────────────────────────────────────────
 /**
- * A MODAL, AND THIS USED TO BE A SLIDEOUT. The comment it replaces read "a
- * create form is non-destructive, so it is a SlideOut and not a ModalDialog",
- * and destructiveness is explicitly NOT the test — the Create pattern's test
- * is whether the user can ignore the surface and keep working in the
- * background. Filling in a name, an email and a location needs nothing from
- * the roster behind it, so they cannot. Running the cascade:
+ * ── Creating a contact is a full page with a Stepper ───────────────────────
  *
- *   1  Does a contact declare a workspace of its own?          no
- *   2  Does the flow branch, or have two or more stages?        no
- *   3  Creatable from a single field, beside a list of them?    no
- *   4  Does it attach to something visible on screen?           no — a roster
- *      is a list of siblings, not the new record's parent
- *   5  More than five fields?                                   no, exactly 5
- *      → ModalDialog variant="content"
+ * THIS SURFACE HAS MOVED TWICE, and both moves are worth keeping written down
+ * because the reasoning is what makes the current one right rather than just
+ * newest.
  *
- * `slotUnstyled`, because the fields sit directly on the modal. The default
- * slot wraps content in the grey `--modal-slot-bg` surface, which is for a
- * card of content inside a dialog, not for the dialog's own form.
+ * It began as a `SlideOut`, justified with "a create form is non-destructive,
+ * so it is a SlideOut and not a ModalDialog". That is not the test — the
+ * Create pattern's test is whether the user can ignore the surface and keep
+ * working in the background — so it became a `ModalDialog variant="content"`,
+ * which is where the cascade lands a standalone five-field create.
  *
- * No `label` prop on Input — placeholder is the only field hint on desktop.
+ * Michael then asked for stages (2026-09-10), and stages change the answer
+ * outright. The pattern's staged-flows table has exactly two rows: one stage
+ * is a panel, and "two or more stages, or any branching" is a full-page wizard
+ * with `Stepper` and `StepperNavFooter`. There is no `Stepper` inside a modal
+ * and no `StepperNavFooter` inside a panel, so this is not a preference.
+ *
+ * WHY THE STAGES ARE NOT PADDING ON FIVE FIELDS. They are three different
+ * questions, and the first one is a gate:
+ *
+ *   1 · Identity   Who is this, and does the platform already know them?
+ *                  The duplicate check lives here and BLOCKS here. A known
+ *                  duplicate should never be carried through two more stages
+ *                  to be refused at the end.
+ *   2 · Details    How to reach them and who owns the relationship.
+ *   3 · Review     What is about to be written, and what happens to it. A
+ *                  record created by hand starts on the Sandbox Plane rather
+ *                  than arriving attested from a source system, and that is a
+ *                  governance consequence — it gets stated before the button
+ *                  that causes it, not in a toast afterwards.
+ *
+ * NO SIDEBAR for the duration (`hideSidebar`) — the pattern's own rule for
+ * full-page create surfaces, so the only ways out are the Header's back arrow
+ * and the footer's Cancel. `Header` carries a title and `backButton` only; the
+ * flow completes in the footer and never in the bar.
  */
-function CreateModal({
-  open, onClose, lockedType, onCreate, onOpenRecord,
+const WIZARD_STEPS = ["Identity", "Details", "Review"] as const
+
+function CreateContactWizard({
+  lockedType, onCancel, onCreate, onOpenRecord,
 }: {
-  open:        boolean
-  onClose:     () => void
-  /** Set when a type tab is active; null on All, where the user picks. */
-  lockedType:  UcpEntityType | null
-  onCreate:    (type: UcpEntityType, name: string) => void
+  /** The tab the user pressed the CTA on, when it names a creatable type. */
+  lockedType:   UcpEntityType | null
+  onCancel:     () => void
+  onCreate:     (type: UcpEntityType, name: string) => void
   /** The duplicate card's way out: open the record that already exists. */
   onOpenRecord: (id: string) => void
 }) {
-  const [type,   setType]   = useState<UcpEntityType>(lockedType ?? "person")
+  const [step,   setStep]   = useState<0 | 1 | 2>(0)
+  const [type,   setType]   = useState<UcpEntityType>(
+    lockedType && CREATABLE_TYPES.includes(lockedType) ? lockedType : "person",
+  )
   const [values, setValues] = useState<Record<string, string>>({})
   const [tried,  setTried]  = useState(false)
   /** One entry per phone row. Starts as a single empty row — an optional field
    *  still shows one line, or nobody discovers it is there. */
   const [phones, setPhones] = useState<string[]>([""])
   const [primary, setPrimary] = useState(0)
-  /** Which Select has its Menu open, and where to anchor it. One at a time. */
+  /** Which Select or search field has its Menu open, and where to anchor it. */
   const [openSel, setOpenSel] = useState<string | null>(null)
   const [selAnchor, setSelAnchor] = useState<DropdownAnchor | null>(null)
   const selDrop = useDropdownPosition(selAnchor)
+  /** What has been typed into a `search` field, kept apart from `values` so
+   *  that abandoning a search without picking anything leaves the committed
+   *  value alone. */
+  const [query, setQuery] = useState<Record<string, string>>({})
 
-  const activeType = lockedType ?? type
-  const fields     = CREATE_FIELDS[activeType]
-
-  const reset = () => {
-    setValues({}); setPhones([""]); setPrimary(0); setTried(false); setOpenSel(null)
+  const fields = CREATE_FIELDS[type]
+  const byKey  = (k: string) => fields.find(f => f.key === k)
+  const STEP_KEYS: Record<0 | 1, string[]> = {
+    0: ["name", "email"],
+    1: ["phones", "location", "owner"],
   }
+  const stepFields = (i: 0 | 1) =>
+    STEP_KEYS[i].map(byKey).filter((f): f is CreateField => !!f)
 
   /**
    * The duplicate check, and it runs on every keystroke rather than on blur.
-   * Blur is the tempting choice — fewer lookups, no card flickering mid-word —
-   * and it is the wrong one here: the card that matters most appears when the
-   * email is COMPLETE, and by then a blur-triggered check has let the user
-   * move on to the next field and start filling in a record that will not be
-   * created. Telling them while their cursor is still in the field is the
-   * difference between a warning and an interruption.
+   * Blur is the tempting choice — fewer lookups, no card appearing mid-word —
+   * and it is the wrong one: the card that matters appears when the email is
+   * COMPLETE, and a blur-triggered check has by then let the user move to the
+   * next field and start filling in a record that will not be created.
    */
-  const match: CreateMatch | null = useMemo(() => {
-    // Policies and assets have no unique field to collide on.
-    if (activeType === "policy" || activeType === "asset") return null
-    return matchExistingRecords({
-      name:   values.name,
-      email:  values.email,
-      phones,
-    })
-  }, [activeType, values.name, values.email, phones])
+  const match: CreateMatch | null = useMemo(
+    () => matchExistingRecords({ name: values.name, email: values.email, phones }),
+    [values.name, values.email, phones],
+  )
+  const blocked = match?.blocks === true
 
-  const required = fields.filter(f => !f.optional)
-  const missing  = required.filter(f =>
-    f.kind === "phones"
-      ? phones.every(p => p.trim() === "")
+  const missingIn = (i: 0 | 1) => stepFields(i).filter(f =>
+    f.optional ? false
+      : f.kind === "phones" ? phones.every(p => p.trim() === "")
       : (values[f.key] ?? "").trim() === "",
   )
-  const complete = missing.length === 0
-  const blocked  = match?.blocks === true
+  const missing = missingIn(step === 2 ? 1 : (step as 0 | 1))
+
+  /* Identity cannot be left with a KNOWN duplicate. The two email cases are
+     certain — an email is the one field this data treats as unique — so Next
+     is closed and the card carries the way out. A phone or a name match warns
+     and lets the user through: a switchboard is not a duplicate, and the
+     person filling the form is the one who knows which it is. */
+  const canContinue = step === 0 ? missingIn(0).length === 0 && !blocked
+                    : step === 1 ? missingIn(1).length === 0
+                    : true
+
+  const steps: StepItem[] = WIZARD_STEPS.map((label, i) => ({
+    label,
+    state: step === i ? "active" : step > i ? "completed" : "default",
+    ...(step < i ? { hint: `Complete ${WIZARD_STEPS[i - 1]} first.` } : {}),
+  }))
 
   const setPhone = (i: number, v: string) =>
     setPhones(list => list.map((p, j) => (j === i ? v : p)))
 
   const removePhone = (i: number) => {
     setPhones(list => list.filter((_, j) => j !== i))
-    // The primary moves with the list, and never past its end. Deleting the
+    // The primary moves with the list and never past its end. Deleting the
     // primary promotes the row that took its place.
     setPrimary(pi => (i < pi ? pi - 1 : Math.min(pi, phones.length - 2)))
   }
+
+  const filled = phones.map(p => p.trim()).filter(Boolean)
 
   const field = (f: CreateField) => {
     const invalid = tried && !f.optional && missing.includes(f)
 
     if (f.kind === "phones") {
       return (
-        <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
-            {f.label} <span style={{ fontWeight: 500, color: "var(--field-supporting)" }}>· optional</span>
-          </span>
+        <div key={f.key}>
+          <FormLabel optional hint="More than one is fine — mark which to use first.">{f.label}</FormLabel>
           {/*
             THE PRIMARY IS A RADIO, AND IT ONLY EXISTS FROM THE SECOND ROW ON.
             One phone is the primary by definition, and a radio group of one is
@@ -317,7 +370,7 @@ function CreateModal({
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 {phones.length > 1 && (
                   <RadioGroup
-                    legend={`Primary phone ${i + 1}`}
+                    legend={`Use phone ${i + 1} first`}
                     hideLegend
                     size="sm"
                     value={primary === i ? "on" : ""}
@@ -343,12 +396,12 @@ function CreateModal({
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-            <Button variant="tertiary" size="sm" className="self-start" onClick={() => setPhones(l => [...l, ""])}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 8 }}>
+            <Button variant="tertiary" size="sm" onClick={() => setPhones(l => [...l, ""])}>
               <Plus size={12} /> Add another number
             </Button>
             {phones.length > 1 && (
-              <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                 {phones[primary]?.trim() ? `${phones[primary].trim()} is primary` : "Pick the primary number"}
               </span>
             )}
@@ -357,13 +410,78 @@ function CreateModal({
       )
     }
 
+    /*
+      A SEARCH FIELD, NOT A SELECT — Michael, 2026-09-10: "en Account owner haz
+      que sea un campo donde se pueda escribir y se despliegue un dropdown
+      menu, tipo busqueda inteligente".
+
+      Owners are the one option list here that grows with the tenant. Five
+      names fit in a Select; two hundred do not, and a Select's answer to two
+      hundred is a scrollbar and a reader hunting alphabetically. Typing is the
+      only interaction that stays the same size as the list.
+
+      Substring matching, not prefix, and case-insensitive: somebody looking
+      for Priya Nair types "nair" as readily as "priya".
+
+      // DS-GAP: no Combobox / typeahead in src/components/ui/. The closest is
+      // Select, a trigger with no text entry. Composed here from Input + Menu
+      // + dropdown-anchor — the same pair every other dropdown uses — rather
+      // than adding a component from inside a PM prototype.
+    */
+    if (f.kind === "search") {
+      const q      = query[f.key] ?? ""
+      const chosen = values[f.key] ?? ""
+      const hits   = (f.options ?? []).filter(o => o.toLowerCase().includes(q.trim().toLowerCase()))
+      const isOpen = openSel === f.key
+
+      return (
+        <div key={f.key}>
+          <FormLabel
+            optional={f.optional}
+            hint="Type to search. Leave it empty and the record goes to the unassigned queue."
+          >
+            {f.label}
+          </FormLabel>
+          <div onClickCapture={e => setSelAnchor(anchorFromEvent(e))}>
+            <Input
+              placeholder={chosen || `Search ${f.label.toLowerCase()}…`}
+              value={isOpen ? q : chosen}
+              state={invalid ? "error" : undefined}
+              /* Anchored off the FIELD, not off a click — Tab into this
+                 input and the menu still lands under it. Focus is the event
+                 that opens the list, so focus is the event that has to
+                 position it. */
+              onFocus={e => { setSelAnchor(anchorFromElement(e.currentTarget)); setOpenSel(f.key); setQuery(v => ({ ...v, [f.key]: "" })) }}
+              /* The anchor is set here too, not only on focus. Typing is the
+                 other event that opens this list — a field that already had
+                 focus when the user started typing fires no focus event, and
+                 the menu would then have a state saying "open" and no
+                 position to open at. Both events open it, so both position
+                 it. */
+              onChange={e => { setSelAnchor(anchorFromElement(e.currentTarget)); setOpenSel(f.key); setQuery(v => ({ ...v, [f.key]: e.target.value })) }}
+              onKeyDown={e => {
+                // Enter commits the only remaining match — the whole point of
+                // typing is that three letters usually leave one name.
+                if (e.key === "Enter" && hits.length === 1) {
+                  setValues(v => ({ ...v, [f.key]: hits[0] })); setOpenSel(null)
+                }
+                if (e.key === "Escape") setOpenSel(null)
+              }}
+            />
+          </div>
+          {isOpen && q.trim() !== "" && hits.length === 0 && (
+            <span style={{ display: "block", marginTop: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
+              {`Nobody matches “${q.trim()}”. Leave it empty and assign later.`}
+            </span>
+          )}
+        </div>
+      )
+    }
+
     if (f.kind === "select") {
       return (
-        <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
-            {f.label}
-            {f.optional && <span style={{ fontWeight: 500, color: "var(--field-supporting)" }}> · optional</span>}
-          </span>
+        <div key={f.key}>
+          <FormLabel optional={f.optional}>{f.label}</FormLabel>
           {/* Select is a trigger only — the options come from the DS Menu,
               positioned by dropdown-anchor. The same mechanism Filters uses,
               which is why there is no second implementation in this file. */}
@@ -382,11 +500,8 @@ function CreateModal({
     }
 
     return (
-      <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
-          {f.label}
-          {f.optional && <span style={{ fontWeight: 500, color: "var(--field-supporting)" }}> · optional</span>}
-        </span>
+      <div key={f.key}>
+        <FormLabel optional={f.optional}>{f.label}</FormLabel>
         <Input
           placeholder={f.label}
           value={values[f.key] ?? ""}
@@ -397,76 +512,191 @@ function CreateModal({
     )
   }
 
-  const selField = fields.find(f => f.key === openSel && f.kind === "select")
+  const selField = fields.find(f => f.key === openSel && (f.kind === "select" || f.kind === "search"))
+  /** What the open menu lists: every option for a Select, the matches for a
+   *  search field. Capped at eight — past that the reader should type another
+   *  letter, not scroll. */
+  const selOptions = selField
+    ? (selField.kind === "search"
+        ? (selField.options ?? []).filter(o => o.toLowerCase().includes((query[selField.key] ?? "").trim().toLowerCase())).slice(0, 8)
+        : (selField.options ?? []))
+    : []
+
+  const name = (values.name ?? "").trim()
 
   return (
-    <>
-      <ModalDialog
-        isOpen={open}
-        onClose={() => { onClose(); reset() }}
-        variant="content"
-        iconName={TYPE_ICON[activeType]}
-        iconVariant="informative"
-        title={`New ${TYPE_LABEL[activeType]}`}
-        description={`A record created here has no source system — its facts start on the Sandbox plane and are promoted as they are verified.`}
-        slotUnstyled
-        slot={
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {!lockedType && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>What are you creating?</span>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {(Object.keys(CREATE_FIELDS) as UcpEntityType[]).map(t => (
-                    <Chip
-                      key={t}
-                      size="s"
-                      variant={activeType === t ? "primary" : "secondary"}
-                      onClick={() => { setType(t); reset() }}
-                    >
-                      {TYPE_LABEL[t]}
-                    </Chip>
-                  ))}
-                </div>
-              </div>
-            )}
+    <ScreenLayout
+      workspaceName="Acme Corp"
+      userName="Thomas González"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={UCP_SIDEBAR_ITEMS}
+      activeSidebarId="contacts"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title={`New ${TYPE_LABEL[type].toLowerCase()}`}
+          description="A record created here has no source system. Its facts start on the Sandbox Plane and are promoted as they are verified."
+          backButton
+          onBack={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} onStepClick={i => { if (i < step) setStep(i as 0 | 1 | 2) }} />
+      </div>
 
-            {/* The edge case, stated before the CTA is reached rather than
-                after it is pressed. One card, strongest signal — the ordering
-                and the reasoning live in matchExistingRecords. */}
-            {match && <DuplicateCard match={match} onOpenRecord={id => { onOpenRecord(id); onClose(); reset() }} />}
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {fields.map(field)}
+      {/* ── 1 · Identity ──────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          {/* Customer or Company, and neither Employee, Policy nor Asset.
+              Michael took all three out (2026-09-10). The reason is one
+              reason: none of them is a person you meet and type in. An
+              employee arrives from Workday, a policy is authored in
+              Governance, a fleet asset comes off the DMS sync. They keep
+              their roster tabs — the records exist — and lose the claim that
+              this form is where they come from. */}
+          <div>
+            <FormLabel hint="What kind of record this is. It decides the fields and the icon it carries everywhere after.">
+              What are you creating?
+            </FormLabel>
+            <div role="radiogroup" aria-label="Record type" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {CREATABLE_TYPES.map(t => (
+                <CardContainer key={t} size="sm" selected={type === t} onClick={() => { setType(t); setTried(false) }}>
+                  <div style={{ pointerEvents: "none", display: "flex", alignItems: "center", gap: 10 }}>
+                    <HighlightIcon size="sm" variant={type === t ? "informative" : "neutral"} iconName={TYPE_ICON[t]} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{TYPE_LABEL[t]}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                        {t === "person" ? "A person you sell to or support." : "An organisation, with people under it."}
+                      </span>
+                    </div>
+                  </div>
+                </CardContainer>
+              ))}
             </div>
-
-            {tried && !complete && (
-              <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
-                {missing.length === 1
-                  ? `${missing[0].label} is still empty.`
-                  : `${missing.length} required fields are still empty: ${missing.map(f => f.label).join(", ")}.`}
-              </span>
-            )}
           </div>
-        }
-        ctaPrimary={{
-          label: `Create ${TYPE_LABEL[activeType]}`,
-          // Disabled ONLY for the two email cases. A phone or a name match is
-          // a warning, and a form that refuses a real second person at the
-          // same company has stopped being a safeguard.
-          disabled: blocked,
-          onClick: () => {
-            if (!complete) { setTried(true); return }
-            onCreate(activeType, (values.name ?? "").trim())
-            reset()
-          },
-        }}
-        ctaSecondary={{ label: "Cancel", onClick: () => { onClose(); reset() } }}
-      />
 
-      {openSel && selAnchor && selField && (
+          {/* The edge case, on the stage that can still act on it — and it
+              gates this stage rather than the final button. */}
+          {match && <DuplicateCard match={match} onOpenRecord={onOpenRecord} />}
+
+          {stepFields(0).map(field)}
+
+          {tried && missingIn(0).length > 0 && (
+            <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
+              {missingIn(0).length === 1
+                ? `${missingIn(0)[0].label} is still empty.`
+                : `${missingIn(0).map(f => f.label).join(" and ")} are still empty.`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── 2 · Details ───────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          {stepFields(1).map(field)}
+
+          {/* A phone entered HERE can collide with a record the identity
+              stage never saw, so the card follows the data rather than the
+              stage. It never blocks: two people at one switchboard is a
+              normal shape for this data. */}
+          {match && !match.blocks && match.kind === "phone" && (
+            <DuplicateCard match={match} onOpenRecord={onOpenRecord} />
+          )}
+
+          {tried && missingIn(1).length > 0 && (
+            <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
+              {`${missingIn(1).map(f => f.label).join(" and ")} is still empty.`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── 3 · Review ────────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          <div>
+            <FormLabel hint="This is the record that gets written, and where its facts land.">Review</FormLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <ReviewRow icon={TYPE_ICON[type]} variant="informative" label={TYPE_LABEL[type]}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{name}</span>
+              </ReviewRow>
+              <ReviewRow icon="Mail" variant="neutral" label="Email">
+                <Tag variant="neutral" size="sm">{(values.email ?? "").trim()}</Tag>
+              </ReviewRow>
+              <ReviewRow icon="Phone" variant="neutral" label={filled.length > 1 ? `${filled.length} numbers` : "Phone"}>
+                {filled.length === 0
+                  ? <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--muted-foreground)" }}>None</span>
+                  : filled.map((p, i) => (
+                      <Tag key={p} variant={i === primary ? "informative" : "neutral"} size="sm">
+                        {i === primary ? `${p} · primary` : p}
+                      </Tag>
+                    ))}
+              </ReviewRow>
+              <ReviewRow icon="MapPin" variant="neutral" label={byKey("location")?.label ?? "Location"}>
+                <Tag variant="neutral" size="sm">{values.location}</Tag>
+              </ReviewRow>
+              <ReviewRow icon="User" variant={values.owner ? "neutral" : "yellow"} label="Account owner">
+                {values.owner
+                  ? <Tag variant="neutral" size="sm">{values.owner}</Tag>
+                  : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Unassigned — goes to the queue</span>}
+              </ReviewRow>
+            </div>
+          </div>
+
+          {/* The domain link is the one match worth repeating here, because it
+              is not a warning — it is a consequence of saving, and this is the
+              stage that states consequences. */}
+          {match?.kind === "domain" && <DuplicateCard match={match} onOpenRecord={onOpenRecord} />}
+
+          <InformativeCard
+            state="informative"
+            size="sm"
+            title="Everything here starts on the Sandbox Plane"
+            description={`Nothing typed into a form is attested. ${name || "This record"}'s facts are candidate claims until a source corroborates them or a domain owner confirms them — until then an agent can cite them and cannot treat them as true.`}
+          />
+        </div>
+      )}
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2 ? `Create ${TYPE_LABEL[type].toLowerCase()}` : "Next"}
+            nextDisabled={step < 2 && !canContinue && tried}
+            onNext={() => {
+              if (step === 2) { onCreate(type, name); return }
+              if (!canContinue) { setTried(true); return }
+              setTried(false)
+              setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)
+            }}
+          />
+        </div>,
+        document.body,
+      )}
+
+      {/*
+        Z-INDEX 200 IS THE FOOTER'S, and a dropdown has to clear it. It also
+        has to clear nothing else: this is a full page, not an overlay, so the
+        10001 the roster's own filter menus use is more than enough. The modal
+        this flow replaced needed 10030 to get out from under `z-[10020]`;
+        that problem left with the modal.
+      */}
+      {openSel && selAnchor && selField && selOptions.length > 0 && (
         <div ref={selDrop.ref} style={{ position: "fixed", zIndex: 10001, ...selDrop.style }}>
           <Menu>
-            {(selField.options ?? []).map(opt => (
+            {selOptions.map(opt => (
               <MenuItem
                 key={opt}
                 size="sm"
@@ -477,50 +707,88 @@ function CreateModal({
           </Menu>
         </div>
       )}
-    </>
+    </ScreenLayout>
+  )
+}
+
+/** A field's label, and the one line of context that stops it needing one. */
+function FormLabel({ children, hint, optional }: { children: React.ReactNode; hint?: string; optional?: boolean }) {
+  return (
+    <div style={{ marginBottom: hint ? 8 : 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>
+        {children}{optional && <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> (optional)</span>}
+      </div>
+      {hint && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>{hint}</div>}
+    </div>
+  )
+}
+
+/** One reviewed fact: what it is on the left, the actual values on the right. */
+function ReviewRow({ icon, variant, label, children }: {
+  icon:     string
+  variant:  HighlightIconVariant
+  label:    string
+  children: React.ReactNode
+}) {
+  return (
+    <CardContainer size="sm">
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <HighlightIcon size="sm" variant={variant} iconName={icon} />
+        <span style={{ width: 140, flexShrink: 0, fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{label}</span>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, minWidth: 0 }}>{children}</div>
+      </div>
+    </CardContainer>
   )
 }
 
 /**
- * ── What an existing record looks like, before you make a second one ───────
+ * THE TITLE NAMES THE RECORD, not the rule that fired. Michael, 2026-09-10:
+ * "como se podría visualizar el nombre del otro contacto creado que usa el
+ * mismo nombre o mail".
  *
- * The card is an `InformativeCard` — its state carries the severity, and the
- * records themselves are listed underneath it as real `EntityList` rows, with
- * the datum that collided in the meta line. That last part is the whole point:
- * "this email already exists" tells the reader nothing they can act on, while
- * "sandra.torres@meridian.com · Sandra Torres · Active · owned by Priya Nair"
- * tells them whether they are about to duplicate a record or whether somebody
- * else's typo is standing in their way.
+ * "This email is already on a record" is a validation message — it describes
+ * the check. "Sandra Torres already has this email" is an answer: the reader
+ * knows in one line whether they are about to duplicate somebody they meant
+ * to create, or whether a colleague's typo is standing in their way. The
+ * difference costs nothing and it is the whole value of the card.
+ *
+ * Above two matches the name is dropped for the count, because three names in
+ * a title is a list and a title is not the place for one — the rows below
+ * carry them, with the email, the phone and the owner on each.
  */
 const MATCH_COPY: Record<CreateMatch["kind"], {
   state: "error" | "alert" | "informative"
-  title: (on: string, n: number) => string
-  body:  (on: string, n: number) => string
+  title: (who: string, on: string, n: number) => string
+  body:  (who: string, on: string, n: number) => string
 }> = {
   "email-active": {
     state: "error",
-    title: () => "This email is already on a record",
-    body:  on => `${on} belongs to the record below. Open it instead of creating a second one — a duplicate has to be merged later, and a merge is a governance event.`,
+    title: who => `${who} already has this email`,
+    body:  (who, on) => `${on} is on ${who}'s record. Open it instead of creating a second one — a duplicate has to be merged later, and a merge is a governance event.`,
   },
   "email-archived": {
     state: "alert",
-    title: () => "This email is on an archived record",
-    body:  on => `${on} belongs to a record that was archived, not deleted. Its facts and drives are still there. Restore it rather than starting again.`,
+    title: who => `${who} has this email, on an archived record`,
+    body:  (who, on) => `${on} belongs to ${who}, whose record was archived rather than deleted. The facts and drives are still there. Restore it rather than starting again.`,
   },
   phone: {
     state: "alert",
-    title: (_, n) => (n === 1 ? "Another record has this number" : `${n} records have this number`),
-    body:  on => `${on} is already on file with a different email. That is normal for a switchboard or a shared line — check it is not the same person before you continue.`,
+    title: (who, _, n) => (n === 1 ? `${who} already has this number` : `${n} records have this number`),
+    body:  (who, on, n) => n === 1
+      ? `${on} is on ${who}'s record, under a different email. That is normal for a switchboard or a shared line — check it is not the same person before you continue.`
+      : `${on} is on ${n} records already, each under a different email. Check none of them is this person before you continue.`,
   },
   name: {
     state: "informative",
-    title: (_, n) => (n === 1 ? "A record already has this name" : `${n} records already have this name`),
-    body:  (_, n) => `The email and phone are different, so ${n === 1 ? "this is" : "these are"} probably not the same person. Worth a look before you create it.`,
+    title: (who, _, n) => (n === 1 ? `${who} already has a record` : `${n} records are already called this`),
+    body:  (who, _, n) => n === 1
+      ? `The email and phone on ${who}'s record are different, so this is probably not the same person. Worth opening it before you create a second.`
+      : "Their emails and phones all differ from what you have entered. Worth a look before you create another.",
   },
   domain: {
     state: "informative",
-    title: on => `${on} is already on file`,
-    body:  (_, n) => `${n} record${n === 1 ? "" : "s"} share this domain. The new contact will be linked to it, so you do not have to come back and do it by hand.`,
+    title: (_who, on) => `${on} is already on file`,
+    body:  (who, _, n) => `${n} record${n === 1 ? "" : "s"} share this domain, ${who} among them. The new contact will be linked to it, so you do not have to come back and do it by hand.`,
   },
 }
 
@@ -534,8 +802,8 @@ function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenReco
       <InformativeCard
         state={copy.state}
         size="sm"
-        title={copy.title(match.on, n)}
-        description={copy.body(match.on, n)}
+        title={copy.title(head.name, match.on, n)}
+        description={copy.body(head.name, match.on, n)}
         /* The way out is on the card, next to the reason for it — not a
            separate button further down the form, where it reads as an
            unrelated action. Only the two blocking cases get one: a phone or
@@ -731,6 +999,33 @@ export default function PMThomasUcpContactsScreen() {
     setSortKey(key)
     resetPage()
     closeSlot()
+  }
+
+  /* ── The create flow takes over the whole screen ──
+     Not an overlay on top of the roster: the Create pattern hides the Sidebar
+     for a full-page create, and a wizard drawn over a list the user can still
+     see and click is the panel it stopped being. It is checked BEFORE the
+     profile so that a duplicate card's "Open Sandra Torres" leaves the flow
+     and lands on the record, rather than opening it behind the wizard. */
+  if (createOpen) {
+    return (
+      <CreateContactWizard
+        lockedType={activeType === "all" ? null : activeType}
+        onCancel={() => setCreateOpen(false)}
+        onOpenRecord={id => { setCreateOpen(false); setOpenId(id) }}
+        /* Every create ends in a toast — the Create pattern is explicit that a
+           visible landing is not confirmation on its own, because "it appeared
+           in the list" only reads as confirmation to somebody who knows what
+           the list looked like a second ago. The toast says what happened; the
+           roster says where it went. */
+        onCreate={(t, name) => {
+          setCreateOpen(false)
+          toast.success(`${TYPE_LABEL[t]} \u201c${name}\u201d created`, {
+            description: "Its facts start on the Sandbox Plane and are promoted as they are verified.",
+          })
+        }}
+      />
+    )
   }
 
   // ── Profile view takes over the whole screen ──
@@ -1216,23 +1511,6 @@ export default function PMThomasUcpContactsScreen() {
         ctaSecondary={{ label: "Cancel", onClick: () => setArchiving(null) }}
       />
 
-      <CreateModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        lockedType={activeType === "all" ? null : activeType}
-        onOpenRecord={setOpenId}
-        /* Every create ends in a toast — the Create pattern is explicit that a
-           visible landing is not confirmation on its own, because "it appeared
-           in the list" only reads as confirmation to someone who knows what
-           the list looked like a second ago. The toast says what happened; the
-           roster says where it went. */
-        onCreate={(t, name) => {
-          setCreateOpen(false)
-          toast.success(`${TYPE_LABEL[t]} \u201c${name}\u201d created`, {
-            description: "Its facts start on the Sandbox plane and are promoted as they are verified.",
-          })
-        }}
-      />
 
     </ScreenLayout>
   )

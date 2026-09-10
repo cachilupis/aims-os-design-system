@@ -61,8 +61,6 @@ import { Chip }              from "@/components/ui/chip"
 import { SwitchTab }         from "@/components/ui/switch-tab"
 import { Button }            from "@/components/ui/button"
 import { Input }             from "@/components/ui/input"
-import { Table }             from "@/components/ui/table"
-import type { TableColumn }  from "@/components/ui/table"
 import { CardContainer }     from "@/components/ui/card-container"
 import { EntityList }        from "@/components/ui/entity-list"
 import type { EntityListItemData } from "@/components/ui/entity-list"
@@ -95,7 +93,7 @@ import {
 import type {
   MetricVariant, StudyRow,
   ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
-  UcpNote,
+  UcpNote, TagVariantLite,
 } from "./ucpShared"
 
 export const UCP_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -470,32 +468,79 @@ function AiSummaryContent({ contact, onAsk, onGoTab }: {
 
 // ── Snapshot (Truth Facts) ────────────────────────────────────────────────────
 
-const FACT_COLUMNS: TableColumn<UcpFact>[] = [
-  {
-    key: "label", header: "Fact", width: "22%",
-    render: r => <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.label}</span>,
-  },
-  {
-    key: "value", header: "Value",
-    render: r => <span style={{ fontSize: 12, color: "var(--foreground)" }}>{r.value}</span>,
-  },
-  {
-    key: "plane", header: "Plane", width: "14%",
-    render: r => <Tag variant={PLANE_META[r.plane].tag} size="sm">{PLANE_META[r.plane].label}</Tag>,
-  },
-  {
-    key: "confidence", header: "Confidence", width: "11%", align: "right",
-    render: r => <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{PLANE_META[r.plane].confidence}</span>,
-  },
-  {
-    key: "source", header: "Source", width: "22%",
-    render: r => <span style={{ fontSize: 12, color: "var(--field-supporting)" }}>{r.source}</span>,
-  },
-  {
-    key: "verifiedAt", header: "Last verified", width: "14%",
-    render: r => <span style={{ fontSize: 12, color: "var(--field-supporting)", whiteSpace: "nowrap" }}>{r.verifiedAt}</span>,
-  },
-]
+/**
+ * ── One fact, as a list row ────────────────────────────────────────────────
+ *
+ * This replaces FACT_COLUMNS, the six-column Table the two fact shelves used
+ * to render. The columns are not gone, they are RE-RANKED — a table gives
+ * every column the same weight because a reader scans down one at a time, and
+ * a list has to decide what matters first.
+ *
+ * The order is Governance's own, read off its views:
+ *
+ *   title          the fact, and its value beside it — "Renewal date ·
+ *                  Sep 22, 2026". A label with no value is a column header,
+ *                  not a row.
+ *   state badge    Verified / Pending review / Due to expire. Governance's
+ *                  three, and the same three the Status filter offers.
+ *   primaryMeta    risk level, and the attention flag when there is one. The
+ *                  flag is the reason somebody opens the row, so it outranks
+ *                  the provenance below it.
+ *   secondaryMeta  where it came from, when it was last verified, and how far
+ *                  it reaches.
+ *
+ * THE CONFIDENCE PERCENTAGE IS GONE. It was a column reading "~80%" for every
+ * Sandbox claim and "100%" for every Truth fact — a number derived from the
+ * plane, restating the plane, next to the plane's own Tag. A figure that
+ * cannot vary between two rows is not data about either of them.
+ */
+const FACT_STATUS_TAG: Record<string, TagVariantLite> = {
+  "Verified":       "success",
+  "Pending review": "alert",
+  "Due to expire":  "error",
+}
+
+const RISK_ICON: Record<string, string> = {
+  Low:    "ShieldCheck",
+  Medium: "ShieldAlert",
+  High:   "ShieldX",
+}
+
+/* EntityList publishes a narrower tint set than HighlightIcon — it has no
+   `informative`, it calls that one `info`. Mapped here rather than widening
+   the component: the plane's identity colour is the same either way, and this
+   is the only place in the file that needs the list's spelling. */
+const PLANE_ROW_VARIANT: Record<KnowledgePlane, NonNullable<EntityListItemData["iconVariant"]>> = {
+  truth:   "success",
+  sandbox: "yellow",
+  sources: "info",
+}
+
+function factRow(f: UcpFact, onPreview: (f: UcpFact) => void): EntityListItemData {
+  return {
+    id:          f.id,
+    title:       `${f.label} · ${f.value}`,
+    iconName:    PLANE_ICON[f.plane],
+    iconVariant: PLANE_ROW_VARIANT[f.plane],
+    primaryMeta: [
+      { iconName: RISK_ICON[f.risk] ?? "Shield", label: `${f.risk} risk` },
+      /* Only when there is one. An empty attention slot rendered as "None"
+         is a row asserting the absence of a flag, which reads as a fourth
+         flag called None. */
+      ...(f.attention.length > 0
+        ? [{ iconName: "Flag", label: f.attention.join(" · ") }]
+        : []),
+    ],
+    secondaryMeta: [
+      { iconName: "FileText",  label: f.source                     },
+      { iconName: "CheckCheck", label: `Verified ${f.verifiedAt}`   },
+      { iconName: "Share2",    label: f.scope                      },
+    ],
+    tags:    [{ label: PLANE_META[f.plane].label }],
+    state:   { label: f.status, variant: FACT_STATUS_TAG[f.status] ?? "neutral" },
+    actions: [{ label: "Preview", variant: "tertiary", icon: "Eye", onClick: () => onPreview(f) }],
+  }
+}
 
 /**
  * One icon AND one tint per knowledge plane, so a plane looks the same
@@ -1337,7 +1382,11 @@ function modifiedBucket(lastSync: string): string {
   return "Older"
 }
 
-function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
+function KnowledgeTab({ contact, onPreview, onPreviewFact }: {
+  contact: UcpContact
+  onPreview: (d: UcpDrive) => void
+  onPreviewFact: (f: UcpFact) => void
+}) {
   const [shelf,    setShelf]    = useState<Shelf>("sandbox")
   const [search,   setSearch]   = useState("")
   /** Drives — Governance's two: Modificar and Todos los departamentos. */
@@ -1396,31 +1445,24 @@ function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* One card per shelf, in the plane's own colour — the same tints the
-          facts table's Tags use, so a plane looks the same wherever counted. */}
-      <AdaptiveMetricGrid
-        cards={[
-          {
-            label: "Drives", value: allDrives.length,
-            feedback: `${sourceFacts.length} fact${sourceFacts.length === 1 ? "" : "s"} cited from them`,
-            feedbackType: "neutral",
-            iconName: PLANE_ICON.sources, iconVariant: PLANE_ICON_VARIANT.sources,
-          },
-          {
-            label: "Sandbox claims", value: facts.filter(f => f.plane === "sandbox").length,
-            feedback: `Confidence ${PLANE_META.sandbox.confidence} · not yet verified`,
-            feedbackType: "neutral",
-            iconName: PLANE_ICON.sandbox, iconVariant: PLANE_ICON_VARIANT.sandbox,
-          },
-          {
-            label: "Truth facts", value: facts.filter(f => f.plane === "truth").length,
-            feedback: `Confidence ${PLANE_META.truth.confidence} · agents treat as absolute`,
-            feedbackType: "positive",
-            iconName: PLANE_ICON.truth, iconVariant: PLANE_ICON_VARIANT.truth,
-          },
-        ]}
-      />
+      {/*
+        THE THREE HIGHLIGHT CARDS ARE GONE — Michael, 2026-09-10: "usan mucho
+        espacio en comparación al valor informativo que aportan".
 
+        He is right, and the reason is structural rather than a matter of
+        taste: the SwitchTab immediately below already carried every number
+        those cards did — Sandbox (3) · Truth Plane (5) · Drives (6) — so the
+        grid was a third of the tab's height spent restating its labels. A
+        card that counts to three, beside a control that counts to three, is
+        not a summary of the section; it is the section's own navigation drawn
+        twice, once in a form you cannot click.
+
+        What the cards did carry and the tabs do not is the confidence line
+        ("agents treat as absolute"). That is a property of the PLANE, not of
+        this record, and it belongs where a reader meets a plane for the first
+        time — it is on each shelf's own empty state and in the preview
+        panels. Nothing was lost by deleting the grid.
+      */}
       {/*
         THE SHELF SELECTOR IS A SwitchTab, TO THE LEFT OF THE FILTERS
         (Michael, 2026-09-10) — because each shelf brings a DIFFERENT filter
@@ -1525,7 +1567,13 @@ function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: 
             {sourceFacts.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <SectionLabel>Cited from these drives</SectionLabel>
-                <Table columns={FACT_COLUMNS} data={sourceFacts} size="sm" rowKey={r => r.id} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {sourceFacts.map(f => (
+                    <CardContainer key={f.id} size="sm" className="!p-0 overflow-hidden">
+                      <EntityList items={[factRow(f, onPreviewFact)]} />
+                    </CardContainer>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -1543,7 +1591,27 @@ function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: 
           onCta={q ? () => setSearch("") : undefined}
         />
       ) : (
-        <Table columns={FACT_COLUMNS} data={shelfFacts} size="sm" rowKey={r => r.id} />
+        /* ALL THREE SHELVES ARE LISTS NOW — Michael, 2026-09-10: "muestra los
+           3 casos del Switch tab como lista".
+
+           The facts were a Table and the drives were an EntityList, which made
+           one segmented control switch between two different kinds of object:
+           a table is columns you compare down, a list is items you act on one
+           at a time. On this shelf you act — a claim gets previewed, chased,
+           and eventually attested — so the list is the right shape and the
+           table was the odd one out.
+
+           What the columns carried is not lost, it is re-ranked. A row leads
+           with the fact and its value, then Governance's own axes: status,
+           risk and, when there is one, the attention flag that is the reason
+           somebody would open it. */
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {shelfFacts.map(f => (
+            <CardContainer key={f.id} size="sm" className="!p-0 overflow-hidden">
+              <EntityList items={[factRow(f, onPreviewFact)]} />
+            </CardContainer>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -1812,6 +1880,7 @@ export function UcpProfileView({
   const [infoOpen,   setInfoOpen]   = useState(false)
   const [drivePeek,  setDrivePeek]  = useState<UcpDrive | null>(null)
   const [notePeek,   setNotePeek]   = useState<{ note: UcpNote; title: string } | null>(null)
+  const [factPeek,   setFactPeek]   = useState<UcpFact | null>(null)
 
   // Ask and Information both open on the side — opening one closes the other,
   // and the panel requested last wins.
@@ -2148,7 +2217,7 @@ export function UcpProfileView({
               onPreview={(note, title) => setNotePeek({ note, title })}
             />
           )}
-          {tab === "knowledge" && <KnowledgeTab contact={contact} onPreview={setDrivePeek} />}
+          {tab === "knowledge" && <KnowledgeTab contact={contact} onPreview={setDrivePeek} onPreviewFact={setFactPeek} />}
         </>
       )}
 
@@ -2268,6 +2337,91 @@ export function UcpProfileView({
               <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
                 Drives feed the Sources plane. Anything here can be cited by {contact.agent.name}, but never
                 promoted to Truth without a verification step.
+              </span>
+            </div>
+          </div>
+        )}
+      </SlideOut>
+
+      {/*
+        ── A fact or a claim, previewed in Governance's own words ───────────
+        Michael, 2026-09-10: make the preview of each item consistent with
+        what Governance shows.
+
+        Governance's own row for a plane reads "Hechos · Propuestas · Riesgo
+        bajo" and, for a Sandbox entry, "Fuentes · Reclamaciones · Promociones
+        · Bundles". Applied one level down — to a single fact rather than to a
+        whole plane — the fields that survive are the ones on a row here:
+        status, risk level, attention flags, scope, where it came from and
+        when it was last verified. Those are the five filters the shelves
+        offer, which is the test: a panel that cannot answer the question a
+        filter asks is not the same data seen closer up.
+
+        // NOTE: written from the Governance filter vocabulary captured on
+        // 2026-09-10, not from the truth-plane item view itself — that view
+        // is behind a sign-in this session cannot pass. Fields may need one
+        // more pass once it can be read.
+      */}
+      <SlideOut
+        open={factPeek !== null}
+        onClose={() => setFactPeek(null)}
+        type="with-variants"
+        size="m"
+        title={factPeek?.label ?? ""}
+        subtitle={factPeek ? `${PLANE_META[factPeek.plane].label} Plane · ${factPeek.scope}` : ""}
+        showIcon
+        iconContent={factPeek ? <HighlightIcon size="sm" variant={PLANE_ICON_VARIANT[factPeek.plane]} iconName={PLANE_ICON[factPeek.plane]} /> : undefined}
+        showStatus
+        statusLabel={factPeek?.status}
+        showTopButton={false}
+        showTabs={false}
+        showSearchBar={false}
+        showChips={false}
+        showCta={false}
+      >
+        {factPeek && (
+          <div className={PANEL_CONTENT_CLASS}>
+            {/* The value first, and large. Everything else on this panel is
+                about how much to trust it. */}
+            <div className="flex flex-col gap-[4px]">
+              <SectionLabel>Value</SectionLabel>
+              <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1.4 }}>
+                {factPeek.value}
+              </span>
+            </div>
+
+            {factPeek.attention.length > 0 && (
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Needs attention</SectionLabel>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {factPeek.attention.map(a => (
+                    <Tag key={a} variant={a === "Due to expire" ? "error" : "alert"} size="sm">{a}</Tag>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-[8px]">
+              <SectionLabel>Governance</SectionLabel>
+              <DetailTable rows={[
+                ["Plane",         <Tag variant={PLANE_META[factPeek.plane].tag} size="sm">{PLANE_META[factPeek.plane].label}</Tag>],
+                ["Status",        <Tag variant={FACT_STATUS_TAG[factPeek.status] ?? "neutral"} size="sm">{factPeek.status}</Tag>],
+                ["Risk level",    factPeek.risk],
+                ["State",         factPeek.state],
+                ["Scope",         factPeek.scope],
+                ["Source",        factPeek.source],
+                ["Last verified", factPeek.verifiedAt],
+              ]} />
+            </div>
+
+            <div className="flex flex-col gap-[8px]">
+              <SectionLabel>What an agent may do with it</SectionLabel>
+              <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                {factPeek.plane === "truth"
+                  ? `${contact.agent.name} treats this as true and will commit to it in a reply without asking. That is what attestation buys, and it is why a fact due to expire is a problem rather than a note.`
+                  : factPeek.plane === "sandbox"
+                    ? `${contact.agent.name} can cite this and cannot commit to it. A draft that depends on it is held by The Council until a domain owner attests it or a source corroborates it.`
+                    : `Material, not a claim. ${contact.agent.name} can quote it with its citation; nothing here is asserted as true on its own.`}
               </span>
             </div>
           </div>
