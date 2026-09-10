@@ -1162,13 +1162,64 @@ export function UcpProfileView({
       activeSidebarId="contacts"
       onSidebarItemClick={onSidebarItemClick}
       header={isScrolled => (
-        <Header
-          size={isScrolled ? "compress" : "size-m"}
-          title="Contacts"
-          backButton
-          showBackInCompress
-          onBack={() => onBack?.()}
-        />
+        <>
+          <Header
+            size={isScrolled ? "compress" : "size-m"}
+            title="Contacts"
+            backButton
+            showBackInCompress
+            onBack={() => onBack?.()}
+          />
+          {/* Pinned: ScreenLayout's header zone is outside the scroll
+              container. 32px sides so the edges line up with the content
+              scrolling underneath — EntityHeader brings its own
+              CardContainer, so this wrapper supplies nothing else.
+
+              The Next Best Action is its own card, directly below the header
+              and never inside it: two records, two containers. The header
+              identifies the entity, this proposes what to do about it. It is
+              pinned alongside the header because a proposal the reader
+              scrolls past is a proposal they never see. */}
+          <div style={{ padding: "0 32px 8px" }}>
+            <EntityHeader
+              compressOnScroll
+              name={contact.name}
+              visual={AVATAR_TYPES.includes(contact.type)
+                ? { kind: "avatar" }
+                : { kind: "icon", icon: (LucideIcons[TYPE_ICON[contact.type] as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon, variant: "informative" }}
+              tags={headerTags}
+              stateBadge={{ label: state.label, variant: state.variant }}
+              source={contact.source.label}
+              secondaryMetadata={secondaryMetadata}
+              recordFields={recordFields}
+              showInformation
+              onInformationOpen={openInfo}
+              assignedAgent={{
+                id: contact.agent.id,
+                name: contact.agent.name,
+                onOpenChat: openChat,
+              }}
+              locked={restriction !== null}
+              state={loading ? "loading" : "default"}
+              secondaryAction={{
+                label: "Export record",
+                variant: "secondary",
+                onClick: () => {},
+                disabledTooltip: "This record's values are governed — request the scope to export it",
+              }}
+              menuActions={[{ label: "Archive", onClick: () => {} }]}
+            />
+            {nba && <NextBestActionCard item={nba} className="mt-[12px]" />}
+          </div>
+
+          <div style={{ padding: "0 32px 16px" }}>
+            <Tabs
+              activeId={tab}
+              onChange={goTab}
+              items={tabsForContact(contact)}
+            />
+          </div>
+        </>
       )}
       pagination={
         tab === "activity" && !loading && !restriction && activityCount > actSize
