@@ -241,6 +241,28 @@ const ROLE_ACCESS_TAG: Record<RoleAccess["access"], "success" | "alert" | "secon
 const ROLE_ACCESS_LABEL: Record<RoleAccess["access"], string> = {
   full: "Full access", limited: "Limited", none: "No access",
 }
+const ROLE_DESCRIPTION: Record<RoleAccess["access"], string> = {
+  full:    "Can view, edit, and manage all studio content",
+  limited: "Can view and interact with studio content",
+  none:    "No access to this studio",
+}
+// Access level is a state, so the tile carries a semantic tint — never the
+// studio's own accent hex.
+const ROLE_HIGHLIGHT: Record<RoleAccess["access"], HighlightIconVariant> = {
+  full: "success", limited: "alert", none: "neutral",
+}
+
+const STUDIO_STATUS_TAG: Record<Studio["status"], "success" | "secondary"> = {
+  active: "success", disabled: "secondary",
+}
+const STUDIO_STATUS_LABEL: Record<Studio["status"], string> = {
+  active: "Active", disabled: "Disabled",
+}
+
+function accessPercent(studio: Studio) {
+  if (studio.totalMembers === 0) return 0
+  return Math.round((studio.membersWithAccess / studio.totalMembers) * 100)
+}
 
 function StudioIconBadge({ studio, size = 48 }: { studio: Studio; size?: number }) {
   const IC = Icons[studio.icon as keyof typeof Icons] as React.ElementType
@@ -258,7 +280,7 @@ function StudioIconBadge({ studio, size = 48 }: { studio: Studio; size?: number 
 // ─── Studio list card (horizontal) ───────────────────────────────────────────
 
 function StudioCard({ studio, onClick }: { studio: Studio; onClick: () => void }) {
-  const accessPct = Math.round((studio.membersWithAccess / studio.totalMembers) * 100)
+  const accessPct = accessPercent(studio)
 
   return (
     <CardContainer variant="default" size="default" onClick={onClick} className="flex flex-row items-center gap-6">
@@ -268,7 +290,7 @@ function StudioCard({ studio, onClick }: { studio: Studio; onClick: () => void }
       <div style={{ width: 220, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", lineHeight: 1 }}>{studio.name}</span>
-          <Tag variant="success" size="sm">Active</Tag>
+          <Tag variant={STUDIO_STATUS_TAG[studio.status]} size="sm">{STUDIO_STATUS_LABEL[studio.status]}</Tag>
         </div>
         <p style={{
           fontSize: 12, fontWeight: 500, color: "var(--color-text-body)", lineHeight: "20px", margin: 0,
@@ -314,8 +336,6 @@ function StudioCard({ studio, onClick }: { studio: Studio; onClick: () => void }
   )
 }
 
-// ─── Detail tab: Overview (WidgetCanvasView) ──────────────────────────────────
-
 // ─── Entity list tab ─────────────────────────────────────────────────────────
 
 function EntityListTab({ tab, accentColor }: { tab: EntityTab; accentColor: string }) {
@@ -345,10 +365,10 @@ function EntityListTab({ tab, accentColor }: { tab: EntityTab; accentColor: stri
   )
 }
 
-// ─── Overview tab ─────────────────────────────────────────────────────────────
+// ─── Overview tab (WidgetCanvasView) ─────────────────────────────────────────
 
 function OverviewTab({ studio, onNavigateToTab }: { studio: Studio; onNavigateToTab?: (id: string) => void }) {
-  const accessPct = Math.round((studio.membersWithAccess / studio.totalMembers) * 100)
+  const accessPct = accessPercent(studio)
   const groupsWithAccess = studio.groups.filter(g => g.access)
 
   const slots: CanvasSlot[] = [
@@ -404,7 +424,7 @@ function OverviewTab({ studio, onNavigateToTab }: { studio: Studio; onNavigateTo
                   fontSize: 11, fontWeight: 600, color: "var(--primary)",
                 }}
               >
-                Ver todos <Icons.ArrowRight size={10} />
+                View all <Icons.ArrowRight size={10} />
               </button>
             )
           })()}
@@ -458,13 +478,7 @@ function OverviewTab({ studio, onNavigateToTab }: { studio: Studio; onNavigateTo
               display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
               borderBottom: i < groupsWithAccess.length - 1 ? "1px solid var(--border)" : "none",
             }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-                background: `${studio.accentColor}18`, border: `1px solid ${studio.accentColor}35`,
-                display: "flex", alignItems: "center", justifyContent: "center", color: studio.accentColor,
-              }}>
-                <Icons.Users size={13} />
-              </div>
+              <HighlightIcon size="sm" variant="informative" iconName="Users" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1 }}>{g.name}</div>
                 <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 2 }}>{g.members} members</div>
@@ -478,13 +492,7 @@ function OverviewTab({ studio, onNavigateToTab }: { studio: Studio; onNavigateTo
               borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
               opacity: 0.45,
             }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-                background: "var(--surface-raised)", border: "1px solid var(--border)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)",
-              }}>
-                <Icons.Users size={13} />
-              </div>
+              <HighlightIcon size="sm" variant="neutral" iconName="Users" />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1 }}>{g.name}</div>
                 <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 2 }}>{g.members} members</div>
@@ -514,13 +522,11 @@ function OverviewTab({ studio, onNavigateToTab }: { studio: Studio; onNavigateTo
               borderBottom: i < studio.roles.length - 1 ? "1px solid var(--border)" : "none",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <HighlightIcon size="sm" variant={ROLE_ACCESS_TAG[r.access] === "success" ? "success" : ROLE_ACCESS_TAG[r.access] === "alert" ? "alert" : "neutral"} iconName="ShieldCheck" />
+                <HighlightIcon size="sm" variant={ROLE_HIGHLIGHT[r.access]} iconName="ShieldCheck" />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", lineHeight: 1 }}>{r.name}</div>
                   <div style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 3 }}>
-                    {r.access === "full" ? "Can view, edit, and manage all studio content" :
-                     r.access === "limited" ? "Can view and interact with studio content" :
-                     "No access to this studio"}
+                    {ROLE_DESCRIPTION[r.access]}
                   </div>
                 </div>
               </div>
@@ -536,12 +542,6 @@ function OverviewTab({ studio, onNavigateToTab }: { studio: Studio; onNavigateTo
 }
 
 // ─── Detail tab: Permissions ──────────────────────────────────────────────────
-
-const ROLE_DESCRIPTION: Record<RoleAccess["access"], string> = {
-  full:    "Can view, edit, and manage all studio content",
-  limited: "Can view and interact with studio content",
-  none:    "No access to this studio",
-}
 
 function PermissionsTab({ studio }: { studio: Studio }) {
   const [subTab,    setSubTab]  = useState<"groups" | "roles">("groups")
@@ -628,15 +628,10 @@ function PermissionsTab({ studio }: { studio: Studio }) {
                 display: "flex", alignItems: "center", gap: 12, padding: "11px 16px",
                 borderBottom: i < filteredGroups.length - 1 ? "1px solid var(--border)" : "none",
               }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                  background: g.access ? `${studio.accentColor}18` : "var(--surface-raised)",
-                  border: `1px solid ${g.access ? studio.accentColor + "35" : "var(--border)"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: g.access ? studio.accentColor : "var(--muted-foreground)",
-                }}>
-                  <Icons.Users size={14} />
-                </div>
+                {/* The tile says whether this group reaches the studio at all —
+                    which is a state, so it is a semantic tint, not the studio's
+                    own accent hex. */}
+                <HighlightIcon size="md" variant={g.access ? "informative" : "neutral"} iconName="Users" />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1 }}>{g.name}</div>
                   <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 3 }}>{g.members} members</div>
@@ -669,7 +664,7 @@ function PermissionsTab({ studio }: { studio: Studio }) {
                 }}>
                   <div style={{ fontSize: 20, fontWeight: 700, color: "var(--foreground)", lineHeight: 1 }}>{count}</div>
                   <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 4 }}>
-                    {level === "full" ? "Full access" : level === "limited" ? "Limited" : "No access"}
+                    {ROLE_ACCESS_LABEL[level]}
                   </div>
                 </div>
               )
@@ -682,15 +677,7 @@ function PermissionsTab({ studio }: { studio: Studio }) {
                 display: "flex", alignItems: "center", gap: 12, padding: "13px 16px",
                 borderBottom: i < studio.roles.length - 1 ? "1px solid var(--border)" : "none",
               }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                  background: r.access === "none" ? "var(--surface-raised)" : `${studio.accentColor}18`,
-                  border: `1px solid ${r.access === "none" ? "var(--border)" : studio.accentColor + "35"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: r.access === "none" ? "var(--muted-foreground)" : studio.accentColor,
-                }}>
-                  <Icons.ShieldCheck size={14} />
-                </div>
+                <HighlightIcon size="md" variant={ROLE_HIGHLIGHT[r.access]} iconName="ShieldCheck" />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1 }}>{r.name}</div>
                   <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 3 }}>{ROLE_DESCRIPTION[r.access]}</div>
@@ -707,33 +694,183 @@ function PermissionsTab({ studio }: { studio: Studio }) {
 
 // ─── Detail tab: Settings ─────────────────────────────────────────────────────
 
+const CONFIG_SECTIONS = [
+  { id: "general",    label: "General"    },
+  { id: "policies",   label: "Policies"   },
+  { id: "compliance", label: "Compliance" },
+] as const
+
+type ConfigSectionId = typeof CONFIG_SECTIONS[number]["id"]
+
+function configSectionItems(config: Studio["config"], id: ConfigSectionId): ConfigItem[] {
+  if (!config) return []
+  if (id === "general")    return config.general ?? []
+  if (id === "policies")   return config.policies ?? []
+  return config.compliance?.items ?? []
+}
+
+function allConfigItems(config: Studio["config"]): ConfigItem[] {
+  return CONFIG_SECTIONS.flatMap(s => configSectionItems(config, s.id))
+}
+
+/** Renders the control for one ConfigItem. Never mutates — hands the caller a new value. */
+function ConfigControl({
+  item, value, onChange,
+}: { item: ConfigItem; value: boolean | number | string; onChange: (next: boolean | number | string) => void }) {
+  if (item.type === "toggle") {
+    return <Toggle checked={Boolean(value)} onChange={() => onChange(!value)} size="sm" />
+  }
+
+  if (item.type === "stepper") {
+    const current = Number(value)
+    const min = item.min ?? 0
+    const max = item.max ?? Number.MAX_SAFE_INTEGER
+    const step = (delta: number) => onChange(Math.min(max, Math.max(min, current + delta)))
+    return (
+      <div style={{
+        display: "flex", alignItems: "center", gap: 2, flexShrink: 0,
+        background: "var(--surface-raised)", border: "1px solid var(--border)", borderRadius: 8,
+      }}>
+        <button
+          onClick={() => step(-1)}
+          disabled={current <= min}
+          style={{
+            width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+            background: "none", border: "none", padding: 0,
+            cursor: current <= min ? "not-allowed" : "pointer",
+            opacity: current <= min ? 0.4 : 1,
+            color: "var(--foreground)",
+          }}
+        >
+          <Icons.Minus size={12} />
+        </button>
+        <span style={{ minWidth: 34, textAlign: "center", fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{current}</span>
+        <button
+          onClick={() => step(+1)}
+          disabled={current >= max}
+          style={{
+            width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
+            background: "none", border: "none", padding: 0,
+            cursor: current >= max ? "not-allowed" : "pointer",
+            opacity: current >= max ? 0.4 : 1,
+            color: "var(--foreground)",
+          }}
+        >
+          <Icons.Plus size={12} />
+        </button>
+      </div>
+    )
+  }
+
+  if (item.type === "select") {
+    return (
+      <select
+        value={String(value)}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          flexShrink: 0, height: 32, padding: "0 10px", borderRadius: 8,
+          background: "var(--surface-raised)", border: "1px solid var(--border)",
+          fontSize: 13, fontWeight: 500, color: "var(--foreground)",
+        }}
+      >
+        {(item.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    )
+  }
+
+  return null
+}
+
+function SettingsRow({
+  label, description, isLast, children,
+}: { label: string; description: string; isLast: boolean; children: React.ReactNode }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 16, padding: "14px 16px",
+      borderBottom: isLast ? "none" : "1px solid var(--border)",
+    }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", lineHeight: 1, marginBottom: 4 }}>{label}</div>
+        <div style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-body)", lineHeight: "20px" }}>{description}</div>
+      </div>
+      <div style={{ paddingTop: 2 }}>{children}</div>
+    </div>
+  )
+}
+
 function SettingsTab({ studio }: { studio: Studio }) {
   const [toggles, setToggles] = useState<StudioToggle[]>(studio.settings)
+  const [values,  setValues]  = useState<Record<string, boolean | number | string>>(
+    () => Object.fromEntries(allConfigItems(studio.config).map(i => [i.id, i.value])),
+  )
+
+  const availableSections = CONFIG_SECTIONS.filter(s => configSectionItems(studio.config, s.id).length > 0)
+  const [section, setSection] = useState<ConfigSectionId>(availableSections[0]?.id ?? "general")
+
+  const sectionItems = configSectionItems(studio.config, section)
+  const hasConfig    = availableSections.length > 0
+
+  if (toggles.length === 0 && !hasConfig) {
+    return (
+      <div style={{ maxWidth: 680, padding: "32px 0", color: "var(--muted-foreground)", fontSize: 13 }}>
+        This studio has no configurable settings yet.
+      </div>
+    )
+  }
 
   return (
     <div style={{ maxWidth: 680 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Studio settings</div>
-      <CardContainer variant="default" size="sm" className="p-0 overflow-hidden">
-        {toggles.map((t, i) => (
-          <div key={t.id} style={{
-            display: "flex", alignItems: "flex-start", gap: 16, padding: "14px 16px",
-            borderBottom: i < toggles.length - 1 ? "1px solid var(--border)" : "none",
-          }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", lineHeight: 1, marginBottom: 4 }}>{t.label}</div>
-              <div style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-body)", lineHeight: "20px" }}>{t.description}</div>
-            </div>
-            <div style={{ paddingTop: 2 }}>
-              <Toggle
-                checked={t.value}
-                onChange={() => setToggles(prev => prev.map(x => x.id === t.id ? { ...x, value: !x.value } : x))}
-                size="sm"
-              />
-            </div>
+      {/* Plain studio toggles */}
+      {toggles.length > 0 && (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)", marginBottom: 10 }}>Studio settings</div>
+          <CardContainer variant="default" size="sm" className="p-0 overflow-hidden">
+            {toggles.map((t, i) => (
+              <SettingsRow key={t.id} label={t.label} description={t.description} isLast={i === toggles.length - 1}>
+                <Toggle
+                  checked={t.value}
+                  onChange={() => setToggles(prev => prev.map(x => x.id === t.id ? { ...x, value: !x.value } : x))}
+                  size="sm"
+                />
+              </SettingsRow>
+            ))}
+          </CardContainer>
+        </>
+      )}
+
+      {/* Structured config: General / Policies / Compliance */}
+      {hasConfig && (
+        <div style={{ marginTop: toggles.length > 0 ? 28 : 0 }}>
+          <div style={{ borderBottom: "1px solid var(--border)", marginBottom: 16 }}>
+            <Tabs
+              items={availableSections.map(s => ({ id: s.id, label: s.label }))}
+              activeId={section}
+              onChange={v => setSection(v as ConfigSectionId)}
+              size="s"
+            />
           </div>
-        ))}
-      </CardContainer>
-      <div style={{ marginTop: 12 }}>
+
+          <CardContainer variant="default" size="sm" className="p-0 overflow-hidden">
+            {sectionItems.map((item, i) => (
+              <SettingsRow key={item.id} label={item.label} description={item.description} isLast={i === sectionItems.length - 1}>
+                <ConfigControl
+                  item={item}
+                  value={values[item.id]}
+                  onChange={next => setValues(prev => ({ ...prev, [item.id]: next }))}
+                />
+              </SettingsRow>
+            ))}
+          </CardContainer>
+
+          {section === "compliance" && studio.config?.compliance?.exportLabel && (
+            <div style={{ marginTop: 12 }}>
+              <Button variant="secondary" size="sm">{studio.config.compliance.exportLabel}</Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginTop: 16 }}>
         <Button variant="primary" size="sm">Save settings</Button>
       </div>
     </div>
