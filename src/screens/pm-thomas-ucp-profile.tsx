@@ -95,6 +95,7 @@ import {
 import type {
   MetricVariant, StudyRow,
   ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
+  UcpNote,
 } from "./ucpShared"
 
 export const UCP_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -804,6 +805,254 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * The two-column key-value table from the SlideOut/SidePanel — Content page,
+ * zone 7 — as ONE function rather than a shape each panel redraws.
+ *
+ * The drive preview already had it inline; the note preview needed the same
+ * thing, and a second copy is how the 120px label column and the 1px divider
+ * drift apart. The page's own anatomy: bordered 8px container, rows at
+ * `py-8 px-12`, a fixed 120px label, dividers between rows and never after
+ * the last one.
+ *
+ * `null` values are DROPPED, not rendered blank — that page is explicit that
+ * a cell is never left empty, and a row for a fact the record does not have
+ * ("Edited: never") is a row that says nothing. A value the record *should*
+ * have and is missing is a different case and reads as italic Unknown.
+ */
+function DetailTable({ rows }: { rows: [string, React.ReactNode | null][] }) {
+  const shown = rows.filter(([, value]) => value !== null && value !== undefined)
+  return (
+    <div className="flex flex-col rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
+      {shown.map(([label, value], i) => (
+        <div key={label}>
+          <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
+            <span className="w-[120px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
+            <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
+          </div>
+          {i < shown.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * ── The note preview ───────────────────────────────────────────────────────
+ *
+ * Michael, 2026-09-10: a note opened from the Activity feed gets Overview and
+ * Details tabs, built from the SlideOut/SidePanel — Content page's vocabulary.
+ *
+ * WHY A NOTE IS THE ONE ACTIVITY ROW WITH A PREVIEW. Every other row in that
+ * feed is already whole: a call row carries its duration, its outcome and the
+ * agent's read of it, and opening it would show the same four facts again. A
+ * note row carries a FIRST LINE. The note is somewhere else, and so is the
+ * thing that makes it matter on this record — the claims it pushed into the
+ * Sandbox plane, each now waiting on a source. That is content the row has
+ * nowhere to put, which is what earns the Eye.
+ *
+ * THE SPLIT BETWEEN THE TABS is what was written versus what the system did
+ * with it. Overview is the note: the agent's read of it, the body as typed,
+ * the claims it produced and the records it names. Details is the note's
+ * metadata: who wrote it, where, when, who can see it. Somebody who opened
+ * this to read the note should not have to walk past a provenance table to
+ * reach the first sentence, and somebody auditing the scope should not have
+ * to scroll three paragraphs to find it.
+ *
+ * ORDER INSIDE OVERVIEW follows that page's fixed content order — AI Summary
+ * first, then list sections — with one deliberate departure: the BODY sits
+ * second, between the summary and the lists. The body is not a zone in that
+ * vocabulary at all; it is the record itself, and a panel that puts a
+ * three-card metric grid above the thing the reader opened it to read has the
+ * order backwards. The claims are the list section, and they come after.
+ *
+ * CONSISTENCY WITH GOVERNANCE. `scope` is one of SANDBOX_SCOPES and each
+ * claim's status is one of TRUTH_STATUSES — the same words, with the same
+ * meanings, as the Sandbox and Truth Plane shelves in the Knowledge tab, and
+ * as the live Governance views those came from. A note is a Sandbox artefact,
+ * so it is described in Sandbox's language rather than in a vocabulary this
+ * panel invented for itself.
+ */
+const CLAIM_STATUS_TAG: Record<string, "success" | "alert" | "error"> = {
+  "Verified":       "success",
+  "Pending review": "alert",
+  "Due to expire":  "error",
+}
+
+function NotePreview({
+  note, title, agentName, open, onClose,
+}: {
+  note:      UcpNote | null
+  title:     string
+  agentName: string
+  open:      boolean
+  onClose:   () => void
+}) {
+  const [tab, setTab] = useState(0)
+
+  return (
+    <SlideOut
+      open={open}
+      onClose={onClose}
+      type="with-variants"
+      size="m"
+      title={title}
+      subtitle={note ? `Note · ${note.author}` : ""}
+      showIcon
+      /* Purple, and the same StickyNote glyph the row carries — the Activity
+         list already colours a note purple because a note is somebody
+         writing. A preview that opened under a different mark than the row it
+         came from is the drive-preview bug over again. */
+      iconContent={<HighlightIcon size="sm" variant="purple" iconName="StickyNote" />}
+      showStatus
+      statusLabel={note?.scope}
+      showTopButton={false}
+      showTabs
+      showTab3={false}
+      tabLabels={["Overview", "Details", ""]}
+      activeTab={tab}
+      onTabChange={setTab}
+      showSearchBar={false}
+      showChips={false}
+      showCta={false}
+    >
+      {note && (
+        <div className={PANEL_CONTENT_CLASS}>
+          {tab === 0 ? (
+            <>
+              {/* Zone 1 — AI Summary. Always first when present. */}
+              <div
+                className="flex flex-col gap-[6px] rounded-[8px] p-[12px]"
+                style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}
+              >
+                <div className="flex items-center gap-[6px]">
+                  <Sparkle size={11} style={{ color: "var(--color-text-purple)" }} />
+                  <span className="text-[10px] font-semibold" style={{ color: "var(--color-text-purple)" }}>
+                    {agentName}&rsquo;s read
+                  </span>
+                </div>
+                <p className="text-[12px] leading-[1.6]" style={{ color: "var(--foreground)" }}>
+                  {note.claims.length === 0
+                    ? "Nothing in this note produced a claim — it is context, not evidence."
+                    : `${note.claims.length} claim${note.claims.length === 1 ? "" : "s"} came out of this note. ` +
+                      `${note.claims.filter(c => c.status === "Verified").length} of them found a corroborating source; ` +
+                      "the rest are still in the Sandbox plane."}
+                </p>
+              </div>
+
+              {/* The note itself, as written. */}
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Note</SectionLabel>
+                <div className="flex flex-col gap-[10px]">
+                  {note.body.map((para, i) => (
+                    <p key={i} className="text-[12px] leading-[1.7]" style={{ color: "var(--field-supporting)" }}>
+                      {para}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Zone 3 — a list section, with the Title–Description variant:
+                  the count alone does not say what a claim IS on this record,
+                  and this is the one thing in the panel that has consequences
+                  outside it. */}
+              {note.claims.length > 0 && (
+                <div className="flex flex-col gap-[8px]">
+                  <div className="flex flex-col gap-[2px]">
+                    <SectionLabel>Claims from this note</SectionLabel>
+                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                      Written into the Sandbox plane. Each needs a source before it can reach Truth.
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-[8px]">
+                    {note.claims.map(c => (
+                      <CardContainer key={c.label} size="sm" className="!p-0 overflow-hidden">
+                        <EntityList items={[{
+                          id:          c.label,
+                          title:       c.label,
+                          iconName:    "FileCheck",
+                          iconVariant: c.status === "Verified" ? "success" : c.status === "Due to expire" ? "error" : "yellow",
+                          state:       { label: c.status, variant: CLAIM_STATUS_TAG[c.status] ?? "neutral" },
+                        }]} />
+                      </CardContainer>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {note.linked.length > 0 && (
+                <div className="flex flex-col gap-[8px]">
+                  <SectionLabel>Linked records</SectionLabel>
+                  <div className="flex flex-col gap-[8px]">
+                    {note.linked.map(l => (
+                      <CardContainer key={l.title} size="sm" className="!p-0 overflow-hidden">
+                        <EntityList items={[{
+                          id:            l.title,
+                          title:         l.title,
+                          iconName:      l.icon,
+                          iconVariant:   "info",
+                          secondaryMeta: [{ iconName: "Info", label: l.kind }],
+                        }]} />
+                      </CardContainer>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Details</SectionLabel>
+                <DetailTable rows={[
+                  ["Author",     note.author],
+                  ["Role",       note.authorRole],
+                  ["Written in", note.writtenIn],
+                  ["Created",    note.createdAt],
+                  ["Edited",     note.editedAt ?? null],
+                  ["Scope",      <Tag variant="neutral" size="sm">{note.scope}</Tag>],
+                  ["Claims",     `${note.claims.length} in the Sandbox plane`],
+                ]} />
+              </div>
+
+              {note.attachments.length > 0 && (
+                <div className="flex flex-col gap-[8px]">
+                  <SectionLabel>Attachments</SectionLabel>
+                  <div className="flex flex-col gap-[8px]">
+                    {note.attachments.map(a => (
+                      <CardContainer key={a.name} size="sm" className="!p-0 overflow-hidden">
+                        <EntityList items={[{
+                          id:            a.name,
+                          title:         a.name,
+                          iconName:      "Paperclip",
+                          iconVariant:   "neutral",
+                          secondaryMeta: [{ iconName: "Info", label: a.meta }],
+                        }]} />
+                      </CardContainer>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* The same closing section the drive preview carries, saying
+                  the equivalent thing for a note. Both previews answer "what
+                  does this do to the record" in the same place, in the same
+                  words as the Knowledge tab's own shelves. */}
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>How this is used</SectionLabel>
+                <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                  A note is a Sandbox artefact. {agentName} can cite it and can act on what it says,
+                  but nothing in it counts as verified until a claim it produced finds a source.
+                  Scope decides who sees the note; it does not change what the claims are worth.
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </SlideOut>
+  )
+}
+
+/**
  * The elapsed-time separator between activity cards — Michael, 2026-09-10.
  *
  * A divider with the subtle border and a left-aligned label in Caption S, so a
@@ -857,7 +1106,7 @@ function filterActivity(
 
 function ActivityTab({
   contact, group, onGroupChange, kind, onKindChange, search, onSearchChange,
-  status, onStatusChange, period, onPeriodChange, now, page, pageSize,
+  status, onStatusChange, period, onPeriodChange, now, page, pageSize, onPreview,
 }: {
   contact:  UcpContact
   /** The four kinds of thing an activity row can be. */
@@ -880,6 +1129,8 @@ function ActivityTab({
   now:      Date
   page:     number
   pageSize: number
+  /** Opens the note preview. Only note rows carry one. */
+  onPreview: (n: UcpNote, title: string) => void
 }) {
   const all      = useMemo(() => getActivity(contact), [contact])
   const filtered = useMemo(
@@ -905,6 +1156,16 @@ function ActivityTab({
     state:       { label: a.state.label, variant: a.state.variant },
     aiInsight:   a.aiSummary
       ? { action: "summary", detail: a.aiSummary, viewMore: a.aiSummary.length > 160 }
+      : undefined,
+    /* The Eye is conditional on the NOTE, not on the channel. Every other row
+       in this feed is already showing everything it has — a call row's whole
+       content is its title, its duration and the agent's read of it, all three
+       visible without opening anything. A note row is the one case where the
+       row is a first line and the thing itself is somewhere else, so it is the
+       one row that earns a preview. CLAUDE.md: omit the button entirely rather
+       than render a disabled one. */
+    actions: a.note
+      ? [{ label: "Preview", variant: "tertiary" as const, icon: "Eye", onClick: () => onPreview(a.note!, a.title) }]
       : undefined,
   }))
 
@@ -1550,6 +1811,7 @@ export function UcpProfileView({
   const [chatOpen,   setChatOpen]   = useState(false)
   const [infoOpen,   setInfoOpen]   = useState(false)
   const [drivePeek,  setDrivePeek]  = useState<UcpDrive | null>(null)
+  const [notePeek,   setNotePeek]   = useState<{ note: UcpNote; title: string } | null>(null)
 
   // Ask and Information both open on the side — opening one closes the other,
   // and the panel requested last wins.
@@ -1883,6 +2145,7 @@ export function UcpProfileView({
               now={now}
               page={actPage}
               pageSize={actSize}
+              onPreview={(note, title) => setNotePeek({ note, title })}
             />
           )}
           {tab === "knowledge" && <KnowledgeTab contact={contact} onPreview={setDrivePeek} />}
@@ -1988,23 +2251,14 @@ export function UcpProfileView({
               <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
                 Details
               </span>
-              <div className="flex flex-col rounded-[8px]" style={{ border: "1px solid var(--field-border)" }}>
-                {([
-                  ["Provider",  drivePeek.provider],
-                  ["Contents",  drivePeek.items],
-                  ["Owner",     drivePeek.owner],
-                  ["Last sync", drivePeek.lastSync],
-                  ["Scope",     drivePeek.scope],
-                ] as [string, string][]).map(([label, value], i, arr) => (
-                  <div key={label}>
-                    <div className="flex items-center gap-[19px] py-[8px] px-[12px]">
-                      <span className="w-[120px] shrink-0 text-[12px] font-medium leading-[20px]" style={{ color: "var(--foreground)" }}>{label}</span>
-                      <span className="flex-1 text-[12px] font-medium leading-[20px]" style={{ color: "var(--field-supporting)" }}>{value}</span>
-                    </div>
-                    {i < arr.length - 1 && <div className="w-full h-[1px]" style={{ background: "var(--color-border-neutral-lighter)" }} />}
-                  </div>
-                ))}
-              </div>
+              <DetailTable rows={[
+                ["Provider",   drivePeek.provider],
+                ["Contents",   drivePeek.items],
+                ["Owner",      drivePeek.owner],
+                ["Department", drivePeek.department],
+                ["Last sync",  drivePeek.lastSync],
+                ["Scope",      drivePeek.scope],
+              ]} />
             </div>
 
             <div className="flex flex-col gap-[8px]">
@@ -2019,6 +2273,14 @@ export function UcpProfileView({
           </div>
         )}
       </SlideOut>
+
+      <NotePreview
+        note={notePeek?.note ?? null}
+        title={notePeek?.title ?? ""}
+        agentName={contact.agent.name}
+        open={notePeek !== null}
+        onClose={() => setNotePeek(null)}
+      />
 
     </ScreenLayout>
   )

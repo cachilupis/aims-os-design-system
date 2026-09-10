@@ -467,6 +467,46 @@ export const CHANNEL_META: Record<ActivityChannel, { label: string; icon: string
 export const COMMUNICATION_CHANNELS: ActivityChannel[] =
   (Object.keys(CHANNEL_GROUP) as ActivityChannel[]).filter(ch => CHANNEL_GROUP[ch] === "communication")
 
+/**
+ * ── A note, in full ────────────────────────────────────────────────────────
+ *
+ * An activity row can only ever show a note's FIRST line — it is one row in a
+ * feed of thirteen. The note itself is what somebody actually wrote, and the
+ * reason it matters on this record is what the note DID: the claims it put
+ * into the Sandbox plane, waiting for a source to corroborate them.
+ *
+ * So the preview carries three things the row cannot:
+ *
+ *   · the body, as written, paragraph by paragraph
+ *   · what it produced — claims, each with the Governance status it now has
+ *   · where it came from and who can see it, in Governance's own words
+ *
+ * `scope` is deliberately from SANDBOX_SCOPES rather than a scale of this
+ * panel's own invention. A note is a Sandbox artefact: whoever reads
+ * "Department" here has read the same word on the Sandbox shelf's Scope
+ * filter, and it means the same thing in both places.
+ */
+export interface UcpNote {
+  /** Paragraphs, in order. Rendered as written — never summarised in place. */
+  body:       string[]
+  author:     string
+  authorRole: string
+  createdAt:  string
+  /** Absent when the note has never been edited, which is the common case —
+   *  an "Edited" row that says "never" is a row saying nothing. */
+  editedAt?:  string
+  /** Where it was written: a call wrap-up, a meeting, the record itself. */
+  writtenIn:  string
+  /** One of SANDBOX_SCOPES. Who can see this note. */
+  scope:      string
+  /** Claims this note put into the Sandbox plane, with the status each one
+   *  now carries — the same three words the Truth shelf filters on. */
+  claims:     { label: string; status: string }[]
+  /** Records the note names and is linked to. */
+  linked:     { title: string; kind: string; icon: string }[]
+  attachments: { name: string; meta: string }[]
+}
+
 export interface UcpActivity {
   id:        string
   channel:   ActivityChannel
@@ -476,6 +516,10 @@ export interface UcpActivity {
   state:     { label: string; variant: TagVariantLite }
   /** Written by the record's assigned agent — rendered as EntityList's aiInsight. */
   aiSummary?: string
+  /** Only on note rows, and only when there is a note to open. The Eye is
+   *  rendered off THIS, not off the channel: CLAUDE.md's rule is that a
+   *  preview button with nothing behind it is worse than no button. */
+  note?:     UcpNote
 }
 
 /**
@@ -1383,15 +1427,65 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       aiSummary: `${who} confirmed the evaluation is still funded and asked for a written migration timeline. No pricing objection was raised. The timeline is the one open commitment from this call.`,
     },
     {
-      id: "a2b", channel: "note", title: `Note · ${c.owner}`,
-      meta: "After the discovery follow-up", timestamp: "Sep 2, 2026 · 14:40",
+      id: "a2b", channel: "note", title: "Discovery follow-up — call wrap-up",
+      meta: `${c.owner} · 3 claims to Sandbox · Shared`, timestamp: "Sep 2, 2026 · 14:40",
       state: { label: "Saved", variant: "neutral" },
       aiSummary: `Wrote up the call while it was fresh: the timeline is the only open commitment, and ${who} asked for it in writing rather than on a call.`,
+      note: {
+        body: [
+          `Called ${who} back on the discovery thread. Evaluation is still funded for this cycle — they were explicit about that without being asked, which is worth noting because the July call left it ambiguous.`,
+          `The one thing they want is a written migration timeline. Not a call, not a deck: a document they can forward internally. They said their own security review cannot start until they can attach a date to it.`,
+          `No pricing objection came up. I did not raise it either. My read is that pricing is settled and the timeline is the only thing between us and a decision.`,
+        ],
+        author:     c.owner,
+        authorRole: "Account owner",
+        createdAt:  "Sep 2, 2026 · 14:40",
+        editedAt:   "Sep 2, 2026 · 16:05",
+        writtenIn:  "Call wrap-up · outbound call at 14:05",
+        scope:      "Shared",
+        claims: [
+          { label: "Evaluation is funded",          status: "Verified"       },
+          { label: "Security review needs a date", status: "Pending review" },
+          { label: "Pricing is not an objection",  status: "Pending review" },
+        ],
+        linked: [
+          { title: "Migration timeline requested", kind: "Email · Aug 18",       icon: "Mail"     },
+          { title: "Governance addendum",          kind: "Document · Legal",     icon: "FileText" },
+        ],
+        attachments: [],
+      },
     },
     {
       id: "a3", channel: "email", title: "Governance addendum sent for review",
       meta: `${c.owner} → ${c.email} · 1 attachment`, timestamp: "Aug 28, 2026 · 09:40",
       state: { label: "Opened", variant: "informative" },
+    },
+    {
+      id: "a4b", channel: "note", title: "QBR — the two escalations nobody dated",
+      meta: `${c.agent.name} · 1 claim to Sandbox · Department`, timestamp: "Aug 22, 2026 · 12:02",
+      state: { label: "Saved", variant: "neutral" },
+      aiSummary: `Written by the agent straight off the QBR transcript. The escalations from July were raised again and left without a resolution date — the same gap the record's risk score is reading.`,
+      note: {
+        body: [
+          `Transcribed from the quarterly review. Usage and roadmap were covered in full and neither raised a concern.`,
+          `The two escalations first logged in July came up again. Nobody in the room put a resolution date on either one. That is the second consecutive review where they were discussed and not closed.`,
+        ],
+        author:     c.agent.name,
+        authorRole: "Assigned agent",
+        createdAt:  "Aug 22, 2026 · 12:02",
+        writtenIn:  "Meeting transcript · quarterly business review",
+        scope:      "Department",
+        claims: [
+          { label: "Two escalations undated", status: "Due to expire" },
+        ],
+        linked: [
+          { title: "Quarterly business review", kind: "Meeting · 52 min", icon: "Users"    },
+          { title: "Meridian — Meeting transcripts", kind: "Drive · Communication Hub", icon: "Folder" },
+        ],
+        attachments: [
+          { name: "QBR-transcript-aug26.txt", meta: "Text · 41 KB" },
+        ],
+      },
     },
     {
       id: "a4", channel: "meeting", title: "Quarterly business review",
@@ -1748,3 +1842,134 @@ export const CONCIERGE_PROMPTS = [
   "What do we still owe them?",
   "Which facts are unverified?",
 ]
+
+/**
+ * ── Create: the edge cases, before anything is created ─────────────────────
+ *
+ * Michael, 2026-09-10: "consideremos casos borde como qué pasa si este existe,
+ * como se mostrará, usando un informative card, en el caso que ya exista el
+ * usuario o contactos poder mostrar los correos o contactos asociados a ese
+ * mail o dato."
+ *
+ * WHY THIS IS THE ONE EDGE CASE WORTH BUILDING FIRST. A unified profile whose
+ * whole promise is one record per person has exactly one way to break that
+ * promise, and it is this form. The Activity feed on every record already
+ * carries the evidence — "Record merged from duplicate · absorbed a duplicate
+ * created by the inbound form" — so the duplicate is not hypothetical here,
+ * it is a thing that has already happened to this data and was cleaned up
+ * afterwards. Catching it before the record exists costs a lookup; catching
+ * it afterwards costs a merge, and a merge is a governance event.
+ *
+ * WHAT IS SHOWN, AND WHY IT IS THE RECORDS THEMSELVES. "This email already
+ * exists" is not actionable — the reader cannot tell whether they are about
+ * to duplicate a record or whether somebody else's typo is in the way. So the
+ * card carries the MATCHED RECORDS, each with the datum that collided, which
+ * is the difference between a validation error and an answer.
+ *
+ * ONE CARD, STRONGEST SIGNAL WINS. Three stacked cards in a 900px modal is
+ * noise, and the reader only ever acts on the most severe one. The order below
+ * is by how certain the collision is, not by how bad it sounds:
+ *
+ *   email-active    An active record already holds this email. CERTAIN — an
+ *                   email is the one field this data treats as unique. Blocks.
+ *   email-archived  Same, but the record is archived. Also certain, and the
+ *                   answer is to restore rather than create. Blocks.
+ *   phone           A phone matches and the email does not. NOT certain: a
+ *                   switchboard, a shared mobile, a household. Warns only.
+ *   name            A name matches and nothing else does. Weak — two people
+ *                   are allowed the same name. Informs only.
+ *   domain          Nothing matched, but the email's domain belongs to a
+ *                   company on file. This is not a duplicate at all, it is
+ *                   the good case: the new contact has a parent, and saying
+ *                   so before the save is how it gets linked without anyone
+ *                   going back to do it. Informs only.
+ *
+ * The three lower cases never block. A create form that refuses a real second
+ * person at the same company has stopped being a safeguard and become a wall,
+ * and the person filling it in is the one who knows which it is.
+ */
+export type CreateMatchKind = "email-active" | "email-archived" | "phone" | "name" | "domain"
+
+export interface CreateMatch {
+  kind:    CreateMatchKind
+  /** The records that matched, most relevant first. */
+  records: UcpContact[]
+  /** The value that collided, quoted back so the reader sees which field. */
+  on:      string
+  /** True for the two email cases: creating would knowingly duplicate. */
+  blocks:  boolean
+}
+
+const norm = (v: string) => v.trim().toLowerCase()
+/** Digits only — "+1 (212) 555-0155" and "2125550155" are the same phone. */
+const digits = (v: string) => v.replace(/\D/g, "")
+
+export function matchExistingRecords(draft: {
+  name?:   string
+  email?:  string
+  phones?: string[]
+}): CreateMatch | null {
+  const email = norm(draft.email ?? "")
+  const name  = norm(draft.name  ?? "")
+  const phones = (draft.phones ?? []).map(digits).filter(p => p.length >= 7)
+
+  if (email.includes("@")) {
+    const hit = CONTACTS.filter(c => norm(c.email) === email)
+    if (hit.length > 0) {
+      const archived = hit.every(c => c.status === "Archived")
+      return {
+        kind:    archived ? "email-archived" : "email-active",
+        records: hit,
+        on:      draft.email!.trim(),
+        blocks:  true,
+      }
+    }
+  }
+
+  if (phones.length > 0) {
+    const hit = CONTACTS.filter(c => phones.includes(digits(c.phone)))
+    if (hit.length > 0) {
+      return { kind: "phone", records: hit, on: hit[0].phone, blocks: false }
+    }
+  }
+
+  // Three characters is the floor: "Li" matches half a roster and the card
+  // would fire on the second keystroke of every name.
+  if (name.length >= 3) {
+    const hit = CONTACTS.filter(c => norm(c.name) === name)
+    if (hit.length > 0) {
+      return { kind: "name", records: hit, on: draft.name!.trim(), blocks: false }
+    }
+  }
+
+  // Last, and only when nothing above matched — this is the good news case.
+  const domain = email.split("@")[1]
+  if (domain && domain.includes(".")) {
+    const hit = CONTACTS.filter(c => norm(c.email).endsWith(`@${domain}`))
+    if (hit.length > 0) {
+      const company = hit.find(c => c.type === "company")
+      return {
+        kind:    "domain",
+        records: company ? [company, ...hit.filter(c => c !== company)] : hit,
+        on:      domain,
+        blocks:  false,
+      }
+    }
+  }
+
+  return null
+}
+
+/** Offices and regions the tenant operates in — the Location field's options. */
+export const CREATE_LOCATIONS = [
+  "Chicago, IL",
+  "Detroit, MI",
+  "Austin, TX",
+  "New York, NY",
+  "San Francisco, CA",
+  "Remote — US",
+]
+
+/** Who a record can be assigned to, read off the roster so the list cannot
+ *  drift from the owners the records actually have. */
+export const CREATE_OWNERS = Array.from(new Set(CONTACTS.map(c => c.owner))).sort()

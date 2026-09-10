@@ -40,10 +40,14 @@ import { Tooltip }           from "@/components/ui/tooltip"
 import { Checkbox }          from "@/components/ui/checkbox"
 import { AiSummaryWidget }   from "@/components/experimental/ai-summary-widget"
 import { Input }             from "@/components/ui/input"
+import { Select }            from "@/components/ui/select"
+import { RadioGroup }        from "@/components/ui/radio"
+import { InformativeCard }   from "@/components/ui/informative-card"
+import { useToast }          from "@/components/ui/toast"
 import { Chip }              from "@/components/ui/chip"
 import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
-import { Plus, Lock, Contact as ContactIcon } from "lucide-react"
+import { Plus, Lock, Trash2, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
@@ -51,8 +55,9 @@ import {
   CONTACTS, PEOPLE_TYPES,
   TYPE_ICON, TYPE_LABEL, TYPE_PLURAL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
+  matchExistingRecords, CREATE_LOCATIONS, CREATE_OWNERS,
 } from "./ucpShared"
-import type { UcpContact, UcpEntityType } from "./ucpShared"
+import type { CreateMatch, UcpContact, UcpEntityType } from "./ucpShared"
 
 const PAGE_SIZE = 10
 
@@ -111,17 +116,76 @@ const CREATE_LABEL: Record<string, string> = {
   ),
 }
 
-/** Which fields the create form asks for, per type. Six at most — past that it
- *  stops being a panel and becomes a page. */
-const CREATE_FIELDS: Record<UcpEntityType, string[]> = {
-  person:         ["Full name", "Title", "Company", "Email", "Phone", "Account owner"],
-  employee:       ["Full name", "Role", "Department", "Work email", "Manager", "Access role"],
-  company:        ["Legal name", "Industry", "Headcount", "Account email", "Account owner", "Primary contact"],
+/**
+ * ── Which fields the create form asks for, per type ────────────────────────
+ *
+ * FIVE, AND FIVE IS NOT A COINCIDENCE. The Create pattern's cascade ends at
+ * step 5 with a threshold: a standalone create of five fields or fewer is a
+ * `ModalDialog variant="content"`, and above that it is a full-page form. The
+ * contact fields Michael specified come to exactly five — name, email, phone,
+ * location, owner — so the modal is what the pattern gives it, and the other
+ * four types are kept at five so that one roster does not open two different
+ * surfaces depending on which tab you were standing on.
+ *
+ * Trimming was the price of that, and each cut went to a field the record
+ * gets somewhere better: an employee's access role is set in People & Access,
+ * a company's primary contact is a link you make once both records exist, and
+ * headcount is a number that arrives from the sync rather than from a form.
+ *
+ * `optional` is real, not decorative: the primary CTA unlocks without it. A
+ * phone nobody has yet and an owner nobody has decided are both normal states
+ * for a record created the moment somebody appears in an inbox.
+ */
+type CreateFieldKind = "text" | "select" | "phones"
+
+interface CreateField {
+  key:       string
+  label:     string
+  kind:      CreateFieldKind
+  optional?: boolean
+  options?:  string[]
+}
+
+const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
+  person: [
+    { key: "name",     label: "Full name",     kind: "text"                                        },
+    { key: "email",    label: "Email",         kind: "text"                                        },
+    { key: "phones",   label: "Phone",         kind: "phones", optional: true                      },
+    { key: "location", label: "Location",      kind: "select", options: CREATE_LOCATIONS           },
+    { key: "owner",    label: "Account owner", kind: "select", options: CREATE_OWNERS, optional: true },
+  ],
+  employee: [
+    { key: "name",       label: "Full name",  kind: "text"                                  },
+    { key: "email",      label: "Work email", kind: "text"                                  },
+    { key: "phones",     label: "Phone",      kind: "phones", optional: true                },
+    { key: "department", label: "Department", kind: "text"                                  },
+    { key: "location",   label: "Location",   kind: "select", options: CREATE_LOCATIONS     },
+  ],
+  company: [
+    { key: "name",     label: "Legal name",    kind: "text"                                        },
+    { key: "email",    label: "Account email", kind: "text"                                        },
+    { key: "phones",   label: "Phone",         kind: "phones", optional: true                      },
+    { key: "location", label: "Headquarters",  kind: "select", options: CREATE_LOCATIONS           },
+    { key: "owner",    label: "Account owner", kind: "select", options: CREATE_OWNERS, optional: true },
+  ],
   // A create form asks what the OBJECT needs, never what the pattern needs.
   // Nothing about these two is person-shaped, and that is the whole reason
-  // they are in this prototype.
-  policy:         ["Policy name", "Scope", "Owner", "Effective date", "Review cycle"],
-  asset:          ["Asset code", "Type", "Assigned site", "Acquired", "Custodian"],
+  // they are in this prototype — no email, no phone, so no duplicate check
+  // either: there is no field here this data treats as unique.
+  policy: [
+    { key: "name",   label: "Policy name",    kind: "text"                              },
+    { key: "scope",  label: "Scope",          kind: "text"                              },
+    { key: "owner",  label: "Owner",          kind: "select", options: CREATE_OWNERS    },
+    { key: "from",   label: "Effective date", kind: "text"                              },
+    { key: "cycle",  label: "Review cycle",   kind: "text",   optional: true            },
+  ],
+  asset: [
+    { key: "name",      label: "Asset code",   kind: "text"                              },
+    { key: "kind",      label: "Type",         kind: "text"                              },
+    { key: "location",  label: "Assigned site", kind: "select", options: CREATE_LOCATIONS },
+    { key: "acquired",  label: "Acquired",     kind: "text"                              },
+    { key: "custodian", label: "Custodian",    kind: "select", options: CREATE_OWNERS, optional: true },
+  ],
 }
 
 type SortKey = "recent" | "name" | "owner"
@@ -139,102 +203,385 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 // unreachable surface in the file and an unused import behind it. The record's
 // own concierge is untouched — it opens from the Entity Header's `Ask`, which
 // is a different thing: that one answers about one record from its own planes.
-// ── Create panel ──────────────────────────────────────────────────────────────
-// A create form is non-destructive, so it is a SlideOut and not a ModalDialog.
-// No `label` prop on Input — placeholder is the only field hint on desktop.
-
-function CreatePanel({
-  open, onClose, lockedType, onCreate,
+// ── Create ────────────────────────────────────────────────────────────────────
+/**
+ * A MODAL, AND THIS USED TO BE A SLIDEOUT. The comment it replaces read "a
+ * create form is non-destructive, so it is a SlideOut and not a ModalDialog",
+ * and destructiveness is explicitly NOT the test — the Create pattern's test
+ * is whether the user can ignore the surface and keep working in the
+ * background. Filling in a name, an email and a location needs nothing from
+ * the roster behind it, so they cannot. Running the cascade:
+ *
+ *   1  Does a contact declare a workspace of its own?          no
+ *   2  Does the flow branch, or have two or more stages?        no
+ *   3  Creatable from a single field, beside a list of them?    no
+ *   4  Does it attach to something visible on screen?           no — a roster
+ *      is a list of siblings, not the new record's parent
+ *   5  More than five fields?                                   no, exactly 5
+ *      → ModalDialog variant="content"
+ *
+ * `slotUnstyled`, because the fields sit directly on the modal. The default
+ * slot wraps content in the grey `--modal-slot-bg` surface, which is for a
+ * card of content inside a dialog, not for the dialog's own form.
+ *
+ * No `label` prop on Input — placeholder is the only field hint on desktop.
+ */
+function CreateModal({
+  open, onClose, lockedType, onCreate, onOpenRecord,
 }: {
   open:        boolean
   onClose:     () => void
   /** Set when a type tab is active; null on All, where the user picks. */
   lockedType:  UcpEntityType | null
-  onCreate:    (type: UcpEntityType) => void
+  onCreate:    (type: UcpEntityType, name: string) => void
+  /** The duplicate card's way out: open the record that already exists. */
+  onOpenRecord: (id: string) => void
 }) {
-  const [type, setType]     = useState<UcpEntityType>(lockedType ?? "person")
+  const [type,   setType]   = useState<UcpEntityType>(lockedType ?? "person")
   const [values, setValues] = useState<Record<string, string>>({})
-  const [tried, setTried]   = useState(false)
+  const [tried,  setTried]  = useState(false)
+  /** One entry per phone row. Starts as a single empty row — an optional field
+   *  still shows one line, or nobody discovers it is there. */
+  const [phones, setPhones] = useState<string[]>([""])
+  const [primary, setPrimary] = useState(0)
+  /** Which Select has its Menu open, and where to anchor it. One at a time. */
+  const [openSel, setOpenSel] = useState<string | null>(null)
+  const [selAnchor, setSelAnchor] = useState<DropdownAnchor | null>(null)
+  const selDrop = useDropdownPosition(selAnchor)
 
-  // Reopening on a different tab should follow the tab, not the last pick.
   const activeType = lockedType ?? type
   const fields     = CREATE_FIELDS[activeType]
-  const complete   = fields.every(f => (values[f] ?? "").trim().length > 0)
+
+  const reset = () => {
+    setValues({}); setPhones([""]); setPrimary(0); setTried(false); setOpenSel(null)
+  }
+
+  /**
+   * The duplicate check, and it runs on every keystroke rather than on blur.
+   * Blur is the tempting choice — fewer lookups, no card flickering mid-word —
+   * and it is the wrong one here: the card that matters most appears when the
+   * email is COMPLETE, and by then a blur-triggered check has let the user
+   * move on to the next field and start filling in a record that will not be
+   * created. Telling them while their cursor is still in the field is the
+   * difference between a warning and an interruption.
+   */
+  const match: CreateMatch | null = useMemo(() => {
+    // Policies and assets have no unique field to collide on.
+    if (activeType === "policy" || activeType === "asset") return null
+    return matchExistingRecords({
+      name:   values.name,
+      email:  values.email,
+      phones,
+    })
+  }, [activeType, values.name, values.email, phones])
+
+  const required = fields.filter(f => !f.optional)
+  const missing  = required.filter(f =>
+    f.kind === "phones"
+      ? phones.every(p => p.trim() === "")
+      : (values[f.key] ?? "").trim() === "",
+  )
+  const complete = missing.length === 0
+  const blocked  = match?.blocks === true
+
+  const setPhone = (i: number, v: string) =>
+    setPhones(list => list.map((p, j) => (j === i ? v : p)))
+
+  const removePhone = (i: number) => {
+    setPhones(list => list.filter((_, j) => j !== i))
+    // The primary moves with the list, and never past its end. Deleting the
+    // primary promotes the row that took its place.
+    setPrimary(pi => (i < pi ? pi - 1 : Math.min(pi, phones.length - 2)))
+  }
+
+  const field = (f: CreateField) => {
+    const invalid = tried && !f.optional && missing.includes(f)
+
+    if (f.kind === "phones") {
+      return (
+        <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+            {f.label} <span style={{ fontWeight: 500, color: "var(--field-supporting)" }}>· optional</span>
+          </span>
+          {/*
+            THE PRIMARY IS A RADIO, AND IT ONLY EXISTS FROM THE SECOND ROW ON.
+            One phone is the primary by definition, and a radio group of one is
+            a control that cannot be used — it renders a selected dot the user
+            can neither change nor understand. It appears when there is a
+            choice to make. A radio and not a Chip because these are mutually
+            exclusive: selecting one deselects the rest, which is the one thing
+            a Chip row does not promise.
+          */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {phones.map((value, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {phones.length > 1 && (
+                  <RadioGroup
+                    legend={`Primary phone ${i + 1}`}
+                    hideLegend
+                    size="sm"
+                    value={primary === i ? "on" : ""}
+                    onChange={() => setPrimary(i)}
+                    options={[{ value: "on", label: "" }]}
+                    name={`primary-phone-${i}`}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <Input
+                    placeholder={i === 0 ? "+1 (555) 000-0000" : "Another number"}
+                    value={value}
+                    onChange={e => setPhone(i, e.target.value)}
+                  />
+                </div>
+                {phones.length > 1 && (
+                  <Tooltip content="Remove this number" side="cursor">
+                    <Button variant="tertiary" size="sm" onClick={() => removePhone(i)} aria-label="Remove this number">
+                      <Trash2 size={14} />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <Button variant="tertiary" size="sm" className="self-start" onClick={() => setPhones(l => [...l, ""])}>
+              <Plus size={12} /> Add another number
+            </Button>
+            {phones.length > 1 && (
+              <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+                {phones[primary]?.trim() ? `${phones[primary].trim()} is primary` : "Pick the primary number"}
+              </span>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    if (f.kind === "select") {
+      return (
+        <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+            {f.label}
+            {f.optional && <span style={{ fontWeight: 500, color: "var(--field-supporting)" }}> · optional</span>}
+          </span>
+          {/* Select is a trigger only — the options come from the DS Menu,
+              positioned by dropdown-anchor. The same mechanism Filters uses,
+              which is why there is no second implementation in this file. */}
+          <div onClickCapture={e => setSelAnchor(anchorFromEvent(e))}>
+            <Select
+              placeholder={f.label}
+              value={values[f.key] ?? ""}
+              state={invalid ? "error" : undefined}
+              open={openSel === f.key}
+              onClick={() => setOpenSel(k => (k === f.key ? null : f.key))}
+              onClear={values[f.key] ? () => setValues(v => ({ ...v, [f.key]: "" })) : undefined}
+            />
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+          {f.label}
+          {f.optional && <span style={{ fontWeight: 500, color: "var(--field-supporting)" }}> · optional</span>}
+        </span>
+        <Input
+          placeholder={f.label}
+          value={values[f.key] ?? ""}
+          state={invalid ? "error" : undefined}
+          onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
+        />
+      </div>
+    )
+  }
+
+  const selField = fields.find(f => f.key === openSel && f.kind === "select")
 
   return (
-    <SlideOut
-      open={open}
-      onClose={onClose}
-      type="with-variants"
-      size="m"
-      title={`New ${TYPE_LABEL[activeType]}`}
-      subtitle={`Contacts · ${fields.length} fields`}
-      showIcon
-      iconContent={<Plus size={14} />}
-      showStatus={false}
-      showTopButton={false}
-      showTabs={false}
-      showSearchBar={false}
-      showChips={false}
-      showCta
-      ctaPrimaryLabel={`Create ${TYPE_LABEL[activeType]}`}
-      ctaSecondaryLabel="Cancel"
-      onCtaPrimary={() => {
-        if (!complete) { setTried(true); return }
-        onCreate(activeType)
-        setValues({})
-        setTried(false)
-      }}
-      onCtaSecondary={onClose}
-    >
-      <div className="flex flex-col gap-[24px]">
-        {!lockedType && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>What are you creating?</span>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {(Object.keys(CREATE_FIELDS) as UcpEntityType[]).map(t => (
-                <Chip
-                  key={t}
-                  size="s"
-                  variant={activeType === t ? "primary" : "secondary"}
-                  onClick={() => { setType(t); setValues({}) }}
-                >
-                  {TYPE_LABEL[t]}
-                </Chip>
-              ))}
+    <>
+      <ModalDialog
+        isOpen={open}
+        onClose={() => { onClose(); reset() }}
+        variant="content"
+        iconName={TYPE_ICON[activeType]}
+        iconVariant="informative"
+        title={`New ${TYPE_LABEL[activeType]}`}
+        description={`A record created here has no source system — its facts start on the Sandbox plane and are promoted as they are verified.`}
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {!lockedType && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>What are you creating?</span>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {(Object.keys(CREATE_FIELDS) as UcpEntityType[]).map(t => (
+                    <Chip
+                      key={t}
+                      size="s"
+                      variant={activeType === t ? "primary" : "secondary"}
+                      onClick={() => { setType(t); reset() }}
+                    >
+                      {TYPE_LABEL[t]}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* The edge case, stated before the CTA is reached rather than
+                after it is pressed. One card, strongest signal — the ordering
+                and the reasoning live in matchExistingRecords. */}
+            {match && <DuplicateCard match={match} onOpenRecord={id => { onOpenRecord(id); onClose(); reset() }} />}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {fields.map(field)}
             </div>
+
+            {tried && !complete && (
+              <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
+                {missing.length === 1
+                  ? `${missing[0].label} is still empty.`
+                  : `${missing.length} required fields are still empty: ${missing.map(f => f.label).join(", ")}.`}
+              </span>
+            )}
           </div>
-        )}
+        }
+        ctaPrimary={{
+          label: `Create ${TYPE_LABEL[activeType]}`,
+          // Disabled ONLY for the two email cases. A phone or a name match is
+          // a warning, and a form that refuses a real second person at the
+          // same company has stopped being a safeguard.
+          disabled: blocked,
+          onClick: () => {
+            if (!complete) { setTried(true); return }
+            onCreate(activeType, (values.name ?? "").trim())
+            reset()
+          },
+        }}
+        ctaSecondary={{ label: "Cancel", onClick: () => { onClose(); reset() } }}
+      />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {fields.map(field => (
-            <Input
-              key={field}
-              placeholder={field}
-              value={values[field] ?? ""}
-              onChange={e => setValues(v => ({ ...v, [field]: e.target.value }))}
-            />
-          ))}
+      {openSel && selAnchor && selField && (
+        <div ref={selDrop.ref} style={{ position: "fixed", zIndex: 10001, ...selDrop.style }}>
+          <Menu>
+            {(selField.options ?? []).map(opt => (
+              <MenuItem
+                key={opt}
+                size="sm"
+                label={opt}
+                onClick={() => { setValues(v => ({ ...v, [selField.key]: opt })); setOpenSel(null) }}
+              />
+            ))}
+          </Menu>
         </div>
+      )}
+    </>
+  )
+}
 
-        <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>
-          A record created here has no source system — its facts start on the Sandbox
-          plane and get promoted as they are verified.
-        </span>
+/**
+ * ── What an existing record looks like, before you make a second one ───────
+ *
+ * The card is an `InformativeCard` — its state carries the severity, and the
+ * records themselves are listed underneath it as real `EntityList` rows, with
+ * the datum that collided in the meta line. That last part is the whole point:
+ * "this email already exists" tells the reader nothing they can act on, while
+ * "sandra.torres@meridian.com · Sandra Torres · Active · owned by Priya Nair"
+ * tells them whether they are about to duplicate a record or whether somebody
+ * else's typo is standing in their way.
+ */
+const MATCH_COPY: Record<CreateMatch["kind"], {
+  state: "error" | "alert" | "informative"
+  title: (on: string, n: number) => string
+  body:  (on: string, n: number) => string
+}> = {
+  "email-active": {
+    state: "error",
+    title: () => "This email is already on a record",
+    body:  on => `${on} belongs to the record below. Open it instead of creating a second one — a duplicate has to be merged later, and a merge is a governance event.`,
+  },
+  "email-archived": {
+    state: "alert",
+    title: () => "This email is on an archived record",
+    body:  on => `${on} belongs to a record that was archived, not deleted. Its facts and drives are still there. Restore it rather than starting again.`,
+  },
+  phone: {
+    state: "alert",
+    title: (_, n) => (n === 1 ? "Another record has this number" : `${n} records have this number`),
+    body:  on => `${on} is already on file with a different email. That is normal for a switchboard or a shared line — check it is not the same person before you continue.`,
+  },
+  name: {
+    state: "informative",
+    title: (_, n) => (n === 1 ? "A record already has this name" : `${n} records already have this name`),
+    body:  (_, n) => `The email and phone are different, so ${n === 1 ? "this is" : "these are"} probably not the same person. Worth a look before you create it.`,
+  },
+  domain: {
+    state: "informative",
+    title: on => `${on} is already on file`,
+    body:  (_, n) => `${n} record${n === 1 ? "" : "s"} share this domain. The new contact will be linked to it, so you do not have to come back and do it by hand.`,
+  },
+}
 
-        {tried && !complete && (
-          <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
-            {`Every field is required. ${fields.filter(f => !(values[f] ?? "").trim()).length} still empty.`}
+function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenRecord: (id: string) => void }) {
+  const copy = MATCH_COPY[match.kind]
+  const n    = match.records.length
+  const head = match.records[0]
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <InformativeCard
+        state={copy.state}
+        size="sm"
+        title={copy.title(match.on, n)}
+        description={copy.body(match.on, n)}
+        /* The way out is on the card, next to the reason for it — not a
+           separate button further down the form, where it reads as an
+           unrelated action. Only the two blocking cases get one: a phone or
+           name match already has its answer, which is to keep typing. */
+        cta={match.blocks
+          ? { label: match.kind === "email-archived" ? `Restore ${head.name}` : `Open ${head.name}`, onClick: () => onOpenRecord(head.id) }
+          : undefined}
+      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {match.records.slice(0, 3).map(c => (
+          <CardContainer key={c.id} size="sm" className="!p-0 overflow-hidden">
+            <EntityList
+              items={[{
+                id:          c.id,
+                title:       c.name,
+                /* A person gets an avatar and everything else an icon — the
+                   same rule the Entity Header states, and the same one this
+                   roster's own rows already follow. */
+                ...(PEOPLE_TYPES.includes(c.type)
+                  ? { avatarName: c.name }
+                  : { iconName: TYPE_ICON[c.type], iconVariant: "neutral" as const }),
+                /* The collided datum first — it is the reason this row is on
+                   screen. Then who owns it, which is who to ask. */
+                primaryMeta:   [{ iconName: "Mail",  label: c.email }],
+                secondaryMeta: [{ iconName: "Phone", label: c.phone }, { iconName: "User", label: c.owner }],
+                state:       { label: c.status, variant: entityState(c).variant },
+                actions:     [{ label: "Open", variant: "tertiary", icon: "ArrowRight", onClick: () => onOpenRecord(c.id) }],
+              }]}
+            />
+          </CardContainer>
+        ))}
+        {n > 3 && (
+          <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+            {`and ${n - 3} more on this domain.`}
           </span>
         )}
       </div>
-    </SlideOut>
+    </div>
   )
 }
+
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function PMThomasUcpContactsScreen() {
+  const toast = useToast()
   const [openId,     setOpenId]     = useState<string | null>(null)
   const [tab,        setTab]        = useState("all")
   const [page,       setPage]       = useState(1)
@@ -869,11 +1216,22 @@ export default function PMThomasUcpContactsScreen() {
         ctaSecondary={{ label: "Cancel", onClick: () => setArchiving(null) }}
       />
 
-      <CreatePanel
+      <CreateModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         lockedType={activeType === "all" ? null : activeType}
-        onCreate={() => setCreateOpen(false)}
+        onOpenRecord={setOpenId}
+        /* Every create ends in a toast — the Create pattern is explicit that a
+           visible landing is not confirmation on its own, because "it appeared
+           in the list" only reads as confirmation to someone who knows what
+           the list looked like a second ago. The toast says what happened; the
+           roster says where it went. */
+        onCreate={(t, name) => {
+          setCreateOpen(false)
+          toast.success(`${TYPE_LABEL[t]} \u201c${name}\u201d created`, {
+            description: "Its facts start on the Sandbox plane and are promoted as they are verified.",
+          })
+        }}
       />
 
     </ScreenLayout>
