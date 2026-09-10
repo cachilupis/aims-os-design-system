@@ -346,13 +346,9 @@ function EntityListTab({ tab, accentColor }: { tab: EntityTab; accentColor: stri
           display: "flex", alignItems: "center", gap: 14, padding: "12px 0",
           borderBottom: i < tab.items.length - 1 ? "1px solid var(--border)" : "none",
         }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-            background: `${accentColor}18`, border: `1px solid ${accentColor}30`,
-            display: "flex", alignItems: "center", justifyContent: "center", color: accentColor,
-          }}>
+          <span style={{ color: accentColor, flexShrink: 0, display: "flex" }}>
             <Icons.FileText size={15} />
-          </div>
+          </span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.3 }}>{item.name}</div>
             <div style={{ fontSize: 11, fontWeight: 500, color: "var(--color-text-subtitle)", marginTop: 3 }}>{item.meta}</div>
