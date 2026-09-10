@@ -84,12 +84,34 @@ These are the rules most often violated in AI-generated views. Scan this block e
   `pm-thomas-widget-builder.tsx`'s `OptionPicker` is the working reference; copy
   that shape rather than inventing a second one.
 
-  **This used to say "compose with `@base-ui/react`'s Popover", and that does
-  not work** — corrected 2026-09-09. `Select` renders a div, so `Popover.Trigger`
-  had nowhere to attach its ref or handlers, and anchoring a wrapper instead made
-  base-ui read the opening click as an outside click and dismiss the panel on the
-  same tick. Both `select.tsx`'s own docblock and `OptionPicker`'s record the
-  attempt. Do not re-try it.
+  **A base-ui Popover also works, and the DS publishes one — half of what
+  this used to say was wrong.** Corrected 2026-09-10, by clicking the real
+  thing on a deployed preview rather than trusting the note.
+
+  The half that is true: `Popover.Trigger render={<Select/>}` cannot be built.
+  `Select` renders a div and base-ui's Trigger has nowhere to attach.
+
+  The half that was wrong: this claimed that anchoring a **wrapper** div
+  instead made base-ui read the opening click as an outside click and dismiss
+  the panel on the same tick. It does not. A wrapper div carrying the ref,
+  with `open` controlled by the trigger's own `onClick`, opens and selects
+  correctly — verified in a plain page, inside a `SlideOut`, and in `Header`'s
+  `aux` slot. `PgInteractiveSelect` in `App.tsx` is that composition, it is
+  live on the Create pattern page's own tour, and it works.
+
+  So there are two sanctioned mechanisms, and the reason to prefer one is
+  consistency, not breakage:
+
+  | Mechanism | Use it for |
+  |---|---|
+  | `dropdown-anchor` + `Menu` | The default. Filter slots, kebab menus, anything a screen positions itself |
+  | wrapper-anchored base-ui `Popover` | A `Select`'s own option list, where Floating UI's collision handling is worth the second mechanism |
+
+  **Why the wrong half is worth this much text:** a rule that forbids what the
+  DS itself publishes does not stop anyone — it sends them to the published
+  example, and then the review argues with them for copying it. That is
+  exactly what happened on PR #127. If a note says something is broken, the
+  cost of checking is one click; pay it before writing the note.
 
   If the option list is short and the labels are brief, a `Chip` row is often the
   better answer than any dropdown — no menu, no positioning, and the choices stay
@@ -270,6 +292,8 @@ Use `EntityHeader` (`src/components/ui/entity-header.tsx`) atop any dashboard vi
 - **Scroll direction, never hover.** A header that grows when the cursor passes over it fires by accident and pushes down the content the reader is mid-sentence in; hover exists neither on a tablet nor for a keyboard. Direction is also what `ScreenLayout` already computes for the page `Header`'s compress, so the two agree instead of competing.
 - **Identity never compresses.** Name, visual, source, tags, state badge and the entire right-hand cluster are untouched. It is the second row that goes, never the first.
 - **One prop, not two.** Sticky and compressed are inseparable — compressing a card that scrolls out of view anyway does nothing — so they are bound together and a caller cannot wire half of it.
+- **`ScreenLayout` decides which element scrolls, and the card asks it** (2026-09-10). The layout publishes its scroll position through `PageScrollContext` (`src/lib/page-scroll.ts`) and `EntityHeader` subscribes. **Do not try to work the scroller out from a component**: a screen holds several — the sidebar, a canvas widget's body, a side panel — and the ones parked at zero overwrite the one that moved, which is why the card would not stay compressed in UCP. A card outside any `ScreenLayout` falls back to its own listener, which is sound only because a DS documentation page is one stage with one scroller.
+- **It works whether the card scrolls with the content or the screen pins it.** Thom's UCP profile puts the `EntityHeader` in `ScreenLayout`'s header zone, outside the scroll container; it compresses the same way, and the component skips its own sticky because the host already pinned it.
 - **Turn it on for a record page whose content scrolls under the header** — a detail view's Overview tab. **Never in a `SlideOut`, a modal or a widget:** none of them has a long scroll to reclaim room from, and a card that sticks inside a panel just eats the panel.
 
 **Dropping is the last resort, and only two slots ever get dropped** — the `description` below 420px of card width, then the `secondaryMetadata` row below 320px. `visual`, `name` and `stateBadge` are never dropped at any width. **The order is reversed from Figma deliberately** (Michael, 2026-09-07): metadata carries the facts someone might act on, the description is the edge case for extra granularity when metadata is not enough, so the description goes first.

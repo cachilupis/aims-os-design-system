@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, type KeyboardEvent, type ReactNode } from "react"
 import { Sparkle, MoreHorizontal, Lock, EyeOff, Info, Database, type LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePageScroll, type PageScrollInfo } from "@/lib/page-scroll"
 import { AvatarCircle } from "@/components/ui/avatar"
 import { CardContainer } from "@/components/ui/card-container"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -934,16 +935,22 @@ function useTagFit(opts: {
  *                  consequence of our own change, and every one of them
  *                  lands inside that window. A real gesture outlasts it.
  *
- * WHY IT LISTENS ON THE DOCUMENT IN THE CAPTURE PHASE, rather than walking up
- * to find the scrolling ancestor and subscribing to that. Walking up resolves
- * ONCE, when the effect runs — and at that moment the container is often not
- * scrollable yet, because the widgets below this card have not rendered. The
- * walk then falls back to the window and the card never compresses, which is
- * exactly the bug this replaced. Scroll events do not bubble, but they DO
- * capture, so one document-level capturing listener sees every scroller
- * regardless of when it grew. The `contains` test is what keeps it precise:
- * only the container this card actually sits inside can drive it, so a
- * scrolling list elsewhere on the page cannot.
+ * WHERE THE POSITION COMES FROM — decided, not guessed (2026-09-10).
+ * `ScreenLayout` publishes the scroll position of the container it created,
+ * and this hook subscribes to it. Nothing else on the page can know which
+ * element scrolls with certainty, and two earlier attempts to work it out
+ * from here both failed on a real screen:
+ *
+ *   walking up to find a scrolling ancestor  resolves once, before the
+ *     content has height, so it answers "none" and never revises
+ *   listening to every scroller in the document  a screen holds many — the
+ *     sidebar, a canvas widget's body, a side panel — and the ones parked at
+ *     zero keep overwriting the one that moved, so the card never stays
+ *     compressed. This is what Michael saw in UCP.
+ *
+ * The fallback for a card outside any `ScreenLayout` is still the document
+ * capture listener, and it is sound there for the reason it was unsound in
+ * UCP: a DS documentation page is one stage with one scroller.
  */
 const SCROLL_TOP_ZONE = 16
 const SCROLL_EPSILON = 4
@@ -984,39 +991,27 @@ function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement 
   const isCompressed = useRef(false)
   const lockUntil = useRef(0)
 
+  // WHERE THE POSITION COMES FROM. `ScreenLayout` publishes the scroll
+  // position of the element it created, so inside one there is nothing to
+  // work out. Outside one — the DS documentation pages — this is null and
+  // the fallback below applies.
+  const pageScroll = usePageScroll()
+
   useEffect(() => {
     if (!enabled) { setCompressed(false); isCompressed.current = false; return }
-    lastY.current = 0
     lockUntil.current = 0
 
-    // Pinned by the host: no scroller of its own, so any scroll on the page
-    // is the signal. Read once — it is a question about layout, not content.
-    const pinned = !hasScrollableAncestor(ref.current)
-
-    const onScroll = (e: Event) => {
-      const el = ref.current
-      if (!el) return
-
-      const target = e.target
-      const isDocument = target === document || target === document.documentElement || target === document.body
-      // Ours when the scroller contains the card. When the card is pinned it
-      // is inside nothing, so the page's scroller is the only one there is
-      // and every scroll is ours.
-      const isOurs = isDocument || pinned || (target instanceof HTMLElement && target.contains(el))
-      if (!isOurs) return
-
-      const y = isDocument ? window.scrollY : (target as HTMLElement).scrollTop
+    // Everything below decides ONE thing: given a new scroll position, should
+    // the card be compressed? Both sources feed this, so the rules — the top
+    // zone, the threshold, the clamp guards — are written once.
+    const apply = (y: number, maxY: number) => {
       const now = performance.now()
 
       // Inside the lock the card holds still and only re-baselines, so the
       // reflow our own toggle caused cannot bounce it back.
       if (now < lockUntil.current) { lastY.current = y; return }
 
-      const maxY = isDocument
-        ? document.documentElement.scrollHeight - window.innerHeight
-        : (target as HTMLElement).scrollHeight - (target as HTMLElement).clientHeight
       const atBottom = y >= maxY - 1
-
       const last = lastY.current
       let next = isCompressed.current
       if (y <= SCROLL_TOP_ZONE) next = false
@@ -1031,9 +1026,41 @@ function useCompressOnScroll(enabled: boolean, ref: React.RefObject<HTMLElement 
       lastY.current = y
     }
 
+    // ── The layout told us. Nothing to guess. ──────────────────────────────
+    if (pageScroll) {
+      lastY.current = pageScroll.read().top
+      return pageScroll.subscribe((info: PageScrollInfo) => apply(info.top, info.max))
+    }
+
+    // ── FALLBACK, for a card that is not inside a ScreenLayout ─────────────
+    // One document-level capturing listener, because scroll does not bubble
+    // but does capture. `contains` keeps it to the container the card sits
+    // in; a card pinned outside every scroller takes whatever the page gives
+    // it, which is only safe here because a page with no ScreenLayout is a
+    // single stage with a single scroller. That assumption is exactly what
+    // broke on a real screen, and exactly why ScreenLayout now decides.
+    lastY.current = 0
+    const pinned = !hasScrollableAncestor(ref.current)
+
+    const onScroll = (e: Event) => {
+      const el = ref.current
+      if (!el) return
+
+      const target = e.target
+      const isDocument = target === document || target === document.documentElement || target === document.body
+      const isOurs = isDocument || pinned || (target instanceof HTMLElement && target.contains(el))
+      if (!isOurs) return
+
+      const y = isDocument ? window.scrollY : (target as HTMLElement).scrollTop
+      const maxY = isDocument
+        ? document.documentElement.scrollHeight - window.innerHeight
+        : (target as HTMLElement).scrollHeight - (target as HTMLElement).clientHeight
+      apply(y, maxY)
+    }
+
     document.addEventListener("scroll", onScroll, { capture: true, passive: true })
     return () => document.removeEventListener("scroll", onScroll, { capture: true })
-  }, [enabled, ref])
+  }, [enabled, ref, pageScroll])
 
   return compressed
 }

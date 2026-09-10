@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { Sparkles, Bell, Settings } from "lucide-react"
 import { Topbar } from "@/components/ui/topbar"
@@ -6,6 +6,7 @@ import type { TopbarAction } from "@/components/ui/topbar"
 import { Sidebar } from "@/components/ui/sidebar"
 import type { SidebarEntry } from "@/components/ui/sidebar"
 import { AppBackground } from "@/components/ui/app-background"
+import { PageScrollContext, type PageScrollApi, type PageScrollInfo } from "@/lib/page-scroll"
 import type { AppBgVariant } from "@/components/ui/app-background"
 import { NotificationCenter, type NotificationGroup, type NotificationItemData } from "@/components/ui/notification-center"
 
@@ -188,15 +189,47 @@ export function ScreenLayout({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [isScrolled, setIsScrolled] = useState(false)
 
+  // ── The page's scroll position, published to anything that asks ─────────
+  // This layout created the element that scrolls, so it is the only thing on
+  // the page that knows which one it is with certainty. A component that
+  // tries to work that out for itself gets it wrong in both directions: a
+  // card pinned in the header zone below has no scrollable ancestor to find,
+  // and a screen holds several scrollers, most of them parked at zero.
+  //
+  // Listeners are held in a ref and called directly. Putting the position in
+  // state would re-render every screen on every scroll frame; this way the
+  // context value is created once, never changes identity, and a scroll costs
+  // nothing outside the components that subscribed.
+  const scrollListeners = useRef(new Set<(info: PageScrollInfo) => void>())
+  const readScroll = useCallback((): PageScrollInfo => {
+    const el = scrollRef.current
+    if (!el) return { top: 0, max: 0 }
+    return { top: el.scrollTop, max: Math.max(0, el.scrollHeight - el.clientHeight) }
+  }, [])
+  const pageScroll = useMemo<PageScrollApi>(() => ({
+    subscribe: listener => {
+      scrollListeners.current.add(listener)
+      return () => { scrollListeners.current.delete(listener) }
+    },
+    read: readScroll,
+  }), [readScroll])
+
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const handler = () => setIsScrolled(el.scrollTop > 16)
-    el.addEventListener("scroll", handler)
+    const handler = () => {
+      setIsScrolled(el.scrollTop > 16)
+      if (scrollListeners.current.size > 0) {
+        const info = readScroll()
+        scrollListeners.current.forEach(l => l(info))
+      }
+    }
+    el.addEventListener("scroll", handler, { passive: true })
     return () => el.removeEventListener("scroll", handler)
-  }, [])
+  }, [readScroll])
 
   return (
+    <PageScrollContext.Provider value={pageScroll}>
     <div className="h-screen flex flex-col">
       <AppBackground variant={bgVariant} />
       <Topbar
@@ -267,5 +300,6 @@ export function ScreenLayout({
         </div>
       </div>
     </div>
+    </PageScrollContext.Provider>
   )
 }

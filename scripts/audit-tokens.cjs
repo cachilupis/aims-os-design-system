@@ -87,8 +87,15 @@ function listFiles(dir, exts) {
   return out
 }
 
+// Always POSIX, on every platform. `path.relative` hands back backslashes on
+// Windows, and that separator leaks into three things that have to agree with
+// each other across machines: the finding text a PR quotes, the JSON `--json`
+// feeds the DS Health page, and the `type:file:name` key a waiver in
+// ds-decisions.json is looked up by. A waiver written on Windows silently
+// failed to match on CI — PR #127, 2026-09-10 — because the two sides had
+// spelled the same file differently. One separator, decided here, once.
 function rel(p) {
-  return path.relative(ROOT, p)
+  return path.relative(ROOT, p).split(path.sep).join("/")
 }
 
 /**
@@ -923,16 +930,31 @@ function printSection(title, items, formatter) {
 //
 // Accepted findings stay visible in the report, marked, so nobody forgets
 // they were waived. They are excluded only from the counts the ratchet reads.
+// Separator-insensitive on both sides. rel() above guarantees our side is
+// POSIX, but a waiver is hand-written by whoever made the call, on whatever
+// machine they were sitting at — and a rule that only works if a human types
+// the right slash is a rule that breaks on a Tuesday. PR #127, 2026-09-10: a
+// waiver authored on Windows read `src\\screens\\...`, never matched on CI, and
+// the finding it had already been ruled on went on blocking the push.
+//
+// Declared BEFORE the read below, not after it: the read is inside a try/catch
+// whose only job is a missing file, so a ReferenceError from using `posix` in
+// the temporal dead zone would be swallowed there and every waiver would
+// silently stop working. Caught here by a test, but only because one was run.
+const posix = (k) => k.replace(/\\/g, "/")
+
 const DECISIONS_PATH = path.join(ROOT, "ds-decisions.json")
 let acceptedKeys = new Set()
 try {
   const d = JSON.parse(fs.readFileSync(DECISIONS_PATH, "utf8")).decisions || {}
-  acceptedKeys = new Set(Object.keys(d).filter((k) => d[k].verdict === "accepted"))
+  acceptedKeys = new Set(
+    Object.keys(d).filter((k) => d[k].verdict === "accepted").map(posix)
+  )
 } catch { /* no decisions file — nothing is waived */ }
 
 // Same key shape generate-ds-health.cjs builds: type:file:name, never a line
 // number, so a verdict survives edits above it.
-const findingKey = (w) => [w.type, w.file, w.name].filter(Boolean).join(":")
+const findingKey = (w) => posix([w.type, w.file, w.name].filter(Boolean).join(":"))
 const isAccepted = (w) => acceptedKeys.has(findingKey(w))
 
 // `--json` dumps every finding as structured data and prints nothing else, so

@@ -1182,29 +1182,8 @@ export function UcpProfileView({
               scrolls past is a proposal they never see. */}
           <div style={{ padding: "0 32px 8px" }}>
             <EntityHeader
-              /* Compress on scroll. This card is PINNED by the screen — it
-                 lives in ScreenLayout's header zone, outside the scroll
-                 container — so it was already always-visible and does not
-                 need a sticky of its own. What it was missing is the other
-                 half: on the way down the metadata row and the description
-                 drop and the visual goes L to M, and scrolling back up
-                 restores all three. The component detects the pinning and
-                 skips its own sticky wrapper. */
               compressOnScroll
               name={contact.name}
-              /*
-                AVATAR OR ICON, decided by the type — not hardcoded.
-                A face or a brand gets an avatar: customers, employees,
-                companies. Everything else gets an icon, and a record titled
-                with a code has no choice: "RO-48291" has no initials, so an
-                avatar there renders nonsense. That is the Entity Header's own
-                rule, and it only became visible once the roster had types that
-                are not people in it (2026-09-09).
-
-                The avatar types are also the ones that carry a classification
-                tag, because an avatar cannot say what kind of thing this is
-                and a highlight icon already does.
-              */
               visual={AVATAR_TYPES.includes(contact.type)
                 ? { kind: "avatar" }
                 : { kind: "icon", icon: (LucideIcons[TYPE_ICON[contact.type] as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon, variant: "informative" }}
@@ -1221,40 +1200,22 @@ export function UcpProfileView({
                 onOpenChat: openChat,
               }}
               locked={restriction !== null}
-              /* The record is fetched, so there is a first paint where it does
-                 not exist yet, and the component's own skeleton is what belongs
-                 there — never an empty header, never withholding the card. */
               state={loading ? "loading" : "default"}
-              /* Disables while the record is locked, which is this prop's
-                 default and the right answer here. Export is the one worth
-                 saying out loud: it is a read, so the component's "locked means
-                 you cannot act on it, not that you cannot consult it" reasoning
-                 would let it through — but an export writes the governed values
-                 into a file the viewer keeps. Consulting a masked field on
-                 screen and extracting it are not the same act. */
               secondaryAction={{
                 label: "Export record",
                 variant: "secondary",
                 onClick: () => {},
                 disabledTooltip: "This record's values are governed — request the scope to export it",
               }}
-              /* Destructive and secondary only — Archive is never one click away. */
               menuActions={[{ label: "Archive", onClick: () => {} }]}
             />
-            {/* One recommendation or none. No card at all for a record with
-                nothing to do — not an empty card, not a placeholder. */}
             {nba && <NextBestActionCard item={nba} className="mt-[12px]" />}
           </div>
 
-          {/* 16px here plus ScreenLayout's own 8px of content padding is the
-              24px the DS wants between the last nav layer and the content. */}
           <div style={{ padding: "0 32px 16px" }}>
             <Tabs
               activeId={tab}
               onChange={goTab}
-              // Published by the type, not by this screen. A Company brings a
-              // People tab; a Customer and an Employee bring none, and render
-              // perfectly well without one.
               items={tabsForContact(contact)}
             />
           </div>
@@ -1275,6 +1236,91 @@ export function UcpProfileView({
           : undefined
       }
     >
+      {/* THE HEADER LIVES IN THE CONTENT, NOT IN THE PINNED ZONE
+          (Michael, 2026-09-10). It used to sit in ScreenLayout's header
+          zone together with the Next Best Action and the Tabs — four
+          things holding the top of the screen, none of which gave any
+          height back on the way down.
+
+          Now only the page bar is pinned, exactly as the Universal
+          Profile does it, and the EntityHeader sticks itself: it is
+          inside the scroll container, so `compressOnScroll` gives it
+          both halves — it stays at the top AND it compresses. The NBA
+          and the Tabs scroll away with the content, which is what they
+          should do: a proposal and a nav bar are not worth permanent
+          screen height on a record you are reading. */}
+      <EntityHeader
+        /* Sticks itself to the top of the scroll container and compresses
+           on the way down: the metadata row and the description drop, the
+           visual goes L to M, and scrolling back up restores all three.
+           One prop, because a card that compresses without sticking would
+           just scroll out of view. */
+        compressOnScroll
+        name={contact.name}
+        /*
+          AVATAR OR ICON, decided by the type — not hardcoded.
+          A face or a brand gets an avatar: customers, employees,
+          companies. Everything else gets an icon, and a record titled
+          with a code has no choice: "RO-48291" has no initials, so an
+          avatar there renders nonsense. That is the Entity Header's own
+          rule, and it only became visible once the roster had types that
+          are not people in it (2026-09-09).
+
+          The avatar types are also the ones that carry a classification
+          tag, because an avatar cannot say what kind of thing this is
+          and a highlight icon already does.
+        */
+        visual={AVATAR_TYPES.includes(contact.type)
+          ? { kind: "avatar" }
+          : { kind: "icon", icon: (LucideIcons[TYPE_ICON[contact.type] as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon, variant: "informative" }}
+        tags={headerTags}
+        stateBadge={{ label: state.label, variant: state.variant }}
+        source={contact.source.label}
+        secondaryMetadata={secondaryMetadata}
+        recordFields={recordFields}
+        showInformation
+        onInformationOpen={openInfo}
+        assignedAgent={{
+          id: contact.agent.id,
+          name: contact.agent.name,
+          onOpenChat: openChat,
+        }}
+        locked={restriction !== null}
+        /* The record is fetched, so there is a first paint where it does
+           not exist yet, and the component's own skeleton is what belongs
+           there — never an empty header, never withholding the card. */
+        state={loading ? "loading" : "default"}
+        /* Disables while the record is locked, which is this prop's
+           default and the right answer here. Export is the one worth
+           saying out loud: it is a read, so the component's "locked means
+           you cannot act on it, not that you cannot consult it" reasoning
+           would let it through — but an export writes the governed values
+           into a file the viewer keeps. Consulting a masked field on
+           screen and extracting it are not the same act. */
+        secondaryAction={{
+          label: "Export record",
+          variant: "secondary",
+          onClick: () => {},
+          disabledTooltip: "This record's values are governed — request the scope to export it",
+        }}
+        /* Destructive and secondary only — Archive is never one click away. */
+        menuActions={[{ label: "Archive", onClick: () => {} }]}
+      />
+      {/* One recommendation or none. No card at all for a record with
+          nothing to do — not an empty card, not a placeholder. */}
+      {nba && <NextBestActionCard item={nba} className="mt-[12px]" />}
+      {/* 24px from the last nav layer to the content, per the DS. */}
+      <div className="mt-[16px] mb-[24px]">
+        <Tabs
+          activeId={tab}
+          onChange={goTab}
+          // Published by the type, not by this screen. A Company brings a
+          // People tab; a Customer and an Employee bring none, and render
+          // perfectly well without one.
+          items={tabsForContact(contact)}
+        />
+      </div>
+
       {/* The body follows the header's state. Three mutually exclusive cases,
           in the order the header resolves them: in flight, governed, readable. */}
       {loading ? (
