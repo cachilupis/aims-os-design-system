@@ -4673,8 +4673,11 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     setPreviewItem(p => p?.type === "member" && p.member.id === id
       ? { type: "member", member: { ...p.member, status: "invited", joinedAt: now } }
       : p)
+    // Say where they went. Sending from a list filtered to Pending drops the
+    // row out of view, and an empty list with no explanation reads as a bug.
+    // The filter is the user's — the toast explains, it does not reset it.
     toast.success("Invitation sent", {
-      description: person ? `${person.email} has 7 days to accept.` : "It expires in 7 days.",
+      description: `${person ? `${person.email} has` : "They have"} 7 days to accept. Moved to Invited.`,
     })
   }
 
