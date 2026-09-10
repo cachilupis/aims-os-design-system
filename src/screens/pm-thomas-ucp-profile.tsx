@@ -84,7 +84,7 @@ import type { ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
-  PLANE_META, PLANE_ORDER, CHANNEL_META, CONCIERGE_PROMPTS,
+  PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
   CONTACTS,
   AVATAR_TYPES, TYPE_ICON, TYPE_LABEL, entityState, restrictionFor, getRecordFields,
   getActivity, getConciergeOpening, getConnections, getDrives,
@@ -92,7 +92,7 @@ import {
 } from "./ucpShared"
 import type {
   MetricVariant, StudyRow,
-  ActivityChannel, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
+  ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
 } from "./ucpShared"
 
 export const UCP_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -293,7 +293,11 @@ function StatRowContent({ counters, checked }: {
  * robot's own has genuinely never been contacted, and saying so is more useful
  * than a feed padded to look busy.
  */
-const COMMS: ActivityChannel[] = ["call", "email", "meeting"]
+// The Last Activity widget shows communications only — its own rule, "don't
+// mix non-communication activity types in this widget". That set is now
+// published by the data layer rather than restated here, so adding SMS did
+// not need this line changed and adding the next kind will not either.
+const COMMS: ActivityChannel[] = COMMUNICATION_CHANNELS
 
 function LastActivityContent({ contact, onViewAll }: { contact: UcpContact; onViewAll: () => void }) {
   const { availableHeight } = useWidgetSize()
@@ -448,7 +452,12 @@ function AiSummaryContent({ contact, onAsk, onGoTab }: {
       // stub rather than a dead button pretending to work.
       onOpenDestination: dest => {
         const tab = dest.toLowerCase()
-        if (["snapshot", "activity", "drives", "people", "overview"].includes(tab)) onGoTab(tab)
+        // The four spine tabs plus the type's own module. A destination the
+        // strip does not have goes nowhere rather than switching to nothing —
+        // "Snapshot" and "Drives" were both live destinations until the tabs
+        // were restructured on 2026-09-10, which is exactly the kind of
+        // dangling pointer a whitelist catches.
+        if (["overview", "activity", "intelligence", "knowledge", "people"].includes(tab)) onGoTab(tab)
       },
     }),
     [contact, onGoTab],
@@ -508,109 +517,289 @@ const PLANE_ICON_VARIANT: Record<KnowledgePlane, HighlightIconVariant> = {
 }
 
 /**
- * Every knowledge tab gets the `Filters` bar with its search — Michael,
- * 2026-09-10. NOT the view-mode variant: `showViewToggle` switches between a
- * card list and a grid, and none of these three has a second view to switch
- * to. A toggle with one destination is a control that does nothing.
+ * ── Intelligence ───────────────────────────────────────────────────────────
  *
- * The search runs over the fields the reader can see. A fact's plane, a
- * drive's provider, an activity's channel are already the Chip row above the
- * list; the search is for the value you remember and cannot find by filtering.
+ * One AI tab for what the system THINKS about this record (Michael,
+ * 2026-09-10). The content is modelled on where the industry landed, checked
+ * rather than remembered:
+ *
+ * · SALESFORCE EINSTEIN shows a score as a TIER with a DIRECTION — "High",
+ *   "Medium", "Low" plus an arrow when it moves a tier — never a bare number,
+ *   and it publishes how the score was computed. It also has KEY MOMENTS:
+ *   notifications for the handful of things that actually changed the picture,
+ *   like a competitor being mentioned or a sponsor leaving.
+ * · GAINSIGHT's Customer 360 leads with a health scorecard and then names
+ *   RISKS AND OPPORTUNITIES as separate lists, so the two are found rather
+ *   than inferred, and hangs CTAs off them.
+ *
+ * Both put the same three things first: where does this stand, what should I
+ * do, what changed. So the order here is score → recommended action → key
+ * moments → the reasoning → the drivers behind the score. "Why" comes after
+ * "what to do", because a reader who agrees with the recommendation never
+ * needs the reasoning and a reader who disagrees needs all of it.
+ *
+ * WHAT AIMS OS ADDS, and what makes this more than a scorecard: every read
+ * carries the AREA it is about, a CONFIDENCE, and a destination — and the
+ * knowledge behind it is auditable one tab over, on Knowledge. Einstein tells
+ * you the score; this tells you which plane the claim came from.
+ *
+ * Every number is computed from THIS record. Nothing here is a placeholder,
+ * and each card says what it was derived from — a score whose derivation is
+ * invisible is a score nobody can argue with, which is the same as one nobody
+ * trusts.
  */
-function SnapshotTab({ contact }: { contact: UcpContact }) {
-  const [plane, setPlane]   = useState<KnowledgePlane | "all">("all")
+
+/** The areas that mean growth rather than maintenance. The agent already
+ *  classifies every read by area, so an opportunity is a read in one of these
+ *  — not a separate thing somebody has to tag. */
+const OPPORTUNITY_AREAS = ["Renewal", "Expansion", "Deal"]
+
+/** Einstein's tiering, applied to the risk score this record already carries.
+ *  A tier is what a person acts on; the number is the audit trail. */
+function riskTier(score: number): { label: string; variant: MetricVariant } {
+  if (score >= 70) return { label: "High",     variant: "error"   }
+  if (score >= 40) return { label: "Elevated", variant: "alert"   }
+  return { label: "Low", variant: "success" }
+}
+
+function IntelligenceTab({ contact, onGoTab, onAsk }: {
+  contact: UcpContact
+  onGoTab: (id: string) => void
+  onAsk:   () => void
+}) {
   const [search, setSearch] = useState("")
-  const facts   = useMemo(() => getFacts(contact), [contact])
-  const q       = search.trim().toLowerCase()
-  const visible = facts
-    .filter(f => plane === "all" || f.plane === plane)
-    .filter(f => q === "" || [f.label, f.value, f.source].some(v => v.toLowerCase().includes(q)))
+  const [area,   setArea]   = useState<string | undefined>(undefined)
+
+  const reads   = contact.insights
+  const signals = contact.tags.filter(t => t.role === "signal")
+  const risk    = useMemo(() => getRisk(contact), [contact])
+  const score     = Number((risk.find(r => r.label === "Risk score")?.value ?? "0").split("/")[0].trim())
+  const trendRow  = risk.find(r => r.label === "Trend")
+  const rising    = trendRow?.variant === "error" || trendRow?.variant === "alert"
+  const tier      = riskTier(score)
+
+  const opportunities = reads.filter(r => OPPORTUNITY_AREAS.includes(r.category))
+
+  /**
+   * KEY MOMENTS, Einstein's device: the few things that changed the picture,
+   * not a second copy of the activity feed. Two sources, both already on the
+   * record — the signals it is carrying, and the activity rows whose state is
+   * not "fine". A moment with nothing to say about it is not a moment, so
+   * anything without a tooltip or a summary is left out.
+   */
+  const moments = useMemo(() => {
+    const fromSignals = signals.map(t => ({
+      id: `sig-${t.label}`, label: t.label, tone: t.tone,
+      detail: t.tooltip ?? "", when: "",
+    }))
+    const fromActivity = getActivity(contact)
+      .filter(a => a.state.variant === "error" || a.state.variant === "alert")
+      .map(a => ({
+        id: a.id, label: a.title, tone: a.state.variant === "error" ? "error" as const : "alert" as const,
+        detail: a.aiSummary ?? a.meta, when: a.timestamp,
+      }))
+    return [...fromSignals, ...fromActivity].filter(m => m.detail)
+  }, [contact, signals])
+
+  const q = search.trim().toLowerCase()
+  const visibleReads = reads
+    .filter(r => !area || r.category === area)
+    .filter(r => q === "" || [r.headline, r.detail, r.category].some(v => v.toLowerCase().includes(q)))
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/*
-        Plane summary — what the system holds as true about this record, and how
-        sure it is. These were three hand-built CardContainers with a Tag, a
-        count and a blurb. That is a KPI card, and the DS has one: Michael's
-        call (2026-09-09) is HighlightCard, laid out by AdaptiveMetricGrid,
-        which is also the pair the panel-content page uses for Key Metrics.
-
-        `label` is the plane, `value` the number of facts, `feedback` its
-        confidence, and `feedbackType` carries the plane's own semantics — the
-        Truth plane reads success at 100%, Sandbox alert at ~80%, Sources
-        informative at ~60%. The blurb moves to the icon's tooltip: it explains
-        the plane rather than this record, so it does not need to be on screen
-        three times.
-      */}
+      {/* Where this record stands. The risk card leads with the TIER and the
+          direction rather than the raw score, which is Einstein's own reading
+          of the same problem: 54 means nothing to somebody who does not know
+          the scale, "Elevated, and rising" means something immediately. */}
       <AdaptiveMetricGrid
-        cards={PLANE_ORDER.map(p => {
-          const meta = PLANE_META[p]
-          return {
-            label:        `${meta.label} plane`,
-            value:        facts.filter(f => f.plane === p).length,
-            feedback:     `Confidence ${meta.confidence}`,
-            // HighlightCard's feedback is positive / negative / neutral. Only
-            // the Truth plane is positive; Sandbox is NOT negative — a lower
-            // confidence is how that plane is supposed to work, not a failure.
-            feedbackType: (meta.tag === "success" ? "positive" : "neutral") as "positive" | "neutral",
-            iconName:     PLANE_ICON[p],
-            iconVariant:  PLANE_ICON_VARIANT[p],
-          }
-        })}
+        cards={[
+          {
+            label: "Risk", value: tier.label,
+            feedback: `${score} / 100 · ${rising ? "rising" : "improving"} since the last scan`,
+            feedbackType: tier.variant === "success" ? "positive" : "neutral",
+            iconName: rising ? "TrendingUp" : "TrendingDown",
+            iconVariant: tier.variant === "error" ? "error" : tier.variant === "alert" ? "alert" : "success",
+          },
+          {
+            label: "Opportunities", value: opportunities.length,
+            feedback: opportunities.length > 0
+              ? `In ${Array.from(new Set(opportunities.map(o => o.category))).join(", ").toLowerCase()}`
+              : "Nothing open on this record",
+            feedbackType: opportunities.length > 0 ? "positive" : "neutral",
+            iconName: "Target", iconVariant: "success",
+          },
+          {
+            label: "Recommendations", value: contact.nba ? 1 : 0,
+            feedback: contact.nba ? "One action proposed" : "Nothing proposed yet",
+            feedbackType: "neutral",
+            iconName: "Sparkle", iconVariant: "purple",
+          },
+        ]}
       />
 
-      <Filters
-        showSearch
-        searchPlaceholder="Search facts by label, value or source…"
-        searchValue={search}
-        onSearchChange={setSearch}
-        /* `Filters` turns ALL THREE of these on by default — the view toggle,
-           the All-filters button and the sort control. Off here, every one:
-           the view toggle switches to a second view none of these tabs has
-           (Michael's "sin view mode variant"), All filters opens a
-           FiltersSlideout that does not exist for them, and sort has nothing
-           wired behind it. A control that cannot do anything is worse than a
-           missing one — it reads as broken rather than as absent. */
-        showViewToggle={false}
-        showAllFilters={false}
-        showSort={false}
-      />
+      {/* WHAT TO DO, before why. Gainsight hangs a CTA off the scorecard for
+          the same reason: a reader who agrees with the recommendation never
+          needs the reasoning underneath it. */}
+      {contact.nba && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <SectionLabel>Recommended next</SectionLabel>
+          <CardContainer size="sm">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>
+                  {contact.nba.title}
+                </span>
+                <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{contact.nba.timestamp}</span>
+              </div>
+              {contact.nba.rationale && (
+                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.55 }}>
+                  {contact.nba.rationale}
+                </span>
+              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Button
+                  variant="secondary" size="sm"
+                  icon={<Sparkle size={13} strokeWidth={1.75} />}
+                  onClick={onAsk}
+                >
+                  Ask the concierge
+                </Button>
+                <Button variant="tertiary" size="sm" onClick={() => onGoTab("activity")}>
+                  See it as a task
+                </Button>
+              </div>
+            </div>
+          </CardContainer>
+        </div>
+      )}
 
-      {/* Plane filter — a selection toggle, so primary/secondary, not a semantic color */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <Chip size="s" variant={plane === "all" ? "primary" : "secondary"} onClick={() => setPlane("all")}>
-          All facts ({facts.length})
-        </Chip>
-        {PLANE_ORDER.map(p => (
-          <Chip
-            key={p}
-            size="s"
-            variant={plane === p ? "primary" : "secondary"}
-            onClick={() => setPlane(p)}
-          >
-            {PLANE_META[p].label} ({facts.filter(f => f.plane === p).length})
-          </Chip>
-        ))}
+      {/* WHAT CHANGED. Not the activity feed — the rows that are not fine,
+          plus the signals the record carries, each with the one line that
+          says why it matters. */}
+      {moments.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <SectionLabel>Key moments</SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {moments.map(m => (
+              <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, minWidth: 0 }}>
+                <HighlightIcon
+                  size="sm"
+                  variant={m.tone === "error" ? "error" : "alert"}
+                  iconName={m.tone === "error" ? "AlertCircle" : "AlertTriangle"}
+                />
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.label}</span>
+                    {m.when && (
+                      <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{m.when}</span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.55 }}>
+                    {m.detail}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* WHY — the agent's reads, each with its area, its confidence and the
+          place to act on it. This is the part no scorecard has: Einstein gives
+          you a score, this gives you the sentence behind it and the plane the
+          claim came from, one tab over. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <SectionLabel>Agent reads</SectionLabel>
+        <Filters
+          showSearch
+          searchPlaceholder="Search reads by headline, detail or area…"
+          searchValue={search}
+          onSearchChange={setSearch}
+          slots={[{
+            placeholder: "Area",
+            value:       area,
+            options:     Array.from(new Set(reads.map(r => r.category))).sort(),
+            onSelect:    setArea,
+            onRemove:    () => setArea(undefined),
+          }]}
+          showClearFilters={!!area || q !== ""}
+          onClearFilters={() => { setArea(undefined); setSearch("") }}
+          showViewToggle={false}
+          showAllFilters={false}
+          showSort={false}
+        />
+        {visibleReads.length === 0 ? (
+          <EmptyState
+            compact
+            icon={LucideIcons.Sparkle}
+            title={q || area ? "No reads match" : "No reads yet"}
+            description={q || area
+              ? "Try another area, or clear the filters to see every read."
+              : `${contact.agent.name} has not published a read on this record yet.`}
+            ctaLabel={q || area ? "Clear filters" : undefined}
+            onCta={q || area ? () => { setArea(undefined); setSearch("") } : undefined}
+          />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {visibleReads.map(r => (
+              <CardContainer key={r.id} size="sm">
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                    <Sparkle size={13} strokeWidth={1.75} style={{ color: "var(--color-text-purple)", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-purple)" }}>
+                      {contact.agent.name}
+                    </span>
+                    <Tag variant="secondary" size="sm">{r.category}</Tag>
+                    <span style={{ fontSize: 11, marginLeft: "auto", color: "var(--field-supporting)", whiteSpace: "nowrap" }}>
+                      {r.confidence}% confidence
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.4 }}>
+                    {r.headline}
+                  </span>
+                  <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.55 }}>
+                    {r.detail}
+                  </span>
+                  {r.destination && (
+                    <Button
+                      variant="tertiary" size="sm" className="self-start !px-0"
+                      icon={<LucideIcons.ArrowUpRight size={13} strokeWidth={1.75} />}
+                      iconPosition="right"
+                      onClick={() => onGoTab(r.destination!.toLowerCase())}
+                    >
+                      {`Open in ${r.destination}`}
+                    </Button>
+                  )}
+                </div>
+              </CardContainer>
+            ))}
+          </div>
+        )}
       </div>
 
-      {visible.length === 0 ? (
-        <EmptyState
-          icon={ScanLine}
-          title={q ? `No facts for “${search}”` : "No facts on this plane"}
-          description={q
-            ? "Try a shorter term, or clear the search to see every fact on this plane."
-            : "Nothing has been recorded on this plane for this contact yet."}
-          ctaLabel={q ? "Clear search" : "Show all facts"}
-          onCta={() => { if (q) setSearch(""); else setPlane("all") }}
-        />
-      ) : (
-        <Table columns={FACT_COLUMNS} data={visible} size="sm" rowKey={r => r.id} />
-      )}
+      {/* THE DRIVERS behind the score. Einstein publishes how it scored an
+          opportunity for a reason: a score you cannot take apart is a score
+          you cannot act on, and the first question anybody asks a number is
+          "made of what". These are the study's own rows, tooltips included. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <SectionLabel>What the risk score is made of</SectionLabel>
+        <StatRowContent counters={risk.slice(0, 3)} checked={risk[3]} />
+      </div>
     </div>
   )
 }
 
-// ── Activity ──────────────────────────────────────────────────────────────────
+/** The section label the panel-content page defines — 11px, semibold, upper,
+ *  `--field-label`. Used here so Intelligence and Knowledge stack sections the
+ *  same way a SlideOut body does. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+      {children}
+    </span>
+  )
+}
 
 /**
  * The elapsed-time separator between activity cards — Michael, 2026-09-10.
@@ -648,7 +837,8 @@ function ElapsedSeparator({ label }: { label: string }) {
  *  Pagination total in the parent. */
 function filterActivity(
   rows: ReturnType<typeof getActivity>,
-  channel: ActivityChannel | "all",
+  group: ActivityGroup | "all",
+  kind: string | undefined,
   search: string,
   status: string | undefined,
   period: string | undefined,
@@ -656,19 +846,25 @@ function filterActivity(
 ): ReturnType<typeof getActivity> {
   const q = search.trim().toLowerCase()
   return rows
-    .filter(a => channel === "all" || a.channel === channel)
+    .filter(a => group === "all" || CHANNEL_GROUP[a.channel] === group)
+    .filter(a => !kind || CHANNEL_META[a.channel].label === kind)
     .filter(a => q === "" || [a.title, a.meta, a.timestamp].some(v => v.toLowerCase().includes(q)))
     .filter(a => !status || a.state.label === status)
     .filter(a => withinPeriod(parseActivityAt(a.timestamp, now), period, now))
 }
 
 function ActivityTab({
-  contact, channel, onChannelChange, search, onSearchChange,
+  contact, group, onGroupChange, kind, onKindChange, search, onSearchChange,
   status, onStatusChange, period, onPeriodChange, now, page, pageSize,
 }: {
   contact:  UcpContact
-  channel:  ActivityChannel | "all"
-  onChannelChange: (c: ActivityChannel | "all") => void
+  /** The four kinds of thing an activity row can be. */
+  group:    ActivityGroup | "all"
+  onGroupChange: (g: ActivityGroup | "all") => void
+  /** Which communication kind, when Communications is the selected group.
+   *  Undefined means all of them. */
+  kind:     string | undefined
+  onKindChange: (value: string | undefined) => void
   /** Held by the parent, not here — all of them. The parent owns the
    *  Pagination and its total has to count the same rows this list renders;
    *  two sources for one number is how a paginator ends up offering a page
@@ -685,8 +881,8 @@ function ActivityTab({
 }) {
   const all      = useMemo(() => getActivity(contact), [contact])
   const filtered = useMemo(
-    () => filterActivity(all, channel, search, status, period, now),
-    [all, channel, search, status, period, now],
+    () => filterActivity(all, group, kind, search, status, period, now),
+    [all, group, kind, search, status, period, now],
   )
   const paged    = filtered.slice((page - 1) * pageSize, page * pageSize)
 
@@ -694,7 +890,14 @@ function ActivityTab({
     id:          a.id,
     title:       a.title,
     iconName:    CHANNEL_META[a.channel].icon,
-    iconVariant: a.channel === "agent" ? "purple" : a.channel === "system" ? "neutral" : "info",
+    // The GROUP carries the colour, so every communication looks like a
+    // communication whichever kind it is: a task is what needs doing (alert),
+    // an event is the system acting on its own (neutral), a note is somebody
+    // writing (purple, the same mark interpretation carries elsewhere).
+    iconVariant: (CHANNEL_GROUP[a.channel] === "task" ? "alert"
+      : CHANNEL_GROUP[a.channel] === "event" ? "neutral"
+      : CHANNEL_GROUP[a.channel] === "note"  ? "purple"
+      : "info") as EntityListItemData["iconVariant"],
     primaryMeta: [{ iconName: "Clock", label: a.timestamp }],
     secondaryMeta: [{ iconName: "Info", label: a.meta }],
     state:       { label: a.state.label, variant: a.state.variant },
@@ -722,6 +925,14 @@ function ActivityTab({
            state in the fixtures shows up here without anyone remembering to
            add it, and a state that no longer occurs stops being offered. */
         slots={[
+          // Only while Communications is selected: email, SMS, call, meeting.
+          ...(group === "communication" ? [{
+            placeholder: "Channel",
+            value:       kind,
+            options:     COMMUNICATION_CHANNELS.map(ch => CHANNEL_META[ch].label),
+            onSelect:    onKindChange,
+            onRemove:    () => onKindChange(undefined),
+          }] : []),
           {
             placeholder: "Status",
             value:       status,
@@ -737,8 +948,8 @@ function ActivityTab({
             onRemove:    () => onPeriodChange(undefined),
           },
         ]}
-        showClearFilters={!!status || !!period || search !== ""}
-        onClearFilters={() => { onStatusChange(undefined); onPeriodChange(undefined); onSearchChange("") }}
+        showClearFilters={!!status || !!period || !!kind || search !== ""}
+        onClearFilters={() => { onStatusChange(undefined); onPeriodChange(undefined); onKindChange(undefined); onSearchChange("") }}
         /* `Filters` turns ALL THREE of these on by default — the view toggle,
            the All-filters button and the sort control. Off here, every one:
            the view toggle switches to a second view none of these tabs has
@@ -751,18 +962,26 @@ function ActivityTab({
         showSort={false}
       />
 
+      {/* Four chips, not seven — Communications · Notes · Events · Tasks. The
+          communication KINDS refine that one group from the Filters bar above,
+          which is where a second level belongs: a flat row of every leaf is a
+          filter nobody reads, and three of the seven would sit at zero on most
+          records. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <Chip size="s" variant={channel === "all" ? "primary" : "secondary"} onClick={() => onChannelChange("all")}>
+        <Chip size="s" variant={group === "all" ? "primary" : "secondary"} onClick={() => { onGroupChange("all"); onKindChange(undefined) }}>
           All ({all.length})
         </Chip>
-        {(Object.keys(CHANNEL_META) as ActivityChannel[]).map(c => (
+        {ACTIVITY_GROUPS.map(g => (
           <Chip
-            key={c}
+            key={g.id}
             size="s"
-            variant={channel === c ? "primary" : "secondary"}
-            onClick={() => onChannelChange(c)}
+            variant={group === g.id ? "primary" : "secondary"}
+            // Leaving Communications drops the kind with it — a kind that
+            // cannot apply to the selected group is a filter still narrowing
+            // something the reader can no longer see.
+            onClick={() => { onGroupChange(g.id); if (g.id !== "communication") onKindChange(undefined) }}
           >
-            {CHANNEL_META[c].label} ({all.filter(a => a.channel === c).length})
+            {g.label} ({all.filter(a => CHANNEL_GROUP[a.channel] === g.id).length})
           </Chip>
         ))}
       </div>
@@ -770,12 +989,12 @@ function ActivityTab({
       {filtered.length === 0 ? (
         <EmptyState
           icon={Inbox}
-          title={q ? `No activity for “${search}”` : "No activity on this channel"}
+          title={q ? `No activity for “${search}”` : "Nothing of this kind yet"}
           description={q
             ? "Try a shorter term, or clear the search to see the full timeline."
-            : "Try another channel, or clear the filter to see the full timeline."}
+            : "Try another kind, or clear the filter to see the full timeline."}
           ctaLabel={q ? "Clear search" : "Clear filter"}
-          onCta={() => { if (q) onSearchChange(""); else onChannelChange("all") }}
+          onCta={() => { if (q) onSearchChange(""); else { onGroupChange("all"); onKindChange(undefined) } }}
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -819,133 +1038,220 @@ const DRIVE_ICON_VARIANT: Record<string, "error" | "yellow" | "light-blue"> = {
   alert: "yellow",
 }
 
-function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
+/**
+ * ── Knowledge (was Drives) ─────────────────────────────────────────────────
+ *
+ * The entity's own mini-governance — what the system HOLDS about it, on three
+ * shelves of the same cupboard (Michael, 2026-09-10):
+ *
+ *   Documents  folders and files, and what has been cited out of them
+ *   Sandbox    claims pending or in processing — not yet verified
+ *   Truth      verified facts
+ *
+ * The facts table used to live in Snapshot and the documents had a tab of
+ * their own, which put a verified fact and the document it came from two tabs
+ * apart. They are the same question — "what do we actually know, and can we
+ * prove it" — so they are one tab with a shelf selector.
+ *
+ * The plane counts lead here, and this is the one place they should: on
+ * Intelligence they were plumbing, and on a governance tab counting the
+ * shelves IS the summary.
+ */
+type Shelf = "documents" | "sandbox" | "truth"
+
+function KnowledgeTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
+  const [shelf,    setShelf]    = useState<Shelf>("documents")
   const [search,   setSearch]   = useState("")
   const [kind,     setKind]     = useState<string | undefined>(undefined)
   const [provider, setProvider] = useState<string | undefined>(undefined)
   const [status,   setStatus]   = useState<string | undefined>(undefined)
-  const all = useMemo(() => getDrives(contact), [contact])
-  const q   = search.trim().toLowerCase()
-  const drives = all
+
+  const allDrives = useMemo(() => getDrives(contact), [contact])
+  const facts     = useMemo(() => getFacts(contact), [contact])
+  const q         = search.trim().toLowerCase()
+
+  const drives = allDrives
     .filter(d => q === "" || [d.name, d.provider, d.owner, d.kind, d.scope].some(v => v.toLowerCase().includes(q)))
     .filter(d => !kind     || d.kind === kind)
     .filter(d => !provider || d.provider === provider)
     .filter(d => !status   || d.state.label === status)
-  const hasFilters = !!kind || !!provider || !!status || q !== ""
-  const clearAll = () => { setKind(undefined); setProvider(undefined); setStatus(undefined); setSearch("") }
-  /** Every value the rows actually take, sorted — never a hardcoded list, so a
-   *  provider that appears in the fixtures tomorrow is offered without anyone
-   *  editing this, and one that disappears stops being offered. */
-  const optionsFor = (pick: (d: UcpDrive) => string) =>
-    Array.from(new Set(all.map(pick))).sort()
 
-  // The record genuinely has none — no bar, because there is nothing to search
-  // and a search over an empty list is a control that cannot succeed.
-  if (all.length === 0) {
-    return (
-      <EmptyState
-        icon={HardDrive}
-        title="No drives attached"
-        description="Source Drives connected to this contact will appear here."
-      />
-    )
-  }
+  const factsOn = (plane: KnowledgePlane) => facts
+    .filter(f => f.plane === plane)
+    .filter(f => q === "" || [f.label, f.value, f.source].some(v => v.toLowerCase().includes(q)))
+
+  const sourceFacts  = factsOn("sources")
+  const shelfFacts   = shelf === "sandbox" ? factsOn("sandbox") : factsOn("truth")
+  const hasFilters   = q !== "" || !!kind || !!provider || !!status
+  const clearAll = () => { setSearch(""); setKind(undefined); setProvider(undefined); setStatus(undefined) }
+
+  /** Michael's three chips, in his order and with his labels (2026-09-10):
+   *  Sandbox · Truth Plane · Drives. "Drives" rather than "Documents" because
+   *  that is what the platform calls the thing — a Source Drive — and the
+   *  chip should say what the reader will click into. */
+  const SHELVES: { id: Shelf; label: string; count: number }[] = [
+    { id: "sandbox",   label: "Sandbox",     count: facts.filter(f => f.plane === "sandbox").length },
+    { id: "truth",     label: "Truth Plane", count: facts.filter(f => f.plane === "truth").length },
+    { id: "documents", label: "Drives",      count: allDrives.length },
+  ]
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* One card per shelf, in the plane's own colour — the same tints the
+          facts table's Tags use, so a plane looks the same wherever counted. */}
+      <AdaptiveMetricGrid
+        cards={[
+          {
+            label: "Drives", value: allDrives.length,
+            feedback: `${sourceFacts.length} fact${sourceFacts.length === 1 ? "" : "s"} cited from them`,
+            feedbackType: "neutral",
+            iconName: PLANE_ICON.sources, iconVariant: PLANE_ICON_VARIANT.sources,
+          },
+          {
+            label: "Sandbox claims", value: facts.filter(f => f.plane === "sandbox").length,
+            feedback: `Confidence ${PLANE_META.sandbox.confidence} · not yet verified`,
+            feedbackType: "neutral",
+            iconName: PLANE_ICON.sandbox, iconVariant: PLANE_ICON_VARIANT.sandbox,
+          },
+          {
+            label: "Truth facts", value: facts.filter(f => f.plane === "truth").length,
+            feedback: `Confidence ${PLANE_META.truth.confidence} · agents treat as absolute`,
+            feedbackType: "positive",
+            iconName: PLANE_ICON.truth, iconVariant: PLANE_ICON_VARIANT.truth,
+          },
+        ]}
+      />
+
       <Filters
         showSearch
-        searchPlaceholder="Search drives by name, provider or owner…"
+        searchPlaceholder={shelf === "documents"
+          ? "Search drives by name, provider or owner…"
+          : "Search claims by label, value or source…"}
         searchValue={search}
         onSearchChange={setSearch}
-        /* The three things a reader narrows a drive list by: what kind of thing
-           it is, where it lives, and whether it is syncing. `options` +
-           `onSelect`, so `Filters` renders and positions the menus itself —
-           a screen never hand-rolls a Menu beside this bar. */
-        slots={[
+        /* The document filters only exist on the document shelf — a claim has
+           no provider, and offering the control anyway would be offering one
+           that cannot narrow anything. */
+        slots={shelf === "documents" ? [
           {
             placeholder: "Type",
             value:       kind,
-            options:     optionsFor(d => d.kind),
+            options:     Array.from(new Set(allDrives.map(d => d.kind))).sort(),
             onSelect:    setKind,
             onRemove:    () => setKind(undefined),
           },
           {
             placeholder: "Provider",
             value:       provider,
-            options:     optionsFor(d => d.provider),
+            options:     Array.from(new Set(allDrives.map(d => d.provider))).sort(),
             onSelect:    setProvider,
             onRemove:    () => setProvider(undefined),
           },
           {
             placeholder: "Status",
             value:       status,
-            options:     optionsFor(d => d.state.label),
+            options:     Array.from(new Set(allDrives.map(d => d.state.label))).sort(),
             onSelect:    setStatus,
             onRemove:    () => setStatus(undefined),
           },
-        ]}
+        ] : []}
         showClearFilters={hasFilters}
         onClearFilters={clearAll}
-        /* `Filters` turns ALL THREE of these on by default — the view toggle,
-           the All-filters button and the sort control. Off here, every one:
-           the view toggle switches to a second view none of these tabs has
-           (Michael's "sin view mode variant"), All filters opens a
-           FiltersSlideout that does not exist for them, and sort has nothing
-           wired behind it. A control that cannot do anything is worse than a
-           missing one — it reads as broken rather than as absent. */
         showViewToggle={false}
         showAllFilters={false}
         showSort={false}
       />
 
-      {drives.length === 0 ? (
+      {/* The shelf selector — a selection toggle, so Chip, primary/secondary. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {SHELVES.map(sh => (
+          <Chip
+            key={sh.id}
+            size="s"
+            variant={shelf === sh.id ? "primary" : "secondary"}
+            onClick={() => setShelf(sh.id)}
+          >
+            {sh.label} ({sh.count})
+          </Chip>
+        ))}
+      </div>
+
+      {shelf === "documents" ? (
+        allDrives.length === 0 ? (
+          <EmptyState
+            icon={HardDrive}
+            title="No drives attached"
+            description="Source Drives connected to this record will appear here."
+          />
+        ) : drives.length === 0 ? (
+          <EmptyState
+            icon={HardDrive}
+            title={q ? `No drives for “${search}”` : "No drives match these filters"}
+            description={q
+              ? "Try a shorter term, or clear the search to see every drive on this record."
+              : "Try a different type, provider or status — or clear the filters."}
+            ctaLabel="Clear filters"
+            onCta={clearAll}
+          />
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {drives.map(d => (
+                <CardContainer key={d.id} size="sm" className="!p-0 overflow-hidden">
+                  <EntityList
+                    items={[{
+                      id:          d.id,
+                      title:       d.name,
+                      iconName:    DRIVE_ICON[d.kind] ?? "Folder",
+                      iconVariant: DRIVE_ICON_VARIANT[d.state.variant] ?? "light-blue",
+                      primaryMeta: [
+                        { iconName: "Cloud",  label: d.provider },
+                        { iconName: "Files",  label: d.items    },
+                      ],
+                      secondaryMeta: [
+                        { iconName: "User",      label: `Owner · ${d.owner}` },
+                        { iconName: "RefreshCw", label: `Last sync · ${d.lastSync}` },
+                        { iconName: "Share2",    label: d.scope },
+                      ],
+                      tags:    [{ label: d.kind }],
+                      state:   { label: d.state.label, variant: d.state.variant },
+                      actions: [{ label: "Preview", variant: "tertiary", icon: "Eye", onClick: () => onPreview(d) }],
+                    }]}
+                  />
+                </CardContainer>
+              ))}
+            </div>
+
+            {/* What has been cited OUT of these documents. The Sources plane is
+                fed by the drives — the preview panel says so — so its facts
+                belong on this shelf rather than in a fourth chip nobody would
+                connect to the documents above them. */}
+            {sourceFacts.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <SectionLabel>Cited from these drives</SectionLabel>
+                <Table columns={FACT_COLUMNS} data={sourceFacts} size="sm" rowKey={r => r.id} />
+              </div>
+            )}
+          </div>
+        )
+      ) : shelfFacts.length === 0 ? (
         <EmptyState
-          icon={HardDrive}
-          title={q ? `No drives for “${search}”` : "No drives match these filters"}
+          icon={ScanLine}
+          title={q ? `No claims for “${search}”` : `Nothing on the ${shelf} plane`}
           description={q
-            ? "Try a shorter term, or clear the search to see every drive on this record."
-            : "Try a different type, provider or status — or clear the filters to see every drive."}
-          ctaLabel="Clear filters"
-          onCta={clearAll}
+            ? "Try a shorter term, or clear the search to see this whole plane."
+            : shelf === "sandbox"
+              ? "No claim is waiting on verification for this record."
+              : "Nothing has been verified onto the Truth plane for this record yet."}
+          ctaLabel={q ? "Clear search" : undefined}
+          onCta={q ? () => setSearch("") : undefined}
         />
       ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {drives.map(d => (
-        <CardContainer key={d.id} size="sm" className="!p-0 overflow-hidden">
-          <EntityList
-            items={[{
-              id:          d.id,
-              title:       d.name,
-              iconName:    DRIVE_ICON[d.kind] ?? "Folder",
-              iconVariant: DRIVE_ICON_VARIANT[d.state.variant] ?? "light-blue",
-              primaryMeta: [
-                { iconName: "Cloud",  label: d.provider },
-                { iconName: "Files",  label: d.items    },
-              ],
-              secondaryMeta: [
-                { iconName: "User",         label: `Owner · ${d.owner}` },
-                { iconName: "RefreshCw",    label: `Last sync · ${d.lastSync}` },
-                { iconName: "Share2",       label: d.scope },
-              ],
-              tags:    [{ label: d.kind }],
-              state:   { label: d.state.label, variant: d.state.variant },
-              actions: [{ label: "Preview", variant: "tertiary", icon: "Eye", onClick: () => onPreview(d) }],
-            }]}
-          />
-        </CardContainer>
-      ))}
-      </div>
+        <Table columns={FACT_COLUMNS} data={shelfFacts} size="sm" rowKey={r => r.id} />
       )}
     </div>
   )
 }
-
-// ── Concierge chat ────────────────────────────────────────────────────────────
-// DS-GAP: agent chat panel — there is no chat component in src/components/ui/.
-// Composed here from SlideOut + CardContainer + Tag + Input + Button per the
-// "compose before you build" rule; the message bubbles are the only bespoke
-// arrangement, and they only rearrange existing tokens.
 
 function ConciergeChat({
   contact, open, onClose,
@@ -1191,7 +1497,8 @@ export function UcpProfileView({
   onOpenRecord?: (c: UcpContact) => void
 }) {
   const [tab,        setTab]        = useState("overview")
-  const [channel,    setChannel]    = useState<ActivityChannel | "all">("all")
+  const [actGroup,   setActGroup]   = useState<ActivityGroup | "all">("all")
+  const [actKind,    setActKind]    = useState<string | undefined>(undefined)
   const [actSearch,  setActSearch]  = useState("")
   const [actStatus,  setActStatus]  = useState<string | undefined>(undefined)
   const [actPeriod,  setActPeriod]  = useState<string | undefined>(undefined)
@@ -1298,8 +1605,8 @@ export function UcpProfileView({
   // The same filter the tab runs, so the paginator counts the rows the reader
   // is actually looking at — including the search.
   const activityCount = useMemo(
-    () => filterActivity(getActivity(contact), channel, actSearch, actStatus, actPeriod, now).length,
-    [contact, channel, actSearch, actStatus, actPeriod, now],
+    () => filterActivity(getActivity(contact), actGroup, actKind, actSearch, actStatus, actPeriod, now).length,
+    [contact, actGroup, actKind, actSearch, actStatus, actPeriod, now],
   )
 
   const spec = useMemo(() => specForContact(contact), [contact])
@@ -1399,55 +1706,19 @@ export function UcpProfileView({
             showBackInCompress
             onBack={() => onBack?.()}
           />
-          {/* Pinned: ScreenLayout's header zone is outside the scroll
-              container. 32px sides so the edges line up with the content
-              scrolling underneath — EntityHeader brings its own
-              CardContainer, so this wrapper supplies nothing else.
+          {/* THE PINNED ZONE CARRIES THE PAGE BAR AND NOTHING ELSE.
 
-              The Next Best Action is its own card, directly below the header
-              and never inside it: two records, two containers. The header
-              identifies the entity, this proposes what to do about it. It is
-              pinned alongside the header because a proposal the reader
-              scrolls past is a proposal they never see. */}
-          <div style={{ padding: "0 32px 8px" }}>
-            <EntityHeader
-              compressOnScroll
-              name={contact.name}
-              visual={AVATAR_TYPES.includes(contact.type)
-                ? { kind: "avatar" }
-                : { kind: "icon", icon: (LucideIcons[TYPE_ICON[contact.type] as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon, variant: "informative" }}
-              tags={headerTags}
-              stateBadge={{ label: state.label, variant: state.variant }}
-              source={contact.source.label}
-              secondaryMetadata={secondaryMetadata}
-              recordFields={recordFields}
-              showInformation
-              onInformationOpen={openInfo}
-              assignedAgent={{
-                id: contact.agent.id,
-                name: contact.agent.name,
-                onOpenChat: openChat,
-              }}
-              locked={restriction !== null}
-              state={loading ? "loading" : "default"}
-              secondaryAction={{
-                label: "Export record",
-                variant: "secondary",
-                onClick: () => {},
-                disabledTooltip: "This record's values are governed — request the scope to export it",
-              }}
-              menuActions={[{ label: "Archive", onClick: () => {} }]}
-            />
-            {nba && <NextBestActionCard item={nba} className="mt-[12px]" />}
-          </div>
+              A duplicate EntityHeader — with the Export action and the Next
+              Best Action card still on it — survived here through a rebase:
+              main had moved the card into the scroll container the same day
+              this branch was editing it in place, and the replay kept both
+              copies. Two identity cards rendered, and the stale one crashed
+              on a `nba` binding that no longer exists.
 
-          <div style={{ padding: "0 32px 16px" }}>
-            <Tabs
-              activeId={tab}
-              onChange={goTab}
-              items={tabsForContact(contact)}
-            />
-          </div>
+              The live one is below, in the content, where Michael put it —
+              it sticks itself with `compressOnScroll`, so pinning it here
+              would spend header height on something that already knows how
+              to hold its own position. */}
         </>
       )}
       pagination={
@@ -1558,12 +1829,14 @@ export function UcpProfileView({
         <>
           {tab === "overview" && <WidgetCanvasView initialSlots={overviewSlots} />}
           {tab === "people"   && <PeopleTab company={contact} onOpen={onOpenRecord} />}
-          {tab === "snapshot" && <SnapshotTab contact={contact} />}
+          {tab === "intelligence" && <IntelligenceTab contact={contact} onGoTab={goTab} onAsk={openChat} />}
           {tab === "activity" && (
             <ActivityTab
               contact={contact}
-              channel={channel}
-              onChannelChange={c => { setChannel(c); setActPage(1) }}
+              group={actGroup}
+              onGroupChange={g => { setActGroup(g); setActPage(1) }}
+              kind={actKind}
+              onKindChange={k => { setActKind(k); setActPage(1) }}
               search={actSearch}
               // Any filter change resets to page 1 — the DS rule, and a search
               // that leaves you on page 3 of 1 looks like an empty tab.
@@ -1577,7 +1850,7 @@ export function UcpProfileView({
               pageSize={actSize}
             />
           )}
-          {tab === "drives" && <DrivesTab contact={contact} onPreview={setDrivePeek} />}
+          {tab === "knowledge" && <KnowledgeTab contact={contact} onPreview={setDrivePeek} />}
         </>
       )}
 

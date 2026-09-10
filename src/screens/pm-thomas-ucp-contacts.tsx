@@ -88,7 +88,7 @@ const ALL_TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[
   // a person is where it stops meaning anything, and its replacement is the
   // global search rather than a wider table.
   { id: "all", label: "All", type: "all" },
-  ...(["person", "employee", "company", "repair-order", "policy", "asset"] as UcpEntityType[])
+  ...(["person", "employee", "company", "policy", "asset"] as UcpEntityType[])
     .map(t => ({ id: t, label: TYPE_PLURAL[t], type: t })),
 ]
 
@@ -106,7 +106,7 @@ const MAX_VISIBLE_TABS = 6
 const CREATE_LABEL: Record<string, string> = {
   all: "Create New Contact",
   ...Object.fromEntries(
-    (["person", "employee", "company", "repair-order", "policy", "asset"] as UcpEntityType[])
+    (["person", "employee", "company", "policy", "asset"] as UcpEntityType[])
       .map(t => [t, `Create New ${TYPE_LABEL[t]}`]),
   ),
 }
@@ -118,9 +118,8 @@ const CREATE_FIELDS: Record<UcpEntityType, string[]> = {
   employee:       ["Full name", "Role", "Department", "Work email", "Manager", "Access role"],
   company:        ["Legal name", "Industry", "Headcount", "Account email", "Account owner", "Primary contact"],
   // A create form asks what the OBJECT needs, never what the pattern needs.
-  // Nothing about these three is person-shaped, and that is the whole reason
+  // Nothing about these two is person-shaped, and that is the whole reason
   // they are in this prototype.
-  "repair-order": ["Order code", "Vehicle", "Store", "Reported issue", "Service advisor"],
   policy:         ["Policy name", "Scope", "Owner", "Effective date", "Review cycle"],
   asset:          ["Asset code", "Type", "Assigned site", "Acquired", "Custodian"],
 }

@@ -61,7 +61,7 @@ export interface UcpNextBestAction {
  */
 export type UcpEntityType =
   | "person" | "employee" | "company"
-  | "repair-order" | "policy" | "asset"
+  | "policy" | "asset"
 
 /** Types whose records are PEOPLE. Connections, coworkers and initials only
  *  make sense for these — a repair order has no colleagues and no initials. */
@@ -177,7 +177,6 @@ export const TYPE_LABEL: Record<UcpEntityType, string> = {
   person:         "Customer",
   employee:       "Employee",
   company:        "Company",
-  "repair-order": "Repair order",
   policy:         "Policy",
   asset:          "Asset",
 }
@@ -188,7 +187,6 @@ export const TYPE_PLURAL: Record<UcpEntityType, string> = {
   person:         "Customers",
   employee:       "Employees",
   company:        "Companies",
-  "repair-order": "Repair orders",
   policy:         "Policies",
   asset:          "Assets",
 }
@@ -197,7 +195,6 @@ export const TYPE_ICON: Record<UcpEntityType, string> = {
   person:         "UserRound",
   employee:       "IdCard",
   company:        "Building2",
-  "repair-order": "Wrench",
   policy:         "FileCheck2",
   asset:          "Truck",
 }
@@ -206,7 +203,6 @@ export const TYPE_TAG: Record<UcpEntityType, "informative" | "purple" | "lightBl
   person:         "informative",
   employee:       "purple",
   company:        "lightBlue",
-  "repair-order": "informative",
   policy:         "purple",
   asset:          "lightBlue",
 }
@@ -379,15 +375,59 @@ export interface UcpFact {
 
 // ── Activity ──────────────────────────────────────────────────────────────────
 
-export type ActivityChannel = "call" | "email" | "meeting" | "agent" | "system"
+/**
+ * ── What an Activity row can be ────────────────────────────────────────────
+ *
+ * Michael's taxonomy, 2026-09-10:
+ *
+ *   Communications   email, SMS, calls — and meetings, see below
+ *   Notes            what somebody wrote down
+ *   Events           workflows that fired
+ *   Tasks            work to do, tied to the next best action
+ *
+ * The channel is the LEAF; `CHANNEL_GROUP` says which of the four it belongs
+ * to. Two levels rather than one flat list because a flat row of seven chips
+ * plus "All" is a filter nobody reads — the four groups are the chips, and
+ * the communication kinds are a dropdown that only appears while
+ * Communications is the selected group.
+ *
+ * MEETINGS ARE A COMMUNICATION, and they are the one kind Michael's list did
+ * not name. The fixtures carry a QBR and a security working session: a
+ * meeting is not a workflow that fired and it is not a note, so filing it
+ * under Events would have been false and deleting it would have been worse.
+ * It joins email, SMS and calls rather than displacing any of them.
+ */
+export type ActivityChannel =
+  | "call" | "email" | "sms" | "meeting"
+  | "note" | "event" | "task"
+
+export type ActivityGroup = "communication" | "note" | "event" | "task"
+
+export const ACTIVITY_GROUPS: { id: ActivityGroup; label: string }[] = [
+  { id: "communication", label: "Communications" },
+  { id: "note",          label: "Notes"          },
+  { id: "event",         label: "Events"         },
+  { id: "task",          label: "Tasks"          },
+]
+
+export const CHANNEL_GROUP: Record<ActivityChannel, ActivityGroup> = {
+  call: "communication", email: "communication", sms: "communication", meeting: "communication",
+  note: "note", event: "event", task: "task",
+}
 
 export const CHANNEL_META: Record<ActivityChannel, { label: string; icon: string }> = {
-  call:    { label: "Calls",    icon: "Phone"    },
-  email:   { label: "Email",    icon: "Mail"     },
-  meeting: { label: "Meetings", icon: "Users"    },
-  agent:   { label: "Agent",    icon: "Bot"      },
-  system:  { label: "System",   icon: "Settings" },
+  call:    { label: "Calls",    icon: "Phone"        },
+  email:   { label: "Email",    icon: "Mail"         },
+  sms:     { label: "SMS",      icon: "MessageSquare"},
+  meeting: { label: "Meetings", icon: "Users"        },
+  note:    { label: "Notes",    icon: "StickyNote"   },
+  event:   { label: "Events",   icon: "Zap"          },
+  task:    { label: "Tasks",    icon: "ListChecks"   },
 }
+
+/** The communication kinds, for the dropdown that refines that group. */
+export const COMMUNICATION_CHANNELS: ActivityChannel[] =
+  (Object.keys(CHANNEL_GROUP) as ActivityChannel[]).filter(ch => CHANNEL_GROUP[ch] === "communication")
 
 export interface UcpActivity {
   id:        string
@@ -550,7 +590,7 @@ export const CONTACTS: UcpContact[] = [
         confidence: 82,
       },
       {
-        id: "read-2", category: "Governance", destination: "Snapshot",
+        id: "read-2", category: "Governance", destination: "Knowledge",
         headline: "The integration is the common thread in all three escalations.",
         detail: "Every escalation since July routes through the same integration, and the DPA on file predates it. Governance has one open review; closing it removes the blocker the renewal call would otherwise inherit.",
         confidence: 74,
@@ -579,7 +619,7 @@ export const CONTACTS: UcpContact[] = [
     nba: null,
     insights: [
       {
-        id: "read-1", category: "Deal", destination: "Drives",
+        id: "read-1", category: "Deal", destination: "Knowledge",
         headline: "Technical evaluator, not the economic buyer.",
         detail: "Sarah has driven every compliance question on the Meridian expansion and cleared the data-residency review herself. She has never discussed price. Route commercial terms to Sandra Torres and keep Sarah on audit evidence.",
         confidence: 76,
@@ -683,7 +723,7 @@ export const CONTACTS: UcpContact[] = [
         confidence: 84,
       },
       {
-        id: "read-2", category: "Governance", destination: "Snapshot",
+        id: "read-2", category: "Governance", destination: "Knowledge",
         headline: "Her budget authority is recorded, not inferred.",
         detail: "The Truth plane carries her as the approver on the Meridian expansion, sourced from the countersigned contract. Nothing needs to be verified before treating her as the decision point.",
         confidence: 88,
@@ -749,7 +789,7 @@ export const CONTACTS: UcpContact[] = [
     nba: null,
     insights: [
       {
-        id: "read-1", category: "Deal", destination: "Snapshot",
+        id: "read-1", category: "Deal", destination: "Knowledge",
         headline: "Technical gatekeeper, currently unblocked.",
         detail: "David signed off on the SSO and data-residency reviews in July. No open questions since. He is the right contact if the migration timeline turns into an implementation plan.",
         confidence: 71,
@@ -844,7 +884,7 @@ export const CONTACTS: UcpContact[] = [
     nba: null,
     insights: [
       {
-        id: "read-1", category: "Governance", destination: "Snapshot",
+        id: "read-1", category: "Governance", destination: "Knowledge",
         headline: "Superseded as the finance contact.",
         detail: "Amy approved the original Meridian contract in 2024. Finance approvals have routed through Sandra Torres since April. Keep the record for contract history.",
         confidence: 69,
@@ -876,7 +916,7 @@ export const CONTACTS: UcpContact[] = [
     },
     insights: [
       {
-        id: "read-1", category: "Governance", destination: "Drives",
+        id: "read-1", category: "Governance", destination: "Knowledge",
         headline: "Mid-review, on schedule.",
         detail: "Four of six security checks have cleared. The two open items are network segmentation evidence and the sub-processor list, both assigned to Halden's side.",
         confidence: 74,
@@ -1000,7 +1040,7 @@ export const CONTACTS: UcpContact[] = [
         confidence: 79,
       },
       {
-        id: "read-2", category: "Governance", destination: "Drives",
+        id: "read-2", category: "Governance", destination: "Knowledge",
         headline: "Four stores, one master agreement.",
         detail: "The group signs centrally, so a service commitment made for Tampa North applies to all four. The agreement in Drives is the one that governs the backlog conversation.",
         confidence: 71,
@@ -1055,64 +1095,6 @@ export const CONTACTS: UcpContact[] = [
   // Everything the screen assumed about contacts shows up here as a bug or as
   // a slot that goes empty, which is the point of having them.
   {
-    id: "RO-48291", type: "repair-order", name: "RO-48291",
-    subtitle: "Transmission diagnostic · Tampa North · 9 days open",
-    email: "service@riverbendauto.com", phone: "+1 (813) 555-0190", company: "Riverbend Auto Group",
-    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 3, 2026",
-    stateBadge: { label: "Overdue", variant: "error" },
-    source: { label: "CDK Global", iconName: "Car" },
-    tags: [
-      { label: "9d overdue", role: "signal", tone: "error", severity: 4, tooltip: "Promised Aug 25, still open — the oldest order in the Tampa North queue" },
-    ],
-    meta: [
-      { iconName: "ShieldCheck", label: "6 facts",     tooltip: "Verified facts · 4 on the Truth plane, 2 across Sandbox and Sources." },
-      { iconName: "Store",       label: "Tampa North", tooltip: "Store · Tampa North, the location carrying 26 of the 41 late orders." },
-      { iconName: "Wrench",      label: "Bay 4",       tooltip: "Bay · 4, allocated since Aug 25 and not released." },
-      { iconName: "Bot",         label: "Tier 2",      tooltip: "Assigned agent · Service Concierge, tier 2." },
-    ],
-    agent: { id: "AGT-09", name: "Service Concierge" },
-    nba: {
-      title: "Release bay 4 or reassign the order to Brandon",
-      timestamp: "2h ago",
-      rationale: "The part arrived Aug 29 and the bay has been allocated without work logged since. Brandon has capacity today.",
-    },
-    insights: [
-      {
-        id: "read-1", category: "Service", destination: "Workflows",
-        headline: "Waiting on a bay, not on a part.",
-        detail: "The transmission arrived Aug 29 and nothing has been logged against this order since. Bay 4 is allocated to it, so the order and the bay are both idle — which is why this one order shows up in two different backlog counts.",
-        confidence: 81,
-      },
-    ],
-    governance: "empty", risk: "loaded", connections: "empty",
-  },
-  {
-    id: "RO-48307", type: "repair-order", name: "RO-48307",
-    subtitle: "Brake recall service · Brandon · 2 days open",
-    email: "service@riverbendauto.com", phone: "+1 (813) 555-0190", company: "Riverbend Auto Group",
-    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 5, 2026",
-    source: { label: "CDK Global", iconName: "Car" },
-    tags: [
-      { label: "Recall", role: "classification" },
-    ],
-    meta: [
-      { iconName: "ShieldCheck", label: "5 facts",  tooltip: "Verified facts · 4 on the Truth plane, 1 on Sources." },
-      { iconName: "Store",       label: "Brandon",  tooltip: "Store · Brandon, running at 60% bay capacity." },
-      { iconName: "Bot",         label: "Tier 2",   tooltip: "Assigned agent · Service Concierge, tier 2." },
-    ],
-    agent: { id: "AGT-09", name: "Service Concierge" },
-    nba: null,
-    insights: [
-      {
-        id: "read-1", category: "Service",
-        headline: "On schedule, and covered by the recall campaign.",
-        detail: "Parts are on site and the labour is billable to the manufacturer campaign rather than the customer. Nothing here needs a decision before the promised date.",
-        confidence: 88,
-      },
-    ],
-    governance: "loaded", risk: "empty", connections: "empty",
-  },
-  {
     id: "POL-0114", type: "policy", name: "Data retention — customer records",
     subtitle: "Tenant-wide · Reviewed quarterly · Effective Jan 2026",
     email: "governance@acme.com", phone: "—", company: "Acme Corp",
@@ -1137,7 +1119,7 @@ export const CONTACTS: UcpContact[] = [
     },
     insights: [
       {
-        id: "read-1", category: "Governance", destination: "Drives",
+        id: "read-1", category: "Governance", destination: "Knowledge",
         headline: "Applies to every studio, evidenced in one.",
         detail: "The policy is tenant-wide but the only attached evidence comes from the Data studio. The other three have nothing on file, which is what made the last two reviews run late.",
         confidence: 76,
@@ -1284,8 +1266,22 @@ export function getActivity(c: UcpContact): UcpActivity[] {
   const who   = c.name.split(" ")[0]
   const agent = c.agent.name
   return [
+    /**
+     * A TASK, and it is the record's next best action — the two are the same
+     * object seen from two places (Michael, 2026-09-10: "Tareas: relacionadas
+     * con Next Best Action"). It exists only when the engine has something to
+     * recommend, which is why this is spread rather than listed: a record with
+     * nothing to do has no open task, and inventing one to fill the group
+     * would be inventing work.
+     */
+    ...(c.nba ? [{
+      id: "a0", channel: "task" as ActivityChannel, title: c.nba.title,
+      meta: `Owner · ${c.owner} · from the next best action`, timestamp: c.nba.timestamp,
+      state: { label: "Open", variant: "alert" as TagVariantLite },
+      aiSummary: c.nba.rationale,
+    }] : []),
     {
-      id: "a1", channel: "agent", title: `${agent} refreshed the record snapshot`,
+      id: "a1", channel: "event", title: `${agent} refreshed the record snapshot`,
       meta: "4 facts promoted to Truth plane · 1 claim expired", timestamp: "Today, 08:12",
       state: { label: "Completed", variant: "success" },
       aiSummary: `Re-verified ${who}'s contact fields against the CRM sync and promoted four Sandbox claims after a matching source appeared. One claim about budget timing expired without corroboration and was dropped back to Sandbox.`,
@@ -1295,6 +1291,12 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       meta: `${c.owner} · 18:24 · Discovery follow-up`, timestamp: "Sep 2, 2026 · 14:05",
       state: { label: "Positive", variant: "success" },
       aiSummary: `${who} confirmed the evaluation is still funded and asked for a written migration timeline. No pricing objection was raised. The timeline is the one open commitment from this call.`,
+    },
+    {
+      id: "a2b", channel: "note", title: `Note · ${c.owner}`,
+      meta: "After the discovery follow-up", timestamp: "Sep 2, 2026 · 14:40",
+      state: { label: "Saved", variant: "neutral" },
+      aiSummary: `Wrote up the call while it was fresh: the timeline is the only open commitment, and ${who} asked for it in writing rather than on a call.`,
     },
     {
       id: "a3", channel: "email", title: "Governance addendum sent for review",
@@ -1308,9 +1310,14 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       aiSummary: `Usage and roadmap were covered in full. Two escalations from July were raised again without a resolution date, which is the thread most likely to carry into the next conversation.`,
     },
     {
-      id: "a5", channel: "system", title: "Record merged from duplicate",
+      id: "a5", channel: "event", title: "Record merged from duplicate",
       meta: `${c.id} absorbed a duplicate created by the inbound form`, timestamp: "Aug 19, 2026 · 16:20",
       state: { label: "Completed", variant: "success" },
+    },
+    {
+      id: "a5b", channel: "sms", title: `SMS · ${c.phone}`,
+      meta: `${c.owner} · delivered`, timestamp: "Aug 18, 2026 · 17:12",
+      state: { label: "Delivered", variant: "success" },
     },
     {
       id: "a6", channel: "email", title: "Migration timeline requested",
@@ -1318,7 +1325,7 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "Awaiting reply", variant: "alert" },
     },
     {
-      id: "a7", channel: "agent", title: `${agent} drafted a follow-up`,
+      id: "a7", channel: "task", title: `${agent} drafted a follow-up`,
       meta: "Draft held for review · not sent", timestamp: "Aug 18, 2026 · 08:02",
       state: { label: "Needs review", variant: "alert" },
       aiSummary: `A reply to the timeline request was drafted but held, because the delivery date it referenced was not confirmed anywhere in the Truth plane.`,
@@ -1335,7 +1342,7 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "Completed", variant: "success" },
     },
     {
-      id: "a10", channel: "system", title: "Source Drive attached",
+      id: "a10", channel: "event", title: "Source Drive attached",
       meta: "Legal · shared folder connected to this record", timestamp: "Jul 28, 2026 · 15:58",
       state: { label: "Completed", variant: "success" },
     },
@@ -1345,10 +1352,15 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "Opened", variant: "informative" },
     },
     {
-      id: "a12", channel: "agent", title: `${agent} flagged a stale fact`,
+      id: "a12", channel: "event", title: `${agent} flagged a stale fact`,
       meta: "Budget cycle claim older than 90 days", timestamp: "Jul 20, 2026 · 06:00",
       state: { label: "Resolved", variant: "success" },
       aiSummary: `The budget-cycle claim passed its freshness window. It was re-confirmed on the Aug 22 review call and returned to the Sandbox plane with a new timestamp.`,
+    },
+    {
+      id: "a12b", channel: "note", title: `Note · ${c.owner}`,
+      meta: "Before the security review", timestamp: "Jul 26, 2026 · 11:20",
+      state: { label: "Saved", variant: "neutral" },
     },
     {
       id: "a13", channel: "call", title: `Outbound call · ${c.phone}`,
@@ -1356,7 +1368,7 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "No answer", variant: "neutral" },
     },
     {
-      id: "a14", channel: "system", title: "Record created",
+      id: "a14", channel: "event", title: "Record created",
       meta: `${c.id} · ingested from the account sync`, timestamp: "Jun 9, 2026 · 08:00",
       state: { label: "Completed", variant: "success" },
     },

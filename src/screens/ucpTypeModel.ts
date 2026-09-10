@@ -113,26 +113,6 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     }
   }
 
-  if (c.type === "repair-order") {
-    const [service, store, age] = p
-    return {
-      extraTabs: [],
-      widget: {
-        uid: "order", title: "Order",
-        rows: [
-          { label: "Service",  value: service ?? "—", icon: "Wrench",     variant: "informative",
-            tooltip: `Service · ${service ?? "not recorded"}. What the order was opened for, from the service advisor's intake.` },
-          { label: "Store",    value: store   ?? "—", icon: "Store",      variant: "neutral",
-            tooltip: `Store · ${store ?? "not recorded"}. Where the work is scheduled, which decides the bay it holds.` },
-          { label: "Open for", value: age     ?? "—", icon: "Clock",      variant: "alert",
-            tooltip: `Open for · ${age ?? "not recorded"}. Measured from the promised date, not from intake.` },
-          { label: "Advisor",  value: c.owner,        icon: "UserRound",  variant: "informative",
-            tooltip: `Service advisor · ${c.owner}. Accountable for the promise made to the customer.` },
-        ],
-      },
-    }
-  }
-
   if (c.type === "policy") {
     const [scope, cycle, effective] = p
     return {
@@ -193,18 +173,37 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
 }
 
 /**
- * The full tab strip: the universal spine with the type's own tabs slotted
- * between Overview and Snapshot. Domain tabs sit next to Overview because they
- * answer "what is this thing"; the knowledge tabs that follow answer "what do
- * we know about it", and that order is the same on every type.
+ * The full tab strip — Michael's structure, 2026-09-10:
+ *
+ *   Overview | Activity | Intelligence | Knowledge | + industry modules
+ *
+ * Four universal tabs, in that order, because each answers a different
+ * question and they get asked in that sequence:
+ *
+ *   Overview      what matters about this record right now (the canvas)
+ *   Activity      what happened — communications, notes, events, tasks
+ *   Intelligence  what the system THINKS: reads, signals, recommendations,
+ *                 deductions. One AI tab rather than a tab per AI feature
+ *   Knowledge     what the system HOLDS: documents, pending claims, verified
+ *                 facts. The entity's own mini-governance
+ *
+ * The previous strip had `Snapshot` and `Drives`, and the split ran along the
+ * wrong seam: the facts table (verified knowledge) sat with nothing, while
+ * documents had a tab of their own. Intelligence is what the system inferred,
+ * Knowledge is what it can prove — and Drive, Sandbox and Truth are three
+ * shelves of the same cupboard.
  */
 export function tabsForContact(c: UcpContact): { id: string; label: string }[] {
   return [
-    { id: "overview", label: "Overview" },
+    { id: "overview",     label: "Overview"     },
+    { id: "activity",     label: "Activity"     },
+    { id: "intelligence", label: "Intelligence" },
+    { id: "knowledge",    label: "Knowledge"    },
+    // Industry modules last. A type's own tab is the domain layer on top of
+    // the spine — a Company brings People — and it sits after the four
+    // because the spine is what every record has and the module is what this
+    // one adds.
     ...specForContact(c).extraTabs,
-    { id: "snapshot", label: "Snapshot" },
-    { id: "activity", label: "Activity" },
-    { id: "drives",   label: "Drives"   },
   ]
 }
 
@@ -271,12 +270,6 @@ const FACETS: Record<string, UcpFacet[]> = {
   // contact's — a repair order filters by store, a policy by scope. Which is
   // the argument for the type publishing its own rather than the screen
   // guessing from a shared shape.
-  "repair-order": [
-    { id: "status", label: "Status", inline: true },
-    { id: "store",  label: "Store",  inline: true },
-    { id: "owner",  label: "Advisor" },
-    { id: "source", label: "Source" },
-  ],
   policy: [
     { id: "status", label: "Status", inline: true },
     { id: "scope",  label: "Scope",  inline: true },
@@ -315,7 +308,7 @@ export function facetValue(c: UcpContact, facetId: string): string {
     case "hq":         return c.type === "company"  ? (p[2] ?? "") : ""
     // The non-people types. Same parser, different position — each type says
     // what its subtitle means, and nothing else has to know.
-    case "store":      return c.type === "repair-order" || c.type === "asset" ? (p[1] ?? "") : ""
+    case "store":      return c.type === "asset" ? (p[1] ?? "") : ""
     case "scope":      return c.type === "policy" ? (p[0] ?? "") : ""
     case "class":      return c.type === "asset"  ? (p[0] ?? "") : ""
     default: return ""
