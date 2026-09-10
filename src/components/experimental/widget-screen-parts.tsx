@@ -164,7 +164,10 @@ export function StudioWelcome({ iconName, title, description, ctaLabel, onCta }:
   const [dismissed, setDismissed] = useState(false)
   if (dismissed) return null
   return (
-    <div style={{ marginBottom: 16 }}>
+    /* 24, the DS gap between a layer and the next one — this used to be 16,
+       which put the banner closer to the filters than the filters were to
+       anything else and made the top of these screens read as two clumps. */
+    <div style={{ marginBottom: 24 }}>
       <CardContainer variant="default">
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px" }}>
           <HighlightIcon iconName={iconName} variant="informative" size="lg" />
