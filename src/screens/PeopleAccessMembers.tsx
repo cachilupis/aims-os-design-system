@@ -1145,17 +1145,23 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
             {!isInvited && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)", display: "flex", gap: 8 }}>
-                {!confirmReset ? (
-                  <Button variant="secondary" size="sm" onClick={() => setConfirmReset(true)}>Reset MFA enrollment</Button>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 12, color: "var(--badge-error)", fontWeight: 600 }}>
-                      Remove their MFA device? They'll re-enroll on next login.
-                    </span>
-                    <Button variant="warning" size="sm" onClick={() => { onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined }); setConfirmReset(false) }}>Yes, reset</Button>
-                    <Button variant="secondary" size="sm" onClick={() => setConfirmReset(false)}>Cancel</Button>
-                  </div>
-                )}
+                {/* Same question, same component, same copy as the profile
+                    card's Reset MFA — this used to be an inline row of
+                    buttons, which is a confirmation UI invented by hand. */}
+                <Button variant="secondary" size="sm" onClick={() => setConfirmReset(true)}>Reset MFA enrollment</Button>
+                <ModalDialog
+                  isOpen={confirmReset}
+                  onClose={() => setConfirmReset(false)}
+                  tone="warning"
+                  iconName="ShieldOff"
+                  title={`Reset MFA for ${member.name}?`}
+                  description={`Their current ${member.mfaMethod ? MFA_METHOD_LABEL[member.mfaMethod] : "second factor"} stops working immediately. They will be asked to enrol a new one the next time they sign in.`}
+                  ctaPrimary={{ label: "Reset MFA", destructive: true, onClick: () => {
+                    onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined })
+                    setConfirmReset(false)
+                  } }}
+                  ctaSecondary={{ label: "Cancel", onClick: () => setConfirmReset(false) }}
+                />
               </div>
             )}
           </div>
@@ -1257,9 +1263,19 @@ function MemberDetailPage({
 }) {
   const [activeTab, setActiveTab] = useState(0)
   const [confirmRemove, setConfirmRemove] = useState(false)
+  const [confirmResetMfa, setConfirmResetMfa] = useState(false)
+  const toast = useToast()
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
   const isPending = member.status === "pending"
+  /**
+   * Somebody who has never signed in has no password to reset and no MFA
+   * device to clear, so those two controls are not "disabled" for them —
+   * they do not apply at all, and a greyed-out button would invite the
+   * question anyway. The Security tab already hides its own MFA reset on the
+   * same test.
+   */
+  const hasSignedIn = isActive || member.status === "suspended"
 
   return (
     <ScreenLayout
@@ -1337,8 +1353,50 @@ function MemberDetailPage({
           {/* Divider after info */}
           <div style={{ height: 1, background: "var(--border)" }} />
 
+          {/* Clearing somebody's second factor locks them out until they
+              enrol again, so it is a question — and the DS answer to a
+              question is ModalDialog, not an inline row of buttons. */}
+          <ModalDialog
+            isOpen={confirmResetMfa}
+            onClose={() => setConfirmResetMfa(false)}
+            tone="warning"
+            iconName="ShieldOff"
+            title={`Reset MFA for ${member.name}?`}
+            description={`Their current ${member.mfaMethod ? MFA_METHOD_LABEL[member.mfaMethod] : "second factor"} stops working immediately. They will be asked to enrol a new one the next time they sign in.`}
+            ctaPrimary={{ label: "Reset MFA", destructive: true, onClick: () => {
+              onUpdate({ ...member, mfaEnabled: false, mfaMethod: undefined, mfaEnrolledAt: undefined })
+              setConfirmResetMfa(false)
+              toast.success("MFA reset", { description: `${member.name} will enrol a new device on next sign-in.` })
+            } }}
+            ctaSecondary={{ label: "Cancel", onClick: () => setConfirmResetMfa(false) }}
+          />
+
           {/* Action buttons */}
           <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {hasSignedIn && (
+              <>
+                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                  onClick={() => toast.success("Password reset link sent", {
+                    description: `${member.email} has one hour to use it.`,
+                  })}>
+                  <Icons.KeyRound size={13} /> Reset password
+                </Button>
+                {member.mfaEnabled ? (
+                  <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                    onClick={() => setConfirmResetMfa(true)}>
+                    <Icons.ShieldOff size={13} /> Reset MFA
+                  </Button>
+                ) : (
+                  <Tooltip side="cursor" content={`${member.name} has no MFA enrolled, so there is nothing to reset.`}>
+                    <span style={{ display: "block" }}>
+                      <Button variant="secondary" size="sm" disabled style={{ width: "100%", justifyContent: "center" }}>
+                        <Icons.ShieldOff size={13} /> Reset MFA
+                      </Button>
+                    </span>
+                  </Tooltip>
+                )}
+              </>
+            )}
             {/* A contact created with the wizard's email toggle off has never
                 been written to. This is where that gets finished — one click,
                 which is the whole point of having been able to defer it. */}
