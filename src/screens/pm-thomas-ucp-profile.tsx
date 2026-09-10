@@ -83,6 +83,7 @@ import { specForContact, tabsForContact } from "./ucpTypeModel"
 import type { ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
+  ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   PLANE_META, PLANE_ORDER, CHANNEL_META, CONCIERGE_PROMPTS,
   CONTACTS,
   AVATAR_TYPES, TYPE_ICON, TYPE_LABEL, entityState, restrictionFor, getRecordFields,
@@ -611,35 +612,82 @@ function SnapshotTab({ contact }: { contact: UcpContact }) {
 
 // ── Activity ──────────────────────────────────────────────────────────────────
 
+/**
+ * The elapsed-time separator between activity cards — Michael, 2026-09-10.
+ *
+ * A divider with the subtle border and a left-aligned label in Caption S, so a
+ * reader scrolling a long feed knows how far back they are without doing
+ * arithmetic on timestamps.
+ *
+ * The label is the DS's own DATE-GROUP LABEL, taken off the Notification
+ * Center's spec rather than invented here: 12px, 600, line-height 1,
+ * `--color-text-caption`, ALL CAPS. Caption S Bold is documented as all-caps
+ * only, which is also why the buckets read "A WEEK AGO" and not "Hace una
+ * semana" — the copy is uppercase because the style is, and the screen is in
+ * English.
+ *
+ * The rule takes the remaining width rather than sitting under the text: one
+ * separator reads as one object, where a full-width line with a label above it
+ * reads as two.
+ */
+function ElapsedSeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-[12px]" role="separator" aria-label={label}>
+      <span
+        className="text-xs font-semibold leading-none shrink-0"
+        style={{ color: "var(--color-text-caption)" }}
+      >
+        {label}
+      </span>
+      <span className="flex-1 h-px" style={{ background: "var(--color-border-neutral-subtle)" }} />
+    </div>
+  )
+}
+
 /** The one place activity rows are filtered — read by the tab and by the
  *  Pagination total in the parent. */
 function filterActivity(
   rows: ReturnType<typeof getActivity>,
   channel: ActivityChannel | "all",
   search: string,
+  status: string | undefined,
+  period: string | undefined,
+  now: Date,
 ): ReturnType<typeof getActivity> {
   const q = search.trim().toLowerCase()
   return rows
     .filter(a => channel === "all" || a.channel === channel)
     .filter(a => q === "" || [a.title, a.meta, a.timestamp].some(v => v.toLowerCase().includes(q)))
+    .filter(a => !status || a.state.label === status)
+    .filter(a => withinPeriod(parseActivityAt(a.timestamp, now), period, now))
 }
 
 function ActivityTab({
-  contact, channel, onChannelChange, search, onSearchChange, page, pageSize,
+  contact, channel, onChannelChange, search, onSearchChange,
+  status, onStatusChange, period, onPeriodChange, now, page, pageSize,
 }: {
   contact:  UcpContact
   channel:  ActivityChannel | "all"
   onChannelChange: (c: ActivityChannel | "all") => void
-  /** Held by the parent, not here: the parent owns the Pagination and its
-   *  total has to count the same rows this list renders. Two sources for one
-   *  number is how a paginator ends up offering a page that is empty. */
+  /** Held by the parent, not here — all of them. The parent owns the
+   *  Pagination and its total has to count the same rows this list renders;
+   *  two sources for one number is how a paginator ends up offering a page
+   *  that is empty. */
   search:   string
   onSearchChange: (value: string) => void
+  status:   string | undefined
+  onStatusChange: (value: string | undefined) => void
+  period:   string | undefined
+  onPeriodChange: (value: string | undefined) => void
+  now:      Date
   page:     number
   pageSize: number
 }) {
   const all      = useMemo(() => getActivity(contact), [contact])
-  const filtered = useMemo(() => filterActivity(all, channel, search), [all, channel, search])
+  const filtered = useMemo(
+    () => filterActivity(all, channel, search, status, period, now),
+    [all, channel, search, status, period, now],
+  )
   const paged    = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   const items: EntityListItemData[] = paged.map(a => ({
@@ -664,6 +712,33 @@ function ActivityTab({
         searchPlaceholder="Search activity by title, detail or date…"
         searchValue={search}
         onSearchChange={onSearchChange}
+        /* `options` + `onSelect`, so Filters renders and positions the menu
+           itself. CLAUDE.md is explicit that a screen never hand-rolls a Menu
+           beside a Filters bar, and the two things these dropdowns filter on —
+           what state a touchpoint is in, and how far back to look — are the
+           two questions a feed this long actually gets asked.
+
+           The options are derived from the rows, never a hardcoded list: a new
+           state in the fixtures shows up here without anyone remembering to
+           add it, and a state that no longer occurs stops being offered. */
+        slots={[
+          {
+            placeholder: "Status",
+            value:       status,
+            options:     Array.from(new Set(all.map(a => a.state.label))).sort(),
+            onSelect:    onStatusChange,
+            onRemove:    () => onStatusChange(undefined),
+          },
+          {
+            placeholder: "Period",
+            value:       period,
+            options:     ACTIVITY_PERIODS.map(p => p.label),
+            onSelect:    onPeriodChange,
+            onRemove:    () => onPeriodChange(undefined),
+          },
+        ]}
+        showClearFilters={!!status || !!period || search !== ""}
+        onClearFilters={() => { onStatusChange(undefined); onPeriodChange(undefined); onSearchChange("") }}
         /* `Filters` turns ALL THREE of these on by default — the view toggle,
            the All-filters button and the sort control. Off here, every one:
            the view toggle switches to a second view none of these tabs has
@@ -704,11 +779,23 @@ function ActivityTab({
         />
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {items.map(item => (
-            <CardContainer key={item.id} size="sm" className="!p-0 overflow-hidden">
-              <EntityList items={[item]} />
-            </CardContainer>
-          ))}
+          {items.map((item, i) => {
+            // The separator appears when the row's age band changes — and on
+            // the FIRST row of the page too, because a page that opens
+            // mid-band would otherwise show rows with no idea how old they
+            // are. The bands come from one function so the label a separator
+            // shows and the order the rows sit in cannot disagree.
+            const label = elapsedGroupLabel(parseActivityAt(paged[i].timestamp, now), now)
+            const prev  = i === 0 ? null : elapsedGroupLabel(parseActivityAt(paged[i - 1].timestamp, now), now)
+            return (
+              <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {label !== prev && <ElapsedSeparator label={label} />}
+                <CardContainer size="sm" className="!p-0 overflow-hidden">
+                  <EntityList items={[item]} />
+                </CardContainer>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -733,11 +820,24 @@ const DRIVE_ICON_VARIANT: Record<string, "error" | "yellow" | "light-blue"> = {
 }
 
 function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d: UcpDrive) => void }) {
-  const [search, setSearch] = useState("")
+  const [search,   setSearch]   = useState("")
+  const [kind,     setKind]     = useState<string | undefined>(undefined)
+  const [provider, setProvider] = useState<string | undefined>(undefined)
+  const [status,   setStatus]   = useState<string | undefined>(undefined)
   const all = useMemo(() => getDrives(contact), [contact])
   const q   = search.trim().toLowerCase()
-  const drives = all.filter(d =>
-    q === "" || [d.name, d.provider, d.owner, d.kind, d.scope].some(v => v.toLowerCase().includes(q)))
+  const drives = all
+    .filter(d => q === "" || [d.name, d.provider, d.owner, d.kind, d.scope].some(v => v.toLowerCase().includes(q)))
+    .filter(d => !kind     || d.kind === kind)
+    .filter(d => !provider || d.provider === provider)
+    .filter(d => !status   || d.state.label === status)
+  const hasFilters = !!kind || !!provider || !!status || q !== ""
+  const clearAll = () => { setKind(undefined); setProvider(undefined); setStatus(undefined); setSearch("") }
+  /** Every value the rows actually take, sorted — never a hardcoded list, so a
+   *  provider that appears in the fixtures tomorrow is offered without anyone
+   *  editing this, and one that disappears stops being offered. */
+  const optionsFor = (pick: (d: UcpDrive) => string) =>
+    Array.from(new Set(all.map(pick))).sort()
 
   // The record genuinely has none — no bar, because there is nothing to search
   // and a search over an empty list is a control that cannot succeed.
@@ -758,6 +858,35 @@ function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d:
         searchPlaceholder="Search drives by name, provider or owner…"
         searchValue={search}
         onSearchChange={setSearch}
+        /* The three things a reader narrows a drive list by: what kind of thing
+           it is, where it lives, and whether it is syncing. `options` +
+           `onSelect`, so `Filters` renders and positions the menus itself —
+           a screen never hand-rolls a Menu beside this bar. */
+        slots={[
+          {
+            placeholder: "Type",
+            value:       kind,
+            options:     optionsFor(d => d.kind),
+            onSelect:    setKind,
+            onRemove:    () => setKind(undefined),
+          },
+          {
+            placeholder: "Provider",
+            value:       provider,
+            options:     optionsFor(d => d.provider),
+            onSelect:    setProvider,
+            onRemove:    () => setProvider(undefined),
+          },
+          {
+            placeholder: "Status",
+            value:       status,
+            options:     optionsFor(d => d.state.label),
+            onSelect:    setStatus,
+            onRemove:    () => setStatus(undefined),
+          },
+        ]}
+        showClearFilters={hasFilters}
+        onClearFilters={clearAll}
         /* `Filters` turns ALL THREE of these on by default — the view toggle,
            the All-filters button and the sort control. Off here, every one:
            the view toggle switches to a second view none of these tabs has
@@ -773,10 +902,12 @@ function DrivesTab({ contact, onPreview }: { contact: UcpContact; onPreview: (d:
       {drives.length === 0 ? (
         <EmptyState
           icon={HardDrive}
-          title={`No drives for “${search}”`}
-          description="Try a shorter term, or clear the search to see every drive on this record."
-          ctaLabel="Clear search"
-          onCta={() => setSearch("")}
+          title={q ? `No drives for “${search}”` : "No drives match these filters"}
+          description={q
+            ? "Try a shorter term, or clear the search to see every drive on this record."
+            : "Try a different type, provider or status — or clear the filters to see every drive."}
+          ctaLabel="Clear filters"
+          onCta={clearAll}
         />
       ) : (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1062,6 +1193,16 @@ export function UcpProfileView({
   const [tab,        setTab]        = useState("overview")
   const [channel,    setChannel]    = useState<ActivityChannel | "all">("all")
   const [actSearch,  setActSearch]  = useState("")
+  const [actStatus,  setActStatus]  = useState<string | undefined>(undefined)
+  const [actPeriod,  setActPeriod]  = useState<string | undefined>(undefined)
+  /**
+   * "Now", captured once per mount rather than read inside the grouping.
+   * A list that regroups itself because a minute ticked over while the reader
+   * was looking at it is a bug, and every band and every period filter has to
+   * be measured from the same instant or two rows can disagree about which
+   * week they are in.
+   */
+  const now = useMemo(() => new Date(), [])
   const [actPage,    setActPage]    = useState(1)
   const [actSize,    setActSize]    = useState(ACTIVITY_PAGE_SIZE)
   const [chatOpen,   setChatOpen]   = useState(false)
@@ -1157,8 +1298,8 @@ export function UcpProfileView({
   // The same filter the tab runs, so the paginator counts the rows the reader
   // is actually looking at — including the search.
   const activityCount = useMemo(
-    () => filterActivity(getActivity(contact), channel, actSearch).length,
-    [contact, channel, actSearch],
+    () => filterActivity(getActivity(contact), channel, actSearch, actStatus, actPeriod, now).length,
+    [contact, channel, actSearch, actStatus, actPeriod, now],
   )
 
   const spec = useMemo(() => specForContact(contact), [contact])
@@ -1427,6 +1568,11 @@ export function UcpProfileView({
               // Any filter change resets to page 1 — the DS rule, and a search
               // that leaves you on page 3 of 1 looks like an empty tab.
               onSearchChange={v => { setActSearch(v); setActPage(1) }}
+              status={actStatus}
+              onStatusChange={v => { setActStatus(v); setActPage(1) }}
+              period={actPeriod}
+              onPeriodChange={v => { setActPeriod(v); setActPage(1) }}
+              now={now}
               page={actPage}
               pageSize={actSize}
             />

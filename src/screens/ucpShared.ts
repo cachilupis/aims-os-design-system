@@ -400,6 +400,88 @@ export interface UcpActivity {
   aiSummary?: string
 }
 
+/**
+ * ── Elapsed time, for the Activity list ────────────────────────────────────
+ *
+ * The fixtures carry timestamps in three shapes, because that is what a real
+ * feed looks like: relative for anything recent ("30m ago", "3d ago"), the
+ * word Today for the same day at a known hour ("Today, 08:12"), and an
+ * absolute date once it stops being recent ("Aug 18, 2026 · 07:55"). One
+ * parser reads all three so the grouping cannot disagree with the label the
+ * row itself shows.
+ *
+ * `now` is injected rather than read from the clock inside these functions —
+ * a list that regroups itself mid-render because a minute ticked over is a
+ * bug, and a caller that memoises on `now` gets a stable list.
+ */
+export function parseActivityAt(timestamp: string, now: Date): Date | null {
+  const rel = timestamp.match(/^(\d+)\s*([mhd])\s+ago$/i)
+  if (rel) {
+    const n = Number(rel[1])
+    const ms = rel[2].toLowerCase() === "m" ? 60_000 : rel[2].toLowerCase() === "h" ? 3_600_000 : 86_400_000
+    return new Date(now.getTime() - n * ms)
+  }
+  const today = timestamp.match(/^Today,\s*(\d{1,2}):(\d{2})/i)
+  if (today) {
+    const d = new Date(now)
+    d.setHours(Number(today[1]), Number(today[2]), 0, 0)
+    return d
+  }
+  // "Aug 18, 2026 · 07:55" — the date half is what matters for grouping.
+  const parsed = new Date(timestamp.split("·")[0].trim())
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** Whole days between two instants, by calendar day rather than by 24h blocks:
+ *  something logged at 23:00 yesterday is YESTERDAY at 08:00 today, not today. */
+function daysBetween(then: Date, now: Date): number {
+  const a = new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime()
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  return Math.round((b - a) / 86_400_000)
+}
+
+/**
+ * The separator label for a row's age — ALL CAPS, because that is what the
+ * DS's own date-group label is (Notification Center: "TODAY / YESTERDAY /
+ * EARLIER", Caption S Bold) and because Caption S Bold is documented as
+ * all-caps only.
+ *
+ * The ladder is deliberately coarse at the far end: past a couple of months
+ * nobody is counting weeks, and a separator per month would out-number the
+ * rows it separates.
+ */
+export function elapsedGroupLabel(at: Date | null, now: Date): string {
+  if (!at) return "UNDATED"
+  const days = daysBetween(at, now)
+  if (days <= 0)   return "TODAY"
+  if (days === 1)  return "YESTERDAY"
+  if (days < 7)    return "EARLIER THIS WEEK"
+  if (days < 14)   return "A WEEK AGO"
+  if (days < 30)   return `${Math.floor(days / 7)} WEEKS AGO`
+  if (days < 60)   return "A MONTH AGO"
+  if (days < 365)  return `${Math.round(days / 30)} MONTHS AGO`
+  if (days < 730)  return "A YEAR AGO"
+  return `${Math.floor(days / 365)} YEARS AGO`
+}
+
+/** The options the Activity period filter offers, and what each one means.
+ *  Kept together so the label a user picks and the window it applies are one
+ *  fact rather than two that can drift. */
+export const ACTIVITY_PERIODS: { label: string; days: number }[] = [
+  { label: "Today",        days: 0   },
+  { label: "Last 7 days",  days: 7   },
+  { label: "Last 30 days", days: 30  },
+  { label: "Last 90 days", days: 90  },
+]
+
+export function withinPeriod(at: Date | null, periodLabel: string | undefined, now: Date): boolean {
+  if (!periodLabel) return true
+  const period = ACTIVITY_PERIODS.find(p => p.label === periodLabel)
+  if (!period) return true
+  if (!at) return false
+  return daysBetween(at, now) <= period.days
+}
+
 // ── Source Drives ─────────────────────────────────────────────────────────────
 
 export interface UcpDrive {
