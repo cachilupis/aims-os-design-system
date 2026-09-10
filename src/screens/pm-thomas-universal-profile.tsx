@@ -627,15 +627,6 @@ function ProfileDetailView({ profile, onBack }: { profile: UniversalProfile; onB
       activeSidebarId="data"
       header={(isScrolled) => (
         <div>
-          {/* THE PAGE HEADER DOES NOT REPEAT THE RECORD (Michael, 2026-09-09).
-              It used to carry the name, the status tag, Export and Edit
-              Profile — all four of which the EntityHeader below already
-              shows, one card down. Two identities stacked on one screen is
-              not a hierarchy, it is a duplicate.
-
-              So this bar says only WHERE YOU ARE and how to get back. The
-              record's own identity, state and actions belong to the
-              EntityHeader, which is the component whose job that is. */}
           <Header
             size={isScrolled ? "compress" : "size-l"}
             backButton

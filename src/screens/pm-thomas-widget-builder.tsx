@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
-import { saveWidget } from "@/lib/widget-drafts"
+import { saveWidget, takeAnnouncement, savedMessage, type SavedWidget } from "@/lib/widget-drafts"
+import { useToast } from "@/components/ui/toast"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
@@ -829,6 +830,12 @@ export default function PMThomasWidgetBuilderScreen() {
     })
   }
 
+  const toast = useToast()
+  function announce(w: SavedWidget) {
+    const m = savedMessage(w)
+    toast.success(m.title, { description: m.description })
+  }
+
   function resetAll() {
     setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
@@ -852,7 +859,11 @@ export default function PMThomasWidgetBuilderScreen() {
           title="Widget Builder"
           description="Connect a data source, pick a chart type, and preview your widget live."
           primaryAction={{
-            label: "Save to catalog",
+            // saveLabel, not a fixed string: this button and the footer's are
+            // the same action, and for a while they disagreed out loud — the
+            // footer said "Save as draft" while this one still said "Save to
+            // catalog" about the very same click.
+            label: saveLabel,
             icon: LucideIcons.Check,
             disabled: !canSave,
             onClick: attemptSave,
@@ -995,7 +1006,7 @@ export default function PMThomasWidgetBuilderScreen() {
                       <EmptyState
                         compact icon={LucideIcons.Filter}
                         title="No filters"
-                        description="The widget will read every record in this entity."
+                        description={`The widget will read every record in this ${dataMode === "dataset" ? "dataset" : "entity"}.`}
                         ctaLabel="Add filter"
                         onCta={() => setDataFilters([{ id: `f-${Date.now()}`, column: "", op: "is", value: "" }])}
                       />
@@ -1541,29 +1552,46 @@ export default function PMThomasWidgetBuilderScreen() {
       />
 
       {/* ── Saved ──────────────────────────────────────────────────────────
-       *  The success view, and the only place "Create new widget" makes sense:
-       *  the widget is in the catalog, so starting a fresh one cannot lose it. */}
+       *  The success view, and the only place "Create another widget" makes
+       *  sense: the widget is in the catalog, so starting a fresh one cannot
+       *  lose it. */}
       <ModalDialog
         isOpen={!!savedName}
         onClose={() => setSavedName(null)}
         tone="success"
         iconName={savedAsDraft ? "FileClock" : "CircleCheck"}
-        title={savedAsDraft ? `"${savedName}" is saved as a draft` : `"${savedName}" is in the catalog`}
+        /* Copy from Michael, 2026-09-10. The outcome leads and the name is
+           gone: by this point the reader typed that name one screen ago and
+           the sentence has better things to spend its width on — what state
+           the widget is in, and what they can still do about it.
+
+           The draft line is the same sentence in the state that is actually
+           true of a draft. It exists because "Widget published" over an
+           unfinished widget would be the flow's one outright lie. */
+        title={savedAsDraft ? "Draft saved" : "Widget published"}
         description={savedAsDraft
-          ? "It is in the catalog and you can pick it up any time. Finish it to make it available on dashboards."
-          : "Anyone on the workspace can now add it to a dashboard."}
-        /* Done is the primary: finishing is what most people came to do, and
-           it goes to the catalog rather than back to the builder — the widget
-           is saved and the sentence above says where it went, so landing back
-           on the form you just filled in reads as if the save did not take.
-           That is the Create pattern's rule for a full-page create: navigate
-           to where the created object now lives.
+          ? "It's in the catalog, but it can't be added to a dashboard until you finish setting it up."
+          : "It's in the catalog for your whole workspace. You can edit or unpublish it anytime."}
+        /* "View in catalog" is the primary, and it says where it goes — this
+           button navigates to the library rather than dismissing anything.
+           Finishing is what most people came to do, and landing back on the
+           form you just filled in reads as if the save did not take. That is
+           the Create pattern's rule for a full-page create: go to where the
+           created object now lives.
 
            Creating another is the secondary — a real outcome, but the one
            fewer people want, and it is the only place the offer makes sense
            because the current widget is already safe. */
-        ctaPrimary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
-        ctaSecondary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
+        ctaPrimary={{ label: "View in catalog", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
+        /* This path never navigates, so the landing cannot speak for it. It
+           takes the announcement here — which also stops the library repeating
+           it later in the same session. */
+        ctaSecondary={{ label: "Create another widget", onClick: () => {
+          const saved = takeAnnouncement()
+          if (saved) announce(saved)
+          setSavedName(null)
+          resetAll()
+        } }}
       />
     </ScreenLayout>
   )
