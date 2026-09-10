@@ -9,12 +9,14 @@ import PMHomeCanvasScreen         from "./screens/pm-home-canvas"
 import PMMichaelAttentionRoomScreen from "./screens/pm-michael-attention-room"
 import PMMichaelLoginScreen         from "./screens/pm-michael-login"
 import PMThomasUniversalProfileScreen  from "./screens/pm-thomas-universal-profile"
+import PMThomasUcpContactsScreen      from "./screens/pm-thomas-ucp-contacts"
 import PMThomasDashboardListScreen     from "./screens/pm-thomas-dashboard-list"
 import PMThomasWidgetLibraryScreen     from "./screens/pm-thomas-widget-library"
 import PMThomasWidgetMarketplaceScreen from "./screens/pm-thomas-widget-marketplace"
 import PMThomasNewDashboardScreen      from "./screens/pm-thomas-new-dashboard"
 import PMThomasWidgetBuilderScreen     from "./screens/pm-thomas-widget-builder"
 import PMThomasComposableDashboardsScreen from "./screens/pm-thomas-composable-dashboards"
+import PMLexPlaybooksScreen from "./screens/pm-lex-playbooks"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AvatarCircle, AVATAR_SIZE_SPECS, AVATAR_COLOR_KEYS, type AvatarSizeKey, type AvatarColorKey } from "@/components/ui/avatar"
@@ -215,12 +217,14 @@ const PROTOTYPE_PAGES: { id: string; label: string; description: string; author:
   { id: "proto-thomas-new-dashboard",     label: "New Dashboard — Thomas",       description: "Two-step wizard for creating a dashboard: Step 0 placement form (kind, profile type, surface, audience, name) + destination summary; Step 1 start-point picker (blank canvas or pre-built template). DS-GAP components: StepIndicator, SectionChip, OptionCard, FormSection, FieldLabel.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasNewDashboardScreen },
   { id: "proto-thomas-widget-builder",    label: "Widget Builder — Thomas",      description: "Two-step builder (Data → Widget) with a sticky live preview that is a real widget — same WidgetFather shell, title style and menu the dashboard draws. Data step: entity and dataset cards in two columns, repeatable calculations, group-by and filters. Widget step: 22 authorable types from the shared widget catalog, each previewing with real content rather than a generic shape. There is no appearance step — a widget looks how the design system says it looks. DS-GAP: StepLabel, EntitySourceCard, DatasetCard, TypeTile, WidgetPreviewPanel.", author: "Thomas", category: "Dashboards & Widgets", addedOn: "2026-09-01", component: PMThomasWidgetBuilderScreen },
   { id: "proto-thomas-universal-profile", label: "Universal Profile — Thomas",   description: "Unified entity profile (Person, Employee, Company) aggregating Governance, Risk, and Connections studies — Overview canvas with adaptive study widgets (hidden when empty, error+retry when failed), Activity feed (last 20), paginated Logs, Edit + Export for all types, Archive for Person/Employee only", author: "Thomas", category: "Records", addedOn: "2026-08-14", component: PMThomasUniversalProfileScreen },
+  { id: "proto-thomas-ucp-contacts",      label: "UCP Contacts — Thomas",      description: "The whole UCP flow in one prototype: contacts roster (tabs by type, filters, create per type) → record profile with EntityHeader, its Next Best Action card, Overview canvas, Snapshot by knowledge plane, Activity and Drives. Exercises the header's loading state and per-field masking driven by the viewer's scopes.", author: "Thomas", category: "Records", addedOn: "2026-09-09", component: PMThomasUcpContactsScreen },
   { id: "proto-chat-workflow-config",     label: "Chat Workflow Config",         description: "Conversational governance gates — 4-stage sequence (Intent → Classification → Data Sources → Systems) producing a governed workflow draft with node-vocabulary enforcement, SVG canvas view, and instrumentation panel", author: "Thomas", category: "Workflows & Agents", addedOn: "2026-08-27", component: ChatWorkflowConfigScreen },
   { id: "proto-workflows-list",           label: "Workflows List",               description: "Governed workflows list — filterable by status (Active / Draft / Paused), searchable, with classification badges, per-connector system tags, last-run timestamps, and missing-dep warnings", author: "Thomas", category: "Workflows & Agents", addedOn: "2026-08-27", component: WorkflowsListScreen },
   { id: "proto-people-access-members",   label: "People & Access — Members",    description: "Unified people management across the workspace: searchable member roster with Active/Invited/Suspended/Bots tabs, inline role picker, invite flow modal, status chip, and member count header", author: "Thomas", category: "Admin & Access", addedOn: "2026-08-27", component: PeopleAccessMembersScreen },
   { id: "proto-admin-console",          label: "Admin Console",                description: "Unified admin console: all 7 sections (Overview, People & Access, Studios, Integrations, Security, Audit Log, Billing) linked via live sidebar navigation", author: "Thomas", category: "Admin & Access", addedOn: "2026-08-27", component: AdminConsoleScreen },
   { id: "pm-chat-widget",              label: "Chat Widget Manager",          description: "Chat widget manager — widget list (Active/Draft/Inactive), detail view with 5 tabs (Overview, Appearance, Agentic Network, Preferences, Embed), browse-all modal with replacement warning, deploy flow with progress steps, bell notification panel", author: "Thomas", category: "Channels", addedOn: "2026-08-31", component: PMChatWidgetScreen },
   { id: "proto-voice-channel",         label: "Voice Channel",                description: "Faithful port of aims-voice-prototype: Numbers table (Agents · Distribution · HiL · Cost MTD) + Call History with Call Detail (Transcript / AI Summary / Metrics) + Workspace Voice Defaults + per-number sheet with 4 sub-tabs (Overview / Agents & Routing incl. HiL config / Business Hours / Call History) + Acquire Number 4-step wizard + Release confirmation with last-4-digit input + multi-select Add Agent modal. Only the visual layer is DS-native; every screen, flow, and mock data value is preserved from the source prototype.", author: "Thomas", category: "Channels", addedOn: "2026-08-31", component: VoiceChannelScreen },
+  { id: "pm-lex-playbooks",            label: "Playbooks",                    description: "Adaptive playbook authoring — list, detail (Overview/Configuration/Versions/History), and the 8-step NBA-driven builder wizard, ported from the customer-comms prototype. DS-GAP (catalog-pending, not shortcuts): 4 Activity/Usage chart widgets (progress ring, phase funnel, ranked blocked-reasons list, 3-segment distribution bar), the 8-step wizard pill nav (SwitchTab caps at 7 items), the NBA personalization guardrail slider, and two data-model fields with no source (Playbook.owner.department, an Archived status). INVENTED-DETAIL: PB-002–005 are card-level real + invented full detail, flagged per-object. PRODUCT-NOTE (D-C1): legal-tier hard-gate overrides land in Council-review pending state instead of applying immediately, unlike operational-tier overrides — a deliberate functional call, not a visual one.", author: "Lex", category: "Workflows & Agents", addedOn: "2026-09-09", component: PMLexPlaybooksScreen },
 ]
 
 // ── Nav data ──────────────────────────────────────────────────────────────
@@ -21607,7 +21611,7 @@ function PatternPanelContentPage() {
                 />
 
                 <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                  Type a tag name and press <kbd className="px-[4px] py-[0px] rounded-[3px] font-mono text-[10px]" style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>Enter</kbd> or click Add tag. Toggle error/disabled to test states. Add 6+ tags to see the full color palette cycle.
+                  Type a tag name and press <kbd className="px-[4px] py-[0px] rounded-[3px] font-mono text-[10px]" style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>Enter</kbd>, click Add tag, or just click away — leaving the field commits what is in it. Toggle error/disabled to test states. Add 6+ tags to see the full color palette cycle.
                 </div>
               </div>
 
@@ -21648,6 +21652,21 @@ function PatternPanelContentPage() {
                       { token: "--color-surface-light-blue-subtle + --color-border-light-blue-default + --color-text-light-blue", usage: "④ Light blue chip" },
                       { token: "--color-surface-yellow-more-subtle + --color-border-yellow-default + --color-text-yellow",  usage: "⑤ Yellow chip" },
                       { token: "--color-surface-purple-more-subtle + --color-border-purple-default + --color-text-purple",  usage: "⑥ Purple chip" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0 max-w-[220px]"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", wordBreak: "break-all" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="text-[10px] font-semibold uppercase tracking-wide mt-[4px] mb-[2px]" style={{ color: "var(--field-supporting)" }}>Commit behaviour</div>
+                    {[
+                      { token: "Enter · Add tag · blur", usage: "Three ways to commit. Blur included: leaving the field keeps what was typed rather than discarding it — a user who has seen their text in the box reads a silent discard as the app losing their input" },
+                      { token: "Escape", usage: "Clears the draft and blurs. The only exit that throws the text away, and the user asked for it" },
+                      { token: "onDraftChange", usage: "Reports the uncommitted text. A CTA gated on tags.length alone reads a visibly filled field as empty — gate on tags.length > 0 || draft.trim() instead" },
+                      { token: "showAddButton={false}", usage: "Hides the button where it competes with the surface's own CTA. Say in the helper text that Enter commits, since the button was the visible hint" },
                     ].map(row => (
                       <div key={row.token} className="flex items-start gap-[8px]">
                         <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0 max-w-[220px]"

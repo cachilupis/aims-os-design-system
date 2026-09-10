@@ -8,6 +8,7 @@ import { Tabs }          from "@/components/ui/tabs"
 import { CardContainer } from "@/components/ui/card-container"
 import { Toggle }        from "@/components/ui/toggle"
 import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
+import { HighlightIcon } from "@/components/ui/highlight-icon"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -362,20 +363,15 @@ function StudioDetailPage({ studio }: { studio: Studio }) {
       {tab === "access" && (
         <>
           <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
-            <div style={{ padding: "8px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ padding: "8px 16px", borderBottom: "1px solid var(--border)" }}>
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)" }}>Groups</span>
             </div>
             {groups.map((g, i) => (
               <div key={g.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 16px", borderBottom: i < groups.length - 1 ? "1px solid var(--border)" : "none" }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-                  background: g.access ? `${studio.accentColor}18` : "var(--surface-raised)",
-                  border: "1px solid var(--border)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: g.access ? studio.accentColor : "var(--muted-foreground)",
-                }}>
-                  <Icons.Users size={13} />
-                </div>
+                {/* The tile says whether this group reaches the studio at all —
+                    which is a state, so it is a semantic tint, not the studio's
+                    own accent hex. */}
+                <HighlightIcon size="md" variant={g.access ? "informative" : "neutral"} iconName="Users" />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{g.name}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{g.members} members</div>
@@ -386,7 +382,7 @@ function StudioDetailPage({ studio }: { studio: Studio }) {
           </div>
 
           <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 20 }}>
-            <div style={{ padding: "8px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ padding: "8px 16px", borderBottom: "1px solid var(--border)" }}>
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)" }}>Roles</span>
             </div>
             {studio.roles.map((r, i) => (
@@ -431,7 +427,7 @@ function StudioDetailPage({ studio }: { studio: Studio }) {
 
           {/* Settings items */}
           <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 20 }}>
-            <div style={{ padding: "8px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ padding: "8px 16px", borderBottom: "1px solid var(--border)" }}>
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--muted-foreground)" }}>
                 {settingsTab}
               </span>

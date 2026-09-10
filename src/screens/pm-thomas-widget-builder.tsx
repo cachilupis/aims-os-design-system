@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as LucideIcons from "lucide-react"
+import { saveWidget } from "@/lib/widget-drafts"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
 import { Header } from "@/components/ui/header"
 import { Button } from "@/components/ui/button"
@@ -64,16 +65,30 @@ const ENTITY_SOURCES = [
 
 const FEATURED_ENTITIES = ENTITY_SOURCES.filter(e => e.featured)
 
-// Thom's four datasets. The `shape` is the part that matters: a dataset arrives
-// already aggregated, and its shape is what says whether it is one number, a
-// grouping, or raw rows — which is also why the dataset path never asks for a
-// calculation. That question was answered when the dataset was built.
+// Thom's seven datasets, name and description read straight off his library
+// rather than written fresh — the same rule the entity columns follow.
+//
+// The `shape` is the part that matters: a dataset arrives already aggregated,
+// and its shape says whether it is one number, a grouping, or raw rows — which
+// is also why the dataset path never asks for a calculation. That question was
+// answered when the dataset was built. It is also the only axis his library
+// filters on, so it is the only rail the browser needs.
+//
+// Four are `featured`, matching the four his step shows before "Browse all".
 const PRESET_DATASETS = [
-  { id: "ds-contacts-by-tier", name: "Contacts by Tier", description: "Count of contacts grouped by tier (Gold, Silver, Bronze)", shape: "Grouped",      integration: "Salesforce", governed: true },
-  { id: "ds-deals-pipeline",   name: "Deals Pipeline",   description: "Sum of deal value grouped by stage",                       shape: "Grouped",      integration: "Salesforce", governed: true },
-  { id: "ds-total-mrr",        name: "Total MRR",        description: "Sum of MRR across all active accounts",                    shape: "Single value", integration: "Salesforce", governed: true },
-  { id: "ds-all-contacts",     name: "All Contacts",     description: "Full contact record set — name, email, city, tier",        shape: "Record set",   integration: "Salesforce", governed: true },
+  { id: "ds-contacts-by-tier",   name: "Contacts by Tier",     description: "Count of contacts grouped by tier (Gold, Silver, Bronze)",        shape: "Grouped",      integration: "Salesforce", featured: true },
+  { id: "ds-deals-pipeline",     name: "Deals Pipeline",       description: "Sum of deal value grouped by stage",                              shape: "Grouped",      integration: "Salesforce", featured: true },
+  { id: "ds-total-mrr",          name: "Total MRR",            description: "Sum of MRR across all active accounts",                           shape: "Single value", integration: "Salesforce", featured: true },
+  { id: "ds-all-contacts",       name: "All Contacts",         description: "Full contact record set — name, email, city, tier",               shape: "Record set",   integration: "Salesforce", featured: true },
+  { id: "ds-activities-week",    name: "Activities This Week", description: "Count of activities grouped by type for the current week",        shape: "Grouped",      integration: "Salesforce", featured: false },
+  { id: "ds-deal-value-owner",   name: "Deal Value by Owner",  description: "Total deal value grouped by owner — shows each rep's pipeline",    shape: "Grouped",      integration: "Salesforce", featured: false },
+  { id: "ds-new-accounts-30d",   name: "New Accounts (30d)",   description: "Count of accounts created in the last 30 days",                    shape: "Single value", integration: "Salesforce", featured: false },
 ]
+
+const FEATURED_DATASETS = PRESET_DATASETS.filter(d => d.featured)
+
+/** The shapes a dataset can have — the browser's only filter, same as Thom's. */
+const DATASET_SHAPES: string[] = [...new Set(PRESET_DATASETS.map(d => d.shape))]
 
 /** Every integration the entity list draws from, derived rather than typed out
  *  so adding an entity cannot leave the filter row behind. */
@@ -179,9 +194,45 @@ const SOURCE_COLUMN_DEFS: Record<string, ColumnDef[]> = {
   ],
 }
 
+/**
+ * What each dataset comes back with.
+ *
+ * A dataset arrives already aggregated, so its columns are the RESULT's
+ * columns, not the source entity's: "Contacts by Tier" returns a tier and a
+ * count, not the nine fields a contact has. Every one is read straight off the
+ * dataset's own description in PRESET_DATASETS — that copy is Thom's and it is
+ * already validated, so deriving from it is what keeps the two from drifting.
+ *
+ * This is also why the dataset path can be filtered at all: you filter the
+ * result ("only Gold"), which is a different question from the one the dataset
+ * already answered.
+ */
+const DATASET_COLUMN_DEFS: Record<string, ColumnDef[]> = {
+  "ds-contacts-by-tier": [
+    { label: "Tier",     type: "Text",   desc: "Gold, Silver or Bronze",                  key: "tier" },
+    { label: "Contacts", type: "Number", desc: "How many contacts fall in that tier",     key: "contacts" },
+  ],
+  "ds-deals-pipeline": [
+    { label: "Stage",      type: "Text",   desc: "The pipeline stage the deal sits in",   key: "stage" },
+    { label: "Deal Value", type: "Number", desc: "Summed value of the deals in the stage", key: "deal_value" },
+  ],
+  "ds-total-mrr": [
+    { label: "MRR", type: "Number", desc: "Monthly recurring revenue across active accounts", key: "mrr" },
+  ],
+  "ds-all-contacts": [
+    { label: "Name",  type: "Text", desc: "Full name of the contact",              key: "name" },
+    { label: "Email", type: "Text", desc: "Primary email address",                 key: "email" },
+    { label: "City",  type: "Text", desc: "City from the billing or main address", key: "city" },
+    { label: "Tier",  type: "Text", desc: "Gold, Silver or Bronze",                key: "tier" },
+  ],
+}
+
+/** Every source that can be filtered, keyed the same way whichever kind it is. */
+const ALL_COLUMN_DEFS: Record<string, ColumnDef[]> = { ...SOURCE_COLUMN_DEFS, ...DATASET_COLUMN_DEFS }
+
 /** Labels only — what the filter pickers and the calc column list read. */
 const SOURCE_COLUMNS: Record<string, string[]> = Object.fromEntries(
-  Object.entries(SOURCE_COLUMN_DEFS).map(([id, cols]) => [id, cols.map(c => c.label)]),
+  Object.entries(ALL_COLUMN_DEFS).map(([id, cols]) => [id, cols.map(c => c.label)]),
 )
 
 
@@ -303,12 +354,16 @@ function DatasetCard({ dataset, selected, onSelect }: { dataset: typeof PRESET_D
  * A searchable option picker: the DS Select as the trigger, the DS Menu as the
  * list, positioned with the repo's own dropdown-anchor helper.
  *
- * CLAUDE.md tells screens to compose Select with a base-ui Popover. That was
- * tried first and does not work here: Select renders a div, and base-ui's
- * Trigger could neither attach to it nor stop reading the click as a dismiss.
- * The pattern the repo actually runs on — anchorFromEvent + useDropdownPosition
- * + a full-screen click-catcher — is what Filters uses, so this matches the
- * codebase instead of introducing a second dropdown mechanism.
+ * A base-ui Popover would also work here — the claim this docblock used to
+ * make, that it was tried and failed, was wrong and is corrected 2026-09-10.
+ * What genuinely fails is only `Popover.Trigger render={<Select/>}`: Select
+ * renders a div with nowhere for the Trigger to attach. A wrapper div as the
+ * anchor is fine.
+ *
+ * dropdown-anchor stays the choice here for a plainer reason — anchorFromEvent
+ * + useDropdownPosition + a full-screen click-catcher is what Filters uses, and
+ * this screen already needs the picker three times (filters, calculations,
+ * group by). One mechanism, one helper.
  *
  * The screen needs this three times (filters, calculations, group by), which is
  * why it is one local helper rather than three inline copies.
@@ -564,7 +619,14 @@ export default function PMThomasWidgetBuilderScreen() {
   const [dataMode, setDataMode]         = useState<"entity" | "dataset">("entity")
   const [previewSize, setPreviewSize]   = useState("lg")
   const [showLeave, setShowLeave]       = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
+  /** The name it was saved under — holds the success view open, and survives
+   *  the reset that "Create new widget" runs, which clears `name`. */
+  const [savedName, setSavedName] = useState<string | null>(null)
+  const [savedAsDraft, setSavedAsDraft] = useState(false)
+  /** Bumped by every reset; the scroll-to-top effect keys off it. */
+  const [resetCount, setResetCount] = useState(0)
   const [typeCat, setTypeCat] = useState<WidgetCategory | "all">("all")
   // The columns modal edits a DRAFT, so Cancel means cancel. Committing on each
   // checkbox would leave a half-made selection behind when someone backs out.
@@ -574,6 +636,9 @@ export default function PMThomasWidgetBuilderScreen() {
   const [colType, setColType]         = useState<ColumnType | "All">("All")
   const [showEntities, setShowEntities] = useState(false)
   const [entQuery, setEntQuery]         = useState("")
+  const [showDatasets, setShowDatasets] = useState(false)
+  const [dsQuery, setDsQuery]           = useState("")
+  const [shapeFilter, setShapeFilter]   = useState("all")
 
   // Search matches the label, the description AND the key — the key is there
   // because someone who knows the data will type `lead_source`, not "Channel
@@ -583,6 +648,18 @@ export default function PMThomasWidgetBuilderScreen() {
     const q = entQuery.trim().toLowerCase()
     return !q || e.label.toLowerCase().includes(q) || e.desc.toLowerCase().includes(q)
   })
+
+  const visibleDatasets = PRESET_DATASETS.filter(d => {
+    if (shapeFilter !== "all" && d.shape !== shapeFilter) return false
+    const q = dsQuery.trim().toLowerCase()
+    return !q || d.name.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)
+  })
+
+  /** How many datasets each rail entry would show — the count sits on the row. */
+  const shapeCounts: Record<string, number> = {
+    all: PRESET_DATASETS.length,
+    ...Object.fromEntries(DATASET_SHAPES.map(sh => [sh, PRESET_DATASETS.filter(d => d.shape === sh).length])),
+  }
 
   const visibleColumns = (SOURCE_COLUMN_DEFS[sourceId ?? ""] ?? []).filter(c => {
     if (colType !== "All" && c.type !== colType) return false
@@ -602,13 +679,36 @@ export default function PMThomasWidgetBuilderScreen() {
   const dataComplete = dataMode === "dataset"
     ? !!sourceId
     : !!sourceId && !!opType && (opType === "aggregate" ? true : recordColumns.length > 0)
-  // A widget IS its data and its type. The name is not part of that — the
-  // preview has been calling an unnamed one "Untitled widget" all along, so the
-  // screen already tolerates it, and requiring it only meant Save sat grey
-  // while everything that matters was decided.
-  const widgetComplete = dataComplete && !!typeId
-  const canSave        = widgetComplete
-  const hasUnsaved     = !!(sourceId || typeId || name.trim() || subtitle.trim())
+  // The name is required (Michael, 2026-09-09 — it was optional until then).
+  // This file used to argue the opposite: the widget IS its data and its type,
+  // and the preview happily says "Untitled widget". That holds right up to the
+  // moment it is saved, and then it does not — the catalog is a shared list
+  // other people search, and "Untitled widget" is unfindable in it. Optional
+  // was the right call for the preview and the wrong one for the catalog.
+  const namedOk        = !!name.trim()
+  const widgetComplete = dataComplete && !!typeId && namedOk
+  /**
+   * A named widget can always be saved; an unfinished one goes in as a DRAFT
+   * (Michael, 2026-09-09).
+   *
+   * Save used to sit grey until everything was answered, which quietly said
+   * "finish this in one sitting or lose it" — and the way people actually
+   * answer that is by leaving the tab open for a week. The catalog is where
+   * work in progress belongs too, so the only thing Save still insists on is a
+   * name: a draft nobody can find again is not saved, it is lost politely.
+   */
+  const canSave      = namedOk
+  const savesAsDraft = namedOk && !widgetComplete
+  const hasUnsaved   = !!(sourceId || typeId || name.trim() || subtitle.trim())
+
+  /** The one thing still missing, phrased to drop into a sentence. */
+  const missingPiece = !sourceId
+    ? (dataMode === "dataset" ? "a dataset" : "an entity")
+    : !dataComplete
+    ? "the rest of its data setup"
+    : !typeId
+    ? "a widget type"
+    : ""
 
   // ── Wizard stages ─────────────────────────────────────────────────────────
   // These were a hand-rolled tab strip: numbered dots, a check when complete,
@@ -617,23 +717,31 @@ export default function PMThomasWidgetBuilderScreen() {
   // stages are what Stepper is for. Its StepState covers every case the local
   // version drew by hand.
   const STEP_ORDER: TabId[] = ["data", "configure"]
+  // A button that says "Save to catalog" and produces a draft is lying about
+  // its own outcome, so the label follows the state.
+  const saveLabel = savesAsDraft ? "Save as draft" : "Save to catalog"
   const NEXT_LABEL: Record<TabId, string> = {
     data:      "Continue to Configure",
-    configure: "Save to catalog",
+    configure: saveLabel,
   }
 
   // The footer's shape follows the stage: Cancel on the first, Back after that,
   // and the primary button becomes Save on the last one.
   const isLast     = tab === "configure"
   const stepIndex  = STEP_ORDER.indexOf(tab)
-  const nextEnabled = tab === "data" ? dataComplete : tab === "configure" ? widgetComplete : canSave
+  const nextEnabled = tab === "data" ? dataComplete : canSave
 
+  // Guidance, not a gate. It still names the first thing missing, because that
+  // is what someone reading it wants to know next — it just no longer explains
+  // why a button is grey.
   const saveHint = !sourceId
-    ? (dataMode === "dataset" ? "Choose a governed dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
+    ? (dataMode === "dataset" ? "Choose a dataset on the Data tab to get started." : "Choose an entity source on the Data tab to get started.")
     : !dataComplete
     ? "Finish configuring your data source on the Data tab."
     : !typeId
     ? "Choose a widget type on the Configure tab."
+    : !namedOk
+    ? "Give the widget a name — it is how people will find it in the catalog."
     : ""
 
   // ── Handlers ──
@@ -645,9 +753,86 @@ export default function PMThomasWidgetBuilderScreen() {
     setRecordColumns([])
   }
 
+  /**
+   * Back to the top of whatever is scrolling.
+   *
+   * ScreenLayout owns the scroll container and does not hand it out, so this
+   * walks up from the builder's own root to the first ancestor that actually
+   * scrolls — the same search the browser does for scrollIntoView, and it
+   * keeps the screen from having to know the layout's internals.
+   *
+   * Without it, starting a fresh widget leaves you wherever you were when you
+   * saved — halfway down, looking at the widget-type grid. The form is reset
+   * but the view is not, so nothing looks like it happened.
+   */
+  function scrollToTop() {
+    // Ask; the effect below does it. See the comment there for why.
+    setResetCount(c => c + 1)
+  }
+
+  /**
+   * A finished widget saves straight through; an unfinished one asks first.
+   *
+   * The confirmation is not about risk — saving to the catalog is undoable, and
+   * the Create pattern says an undoable save needs no dialog. It is about the
+   * OUTCOME differing from the one the person expects: they set out to publish
+   * a widget and what lands is a draft. That is worth a sentence and a way
+   * back, which is what Keep editing is.
+   */
+  /**
+   * Back to the top after a reset — as an effect, not from the click handler.
+   *
+   * resetAll empties most of the page, so anything scheduled inside the click
+   * runs while the layout is still the old, tall one; the browser then clamps
+   * the scroll to the new, much smaller maximum and the view settles a few
+   * pixels short of the top with the stage switcher clipped. requestAnimation-
+   * Frame was not late enough either. An effect keyed to the reset runs after
+   * React has committed and the browser has laid the page out, which is the
+   * first moment "top" means what it will still mean a frame later.
+   *
+   * ScreenLayout owns the scroll container and does not hand it out, so this
+   * walks up from the builder's own root to the first ancestor whose overflow
+   * says it scrolls — by STYLE, not by "is it taller than its box right now":
+   * once the page is empty that test walks straight past the only scroller.
+   */
+  useEffect(() => {
+    if (resetCount === 0) return
+    let el: HTMLElement | null = rootRef.current
+    while (el) {
+      const oy = getComputedStyle(el).overflowY
+      if (oy === "auto" || oy === "scroll") { el.scrollTop = 0; return }
+      el = el.parentElement
+    }
+  }, [resetCount])
+
+  function attemptSave() {
+    if (savesAsDraft) { setShowSaveModal(true); return }
+    commitSave(false)
+  }
+
+  function commitSave(asDraft: boolean) {
+    setShowSaveModal(false)
+    setSavedAsDraft(asDraft)
+    setSavedName(name)
+    // Hand it to the library. Without this the success view says "it is in the
+    // catalog" and the catalog has never heard of it — the one seam in this
+    // flow you could see from the outside.
+    saveWidget({
+      name: name.trim(),
+      source: ENTITY_SOURCES.find(e => e.id === sourceId)?.label
+           ?? PRESET_DATASETS.find(d => d.id === sourceId)?.name
+           ?? "Not connected",
+      skeleton: AUTHORABLE_WIDGETS.find(t => t.id === typeId)?.label ?? null,
+      previewTypeId: typeId ?? undefined,
+      status: asDraft ? "draft" : "published",
+      missing: asDraft ? missingPiece : undefined,
+    })
+  }
+
   function resetAll() {
     setTab("data"); setDataMode("entity"); setSourceId(null); setOpType(null); setRecordColumns([]); setGroupers([]); setDataFilters([]); setSrcFilter("all")
     setTypeId(null); setName(""); setSubtitle(""); setFreshness("15m"); setInteractiveFilters(true)
+    scrollToTop()
   }
 
 
@@ -670,13 +855,13 @@ export default function PMThomasWidgetBuilderScreen() {
             label: "Save to catalog",
             icon: LucideIcons.Check,
             disabled: !canSave,
-            onClick: () => setShowSaveModal(true),
+            onClick: attemptSave,
           }}
         />
       )}
     >
       {/* ── Builder ── */}
-      <div style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
+      <div ref={rootRef} style={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 160px)" }}>
           {/* Two stages read as a wizard when the top carries a Stepper AND
               the bottom carries StepperNavFooter — two progress bars for one
               two-step flow. The footer is the one that moves you forward, so
@@ -720,7 +905,7 @@ export default function PMThomasWidgetBuilderScreen() {
                   <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
                     <OptionCard
                       icon="Database" title="Existing dataset"
-                      description="Use a pre-built, governed query as your starting point."
+                      description="Use a pre-built query as your starting point."
                       selected={dataMode === "dataset"}
                       onSelect={() => { setDataMode("dataset"); setSourceId(null); setOpType(null); setGroupers([]); setDataFilters([]); setRecordColumns([]) }}
                     />
@@ -742,7 +927,7 @@ export default function PMThomasWidgetBuilderScreen() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                       <StepLabel>Choose entity</StepLabel>
                       <div style={{ marginTop: -8 }}>
-                        <Button variant="secondary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
+                        <Button variant="tertiary" size="sm" onClick={() => { setEntQuery(""); setSrcFilter("all"); setShowEntities(true) }}>
                           <LucideIcons.LayoutGrid size={14} />
                           Browse all entities
                         </Button>
@@ -766,18 +951,44 @@ export default function PMThomasWidgetBuilderScreen() {
                   </div>
                 )}
 
+                {/* The same shape as Choose entity above, deliberately: a
+                    heading with the catalogue CTA aligned to its right, four
+                    featured cards, and a line saying what is not shown. The two
+                    data sources are the same kind of decision, so switching
+                    between them should change what you are choosing, never how
+                    the choosing is laid out. */}
                 {dataMode === "dataset" && (
                   <div>
-                    <StepLabel>Governed dataset</StepLabel>
-                    <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10 }}>
-                      {PRESET_DATASETS.map(ds => (
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                      <StepLabel>Choose dataset</StepLabel>
+                      <div style={{ marginTop: -8 }}>
+                        <Button variant="tertiary" size="sm" onClick={() => { setDsQuery(""); setShapeFilter("all"); setShowDatasets(true) }}>
+                          <LucideIcons.LayoutGrid size={14} />
+                          Browse all datasets
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Padding for the card's hover glow, negative margin to
+                        keep the left edge with everything else in the step. */}
+                    <div style={{
+                      display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 10,
+                      padding: 4, margin: -4,
+                    }}>
+                      {FEATURED_DATASETS.map(ds => (
                         <DatasetCard key={ds.id} dataset={ds} selected={sourceId === ds.id} onSelect={() => setSourceId(ds.id)} />
                       ))}
                     </div>
+                    <p style={{ fontSize: 11, color: "var(--color-text-subtitle)", margin: "12px 0 0" }}>
+                      Browse {PRESET_DATASETS.length - FEATURED_DATASETS.length} more datasets in the full library.
+                    </p>
                   </div>
                 )}
 
-                {sourceId && dataMode === "entity" && (
+                {/* Both paths get this. A dataset arrives aggregated, which
+                    answers "what is counted" — it does not answer "which of the
+                    results do I want to see". Only the entity path had a filter
+                    step, so a governed dataset was all-or-nothing. */}
+                {sourceId && (
                   <div>
                     <StepLabel n={3}>Filters</StepLabel>
                     {dataFilters.length === 0 ? (
@@ -841,7 +1052,19 @@ export default function PMThomasWidgetBuilderScreen() {
                         icon="Rows3" title="Record set"
                         description="Show raw records — choose which columns to expose."
                         selected={opType === "record_set"}
-                        onSelect={() => { setOpType("record_set"); setGroupers([]) }}
+                        /* Every column, pre-selected — the same default Thom's
+                           prototype lands on ("9 of 9 selected"). A record set
+                           IS the entity's rows, so "all of them" is the answer
+                           far more often than any subset, and starting from
+                           zero made the step a required chore before you could
+                           even see the widget. Deselecting is one click each;
+                           selecting nine was nine. Re-picking the mode keeps
+                           whatever you already chose. */
+                        onSelect={() => {
+                          setOpType("record_set")
+                          setGroupers([])
+                          if (recordColumns.length === 0) setRecordColumns(SOURCE_COLUMNS[sourceId] ?? [])
+                        }}
                       />
                     </div>
                   </div>
@@ -900,13 +1123,15 @@ export default function PMThomasWidgetBuilderScreen() {
                         onCta={() => { setColDraft(recordColumns); setShowColumns(true) }}
                       />
                     ) : (
+                      /* Every column, not the first four. A "+5 more" chip is
+                         right when the hidden items are decoration; here they
+                         ARE the widget — this list is the columns the table
+                         will show, in order, and a reader checking their work
+                         has to see all of them. */
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-                        {recordColumns.slice(0, 4).map(c => (
+                        {recordColumns.map(c => (
                           <Tag key={c} variant="neutral" size="sm">{c}</Tag>
                         ))}
-                        {recordColumns.length > 4 && (
-                          <Tag variant="neutral" size="sm">+{recordColumns.length - 4} more</Tag>
-                        )}
                         <Button variant="secondary" size="sm" onClick={() => { setColDraft(recordColumns); setShowColumns(true) }}>
                           Edit columns
                         </Button>
@@ -1039,7 +1264,7 @@ export default function PMThomasWidgetBuilderScreen() {
           nextLabel={NEXT_LABEL[tab]}
           nextDisabled={!nextEnabled}
           onNext={() => {
-            if (isLast) { setShowSaveModal(true); return }
+            if (isLast) { attemptSave(); return }
             setTab(STEP_ORDER[stepIndex + 1])
           }}
         />
@@ -1110,6 +1335,77 @@ export default function PMThomasWidgetBuilderScreen() {
                         source={src}
                         selected={sourceId === src.id}
                         onSelect={() => { selectSource(src.id); setShowEntities(false) }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        }
+      />
+
+      {/* ── Browse all datasets ── */}
+      {/* Structurally identical to Browse all entities above — same modal
+          variant, same search, same left rail, same two-column grid, same
+          select-and-close. Only two things differ, and both are content: the
+          rail filters by SHAPE rather than by source (a dataset's shape is what
+          decides which widget types can draw it, and it is the only axis Thom's
+          library filters on), and each rail row carries its count, because with
+          seven datasets "Record set 1" tells you not to bother looking. */}
+      <ModalDialog
+        isOpen={showDatasets}
+        onClose={() => setShowDatasets(false)}
+        variant="content"
+        showIcon={false}
+        title="Browse all datasets"
+        description="Pick a pre-built query to power your widget."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <Input
+              size="sm"
+              placeholder="Search datasets…"
+              value={dsQuery}
+              onChange={e => setDsQuery(e.target.value)}
+            />
+            <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+              <div style={{ width: 148, flexShrink: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {["all", ...DATASET_SHAPES].map(sh => (
+                  <Button
+                    key={sh}
+                    variant="tertiary"
+                    size="sm"
+                    className={`justify-between w-full ${shapeFilter === sh ? "!text-[var(--primary)]" : ""}`}
+                    onClick={() => setShapeFilter(sh)}
+                  >
+                    {sh === "all" ? "All shapes" : sh}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 11, color: "var(--color-text-subtitle)" }}>{shapeCounts[sh]}</span>
+                      <LucideIcons.ChevronRight size={14} />
+                    </span>
+                  </Button>
+                ))}
+              </div>
+
+              <div style={{
+                flex: 1, minWidth: 0, height: 340, overflowY: "auto",
+                padding: 4, margin: -4,
+              }}>
+                {visibleDatasets.length === 0 ? (
+                  <EmptyState
+                    compact icon={LucideIcons.SearchX}
+                    title="No datasets found"
+                    description="Try a different search term or shape."
+                  />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 8 }}>
+                    {visibleDatasets.map(ds => (
+                      <DatasetCard
+                        key={ds.id}
+                        dataset={ds}
+                        selected={sourceId === ds.id}
+                        onSelect={() => { setSourceId(ds.id); setShowDatasets(false) }}
                       />
                     ))}
                   </div>
@@ -1216,24 +1512,58 @@ export default function PMThomasWidgetBuilderScreen() {
         tone="warning"
         title="Leave without saving?"
         description="Your widget isn't saved yet. If you leave now, your configuration will be lost."
-        ctaPrimary={{ label: "Leave without saving", destructive: true, onClick: resetAll }}
+        /* Close it too. resetAll clears the builder but knows nothing about
+           this dialog, so leaving used to empty the form behind a confirmation
+           that was still sitting on top of it. */
+        ctaPrimary={{ label: "Leave without saving", destructive: true, onClick: () => { setShowLeave(false); resetAll() } }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowLeave(false) }}
       />
 
-      {/* ── Save confirmation modal ── */}
+      {/* ── Save as draft ──────────────────────────────────────────────────
+       *  This dialog only appears for an UNFINISHED widget. A complete one
+       *  saves straight through: the Create pattern reserves a confirmation for
+       *  a save that cannot be undone, and this one can — asking "are you sure?"
+       *  about a reversible action trains people to click past the question.
+       *
+       *  What makes this case different is not risk, it is that the outcome is
+       *  not the one the button implied a moment ago: you set out to publish a
+       *  widget and a draft is what lands. Keep editing is the way back. */}
       <ModalDialog
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        tone="success"
-        iconName="BookMarked"
-        title="Save to catalog?"
-        description={`"${name || "Untitled widget"}" will be added to the widget library and available across all dashboards.`}
-        /* Three genuinely different outcomes, which is the only reason a third
-           CTA earns its place: save and stay with the widget, save and start a
-           fresh one, or go back without saving. */
-        ctaPrimary={{ label: "Save to catalog", onClick: () => setShowSaveModal(false) }}
+        tone="default"
+        iconName="FileClock"
+        title="Save as a draft?"
+        description={`"${name}" is still missing ${missingPiece}, so it goes to the catalog as a draft.`}
+        informativeCard="A draft is saved and searchable, but it cannot be added to a dashboard until it is finished."
+        ctaPrimary={{ label: "Save as draft", onClick: () => commitSave(true) }}
         ctaSecondary={{ label: "Keep editing", onClick: () => setShowSaveModal(false) }}
-        ctaTertiary={{ label: "Create new widget", onClick: () => { resetAll(); setShowSaveModal(false) } }}
+      />
+
+      {/* ── Saved ──────────────────────────────────────────────────────────
+       *  The success view, and the only place "Create new widget" makes sense:
+       *  the widget is in the catalog, so starting a fresh one cannot lose it. */}
+      <ModalDialog
+        isOpen={!!savedName}
+        onClose={() => setSavedName(null)}
+        tone="success"
+        iconName={savedAsDraft ? "FileClock" : "CircleCheck"}
+        title={savedAsDraft ? `"${savedName}" is saved as a draft` : `"${savedName}" is in the catalog`}
+        description={savedAsDraft
+          ? "It is in the catalog and you can pick it up any time. Finish it to make it available on dashboards."
+          : "Anyone on the workspace can now add it to a dashboard."}
+        /* Done is the primary: finishing is what most people came to do, and
+           it goes to the catalog rather than back to the builder — the widget
+           is saved and the sentence above says where it went, so landing back
+           on the form you just filled in reads as if the save did not take.
+           That is the Create pattern's rule for a full-page create: navigate
+           to where the created object now lives.
+
+           Creating another is the secondary — a real outcome, but the one
+           fewer people want, and it is the only place the offer makes sense
+           because the current widget is already safe. */
+        ctaPrimary={{ label: "Done", onClick: () => { window.location.href = "?proto=proto-thomas-widget-library" } }}
+        ctaSecondary={{ label: "Create new widget", onClick: () => { setSavedName(null); resetAll() } }}
       />
     </ScreenLayout>
   )
