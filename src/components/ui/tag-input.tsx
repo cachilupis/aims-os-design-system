@@ -1,6 +1,6 @@
 /**
  * Tag Input — AIMS OS DS · node 16937:21999
- * Figma field logic: Enter/button commit · case-insensitive dedup · chips wrap ·
+ * Figma field logic: Enter/button/blur commit · case-insensitive dedup · chips wrap ·
  * overflow collapses to "View more: +N" after maxVisibleTags · maxTags cap disables field.
  * All tokens are canonical DS tokens — no component-level aliases needed.
  */
@@ -33,6 +33,17 @@ export interface TagInputProps {
    * because the button was the only visible hint that a commit step exists.
    */
   showAddButton?: boolean
+  /**
+   * Fires with the uncommitted text as the user types, "" once it is committed
+   * or cleared.
+   *
+   * A caller that gates a CTA on `tags.length` otherwise reads a field the user
+   * has visibly filled in as empty: they type one address, click the button,
+   * and nothing happens because the address is still a draft. Gate on
+   * `tags.length > 0 || draft.trim()` instead — the blur commit below turns the
+   * draft into a tag before the click lands.
+   */
+  onDraftChange?: (draft: string) => void
   className?: string
 }
 
@@ -54,6 +65,7 @@ export function TagInput({
   maxTags = 30,
   maxVisibleTags = 8,
   showAddButton = true,
+  onDraftChange,
   className,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState("")
@@ -61,9 +73,16 @@ export function TagInput({
   const [expanded, setExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  /** Escape blurs on purpose after clearing — that blur must not re-commit. */
+  const escaping = useRef(false)
 
   const maxReached = tags.length >= maxTags
   const isInputDisabled = disabled || maxReached
+
+  const setDraft = useCallback((v: string) => {
+    setInputValue(v)
+    onDraftChange?.(v)
+  }, [onDraftChange])
 
   const commit = useCallback(() => {
     const trimmed = inputValue.trim()
@@ -71,17 +90,18 @@ export function TagInput({
     if (!tags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
       onAddTag(trimmed)
     }
-    setInputValue("")
-  }, [inputValue, tags, onAddTag])
+    setDraft("")
+  }, [inputValue, tags, onAddTag, setDraft])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); commit() }
     if (e.key === "Escape") {
-      setInputValue("")
+      escaping.current = true
+      setDraft("")
       setExpanded(false)
       inputRef.current?.blur()
     }
-  }, [commit])
+  }, [commit, setDraft])
 
   // Collapse expanded chip list when clicking outside — DS spec: "Collapse back by clicking away"
   useEffect(() => {
@@ -128,10 +148,18 @@ export function TagInput({
           <input
             ref={inputRef}
             value={inputValue}
-            onChange={e => setInputValue(e.target.value)}
+            onChange={e => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
             onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onBlur={() => {
+              setFocused(false)
+              // Leaving the field keeps what was typed. Throwing it away is the
+              // behaviour every chip field has been talked out of: the user has
+              // already seen their text sitting in the box, so silently
+              // discarding it reads as the app losing their input.
+              if (escaping.current) escaping.current = false
+              else commit()
+            }}
             disabled={isInputDisabled}
             placeholder={placeholder}
             className="w-full bg-transparent text-sm font-medium outline-none border-none"
