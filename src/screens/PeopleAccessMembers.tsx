@@ -3581,7 +3581,7 @@ function InviteWizard({ onCancel, onSend }: {
       {step === 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           <div>
-            <FormSectionLabel hint="Press Enter after each address. Everyone here gets the same role and the same access.">
+            <FormSectionLabel hint="Press Enter after each address; Backspace takes the last one back. Everyone here gets the same role and the same access.">
               Email addresses
             </FormSectionLabel>
             {/* This is a recipient list, not a tag builder. `validate` is what
@@ -3595,6 +3595,7 @@ function InviteWizard({ onCancel, onSend }: {
               onDraftChange={setEmailDraft}
               validate={v => isEmail(v) ? null : `"${v}" is not an email address.`}
               tagVariant="neutral"
+              inlineTags
               placeholder="name@company.com"
               showAddButton={false}
             />
