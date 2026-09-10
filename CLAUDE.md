@@ -740,11 +740,28 @@ Steps 4–5, stated as one rule: **contextual** (the new object hangs off someth
 
 **Confirming that it worked** — separate from the confirmation above, which is about risk. This is about whether the user can tell the create succeeded.
 
+**Every create ends in a `useToast().success(...)`.** The landing is where the
+object went; the toast is the product saying it did the thing. Michael,
+2026-09-09 — this used to say a visible landing was confirmation enough and a
+toast was only for the invisible case, and both New Role and Invite were built
+against the newer rule before it was written down.
+
+The reason the older rule was wrong: "it appeared in the list" only reads as
+confirmation if you already know what the list looked like a second ago. Come
+back from a full-page wizard to six roles or fourteen members and the new row
+is just a row. The toast names what happened, in words, and is gone in 3.5s —
+it costs nothing to a user who did not need it.
+
 | Situation | Feedback |
 | --- | --- |
-| The created object lands somewhere visible — a list, a widget, the page you return to | The object appearing is the confirmation. Show it as the first row, briefly highlighted. No banner. |
-| The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | `useToast().success(...)` — floating, auto-dismissing. See below. |
-| The create was irreversible | The confirmation modal before saving already carried the weight. The landing does the rest. |
+| The created object lands somewhere visible — a list, a widget, the page you return to | Toast, **and** show it as the first row, briefly highlighted. The two do different jobs: the toast says it happened, the row says where it went. |
+| The result is not visible — an asynchronous create, a governed action awaiting validation, a create the user navigates away from | Toast. It is the only signal there is. |
+| The create was irreversible | Toast. The confirmation modal before saving carried the risk; this carries the outcome. |
+
+Say what happened and what follows from it, not just "Created". `Role "Risk
+Analyst" created · Assigned to 3 members.` A landing that filters or scrolls to
+make the new object visible says so in the toast, because the user did not ask
+for the filter — see `handleInvite` in `PeopleAccessMembers.tsx`.
 
 In-flow `AlertBanner` is not the component for the invisible-result case — it's a full-width notice for system-level feedback, not "the thing you just asked for was created." **`Toast` resolves this** (`src/components/ui/toast.tsx`, `useToast()`) — it's a floating placement of the same `AlertBanner`, not a second component, auto-dismissed after 3500ms. `ToastProvider` wraps the whole app once, at the true root (`App()` in `src/App.tsx`) — call `useToast()` from any PM prototype screen with nothing to wire; there is no per-screen `ToastProvider` to remember. See the live demo on the `patterns-create` doc page's Anatomy tab.
 

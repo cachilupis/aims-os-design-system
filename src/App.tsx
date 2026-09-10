@@ -21609,7 +21609,7 @@ function PatternPanelContentPage() {
                 />
 
                 <div className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                  Type a tag name and press <kbd className="px-[4px] py-[0px] rounded-[3px] font-mono text-[10px]" style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>Enter</kbd> or click Add tag. Toggle error/disabled to test states. Add 6+ tags to see the full color palette cycle.
+                  Type a tag name and press <kbd className="px-[4px] py-[0px] rounded-[3px] font-mono text-[10px]" style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", border: "0.5px solid var(--field-border)" }}>Enter</kbd>, click Add tag, or just click away — leaving the field commits what is in it. Toggle error/disabled to test states. Add 6+ tags to see the full color palette cycle.
                 </div>
               </div>
 
@@ -21650,6 +21650,21 @@ function PatternPanelContentPage() {
                       { token: "--color-surface-light-blue-subtle + --color-border-light-blue-default + --color-text-light-blue", usage: "④ Light blue chip" },
                       { token: "--color-surface-yellow-more-subtle + --color-border-yellow-default + --color-text-yellow",  usage: "⑤ Yellow chip" },
                       { token: "--color-surface-purple-more-subtle + --color-border-purple-default + --color-text-purple",  usage: "⑥ Purple chip" },
+                    ].map(row => (
+                      <div key={row.token} className="flex items-start gap-[8px]">
+                        <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0 max-w-[220px]"
+                          style={{ background: "var(--color-surface-neutral-default)", color: "var(--foreground)", wordBreak: "break-all" }}>
+                          {row.token}
+                        </code>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>{row.usage}</span>
+                      </div>
+                    ))}
+                    <div className="text-[10px] font-semibold uppercase tracking-wide mt-[4px] mb-[2px]" style={{ color: "var(--field-supporting)" }}>Commit behaviour</div>
+                    {[
+                      { token: "Enter · Add tag · blur", usage: "Three ways to commit. Blur included: leaving the field keeps what was typed rather than discarding it — a user who has seen their text in the box reads a silent discard as the app losing their input" },
+                      { token: "Escape", usage: "Clears the draft and blurs. The only exit that throws the text away, and the user asked for it" },
+                      { token: "onDraftChange", usage: "Reports the uncommitted text. A CTA gated on tags.length alone reads a visibly filled field as empty — gate on tags.length > 0 || draft.trim() instead" },
+                      { token: "showAddButton={false}", usage: "Hides the button where it competes with the surface's own CTA. Say in the helper text that Enter commits, since the button was the visible hint" },
                     ].map(row => (
                       <div key={row.token} className="flex items-start gap-[8px]">
                         <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0 max-w-[220px]"
