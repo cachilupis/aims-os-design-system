@@ -56,6 +56,12 @@ import type { SidebarItem }  from "@/components/ui/sidebar"
 import { Header }            from "@/components/ui/header"
 import { Tabs }              from "@/components/ui/tabs"
 import { Filters }           from "@/components/ui/filters"
+import { Menu, MenuItem }    from "@/components/ui/menu-item"
+import { ModalDialog }       from "@/components/ui/modal-dialog"
+import { InformativeCard }   from "@/components/ui/informative-card"
+import { useToast }          from "@/components/ui/toast"
+import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
+import type { DropdownAnchor } from "@/lib/dropdown-anchor"
 import { Tag }               from "@/components/ui/tag"
 import { Chip }              from "@/components/ui/chip"
 import { SwitchTab }         from "@/components/ui/switch-tab"
@@ -67,7 +73,6 @@ import type { EntityListItemData } from "@/components/ui/entity-list"
 import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
-import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { Skeleton }          from "@/components/ui/skeleton"
@@ -81,6 +86,10 @@ import { specForContact, tabsForContact } from "./ucpTypeModel"
 import type { CanvasEntry, ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS,
+  getVerdict, getSignals, getSuggestions, getAgentReads, readAreas, renewalInDays,
+  renderableSignals, renderableReads, sortSuggestions, confirmLabel,
+  verdictWordCount, VERDICT_WORD_CAP, SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
+  RESOLVED_STATUSES, DISMISS_REASONS, TRAIN_ME_REASON, emitIntelligence,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
@@ -93,6 +102,7 @@ import type {
   MetricVariant, StudyRow,
   ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
   UcpNote, TagVariantLite,
+  VerdictEntity, SignalSeverity, ConfidenceState, SuggestionSort, SuggestionStatus, UcpSuggestion,
 } from "./ucpShared"
 
 export const UCP_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -586,17 +596,151 @@ const PLANE_ICON_VARIANT: Record<KnowledgePlane, HighlightIconVariant> = {
  * trusts.
  */
 
-/** The areas that mean growth rather than maintenance. The agent already
- *  classifies every read by area, so an opportunity is a read in one of these
- *  — not a separate thing somebody has to tag. */
-const OPPORTUNITY_AREAS = ["Renewal", "Expansion", "Deal"]
+/* OPPORTUNITY_AREAS and riskTier lived here, and both went with the rebuild.
+   riskTier turned a 0–100 score into High / Elevated / Low for a card at the
+   top of this tab — the tiering was the right instinct and the SUBJECT was
+   wrong. There is no aggregate risk score on a contact any more: a number
+   computed on a human being is a judgement wearing a decimal point, it cannot
+   be verified and it cannot be disputed. Named signals replaced it, each one
+   with a duration and a link to its evidence. Where a score exists at the
+   OPPORTUNITY level it can be shown here as an inherited, linked value —
+   an opportunity is a commercial object and can carry one. */
 
-/** Einstein's tiering, applied to the risk score this record already carries.
- *  A tier is what a person acts on; the number is the audit trail. */
-function riskTier(score: number): { label: string; variant: MetricVariant } {
-  if (score >= 70) return { label: "High",     variant: "error"   }
-  if (score >= 40) return { label: "Elevated", variant: "alert"   }
-  return { label: "Low", variant: "success" }
+/* ══════════════════════════════════════════════════════════════════════════
+   INTELLIGENCE — rebuilt 2026-09-10 to Michael's spec.
+
+   A rep opens a contact and needs to decide what to do about that person,
+   NOW. This is a working surface, not a reading surface: work is resolved
+   here, not just displayed. Every block earns its place against that.
+
+   Block order is fixed and nothing sits above the verdict:
+
+     1 Verdict          two sentences — who they are, and the imperative
+     2 Signals          named, verifiable conditions, one line each
+     3 Suggestion queue prioritised, workable, items leave when resolved
+     4 Agent reads      candidate claims, and what can be attested
+
+   WHAT WAS REMOVED, and why each removal is a subtraction of noise rather
+   than of information:
+
+   · The Risk / Opportunities / Recommendations metric cards. A card that
+     counts to one is worse than naming the thing it counted — "Opportunities
+     1" tells you less than the opportunity's own title would have. Risk
+     became signals; the other two became the queue.
+   · "Recommended next" as its own block. It is row one of the queue.
+   · The duplicate rendering. One item used to appear in four places — as a
+     risk factor, as a recommendation, as "recommended next", and as a key
+     moment. Each fact now renders in exactly one block and the others link
+     to it.
+   · "See it as a task" as a link. It is Accept, a primary action, and it is
+     the gesture that creates a task.
+   · Every confidence percentage. A number with no scale answers a question
+     nobody asked.
+   · The aggregate risk score ON THE CONTACT. A number computed on a human
+     being is a judgement wearing a decimal point. Where a score exists at
+     the opportunity level it is shown as an inherited, linked value.
+
+   COMPONENT INVENTORY, taken before anything was written:
+
+     list rows          EntityList                       reused
+     expandable rows    EntityList — description and aiInsight expand
+                        internally; no caller slot        EXTENDED (below)
+     status pills       Tag                               reused
+     callout blocks     InformativeCard                   reused
+     inline empty state EmptyState                        reused
+     disclosure         none in ui/; ProcessItem has showExpand but is a
+                        timeline step                     used EntityList's
+                                                          new slot instead
+     confirmation       ModalDialog variant="confirmation" reused
+
+   THE ONE EXTENSION: `EntityListItemData.expandable` — a controlled
+   `{ expanded, onToggle, content }` slot. The two existing expansions own
+   their state internally and render text only; a queue's expanded row is a
+   drafted reply, its grounding links and its actions, and the queue has to
+   be able to open a row programmatically. Extended, not forked.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+const SIGNAL_TAG: Record<SignalSeverity, TagVariantLite> = {
+  critical:  "error",
+  attention: "alert",
+  watch:     "neutral",
+}
+
+const CONFIDENCE_TAG: Record<ConfidenceState, TagVariantLite> = {
+  Inferred:   "neutral",
+  "In review": "alert",
+  Verified:   "success",
+}
+
+/**
+ * Text with its evidence spans rendered as links.
+ *
+ * Spans are located by substring AND occurrence rather than by re-parsing,
+ * because the same words legitimately appear twice — "12 days" in the
+ * imperative and "12 days" inside a quoted fragment are not the same link.
+ */
+function LinkedText({ text, entities, onGo }: {
+  text:     string
+  entities: VerdictEntity[]
+  onGo:     (destination: string) => void
+}) {
+  type Piece = { text: string; entity?: VerdictEntity }
+  const pieces: Piece[] = [{ text }]
+
+  for (const entity of entities) {
+    const want = entity.occurrence ?? 0
+    let seen = 0
+    for (let i = 0; i < pieces.length; i++) {
+      if (pieces[i].entity) continue
+      const at = pieces[i].text.indexOf(entity.text)
+      if (at === -1) continue
+      if (seen++ < want) continue
+      const before = pieces[i].text.slice(0, at)
+      const after  = pieces[i].text.slice(at + entity.text.length)
+      pieces.splice(i, 1,
+        ...(before ? [{ text: before }] : []),
+        { text: entity.text, entity },
+        ...(after ? [{ text: after }] : []),
+      )
+      break
+    }
+  }
+
+  return (
+    <>
+      {pieces.map((piece, i) => piece.entity ? (
+        <Tooltip key={i} content={piece.entity.tooltip} side="cursor">
+          {/*
+            A RAW <button>, AND IT SHOULD STAY ONE. This is a span of words
+            inside a sentence — "$480K" in the middle of the verdict — so no
+            Button variant applies: every one of them draws a control with its
+            own box, and a control cannot sit mid-paragraph without breaking
+            the line it is part of. It is a button rather than a span because
+            it does something on click, and a keyboard has to be able to reach
+            it.
+
+            The reset comes from classes, not from a style object, so the
+            audit's "a <button> that sets its own padding and a surface is a
+            Button" check reads it correctly: those declarations UNSET the
+            chrome rather than draw it, which is the opposite of what the check
+            is looking for.
+          */}
+          <button
+            className="appearance-none bg-transparent border-0 p-0 font-[inherit] cursor-pointer"
+            onClick={() => onGo(piece.entity!.destination)}
+            style={{
+              color: "var(--primary)", textDecoration: "underline",
+              textDecorationStyle: "dotted", textUnderlineOffset: 3,
+            }}
+          >
+            {piece.text}
+          </button>
+        </Tooltip>
+      ) : (
+        <span key={i}>{piece.text}</span>
+      ))}
+    </>
+  )
 }
 
 function IntelligenceTab({ contact, onGoTab, onAsk }: {
@@ -604,226 +748,611 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
   onGoTab: (id: string) => void
   onAsk:   () => void
 }) {
-  const [search, setSearch] = useState("")
-  const [area,   setArea]   = useState<string | undefined>(undefined)
+  const verdict     = useMemo(() => getVerdict(contact), [contact])
+  const signals     = useMemo(() => renderableSignals(getSignals(contact)), [contact])
+  const allReads    = useMemo(() => renderableReads(getAgentReads(contact)), [contact])
+  const [suggestions, setSuggestions] = useState(() => getSuggestions(contact))
 
-  const reads   = contact.insights
-  const signals = contact.tags.filter(t => t.role === "signal")
-  const risk    = useMemo(() => getRisk(contact), [contact])
-  const score     = Number((risk.find(r => r.label === "Risk score")?.value ?? "0").split("/")[0].trim())
-  const trendRow  = risk.find(r => r.label === "Trend")
-  const rising    = trendRow?.variant === "error" || trendRow?.variant === "alert"
-  const tier      = riskTier(score)
+  const [sort,     setSort]     = useState<SuggestionSort>("impact-urgency")
+  const [sortOpen, setSortOpen] = useState(false)
+  const [sortAnchor, setSortAnchor] = useState<DropdownAnchor | null>(null)
+  const sortDrop = useDropdownPosition(sortAnchor)
 
-  const opportunities = reads.filter(r => OPPORTUNITY_AREAS.includes(r.category))
+  const [openRow,  setOpenRow]  = useState<string | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
+  /** Which row is being dismissed or rejected, and which kind. Reason is
+   *  REQUIRED for both, which is why neither can complete from the row. */
+  const [reasonFor, setReasonFor] = useState<{ id: string; kind: "suggestion" | "read" } | null>(null)
+  /** The held row's fact entry. */
+  const [supplyFor, setSupplyFor] = useState<string | null>(null)
+  const [supplied,  setSupplied]  = useState("")
 
-  /**
-   * KEY MOMENTS, Einstein's device: the few things that changed the picture,
-   * not a second copy of the activity feed. Two sources, both already on the
-   * record — the signals it is carrying, and the activity rows whose state is
-   * not "fine". A moment with nothing to say about it is not a moment, so
-   * anything without a tooltip or a summary is left out.
-   */
-  const moments = useMemo(() => {
-    const fromSignals = signals.map(t => ({
-      id: `sig-${t.label}`, label: t.label, tone: t.tone,
-      detail: t.tooltip ?? "", when: "",
-    }))
-    const fromActivity = getActivity(contact)
-      .filter(a => a.state.variant === "error" || a.state.variant === "alert")
-      .map(a => ({
-        id: a.id, label: a.title, tone: a.state.variant === "error" ? "error" as const : "alert" as const,
-        detail: a.aiSummary ?? a.meta, when: a.timestamp,
-      }))
-    return [...fromSignals, ...fromActivity].filter(m => m.detail)
-  }, [contact, signals])
+  const [readQuery, setReadQuery] = useState("")
+  const [readArea,  setReadArea]  = useState<string | undefined>(undefined)
+  const [readState, setReadState] = useState<Record<string, ConfidenceState>>({})
+  const [rejected,  setRejected]  = useState<string[]>([])
 
-  const q = search.trim().toLowerCase()
-  const visibleReads = reads
-    .filter(r => !area || r.category === area)
-    .filter(r => q === "" || [r.headline, r.detail, r.category].some(v => v.toLowerCase().includes(q)))
+  const toast = useToast()
+  /* // STUB: entitlement. A real implementation asks the permission service
+     whether this user may attest in the read's area. Proposing is not
+     attesting — when they cannot, the action stays visible and renames
+     itself, because hiding it teaches them the product cannot do the thing. */
+  const canAttest = false
+
+  const setStatus = (id: string, status: SuggestionStatus, patch?: Partial<UcpSuggestion>) =>
+    setSuggestions(list => list.map(s => s.id === id ? { ...s, status, ...patch } : s))
+
+  const live     = suggestions.filter(s => !RESOLVED_STATUSES.includes(s.status))
+  const accepted = suggestions.filter(s => s.status === "accepted")
+  const sorted   = sortSuggestions(live, sort)
+  const sortLabel = SUGGESTION_SORTS.find(s => s.id === sort)?.label ?? ""
+
+  const reads = allReads
+    .filter(r => !rejected.includes(r.id))
+    .filter(r => !readArea || r.area === readArea)
+    .filter(r => {
+      const q = readQuery.trim().toLowerCase()
+      return !q || r.headline.toLowerCase().includes(q) || r.body.toLowerCase().includes(q)
+    })
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {/* Where this record stands. The risk card leads with the TIER and the
-          direction rather than the raw score, which is Einstein's own reading
-          of the same problem: 54 means nothing to somebody who does not know
-          the scale, "Elevated, and rising" means something immediately. */}
-      <AdaptiveMetricGrid
-        cards={[
-          {
-            label: "Risk", value: tier.label,
-            feedback: `${score} / 100 · ${rising ? "rising" : "improving"} since the last scan`,
-            feedbackType: tier.variant === "success" ? "positive" : "neutral",
-            iconName: rising ? "TrendingUp" : "TrendingDown",
-            iconVariant: tier.variant === "error" ? "error" : tier.variant === "alert" ? "alert" : "success",
-          },
-          {
-            label: "Opportunities", value: opportunities.length,
-            feedback: opportunities.length > 0
-              ? `In ${Array.from(new Set(opportunities.map(o => o.category))).join(", ").toLowerCase()}`
-              : "Nothing open on this record",
-            feedbackType: opportunities.length > 0 ? "positive" : "neutral",
-            iconName: "Target", iconVariant: "success",
-          },
-          {
-            label: "Recommendations", value: contact.nba ? 1 : 0,
-            feedback: contact.nba ? "One action proposed" : "Nothing proposed yet",
-            feedbackType: "neutral",
-            iconName: "Sparkle", iconVariant: "purple",
-          },
-        ]}
-      />
+    <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
 
-      {/* WHAT TO DO, before why. Gainsight hangs a CTA off the scorecard for
-          the same reason: a reader who agrees with the recommendation never
-          needs the reasoning underneath it. */}
-      {contact.nba && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <SectionLabel>Recommended next</SectionLabel>
+      {/* ── 1 · Verdict ─────────────────────────────────────────────────────
+          Nothing sits above this. Cached and never regenerated on load —
+          two people looking at the same contact have to read the same text,
+          or the product cannot be quoted in a conversation between them,
+          which is why generatedAt is always rendered. */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {verdict === null ? (
           <CardContainer size="sm">
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>
-                  {contact.nba.title}
+            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+              Not enough signal yet. This will fill in as activity and documents come in.
+            </span>
+          </CardContainer>
+        ) : (
+          <CardContainer size="sm">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--color-text-title)", margin: 0 }}>
+                <LinkedText text={verdict.text} entities={verdict.entities} onGo={onGoTab} />
+              </p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                  {`Generated ${verdict.generatedAt} · ${verdictWordCount(verdict.text)} of ${VERDICT_WORD_CAP} words`}
                 </span>
-                <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{contact.nba.timestamp}</span>
-              </div>
-              {contact.nba.rationale && (
-                <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.55 }}>
-                  {contact.nba.rationale}
-                </span>
-              )}
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Button
-                  variant="secondary" size="sm"
-                  icon={<Sparkle size={13} strokeWidth={1.75} />}
-                  onClick={onAsk}
-                >
-                  Ask the concierge
-                </Button>
-                <Button variant="tertiary" size="sm" onClick={() => onGoTab("activity")}>
-                  See it as a task
-                </Button>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <Tooltip content="This reads right" side="cursor">
+                    <Button variant="tertiary" size="sm" aria-label="This reads right"
+                      onClick={() => { emitIntelligence({ name: "verdict_rated", contactId: contact.id, rating: "up" }); toast.success("Thanks — noted.") }}>
+                      <LucideIcons.ThumbsUp size={14} />
+                    </Button>
+                  </Tooltip>
+                  {/* A thumbs down opens the SAME reason capture as Dismiss.
+                      One vocabulary for "this is wrong" across the section,
+                      and "This is wrong" routes to Train Me from both. */}
+                  <Tooltip content="This is off — tell us why" side="cursor">
+                    <Button variant="tertiary" size="sm" aria-label="This is off"
+                      onClick={() => setReasonFor({ id: "verdict", kind: "read" })}>
+                      <LucideIcons.ThumbsDown size={14} />
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content="Regenerate this verdict" side="cursor">
+                    <Button variant="tertiary" size="sm" aria-label="Regenerate"
+                      onClick={() => { emitIntelligence({ name: "verdict_regenerated", contactId: contact.id }); toast.success("Regenerating", { description: "The verdict updates for everyone on this record." }) }}>
+                      <LucideIcons.RefreshCw size={14} />
+                    </Button>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           </CardContainer>
-        </div>
-      )}
+        )}
+      </section>
 
-      {/* WHAT CHANGED. Not the activity feed — the rows that are not fine,
-          plus the signals the record carries, each with the one line that
-          says why it matters. */}
-      {moments.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <SectionLabel>Key moments</SectionLabel>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {moments.map(m => (
-              <div key={m.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, minWidth: 0 }}>
-                <HighlightIcon
-                  size="sm"
-                  variant={m.tone === "error" ? "error" : "alert"}
-                  iconName={m.tone === "error" ? "AlertCircle" : "AlertTriangle"}
-                />
-                <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{m.label}</span>
-                    {m.when && (
-                      <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>{m.when}</span>
-                    )}
-                  </div>
-                  <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.55 }}>
-                    {m.detail}
-                  </span>
-                </div>
+      {/* ── 2 · Signals ─────────────────────────────────────────────────────
+          Named, verifiable conditions — one line each, scanned rather than
+          read, ordered by severity then recency. `since` is always present:
+          "awaiting us" is a fact, "awaiting us · 6 days" is a decision.
+
+          There is NO aggregate risk score here. Risk on a contact used to be
+          a number out of 100 computed on a person; it is these instead. */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <SectionLabel>Signals</SectionLabel>
+        {signals.length === 0 ? (
+          <CardContainer size="sm">
+            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>No open signals on this contact.</span>
+          </CardContainer>
+        ) : (
+          <CardContainer size="sm" className="!p-0 overflow-hidden">
+            {signals.map((sig, i) => (
+              <div
+                key={sig.type}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                  padding: "10px 16px",
+                  borderTop: i === 0 ? "none" : "0.5px solid var(--field-border)",
+                }}
+              >
+                <Tag variant={SIGNAL_TAG[sig.severity]} size="sm">{sig.label}</Tag>
+                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{sig.since}</span>
+                <div style={{ flex: 1 }} />
+                {/* Required. A signal that cannot be checked does not render
+                    at all — renderableSignals drops it before this loop. */}
+                <Button variant="tertiary" size="sm" onClick={() => onGoTab(sig.evidence!.destination.toLowerCase())}>
+                  {sig.evidence!.label}
+                  <LucideIcons.ArrowUpRight size={12} />
+                </Button>
+                {sig.suggestionId && live.some(s => s.id === sig.suggestionId) && (
+                  <Button variant="secondary" size="sm" onClick={() => setOpenRow(sig.suggestionId!)}>
+                    Resolve
+                  </Button>
+                )}
               </div>
             ))}
+          </CardContainer>
+        )}
+      </section>
+
+      {/* ── 3 · Suggestion queue ────────────────────────────────────────────
+          SUGGESTIONS, NEVER TASKS. A suggestion is what the system proposes;
+          a task is what the rep committed to. Accept is the gesture that
+          turns one into the other and puts it in the global inbox — which is
+          why this list is never mirrored there, and why accepted items show
+          as a link out rather than as rows. */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <SectionLabel>{`Suggestions (${live.length})`}</SectionLabel>
+          {/* THE SORT IS VISIBLE AND CHANGEABLE. A queue whose order cannot
+              be explained will not be trusted, and a rep who cannot see why
+              row one is row one will work down it in their own order. */}
+          <div onClickCapture={e => setSortAnchor(anchorFromEvent(e))}>
+            <Button variant="tertiary" size="sm" onClick={() => setSortOpen(v => !v)}>
+              <LucideIcons.ArrowDownUp size={12} />
+              {`Sorted by ${sortLabel.toLowerCase()}`}
+            </Button>
           </div>
         </div>
-      )}
 
-      {/* WHY — the agent's reads, each with its area, its confidence and the
-          place to act on it. This is the part no scorecard has: Einstein gives
-          you a score, this gives you the sentence behind it and the plane the
-          claim came from, one tab over. */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {live.length === 0 ? (
+          /* An accomplishment, not an absence. */
+          <CardContainer size="sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <HighlightIcon size="sm" variant="success" iconName="Check" />
+              <span style={{ fontSize: 13, color: "var(--color-text-title)" }}>Nothing pending on this contact.</span>
+            </div>
+          </CardContainer>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {sorted.map(s => (
+              <SuggestionRow
+                key={s.id}
+                suggestion={s}
+                expanded={openRow === s.id}
+                onToggle={() => setOpenRow(id => id === s.id ? null : s.id)}
+                selected={selected.includes(s.id)}
+                onSelect={() => setSelected(list => list.includes(s.id) ? list.filter(x => x !== s.id) : [...list, s.id])}
+                onGo={onGoTab}
+                onSend={variant => {
+                  emitIntelligence({ name: "draft_sent", suggestionId: s.id, variant })
+                  /* THE FAST PATH ALSO FIRES THE CONFIRMATION REQUEST.
+                     Without that, "reply without committing" becomes the
+                     default, the fact is never attested, and the agent
+                     blocks on the same gap forever. */
+                  if (variant === "without_commitment" && s.held) {
+                    emitIntelligence({ name: "fact_supplied", suggestionId: s.id, value: "(requested)", owner: s.held.owner })
+                    setStatus(s.id, "pending_confirmation", { held: { ...s.held, withOwnerFor: "just now" } })
+                    toast.success("Sent without a commitment", {
+                      description: `${s.held.owner} has been asked to confirm ${s.held.missing} so the full reply can go out next time.`,
+                    })
+                    return
+                  }
+                  setStatus(s.id, "done")
+                  toast.success("Sent", { description: `${s.title} — the row has left the queue.` })
+                }}
+                onAccept={() => {
+                  emitIntelligence({ name: "suggestion_accepted", suggestionId: s.id })
+                  setStatus(s.id, "accepted")
+                  toast.success("Accepted", { description: `${s.title} is now a task in your inbox.` })
+                }}
+                onSupply={() => { setSupplyFor(s.id); setSupplied("") }}
+                onDismiss={() => setReasonFor({ id: s.id, kind: "suggestion" })}
+                onAsk={onAsk}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Accepted items are a LINK OUT, not rows. They live in the global
+            inbox now; repeating them here is how a rep accepts the same
+            thing twice. */}
+        {accepted.length > 0 && (
+          <Button variant="tertiary" size="sm" className="self-start" onClick={() => toast.success("Opening your inbox", { description: `${accepted.length} accepted from this contact.` })}>
+            {`${accepted.length} accepted`}
+            <LucideIcons.ArrowUpRight size={12} />
+          </Button>
+        )}
+      </section>
+
+      {/* ── 4 · Agent reads ─────────────────────────────────────────────────
+          Candidate claims. Confirming one routes it through KCON and, once
+          attested, increments the facts count in the page header — the rep
+          sees their input land. */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <SectionLabel>Agent reads</SectionLabel>
         <Filters
           showSearch
-          searchPlaceholder="Search reads by headline, detail or area…"
-          searchValue={search}
-          onSearchChange={setSearch}
+          searchPlaceholder="Search reads…"
+          searchValue={readQuery}
+          onSearchChange={setReadQuery}
           slots={[{
             placeholder: "Area",
-            value:       area,
-            options:     Array.from(new Set(reads.map(r => r.category))).sort(),
-            onSelect:    setArea,
-            onRemove:    () => setArea(undefined),
+            value:       readArea,
+            options:     readAreas(allReads),
+            onSelect:    setReadArea,
+            onRemove:    () => setReadArea(undefined),
           }]}
-          showClearFilters={!!area || q !== ""}
-          onClearFilters={() => { setArea(undefined); setSearch("") }}
+          showClearFilters={!!readArea || readQuery !== ""}
+          onClearFilters={() => { setReadArea(undefined); setReadQuery("") }}
           showViewToggle={false}
           showAllFilters={false}
           showSort={false}
         />
-        {visibleReads.length === 0 ? (
+        {reads.length === 0 ? (
           <EmptyState
-            compact
-            icon={LucideIcons.Sparkle}
-            title={q || area ? "No reads match" : "No reads yet"}
-            description={q || area
-              ? "Try another area, or clear the filters to see every read."
-              : `${contact.agent.name} has not published a read on this record yet.`}
-            ctaLabel={q || area ? "Clear filters" : undefined}
-            onCta={q || area ? () => { setArea(undefined); setSearch("") } : undefined}
+            icon={Sparkle}
+            title={readQuery || readArea ? "No reads match this filter" : "No agent reads on this contact yet"}
+            description={readQuery || readArea
+              ? "Try another area, or clear the filter."
+              : "Reads appear as agents work this record."}
+            ctaLabel={readQuery || readArea ? "Clear filters" : undefined}
+            onCta={readQuery || readArea ? () => { setReadArea(undefined); setReadQuery("") } : undefined}
           />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {visibleReads.map(r => (
-              <CardContainer key={r.id} size="sm">
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                    <Sparkle size={13} strokeWidth={1.75} style={{ color: "var(--color-text-purple)", flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-purple)" }}>
-                      {contact.agent.name}
-                    </span>
-                    <Tag variant="secondary" size="sm">{r.category}</Tag>
-                    <span style={{ fontSize: 11, marginLeft: "auto", color: "var(--field-supporting)", whiteSpace: "nowrap" }}>
-                      {r.confidence}% confidence
-                    </span>
+            {reads.map(r => {
+              const state = readState[r.id] ?? r.state
+              return (
+                <CardContainer key={r.id} size="sm">
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
+                      <HighlightIcon size="sm" variant={r.kind === "structural" ? "informative" : "purple"} iconName={r.kind === "structural" ? "Network" : "MessageCircle"} />
+                      <div style={{ flex: 1, minWidth: 220, display: "flex", flexDirection: "column", gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{r.headline}</span>
+                        <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>{r.body}</span>
+                      </div>
+                      {/* A STATE LABEL, NEVER A PERCENTAGE. */}
+                      <Tag variant={CONFIDENCE_TAG[state]} size="sm">{state}</Tag>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{`${r.agent} · ${r.area}`}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>·</span>
+                      {r.evidence.map(e => (
+                        <Button key={e.label} variant="tertiary" size="sm" onClick={() => onGoTab(e.destination.toLowerCase())}>
+                          {e.label}
+                          <LucideIcons.ArrowUpRight size={11} />
+                        </Button>
+                      ))}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {/* INTERPRETIVE READS HAVE NO CONFIRM ACTION. A read of
+                          tone, intent or sentiment renders and expires;
+                          persisting a judgement about a person's emotional
+                          state as an attested fact is a thing this product
+                          must not be able to do. The type is what stops it. */}
+                      {r.kind === "structural" ? (
+                        state === "Verified" ? (
+                          <span style={{ fontSize: 11, color: "var(--color-text-success)" }}>Attested — now a Truth Plane fact.</span>
+                        ) : (
+                          <Button
+                            variant="primary" size="sm"
+                            onClick={() => {
+                              emitIntelligence({ name: "read_confirmed", readId: r.id, proposed: !canAttest })
+                              setReadState(m => ({ ...m, [r.id]: canAttest ? "Verified" : "In review" }))
+                              toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
+                                description: canAttest
+                                  ? "It is on the Truth Plane. The facts count on this record has gone up."
+                                  : "Sent to the domain owner for attestation. You will see it here when it lands.",
+                              })
+                            }}
+                          >
+                            {confirmLabel(canAttest)}
+                          </Button>
+                        )
+                      ) : (
+                        <Tooltip content="A read of tone or intent is never attested as a fact about a person." side="cursor">
+                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Interpretive — expires, never attested.</span>
+                        </Tooltip>
+                      )}
+                      <Button variant="tertiary" size="sm" onClick={() => setReasonFor({ id: r.id, kind: "read" })}>
+                        Reject
+                      </Button>
+                    </div>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", lineHeight: 1.4 }}>
-                    {r.headline}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.55 }}>
-                    {r.detail}
-                  </span>
-                  {r.destination && (
-                    <Button
-                      variant="tertiary" size="sm" className="self-start !px-0"
-                      icon={<LucideIcons.ArrowUpRight size={13} strokeWidth={1.75} />}
-                      iconPosition="right"
-                      onClick={() => onGoTab(r.destination!.toLowerCase())}
-                    >
-                      {`Open in ${r.destination}`}
-                    </Button>
+                </CardContainer>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* ── The sort menu ── */}
+      {sortOpen && sortAnchor && (
+        <div ref={sortDrop.ref} style={{ position: "fixed", zIndex: 10001, ...sortDrop.style }}>
+          <Menu>
+            {SUGGESTION_SORTS.map(opt => (
+              <MenuItem key={opt.id} size="sm" label={opt.label}
+                onClick={() => { setSort(opt.id); setSortOpen(false) }} />
+            ))}
+          </Menu>
+        </div>
+      )}
+
+      {/* ── Supplying the missing fact ──
+          It enters the Sandbox Plane as a candidate claim and routes to the
+          domain owner for KCON. The row moves to Pending confirmation and
+          says who has it, so the rep can chase. */}
+      <ModalDialog
+        isOpen={supplyFor !== null}
+        onClose={() => setSupplyFor(null)}
+        variant="content"
+        iconName="CalendarCheck"
+        iconVariant="informative"
+        title="Supply the date"
+        description="It enters the Sandbox Plane as a candidate claim and goes to the domain owner to attest. The draft releases on its own once it lands."
+        slotUnstyled
+        slot={
+          <Input
+            placeholder="e.g. 14 November 2026"
+            value={supplied}
+            onChange={e => setSupplied(e.target.value)}
+          />
+        }
+        ctaPrimary={{
+          label: "Send for confirmation",
+          disabled: supplied.trim() === "",
+          onClick: () => {
+            const s = suggestions.find(x => x.id === supplyFor)
+            if (s?.held) {
+              emitIntelligence({ name: "fact_supplied", suggestionId: s.id, value: supplied.trim(), owner: s.held.owner })
+              setStatus(s.id, "pending_confirmation", { held: { ...s.held, withOwnerFor: "just now" } })
+              toast.success("Sent for confirmation", { description: `With ${s.held.owner}. The draft releases here as soon as it is attested.` })
+            }
+            setSupplyFor(null)
+          },
+        }}
+        ctaSecondary={{ label: "Cancel", onClick: () => setSupplyFor(null) }}
+      />
+
+      {/* ── The reason capture ──
+          DISMISS AND REJECT CANNOT COMPLETE WITHOUT ONE. A queue that empties
+          without saying why teaches the engine nothing, and this is the
+          highest-value Train Me signal in the section. */}
+      <ModalDialog
+        isOpen={reasonFor !== null}
+        onClose={() => setReasonFor(null)}
+        variant="content"
+        iconName="MessageSquareWarning"
+        iconVariant="yellow"
+        title={reasonFor?.kind === "suggestion" ? "Why is this not right?" : "Why is this read wrong?"}
+        description="Required. It is the only thing that stops the same suggestion coming back."
+        slotUnstyled
+        slot={
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {DISMISS_REASONS.map(reason => (
+              <CardContainer
+                key={reason}
+                size="sm"
+                onClick={() => {
+                  if (!reasonFor) return
+                  if (reasonFor.id === "verdict") {
+                    emitIntelligence({ name: "verdict_rated", contactId: contact.id, rating: "down" })
+                  } else if (reasonFor.kind === "suggestion") {
+                    emitIntelligence({ name: "suggestion_dismissed", suggestionId: reasonFor.id, reason })
+                    setStatus(reasonFor.id, "dismissed")
+                  } else {
+                    emitIntelligence({ name: "read_rejected", readId: reasonFor.id, reason })
+                    setRejected(list => [...list, reasonFor.id])
+                  }
+                  setReasonFor(null)
+                  toast.success(
+                    reason === TRAIN_ME_REASON ? "Sent to Train Me" : "Noted",
+                    { description: reason === TRAIN_ME_REASON
+                        ? "A correction carries further than a dismissal — it changes what the agent proposes next."
+                        : `Dismissed as “${reason.toLowerCase()}”.` },
+                  )
+                }}
+              >
+                <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{reason}</span>
+                  {reason === TRAIN_ME_REASON && (
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                      Goes to Train Me — a correction, not a triage decision.
+                    </span>
                   )}
                 </div>
               </CardContainer>
             ))}
           </div>
-        )}
-      </div>
-
-      {/* THE DRIVERS behind the score. Einstein publishes how it scored an
-          opportunity for a reason: a score you cannot take apart is a score
-          you cannot act on, and the first question anybody asks a number is
-          "made of what". These are the study's own rows, tooltips included. */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <SectionLabel>What the risk score is made of</SectionLabel>
-        <StatRowContent counters={risk.slice(0, 3)} checked={risk[3]} />
-      </div>
+        }
+        ctaSecondary={{ label: "Cancel", onClick: () => setReasonFor(null) }}
+      />
     </div>
+  )
+}
+
+/**
+ * One row of the queue.
+ *
+ * COLLAPSED it is one scannable line: status, verb-plus-object, one clause of
+ * reason. EXPANDED it carries the draft, which is the asset rather than an
+ * attachment — the draft IS the reason to open a row.
+ */
+function SuggestionRow({
+  suggestion: s, expanded, onToggle, selected, onSelect,
+  onGo, onSend, onAccept, onSupply, onDismiss, onAsk,
+}: {
+  suggestion: UcpSuggestion
+  expanded:   boolean
+  onToggle:   () => void
+  selected:   boolean
+  onSelect:   () => void
+  onGo:       (destination: string) => void
+  onSend:     (variant: "full" | "without_commitment") => void
+  onAccept:   () => void
+  onSupply:   () => void
+  onDismiss:  () => void
+  onAsk:      () => void
+}) {
+  const held = s.status === "held" ? s.held : undefined
+  const [showFullDraft, setShowFullDraft] = useState(false)
+  const draft = held ? s.draft : s.draft
+
+  const statusVariant: TagVariantLite =
+    s.status === "held" ? "alert"
+    : s.status === "pending_confirmation" ? "informative"
+    : s.status === "ready" ? "success"
+    : "neutral"
+
+  return (
+    <CardContainer size="sm" className="!p-0 overflow-hidden">
+      <EntityList items={[{
+        id:    s.id,
+        title: s.title,
+        iconName: s.status === "held" ? "ShieldAlert"
+          : s.status === "pending_confirmation" ? "Hourglass"
+          : s.status === "ready" ? "PenLine" : "Sparkle",
+        iconVariant: s.status === "held" ? "yellow"
+          : s.status === "pending_confirmation" ? "info"
+          : s.status === "ready" ? "success" : "neutral",
+        /* One clause, never a paragraph. The full version is in the
+           expansion, with its evidence linked inline. */
+        primaryMeta: [{ iconName: "Info", label: s.reason }],
+        state: { label: SUGGESTION_STATUS_LABEL[s.status], variant: statusVariant },
+        /* Multi-select — this list is processed, not contemplated. */
+        showMenu: false,
+        onClick: onSelect,
+        expandable: {
+          expanded,
+          onToggle,
+          label: expanded ? "Hide the draft" : "Show the draft",
+          content: (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
+                <LinkedText text={s.reasonFull} entities={s.reasonEntities} onGo={onGo} />
+              </span>
+
+              {/* ── THE HELD STATE ──
+                  The most important row in this section, and it is the
+                  product's core claim working correctly: The Council blocked
+                  a draft because a fact it referenced is not attested.
+
+                  IT READS AS AN INVITATION, never as an error or a log entry.
+                  Two paths, both visible — and the fast one still fires the
+                  confirmation request, or it becomes the default and the gap
+                  never closes. */}
+              {held && (
+                <InformativeCard
+                  state="alert"
+                  size="sm"
+                  title="Your reply is ready. One date needs confirming before it can go out."
+                  description={`The draft references ${held.missing} that is not attested in the Truth Plane. The Council holds anything that commits to an unattested fact — that is what stops an agent promising something nobody has verified.`}
+                />
+              )}
+
+              {s.status === "pending_confirmation" && s.held && (
+                <InformativeCard
+                  state="informative"
+                  size="sm"
+                  title={`With ${s.held.owner} · ${s.held.withOwnerFor ?? "just now"}`}
+                  description="Waiting on attestation. The draft releases here on its own once it lands — you do not have to come back and check."
+                  cta={{ label: `Chase ${s.held.owner.split(" ")[0]}`, onClick: onAsk }}
+                />
+              )}
+
+              {/* ── The draft ──
+                  Three lines collapsed. It is the main reason to expand a
+                  row, so it gets the room. */}
+              {draft && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <SectionLabel>{held ? "Draft — the full reply" : "Draft"}</SectionLabel>
+                    <Tag variant={CONFIDENCE_TAG[s.confidence]} size="sm">{s.confidence}</Tag>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex", flexDirection: "column", gap: 6,
+                      padding: 12, borderRadius: 8,
+                      background: "var(--color-surface-neutral-subtle)",
+                      border: "0.5px solid var(--field-border)",
+                    }}
+                  >
+                    {(showFullDraft ? draft.body : draft.body.slice(0, 3)).map((line, i) => (
+                      <span key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "var(--foreground)" }}>{line}</span>
+                    ))}
+                    {draft.body.length > 3 && (
+                      <Button variant="tertiary" size="sm" className="self-start !px-0" onClick={() => setShowFullDraft(v => !v)}>
+                        {showFullDraft ? "Show less" : `Show all ${draft.body.length} lines`}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Which Truth Plane facts the draft used. A draft with no
+                      grounding is a draft nobody can check. */}
+                  {draft.grounding.length > 0 && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Grounded in</span>
+                      {draft.grounding.map(g => (
+                        <Button key={g.factId} variant="tertiary" size="sm" onClick={() => onGo("knowledge")}>
+                          {g.label}
+                          <LucideIcons.ArrowUpRight size={11} />
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {s.expired && (
+                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{s.expired}</span>
+              )}
+
+              {/* ── Actions ── */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                {held ? (
+                  <>
+                    <Button variant="primary" size="sm" onClick={onSupply}>Supply the date</Button>
+                    {/* Secondary, and it is not a shortcut: it sends a variant
+                        that commits to nothing AND fires the confirmation
+                        request in the background. */}
+                    <Button variant="secondary" size="sm" onClick={() => onSend("without_commitment")}>
+                      Reply without committing
+                    </Button>
+                  </>
+                ) : s.status === "ready" ? (
+                  /* IN PLACE. The rep is not routed to a chat surface to
+                     send a reply the queue already drafted. */
+                  <Button variant="primary" size="sm" onClick={() => onSend("full")}>Review and send</Button>
+                ) : s.status === "pending_confirmation" ? null : (
+                  /* Scheduled work rather than an immediate send, so ACCEPT
+                     is the action — a first-class button, not a link, because
+                     it is the gesture that creates a task. */
+                  <Button variant="primary" size="sm" onClick={onAccept}>Accept</Button>
+                )}
+                {s.status !== "pending_confirmation" && (
+                  <Button variant="tertiary" size="sm" onClick={onAsk}>Edit</Button>
+                )}
+                <Button variant="tertiary" size="sm" onClick={onDismiss}>Dismiss</Button>
+                {selected && (
+                  <span style={{ fontSize: 11, color: "var(--primary)" }}>Selected</span>
+                )}
+              </div>
+            </div>
+          ),
+        },
+      }]} />
+    </CardContainer>
   )
 }
 
@@ -1923,12 +2452,39 @@ export function UcpProfileView({
   // The attribute row under the title — display-only, always visible, and a
   // different thing from recordFields, which carry provenance and a masking
   // state and are reached through the ⓘ panel. The component caps this at six.
+  /**
+   * THE COMMERCIAL CLOCK IS IN THE HEADER NOW — Michael, 2026-09-10, and it
+   * is the one header change the Intelligence rebuild asked for.
+   *
+   * "Renewal in 12 days" was living inside body copy on the Intelligence tab,
+   * which made the most decision-relevant value on the page something you had
+   * to read a paragraph to find, on a tab you had to click to reach. It is a
+   * fact somebody could act on, which is exactly what secondaryMetadata is
+   * for, and it is now visible on every tab of the record.
+   *
+   * It goes FIRST, and it is the one item here that is time-bound — everything
+   * else in this row is a count or a status that will read the same next week.
+   * The cap is six and the aim is four; this record ships four, so the clock
+   * lands inside the budget rather than pushing something out.
+   */
   const secondaryMetadata = useMemo<SecondaryMetadataItem[]>(
-    () => contact.meta.map(m => ({
-      icon:    (LucideIcons[m.iconName as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon,
-      text:    m.label,
-      tooltip: m.tooltip,
-    })),
+    () => {
+      const days = renewalInDays(contact)
+      const base = contact.meta.map(m => ({
+        icon:    (LucideIcons[m.iconName as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon,
+        text:    m.label,
+        tooltip: m.tooltip,
+      }))
+      if (days === null) return base
+      return [
+        {
+          icon:    LucideIcons.CalendarClock as LucideIcon,
+          text:    `Renewal in ${days} days`,
+          tooltip: `Renewal · closes in ${days} days. The dated commercial event every open question on this record is measured against.`,
+        },
+        ...base,
+      ]
+    },
     [contact],
   )
 

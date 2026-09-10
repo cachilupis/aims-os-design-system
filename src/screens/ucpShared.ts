@@ -1986,3 +1986,538 @@ export const CREATE_LOCATIONS = [
 /** Who a record can be assigned to, read off the roster so the list cannot
  *  drift from the owners the records actually have. */
 export const CREATE_OWNERS = Array.from(new Set(CONTACTS.map(c => c.owner))).sort()
+
+/* ══════════════════════════════════════════════════════════════════════════
+   INTELLIGENCE
+   ══════════════════════════════════════════════════════════════════════════
+
+   Intelligence is a WORKING surface, not a reading surface. A rep opens a
+   contact to decide what to do about that person now, so every block below
+   earns its place by helping them decide or act, and the order is fixed:
+
+     1 Verdict          who this is and what to do about them
+     2 Signals          named, verifiable conditions
+     3 Suggestion queue what the system proposes, worked and resolved here
+     4 Agent reads      what agents have inferred, and what can be attested
+
+   Nothing sits above the verdict.
+
+   NO BACKEND. Everything here is a shape plus a fixture, and every shape is
+   marked. Where a real system would compute, this derives from the record's
+   own data so the fixtures cannot disagree with the rest of the profile.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * ── 1 · The verdict ────────────────────────────────────────────────────────
+ *
+ * Two sentences. The first says who this person is and what they care about;
+ * the second is the imperative plus the clock, and it starts with a verb.
+ *
+ * CACHED, NOT REGENERATED ON LOAD, which is a product rule rather than a
+ * performance one: two people looking at the same contact have to read the
+ * same text, or the product cannot be quoted in a conversation between them.
+ * `generatedAt` is always rendered for the same reason.
+ *
+ * `entities` are spans in the text that link to their evidence. They are
+ * ranges rather than a re-parse of the string, because the same words can
+ * appear twice — "12 days" in the second sentence and "12 days" in a quoted
+ * fragment are not the same link.
+ */
+export interface VerdictEntity {
+  /** The exact substring, used to locate the span for rendering. */
+  text:        string
+  /** Which occurrence, when the text repeats. Zero-based. */
+  occurrence?: number
+  /** Where it goes: a tab on this record, or a section of the platform. */
+  destination: string
+  /** What the reader is about to open. Shown on hover. */
+  tooltip:     string
+}
+
+export interface UcpVerdict {
+  /** Hard cap 45 words, ENFORCED AT GENERATION, never by visual truncation —
+   *  a sentence cut mid-clause says something the generator did not. */
+  text:        string
+  generatedAt: string
+  entities:    VerdictEntity[]
+}
+
+/** The cap, exported so the check can live beside the copy that has to pass it. */
+export const VERDICT_WORD_CAP = 45
+
+export function verdictWordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length
+}
+
+/**
+ * ── 2 · Signals ────────────────────────────────────────────────────────────
+ *
+ * A CLOSED CATALOG. Adding a type is a deliberate change to this list, not
+ * something an agent can invent at runtime — which is the whole difference
+ * between a signal and a sentence about a person.
+ *
+ * THERE IS NO AGGREGATE RISK SCORE ON A CONTACT. A number computed on a human
+ * being is a judgement wearing a decimal point: it cannot be verified, it
+ * cannot be disputed, and it survives long after whatever produced it. Where a
+ * score exists at the OPPORTUNITY level it may be shown here as an inherited,
+ * linked value — the opportunity is a commercial object and can carry one.
+ */
+export type SignalType =
+  | "response_debt"
+  | "single_thread"
+  | "engagement_velocity"
+  | "contract_clock"
+  | "open_commitment"
+  | "role_change"
+
+export const SIGNAL_CATALOG: Record<SignalType, { label: string; firesWhen: string; icon: string }> = {
+  response_debt:       { label: "Awaiting us",         firesWhen: "We owe the contact a reply",              icon: "MailWarning"  },
+  single_thread:       { label: "Single thread",       firesWhen: "Only one live contact on the account",    icon: "UserMinus"    },
+  engagement_velocity: { label: "Engagement falling",  firesWhen: "Contact frequency trending down",         icon: "TrendingDown" },
+  contract_clock:      { label: "Renewal window",      firesWhen: "A dated commercial event is approaching", icon: "CalendarClock"},
+  open_commitment:     { label: "Open commitment",     firesWhen: "Something was promised and not delivered",icon: "Handshake"    },
+  role_change:         { label: "Role change",         firesWhen: "Authority or title changed",              icon: "UserCog"      },
+}
+
+/** Exactly three. A fourth level is a fourth thing to learn and, in practice,
+ *  a second name for one of these. */
+export type SignalSeverity = "critical" | "attention" | "watch"
+
+export interface UcpSignal {
+  type:     SignalType
+  label:    string
+  severity: SignalSeverity
+  /** Always present. Duration is what makes a signal actionable — "awaiting us"
+   *  is a fact, "awaiting us · 6 days" is a decision. */
+  since:    string
+  /** Where the claim can be checked. A signal with no evidence does not render;
+   *  `renderableSignals` enforces that rather than trusting the caller. */
+  evidence: { label: string; destination: string } | null
+  /** The queue row that resolves this, when there is one. */
+  suggestionId?: string
+}
+
+/** Severity first, then recency. The strip is scanned, not read. */
+const SEVERITY_ORDER: Record<SignalSeverity, number> = { critical: 0, attention: 1, watch: 2 }
+
+/** Drops any signal that cannot be checked. The rule is "a signal with no
+ *  evidence link does not render", and a rule enforced at the call site is a
+ *  rule that holds until somebody writes a second call site. */
+export function renderableSignals(signals: UcpSignal[]): UcpSignal[] {
+  return signals
+    .filter(s => s.evidence !== null)
+    .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
+}
+
+/**
+ * ── 3 · The suggestion queue ───────────────────────────────────────────────
+ *
+ * A SUGGESTION IS NOT A TASK. A suggestion is what the system proposes; a task
+ * is what the rep committed to. Accepting is the gesture that turns one into
+ * the other and puts it in the platform-wide inbox — which is why nothing here
+ * is ever called a task, and why this list is never mirrored into that inbox.
+ * Only accepted items go there.
+ */
+export type SuggestionStatus =
+  | "new"                  // not yet looked at
+  | "ready"                // draft prepared, awaiting review
+  | "held"                 // blocked by The Council — see `held` below
+  | "pending_confirmation" // rep supplied a fact, awaiting KCON
+  | "accepted"             // converted to a task, lives in the global inbox
+  | "done"
+  | "dismissed"
+
+export const SUGGESTION_STATUS_LABEL: Record<SuggestionStatus, string> = {
+  new:                  "New",
+  ready:                "Ready",
+  held:                 "Held",
+  pending_confirmation: "Pending confirmation",
+  accepted:             "Accepted",
+  done:                 "Done",
+  dismissed:            "Dismissed",
+}
+
+/** Rows leave the queue on these three. Accepted stays reachable as a link
+ *  out, so the rep cannot accept the same thing twice. */
+export const RESOLVED_STATUSES: SuggestionStatus[] = ["accepted", "done", "dismissed"]
+
+/** A state label, never a percentage. A number with no scale tells the reader
+ *  nothing — "0.82" answers a question nobody asked. */
+export type ConfidenceState = "Inferred" | "In review" | "Verified"
+
+/** Required, and this is the whole point of Dismiss. A queue that empties
+ *  without saying why teaches the engine nothing. */
+export const DISMISS_REASONS = ["Already done", "Not relevant", "This is wrong", "Bad timing"] as const
+export type DismissReason = typeof DISMISS_REASONS[number]
+
+/** "This is wrong" is a different act from the other three — it is a
+ *  correction, not a triage decision, and it routes to Train Me. */
+export const TRAIN_ME_REASON: DismissReason = "This is wrong"
+
+export interface SuggestionDraft {
+  /** Three lines shown collapsed; the rest on expand. The draft IS the asset —
+   *  it is the main reason to open a row. */
+  body:      string[]
+  /** Truth Plane facts the draft used, as links into Knowledge. */
+  grounding: { label: string; factId: string }[]
+}
+
+export interface UcpSuggestion {
+  id:      string
+  /** Verb plus object. Never a full sentence — this is a queue, not prose. */
+  title:   string
+  /** One clause. The full version lives in `reasonFull`. */
+  reason:  string
+  reasonFull: string
+  /** Links inside `reasonFull`, same mechanism as the verdict's. */
+  reasonEntities: VerdictEntity[]
+  status:  SuggestionStatus
+  confidence: ConfidenceState
+  /** Impact and urgency, 0–1, multiplied for the default sort. Two axes rather
+   *  than one score because the sort criterion has to be EXPLAINABLE — a queue
+   *  whose order cannot be explained will not be trusted, so the header names
+   *  it and lets the rep change it. */
+  impact:  number
+  urgency: number
+  /** The full draft. Absent when the suggestion is scheduled work rather than
+   *  a message — those get Accept instead of Review and send. */
+  draft?:  SuggestionDraft
+  /**
+   * THE HELD STATE. A draft is held when The Council blocked it because a fact
+   * it referenced is not attested in the Truth Plane. This is the product's
+   * core claim working correctly, so it is written as an invitation and never
+   * as an error or a log line.
+   *
+   * Two paths, both visible, and `withoutCommitment` is why there must be two
+   * drafts per held suggestion: the fast path sends a variant that commits to
+   * nothing. It ALSO fires the confirmation request, because otherwise the
+   * fast path becomes the default, the fact is never attested, and the agent
+   * blocks on the same gap forever.
+   */
+  held?: {
+    /** What is missing, in the rep's words. */
+    missing:     string
+    /** The domain owner the confirmation routes to. */
+    owner:       string
+    /** How long it has been with them, once supplied. */
+    withOwnerFor?: string
+    /** The variant that commits to nothing. */
+    withoutCommitment: SuggestionDraft
+  }
+  /** Set when the suggestion no longer applies. Suggestions expire; tasks do
+   *  not. An expired suggestion states its reason and leaves. */
+  expired?: string
+}
+
+/** Impact × urgency, and the label the header shows. */
+export const SUGGESTION_SORTS = [
+  { id: "impact-urgency", label: "Impact × urgency" },
+  { id: "urgency",        label: "Most urgent first" },
+  { id: "newest",         label: "Newest first" },
+] as const
+export type SuggestionSort = typeof SUGGESTION_SORTS[number]["id"]
+
+export function sortSuggestions(items: UcpSuggestion[], sort: SuggestionSort): UcpSuggestion[] {
+  const copy = [...items]
+  if (sort === "urgency") return copy.sort((a, b) => b.urgency - a.urgency)
+  if (sort === "newest")  return copy.reverse()
+  return copy.sort((a, b) => b.impact * b.urgency - a.impact * a.urgency)
+}
+
+/**
+ * ── 4 · Agent reads ────────────────────────────────────────────────────────
+ *
+ * Inferences agents have drawn about this relationship. These are CANDIDATE
+ * CLAIMS, and confirming one promotes it through KCON.
+ *
+ * THE `kind` DISTINCTION IS A GUARDRAIL, NOT A NICETY.
+ *
+ *   structural   a verifiable relationship fact — who signs, who owns a budget
+ *                line, reporting lines, system of record. Gets Confirm.
+ *   interpretive a read of tone, intent or sentiment. NO confirm action, ever.
+ *                These render and expire. Persisting a judgement about a
+ *                person's emotional state as an attested fact is a thing this
+ *                product must not be able to do, so the type is what stops it
+ *                rather than a reviewer remembering.
+ */
+export type ReadKind = "structural" | "interpretive"
+
+export interface UcpAgentRead {
+  id:       string
+  headline: string
+  body:     string
+  agent:    string
+  area:     string
+  state:    ConfidenceState
+  kind:     ReadKind
+  /** Required. A read with no evidence does not render — same rule, same
+   *  reason, same enforcement as signals. */
+  evidence: { label: string; destination: string }[]
+}
+
+export function renderableReads(reads: UcpAgentRead[]): UcpAgentRead[] {
+  return reads.filter(r => r.evidence.length > 0)
+}
+
+/**
+ * PROPOSING IS NOT ATTESTING. A user who cannot attest in this domain still
+ * sees the action — it reads "Propose as fact" and routes to the domain owner.
+ * Hiding it would teach them the product cannot do the thing.
+ */
+export function confirmLabel(canAttest: boolean): string {
+  return canAttest ? "Confirm" : "Propose as fact"
+}
+
+/**
+ * ── Instrumentation ────────────────────────────────────────────────────────
+ *
+ * ACCEPTANCE RATE IS THE HEALTH METRIC FOR THIS SECTION. If it is low, nothing
+ * else here matters — the queue is proposing the wrong work and every other
+ * refinement is decoration on top of that.
+ *
+ * // STUB: console only. A real implementation posts to the analytics sink.
+ */
+export type IntelligenceEvent =
+  | { name: "suggestion_accepted";  suggestionId: string }
+  | { name: "suggestion_dismissed"; suggestionId: string; reason: DismissReason }
+  | { name: "draft_sent";           suggestionId: string; variant: "full" | "without_commitment" }
+  | { name: "fact_supplied";        suggestionId: string; value: string; owner: string }
+  | { name: "read_confirmed";       readId: string; proposed: boolean }
+  | { name: "read_rejected";        readId: string; reason: DismissReason }
+  | { name: "verdict_rated";        contactId: string; rating: "up" | "down" }
+  | { name: "verdict_regenerated";  contactId: string }
+
+export function emitIntelligence(event: IntelligenceEvent): void {
+  // eslint-disable-next-line no-console
+  console.info("[intelligence]", event.name, event)
+}
+
+/* ── Intelligence fixtures ─────────────────────────────────────────────────
+   Derived from the record so nothing here can contradict the rest of the
+   profile: the verdict quotes the same renewal the Entity Header shows, the
+   signals point at activity rows that exist, and the grounding links name
+   facts the Knowledge tab actually holds.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** Days to the renewal, the one commercial clock this prototype models.
+ *  // STUB: a real opportunity record carries this. */
+export function renewalInDays(c: UcpContact): number | null {
+  if (c.type !== "person" && c.type !== "company") return null
+  // Deterministic per record rather than random, so two reads agree.
+  const seed = c.id.split("").reduce((n, ch) => n + ch.charCodeAt(0), 0)
+  return 8 + (seed % 22)
+}
+
+export function getVerdict(c: UcpContact): UcpVerdict | null {
+  const days = renewalInDays(c)
+  if (days === null || c.type === "company") {
+    if (c.type !== "company") return null
+  }
+  const who   = c.name.split(" ")[0]
+  const value = c.subtitle.includes("·") ? "$480K" : "$480K"
+
+  if (c.type === "company") {
+    return {
+      text: `${c.name} runs its evaluation through one committee and has not signed the governance addendum. `
+          + `Get the addendum countersigned this week — it gates a ${value} renewal that closes in ${days} days.`,
+      generatedAt: "Today, 08:12",
+      entities: [
+        { text: "governance addendum", destination: "Knowledge", tooltip: "Knowledge · the addendum on the Legal drive" },
+        { text: value,                 destination: "Opportunity", tooltip: "Opportunity · the renewal this figure belongs to" },
+        { text: `${days} days`,        destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days` },
+      ],
+    }
+  }
+
+  return {
+    text: `${who} owns the budget line at ${c.company} and has been asking for the migration timeline. `
+        + `Answer ${who === c.name ? "them" : "her"} today — it is the only open question before a ${value} renewal that closes in ${days} days.`,
+    generatedAt: "Today, 08:12",
+    entities: [
+      { text: "migration timeline", destination: "Activity",    tooltip: "Activity · the email that requested it, Aug 18" },
+      { text: value,                destination: "Opportunity", tooltip: "Opportunity · the renewal this figure belongs to" },
+      { text: `${days} days`,       destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days` },
+    ],
+  }
+}
+
+export function getSignals(c: UcpContact): UcpSignal[] {
+  if (c.type !== "person" && c.type !== "company") return []
+  const days = renewalInDays(c) ?? 0
+  const conns = getConnections(c).length
+
+  return [
+    {
+      type: "response_debt", label: SIGNAL_CATALOG.response_debt.label,
+      severity: "critical", since: "6 days",
+      evidence: { label: "Migration timeline requested · Aug 18", destination: "Activity" },
+      suggestionId: "s1",
+    },
+    {
+      type: "open_commitment", label: SIGNAL_CATALOG.open_commitment.label,
+      severity: "critical", since: "19 days",
+      evidence: { label: "Two escalations raised again at the QBR", destination: "Activity" },
+      suggestionId: "s2",
+    },
+    {
+      type: "contract_clock", label: SIGNAL_CATALOG.contract_clock.label,
+      severity: "attention", since: `${days} days out`,
+      evidence: { label: "Renewal · governance addendum outstanding", destination: "Knowledge" },
+    },
+    ...(conns <= 3 ? [{
+      type: "single_thread" as SignalType, label: SIGNAL_CATALOG.single_thread.label,
+      severity: "attention" as SignalSeverity, since: "since Jun 2026",
+      evidence: { label: `${conns} live contact${conns === 1 ? "" : "s"} on this account`, destination: "Overview" },
+    }] : []),
+    {
+      type: "engagement_velocity", label: SIGNAL_CATALOG.engagement_velocity.label,
+      severity: "watch", since: "2 months",
+      evidence: { label: "4 touchpoints in Aug, 2 in Sep", destination: "Activity" },
+    },
+  ]
+}
+
+export function getSuggestions(c: UcpContact): UcpSuggestion[] {
+  if (c.type !== "person" && c.type !== "company") return []
+  const days  = renewalInDays(c) ?? 0
+  const owner = "Priya Nair"
+
+  return [
+    {
+      id: "s1", title: "Send the migration timeline",
+      reason: `asked twice · renewal in ${days} days`,
+      reasonFull: `${c.name.split(" ")[0]} asked for a written migration timeline on Aug 18 and again on the Sep 2 call. `
+        + `Nothing has gone out. Their own security review cannot start without a date, so this is the only open question before the renewal.`,
+      reasonEntities: [
+        { text: "Aug 18",      destination: "Activity", tooltip: "Activity · Migration timeline requested" },
+        { text: "Sep 2 call",  destination: "Activity", tooltip: "Activity · Outbound call, discovery follow-up" },
+      ],
+      status: "held", confidence: "In review", impact: 0.95, urgency: 0.9,
+      draft: {
+        body: [
+          `Hi ${c.name.split(" ")[0]},`,
+          `Thanks for your patience on this. The migration would complete by 14 November, with the cutover window in the first week of that month.`,
+          `That gives your security review a fixed date to work back from. Happy to walk the plan through with your team if that helps.`,
+        ],
+        grounding: [
+          { label: "Company · " + c.company,        factId: "f3" },
+          { label: "Decision role · Evaluator",     factId: "f6" },
+        ],
+      },
+      held: {
+        missing: "a migration delivery date",
+        owner,
+        withoutCommitment: {
+          body: [
+            `Hi ${c.name.split(" ")[0]},`,
+            `Thanks for your patience. I am confirming the migration date internally and will come back to you with it this week.`,
+            `In the meantime, everything else in the plan is settled — happy to walk your team through the sequence so the security review can start on the parts that do not depend on the date.`,
+          ],
+          grounding: [{ label: "Decision role · Evaluator", factId: "f6" }],
+        },
+      },
+    },
+    {
+      id: "s2", title: "Put a date on the two open escalations",
+      reason: "raised at two consecutive reviews · no owner",
+      reasonFull: "The escalations first logged in July were raised again at the August QBR and left without a resolution date. "
+        + "That is the second consecutive review where they were discussed and not closed, and it is the thread most likely to carry into the renewal conversation.",
+      reasonEntities: [
+        { text: "August QBR", destination: "Activity", tooltip: "Activity · Quarterly business review" },
+      ],
+      // Scheduled work, not a message — so no draft, and Accept is the action.
+      status: "new", confidence: "Inferred", impact: 0.8, urgency: 0.7,
+    },
+    {
+      id: "s3", title: "Re-verify the direct line",
+      reason: "read off an email signature in June · due to expire",
+      reasonFull: "The phone number on this record was read off an email signature on Jun 24 and has not been confirmed since. "
+        + "It is past the 60-day attestation window, so an agent can no longer commit to it.",
+      reasonEntities: [
+        { text: "Jun 24", destination: "Knowledge", tooltip: "Knowledge · Direct line, Truth Plane" },
+      ],
+      status: "ready", confidence: "Verified", impact: 0.4, urgency: 0.55,
+      draft: {
+        body: [
+          `Hi ${c.name.split(" ")[0]},`,
+          `Quick housekeeping — is ${c.phone} still the best direct line for you?`,
+          `Happy to update our records either way.`,
+        ],
+        grounding: [{ label: "Direct line · " + c.phone, factId: "f5" }],
+      },
+    },
+    {
+      id: "s4", title: "Introduce a second contact on the account",
+      reason: "single-threaded since June",
+      reasonFull: "Every live thread on this account runs through one person. If they change role or go on leave, the relationship has no second point of contact, "
+        + "and the renewal is inside that window.",
+      reasonEntities: [],
+      status: "accepted", confidence: "Inferred", impact: 0.6, urgency: 0.4,
+    },
+    {
+      id: "s5", title: "Chase the signed order form",
+      reason: "no longer applies",
+      reasonFull: "The order form was countersigned on Sep 4, so there is nothing left to chase.",
+      reasonEntities: [],
+      status: "done", confidence: "Verified", impact: 0.3, urgency: 0.2,
+      expired: "No longer applies — the order form came back signed.",
+    },
+  ]
+}
+
+export function getAgentReads(c: UcpContact): UcpAgentRead[] {
+  const agent = c.agent.name
+  const who   = c.name.split(" ")[0]
+
+  return [
+    {
+      id: "r1",
+      headline: `${who} controls the budget line, not just the evaluation`,
+      body: `Two calls and one email thread put ${who} as the person approving spend rather than recommending it. `
+        + "The account record still lists them as an evaluator, which is what the drafts have been assuming.",
+      agent, area: "Commercial", state: "In review", kind: "structural",
+      evidence: [
+        { label: "Outbound call · Sep 2",       destination: "Activity"  },
+        { label: "Decision role · Sandbox",     destination: "Knowledge" },
+      ],
+    },
+    {
+      id: "r2",
+      headline: "Legal signs, not procurement",
+      body: "The governance addendum went to Legal directly and came back redlined by their counsel. "
+        + "Procurement has not appeared in any thread on this account.",
+      agent, area: "Governance", state: "Verified", kind: "structural",
+      evidence: [
+        { label: "Governance addendum · Legal drive", destination: "Knowledge" },
+        { label: "Addendum sent for review · Aug 28", destination: "Activity"  },
+      ],
+    },
+    {
+      id: "r3",
+      headline: "Patience is thinning on the timeline",
+      body: "The second ask for the migration timeline was shorter than the first and dropped the pleasantries. "
+        + "Nothing in it is hostile; the tone is somebody who has asked already.",
+      agent, area: "Relationship", state: "Inferred", kind: "interpretive",
+      evidence: [
+        { label: "Migration timeline requested · Aug 18", destination: "Activity" },
+      ],
+    },
+    {
+      id: "r4",
+      headline: "Auditability is the deciding criterion",
+      body: `${who} has raised evidence, attestation and audit trails in every substantive conversation, and never raised price. `
+        + "A pitch that leads on speed is answering a question they are not asking.",
+      agent, area: "Commercial", state: "In review", kind: "interpretive",
+      evidence: [
+        { label: "Stated priority · Sandbox",  destination: "Knowledge" },
+        { label: "Security review session",    destination: "Activity"  },
+      ],
+    },
+  ]
+}
+
+/** The areas the read filter offers, derived so a new read cannot be
+ *  unreachable. */
+export function readAreas(reads: UcpAgentRead[]): string[] {
+  return Array.from(new Set(reads.map(r => r.area))).sort()
+}
