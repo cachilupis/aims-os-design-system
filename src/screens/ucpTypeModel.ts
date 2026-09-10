@@ -53,11 +53,45 @@ export interface ProfileWidgetRow {
   tooltip: string
 }
 
+/**
+ * ── What a type's Overview is made of ──────────────────────────────────────
+ *
+ * Michael, 2026-09-10: "usar diferentes widgets para cada caso para que no se
+ * muestren siempre los mismos".
+ *
+ * Every type used to draw the same canvas in the same order — the type's own
+ * field widget, then Governance, then Risk, then Connections, then Recent
+ * activity, each one column wide. Only the CONTENT of the first one changed,
+ * so a fleet asset and a VP of Operations opened to the same page furniture,
+ * and the widget that mattered most for each of them sat in whichever slot the
+ * loop happened to reach.
+ *
+ * So the composition is published by the type, the way its fields and tabs
+ * already are. A `CanvasEntry` is a widget the screen knows how to build plus
+ * the span it gets HERE — the same Risk study is one column on a customer,
+ * where the relationship carries the risk, and two on an asset, where the
+ * asset's own condition IS the record.
+ *
+ * `self` means the type's own field widget, so a type can place it rather than
+ * always leading with it. Studies named here still disappear when the record
+ * has nothing for them (`contact.governance === "empty"` and friends) — the
+ * order is the type's, the presence is the record's.
+ */
+export type CanvasWidget = "self" | "governance" | "risk" | "connections" | "activity"
+
+export interface CanvasEntry {
+  widget: CanvasWidget
+  /** 1, 2 or 3 columns. */
+  span:   1 | 2 | 3
+}
+
 export interface UcpProfileSpec {
   /** Beyond the universal four. Empty when the type has nothing to add. */
   extraTabs: { id: string; label: string }[]
   /** The type's own Overview widget — the fields only this type carries. */
   widget:    { uid: string; title: string; rows: ProfileWidgetRow[] }
+  /** The Overview canvas, in order, with each widget's span. */
+  canvas:    CanvasEntry[]
 }
 
 /**
@@ -77,6 +111,17 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [industry, headcount, hq] = p
     return {
       extraTabs: [{ id: "people", label: "People" }],
+      /* The org leads and takes two columns — industry, headcount and HQ are
+         what every other widget here gets read against. Governance sits
+         beside it because a company is where policy attaches. Connections
+         goes full width: on a company they are the PEOPLE, and a column of
+         three names with the rest hidden is the widget failing. */
+      canvas: [
+        { widget: "self",        span: 2 },
+        { widget: "governance",  span: 1 },
+        { widget: "connections", span: 3 },
+        { widget: "activity",    span: 3 },
+      ],
       widget: {
         uid: "organization", title: "Organization",
         rows: [
@@ -97,6 +142,15 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [role, department, location] = p
     return {
       extraTabs: [],
+      /* Governance takes two columns and Risk is absent. An employee record
+         exists so somebody can answer "is this person trained, cleared and
+         signed off" — that is the Governance study, and a risk score on a
+         colleague is a thing this product should not be computing. */
+      canvas: [
+        { widget: "self",       span: 1 },
+        { widget: "governance", span: 2 },
+        { widget: "activity",   span: 3 },
+      ],
       widget: {
         uid: "employment", title: "Employment",
         rows: [
@@ -117,6 +171,15 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [scope, cycle, effective] = p
     return {
       extraTabs: [],
+      /* The policy\u0027s own fields ARE the record — scope, review cycle,
+         effective date — so they take two columns, and Governance beside them
+         says how the tenant is doing against it. Nothing else applies: a
+         policy has no relationships and no risk of its own. */
+      canvas: [
+        { widget: "self",       span: 2 },
+        { widget: "governance", span: 1 },
+        { widget: "activity",   span: 3 },
+      ],
       widget: {
         uid: "policy", title: "Policy",
         rows: [
@@ -137,6 +200,15 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [cls, site, acquired] = p
     return {
       extraTabs: [],
+      /* Risk takes two columns here, and it is the only type where it does.
+         On a person a risk score is a read of a relationship; on a vehicle it
+         is the service interval, the overdue mileage and the condition — the
+         asset\u0027s own state, which is most of what the record is for. */
+      canvas: [
+        { widget: "self",     span: 1 },
+        { widget: "risk",     span: 2 },
+        { widget: "activity", span: 3 },
+      ],
       widget: {
         uid: "asset", title: "Asset",
         rows: [
@@ -169,7 +241,21 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
   rows.push({ label: "Account owner", value: c.owner, icon: "UserRound", variant: "informative",
     tooltip: `Account owner · ${c.owner}. Holds this relationship on our side; escalations go here first.` })
 
-  return { extraTabs: [], widget: { uid: "account", title: "Account", rows } }
+  /* A customer's three columns each answer a different question and none of
+     them is bigger than the others: who they are, how the relationship is
+     going, and who else is in it. Risk earns a column on a person because it
+     is a read of the RELATIONSHIP — Intelligence carries the reasoning, this
+     is the number. Governance is absent: a contact is not a policy subject. */
+  return {
+    extraTabs: [],
+    canvas: [
+      { widget: "self",        span: 1 },
+      { widget: "risk",        span: 1 },
+      { widget: "connections", span: 1 },
+      { widget: "activity",    span: 3 },
+    ],
+    widget: { uid: "account", title: "Account", rows },
+  }
 }
 
 /**

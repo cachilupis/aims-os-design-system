@@ -68,7 +68,6 @@ import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
-import { AiSummaryWidget } from "@/components/experimental/ai-summary-widget"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { Skeleton }          from "@/components/ui/skeleton"
@@ -79,9 +78,9 @@ import * as LucideIcons from "lucide-react"
 import { Sparkle, Send, ScanLine, Inbox, HardDrive, FileSearch, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { specForContact, tabsForContact } from "./ucpTypeModel"
-import type { ProfileWidgetRow } from "./ucpTypeModel"
+import type { CanvasEntry, ProfileWidgetRow } from "./ucpTypeModel"
 import {
-  PANEL_CONTENT_CLASS, toAiInsights,
+  PANEL_CONTENT_CLASS,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
@@ -438,33 +437,23 @@ function ConnectionsContent({ contact }: { contact: UcpContact }) {
   )
 }
 
-/** The assigned agent's read on this record. Purple = "AI produced this",
- *  the same treatment EntityList's own aiInsight block uses. */
-function AiSummaryContent({ contact, onAsk, onGoTab }: {
-  contact: UcpContact
-  onAsk:   () => void
-  onGoTab: (id: string) => void
-}) {
-  const { isNarrow } = useWidgetSize()
-  const insights = useMemo(
-    () => toAiInsights(contact, {
-      // A destination is either one of this record's own tabs or a section of
-      // the platform. The tabs we can actually go to; the rest is a prototype
-      // stub rather than a dead button pretending to work.
-      onOpenDestination: dest => {
-        const tab = dest.toLowerCase()
-        // The four spine tabs plus the type's own module. A destination the
-        // strip does not have goes nowhere rather than switching to nothing —
-        // "Snapshot" and "Drives" were both live destinations until the tabs
-        // were restructured on 2026-09-10, which is exactly the kind of
-        // dangling pointer a whitelist catches.
-        if (["overview", "activity", "intelligence", "knowledge", "people"].includes(tab)) onGoTab(tab)
-      },
-    }),
-    [contact, onGoTab],
-  )
-  return <AiSummaryWidget items={insights} onAsk={onAsk} compact={isNarrow} />
-}
+/*
+  AiSummaryContent lived here — the full-width purple card at the top of every
+  Overview, "<Agent> — read on this record". Michael removed it on 2026-09-10
+  and the component went with it: nothing else rendered it, so keeping it would
+  have left a dead export and an unused AiSummaryWidget import behind, which is
+  the orphan the DS audit exists to catch.
+
+  Where its content went, and why that is not a loss: Intelligence is the tab
+  that holds the agent's read of a record, with the signals, the evidence and
+  the queue that follow from it. A paragraph-length version of the same
+  interpretation on Overview meant one fact rendered in two tabs, and the
+  Overview copy was the one you could not act on — a summary whose only
+  affordance is "Ask the concierge" is a summary that could not finish its own
+  sentence. The concierge is untouched and still opens from the Entity Header's
+  Ask, and toAiInsights still feeds the roster's own preview panel and the
+  Widget Builder's AI Summary preview, so neither is orphaned.
+*/
 
 // ── Snapshot (Truth Facts) ────────────────────────────────────────────────────
 
@@ -1984,74 +1973,100 @@ export function UcpProfileView({
     setActPage(1)
   }
 
+  /**
+   * ── The Overview canvas ──────────────────────────────────────────────────
+   *
+   * TWO CHANGES ON 2026-09-10, both Michael's, and they are the same change
+   * seen from two sides.
+   *
+   * THE AI SUMMARY WIDGET IS GONE, from every type. It was the full-width
+   * card at the top — "Deal Concierge — read on this record" — and it was the
+   * first thing anybody saw on every record in the product. The reason to
+   * remove it is not that it was bad; it is that the tab restructure gave its
+   * content a home. Intelligence exists to hold the agent's read of this
+   * record, with the evidence, the signals and the queue that follow from it.
+   * A one-paragraph version of that on Overview meant the same interpretation
+   * rendered in two tabs, and the Overview copy was the one with no way to
+   * act on it — a summary that ends in "Ask the concierge" is a summary that
+   * could not finish its own sentence. The concierge itself is untouched; it
+   * opens from the Entity Header's Ask, where it belongs.
+   *
+   * WHICH WIDGETS APPEAR, AND HOW WIDE, NOW COMES FROM THE TYPE. This loop
+   * used to push the same five in the same order at the same width for every
+   * record, so only the first widget's contents ever differed and a fleet
+   * asset opened to the same furniture as a VP of Operations. `spec.canvas`
+   * is the type's own composition — see the reasoning per type in
+   * ucpTypeModel.ts, which is where a designer would look for it.
+   *
+   * A study named in the canvas still disappears when the record has nothing
+   * for it. The ORDER is the type's; the PRESENCE is the record's.
+   */
   const overviewSlots = useMemo<CanvasSlot[]>(() => {
-    const slots: CanvasSlot[] = [
-      {
-        uid: "ai-summary", title: `${contact.agent.name} — read on this record`,
-        // 4 rows, not 5. With the CTA in the chips row the content ends about
-        // 60px above where the slot did, and an empty band at the bottom of a
-        // widget is space the canvas charges every other widget for.
-        colSpan: 3, widthClass: "full", rowSpan: 4,
-        content: <AiSummaryContent contact={contact} onAsk={openChat} onGoTab={goTab} />,
-      },
-    ]
-    // The type's own fields, ahead of the studies. It answers "what is this
-    // thing", which is what you read before "how sure are we about it" — and
-    // it is the one widget on this canvas whose CONTENT differs by type rather
-    // than only its values. A Company shows Industry / Headcount / HQ where a
-    // Customer shows Role / Account, because that is what each model published.
-    slots.push({
-      uid: spec.widget.uid, title: spec.widget.title, colSpan: 1, rowSpan: 4,
-      content: <MetricRows rows={spec.widget.rows} />,
-    })
-    // Governance and Risk are Stat Rows — counters and scores, three across,
-    // with the study's own date underneath. The type's field widget above is a
-    // Profile Card. Two different widgets because they hold two different
-    // kinds of thing; they shared one renderer until 2026-09-09.
-    if (contact.governance !== "empty") {
-      const gov = getGovernance(contact)
-      slots.push({
-        uid: "governance", title: "Governance", colSpan: 1, rowSpan: 4,
-        content: (
-          <StudyWidget title="Governance" state={contact.governance}>
-            <StatRowContent counters={gov.slice(0, 3)} checked={gov[3]} />
-          </StudyWidget>
-        ),
-      })
+    const widthOf = (span: 1 | 2 | 3) => (span === 3 ? "full" : span === 2 ? "wide" : undefined)
+
+    const build = (entry: CanvasEntry): CanvasSlot | null => {
+      const width = widthOf(entry.span)
+      switch (entry.widget) {
+        case "self":
+          return {
+            uid: spec.widget.uid, title: spec.widget.title,
+            colSpan: entry.span, widthClass: width, rowSpan: 4,
+            content: <MetricRows rows={spec.widget.rows} />,
+          }
+        case "governance": {
+          if (contact.governance === "empty") return null
+          const gov = getGovernance(contact)
+          return {
+            uid: "governance", title: "Governance",
+            colSpan: entry.span, widthClass: width, rowSpan: 4,
+            content: (
+              <StudyWidget title="Governance" state={contact.governance}>
+                <StatRowContent counters={gov.slice(0, 3)} checked={gov[3]} />
+              </StudyWidget>
+            ),
+          }
+        }
+        case "risk": {
+          if (contact.risk === "empty") return null
+          const risk = getRisk(contact)
+          return {
+            uid: "risk", title: "Risk",
+            colSpan: entry.span, widthClass: width, rowSpan: 4,
+            content: (
+              <StudyWidget title="Risk" state={contact.risk}>
+                {/* Score, flags and trend are the counters; the scan date is
+                    the date. getRisk returns them in that order. */}
+                <StatRowContent counters={risk.slice(0, 3)} checked={risk[3]} />
+              </StudyWidget>
+            ),
+          }
+        }
+        case "connections":
+          if (contact.connections === "empty") return null
+          return {
+            uid: "connections", title: "Connections",
+            colSpan: entry.span, widthClass: width, rowSpan: 4,
+            content: (
+              <StudyWidget title="Connections" state={contact.connections}>
+                <ConnectionsContent contact={contact} />
+              </StudyWidget>
+            ),
+          }
+        case "activity":
+          return {
+            uid: "recent-activity", title: "Recent activity",
+            colSpan: entry.span, widthClass: width, rowSpan: 5,
+            content: (
+              <LastActivityContent
+                contact={contact}
+                onViewAll={() => { setTab("activity"); setActPage(1) }}
+              />
+            ),
+          }
+      }
     }
-    if (contact.risk !== "empty") {
-      const risk = getRisk(contact)
-      slots.push({
-        uid: "risk", title: "Risk", colSpan: 1, rowSpan: 4,
-        content: (
-          <StudyWidget title="Risk" state={contact.risk}>
-            {/* Score, flags and trend are the counters; the scan date is the
-                date. getRisk returns them in that order. */}
-            <StatRowContent counters={risk.slice(0, 3)} checked={risk[3]} />
-          </StudyWidget>
-        ),
-      })
-    }
-    if (contact.connections !== "empty") {
-      slots.push({
-        uid: "connections", title: "Connections", colSpan: 1, rowSpan: 4,
-        content: (
-          <StudyWidget title="Connections" state={contact.connections}>
-            <ConnectionsContent contact={contact} />
-          </StudyWidget>
-        ),
-      })
-    }
-    slots.push({
-      uid: "recent-activity", title: "Recent activity", colSpan: 3, widthClass: "full", rowSpan: 5,
-      content: (
-        <LastActivityContent
-          contact={contact}
-          onViewAll={() => { setTab("activity"); setActPage(1) }}
-        />
-      ),
-    })
-    return slots
+
+    return spec.canvas.map(build).filter((slot): slot is CanvasSlot => slot !== null)
   }, [contact, spec])
 
 
