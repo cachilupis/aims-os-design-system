@@ -44,6 +44,24 @@ export interface TagInputProps {
    * draft into a tag before the click lands.
    */
   onDraftChange?: (draft: string) => void
+  /**
+   * Reject a value before it becomes a chip. Return an error message to
+   * refuse it, or null to accept.
+   *
+   * Without this the field takes anything, which is right for tags and wrong
+   * for a list of email addresses: "josjosjdos" turned into a chip and read
+   * as a label somebody had just invented. A field that accepts nonsense is
+   * announcing that it is a tag builder.
+   */
+  validate?: (value: string) => string | null
+  /**
+   * Render every chip in one variant instead of cycling six colours.
+   *
+   * The cycle is what makes a set of chips read as CATEGORIES — six colours
+   * say these things differ from each other. A list of recipients is one
+   * kind of thing repeated, so it takes one variant, usually "neutral".
+   */
+  tagVariant?: TagVariant
   className?: string
 }
 
@@ -66,6 +84,8 @@ export function TagInput({
   maxVisibleTags = 8,
   showAddButton = true,
   onDraftChange,
+  validate,
+  tagVariant,
   className,
 }: TagInputProps) {
   const [inputValue, setInputValue] = useState("")
@@ -75,23 +95,37 @@ export function TagInput({
   const containerRef = useRef<HTMLDivElement>(null)
   /** Escape blurs on purpose after clearing — that blur must not re-commit. */
   const escaping = useRef(false)
+  /** What `validate` said about the last attempted commit. */
+  const [rejected, setRejected] = useState<string | null>(null)
+
+  const shownError = error ?? rejected ?? undefined
 
   const maxReached = tags.length >= maxTags
   const isInputDisabled = disabled || maxReached
 
   const setDraft = useCallback((v: string) => {
     setInputValue(v)
+    // Typing again is the user answering the complaint; keeping it on screen
+    // while they fix the address is just nagging.
+    setRejected(null)
     onDraftChange?.(v)
   }, [onDraftChange])
 
   const commit = useCallback(() => {
     const trimmed = inputValue.trim()
     if (!trimmed) return
+    const problem = validate?.(trimmed) ?? null
+    if (problem) {
+      // Refused: the text stays in the field so it can be corrected rather
+      // than retyped, and the reason sits under it.
+      setRejected(problem)
+      return
+    }
     if (!tags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
       onAddTag(trimmed)
     }
     setDraft("")
-  }, [inputValue, tags, onAddTag, setDraft])
+  }, [inputValue, tags, onAddTag, setDraft, validate])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") { e.preventDefault(); commit() }
@@ -122,7 +156,7 @@ export function TagInput({
   // ── Border style by state ─────────────────────────────────────────────────
   const borderStyle = isInputDisabled
     ? "1px solid var(--color-border-neutral-lighter)"
-    : error
+    : shownError
     ? "0.5px solid var(--field-border-error)"
     : focused
     ? "1px solid var(--field-border-focus)"
@@ -192,12 +226,12 @@ export function TagInput({
       </div>
 
       {/* ── Error / max-reached message ────────────────────────────────── */}
-      {error && (
+      {shownError && (
         <p className="text-xs font-medium pl-[2px]" style={{ color: "var(--color-text-error)" }}>
-          {error}
+          {shownError}
         </p>
       )}
-      {maxReached && !error && (
+      {maxReached && !shownError && (
         <p className="text-xs font-medium pl-[2px]" style={{ color: "var(--field-placeholder)" }}>
           Maximum tags reached
         </p>
@@ -209,7 +243,7 @@ export function TagInput({
           {/* Chip wrap row */}
           <div className="flex flex-wrap gap-[8px] items-center">
             {visibleTags.map((tag) => {
-              const variant = TAG_VARIANT_CYCLE[tags.indexOf(tag) % TAG_VARIANT_CYCLE.length]
+              const variant = tagVariant ?? TAG_VARIANT_CYCLE[tags.indexOf(tag) % TAG_VARIANT_CYCLE.length]
               return (
                 <Tag
                   key={tag}
