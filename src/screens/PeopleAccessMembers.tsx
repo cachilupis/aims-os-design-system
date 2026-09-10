@@ -3458,6 +3458,23 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 
 // ─── Invite modal ─────────────────────────────────────────────────────────────
 
+/** Short studio labels for a tag that has to sit beside other tags. */
+const STUDIO_SHORT: Record<string, string> = {
+  governance: "Gov", datastudio: "Data", agentic: "Agentic", admin: "Admin",
+}
+
+/**
+ * A capped list that scrolls instead of pushing the rest of the step down.
+ *
+ * The padding and the equal negative margin are not decoration: a scroll
+ * container clips at its PADDING box, and CardContainer's hover glow paints
+ * outside the card. Without the pair, every card in here has its halo sliced
+ * flat against the scroller's edge.
+ */
+const LIST_SCROLLER: React.CSSProperties = {
+  maxHeight: 268, overflowY: "auto", paddingInline: 12, marginInline: -12, paddingBlock: 4, marginBlock: -4,
+}
+
 const INVITE_STUDIO_OPTIONS = [
   { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={13} /> },
   { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={13} /> },
@@ -3499,6 +3516,7 @@ function InviteWizard({ onCancel, onSend }: {
   /** A permission preset, not the user type above it. Optional by design. */
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [groupQuery, setGroupQuery]         = useState("")
+  const [roleQuery, setRoleQuery]           = useState("")
   const [sendEmail, setSendEmail]           = useState(true)
   const [note, setNote]         = useState("")
 
@@ -3544,6 +3562,31 @@ function InviteWizard({ onCancel, onSend }: {
     if (!q) return GROUPS
     return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
   })()
+
+  const shownRoles = (() => {
+    const q = roleQuery.trim().toLowerCase()
+    if (!q) return ROLES
+    return ROLES.filter(r => r.label.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q))
+  })()
+
+  // ── What the left column adds up to ──────────────────────────────────────
+  // Three separate things grant reach — the studios ticked directly, the
+  // studios a chosen group carries, and everything at once for an Admin or
+  // Owner — so the preview has to union them rather than read any one.
+  const reachedStudios = (() => {
+    const set = new Set<string>(effectiveStudios)
+    chosenGroups.forEach(g => g.studios.forEach(st => set.add(st)))
+    return STUDIO_TABS.map(t => t.id).filter(id => set.has(id))
+  })()
+
+  const roleCounts = selectedRole ? ROLE_PERM_COUNTS[selectedRole.id] : undefined
+  const previewRows = studioPermRows({
+    governance: roleCounts?.governance ?? 0,
+    datastudio: roleCounts?.datastudio ?? 0,
+    agentic:    roleCounts?.agentic    ?? 0,
+    admin:      roleCounts?.admin      ?? 0,
+  }).filter(r => reachedStudios.includes(r.id))
+  const grantedTotal = previewRows.reduce((n, r) => n + r.value, 0)
 
   return (
     <ScreenLayout
@@ -3615,119 +3658,190 @@ function InviteWizard({ onCancel, onSend }: {
 
       {/* ── 2 · Access ────────────────────────────────────────────────── */}
       {step === 1 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div>
-            <FormSectionLabel hint={isMember
-              ? "Select which studios these people can open."
-              : `${role}s get every studio automatically — there is nothing to choose here.`}>
-              Studio access
-            </FormSectionLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
-              {INVITE_STUDIO_OPTIONS.map(st => {
-                const on = isMember ? studios.includes(st.id) : true
-                return (
-                  <CardContainer
-                    key={st.id}
-                    size="sm"
-                    selected={on}
-                    disabled={!isMember}
-                    onClick={isMember ? () => toggleStudio(st.id) : undefined}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
-                      <Checkbox size="sm" checked={on} disabled={!isMember} id={`inv-studio-${st.id}`} />
-                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
-                      <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
-                    </div>
-                  </CardContainer>
-                )
-              })}
-            </div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 20, alignItems: "start" }}>
 
-          <div>
-            <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
-              Add to groups
-            </FormSectionLabel>
-            <div style={{ marginBottom: 8 }}>
-              <Input value={groupQuery} onChange={e => setGroupQuery(e.target.value)} placeholder="Search groups…" />
+          {/* Left — the choices */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, minWidth: 0 }}>
+            <div>
+              <FormSectionLabel hint={isMember
+                ? "Select which studios these people can open."
+                : `${role}s get every studio automatically — there is nothing to choose here.`}>
+                Studio access
+              </FormSectionLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {INVITE_STUDIO_OPTIONS.map(st => {
+                  const on = isMember ? studios.includes(st.id) : true
+                  return (
+                    <CardContainer
+                      key={st.id}
+                      size="sm"
+                      selected={on}
+                      disabled={!isMember}
+                      onClick={isMember ? () => toggleStudio(st.id) : undefined}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "none" }}>
+                        <Checkbox size="sm" checked={on} disabled={!isMember} id={`inv-studio-${st.id}`} />
+                        <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0 }}>{st.icon}</span>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-title)" }}>{st.label}</span>
+                      </div>
+                    </CardContainer>
+                  )
+                })}
+              </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {shownGroups.length === 0 && (
-                <EmptyState
-                  icon={Icons.Users}
-                  title="No groups found"
-                  description="Try adjusting your search term."
-                  ctaLabel="Clear search"
-                  onCta={() => setGroupQuery("")}
-                />
-              )}
-              {shownGroups.map(g => {
-                const on = groupIds.includes(g.id)
-                return (
-                  <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} className="pointer-events-none" />
-                      <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
-                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</span>
-                        <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>
-                          {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
-                        </span>
-                      </div>
-                      <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 1, minWidth: 0 }}>
-                        {g.studios.map(st => (
-                          <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
-                            {st === "governance" ? "Gov" : st === "datastudio" ? "Data" : st === "agentic" ? "Agentic" : "Admin"}
-                          </Tag>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContainer>
-                )
-              })}
+
+            {/*
+              A role is a preset of permissions, which is why it sits beside
+              studios and groups rather than being a step of its own: all three
+              answer "what can this person reach". Thom's spec had it as its own
+              stage marked Optional — a stage nobody has to complete is a
+              section.
+            */}
+            <div>
+              <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
+                Assign a role
+              </FormSectionLabel>
+              <div style={{ marginBottom: 8 }}>
+                <Input value={roleQuery} onChange={e => setRoleQuery(e.target.value)} placeholder="Search roles…" />
+              </div>
+              <div style={LIST_SCROLLER}>
+                {shownRoles.length === 0 && roleQuery.trim() ? (
+                  <EmptyState
+                    icon={Icons.ShieldQuestion}
+                    title="No roles found"
+                    description="Try adjusting your search term."
+                    ctaLabel="Clear search"
+                    onCta={() => setRoleQuery("")}
+                  />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {!roleQuery.trim() && (
+                      <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
+                        <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
+                          <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                            Member gets access via groups or direct permissions only.
+                          </span>
+                        </div>
+                      </CardContainer>
+                    )}
+                    {shownRoles.map(r => {
+                      const on = selectedRoleId === r.id
+                      return (
+                        <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
+                          <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.label}</span>
+                              <Tag variant={r.system ? "secondary" : "informative"} size="sm">
+                                {r.system ? "System" : "Custom"}
+                              </Tag>
+                            </div>
+                            <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>{r.desc}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)" }}>
+                                {ROLE_PERM_COUNTS[r.id]?.total ?? 0} permissions
+                              </span>
+                              {/* The studios a role covers belong on the ROLE, not on
+                                  the group beside it: a role is defined by the studios
+                                  its permissions live in, while a group's studios are
+                                  a side effect of who is in it. */}
+                              {(r.studios ?? []).map(st => (
+                                <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
+                                  {STUDIO_SHORT[st] ?? st}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                        </CardContainer>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
+                Add to groups
+              </FormSectionLabel>
+              <div style={{ marginBottom: 8 }}>
+                <Input value={groupQuery} onChange={e => setGroupQuery(e.target.value)} placeholder="Search groups…" />
+              </div>
+              <div style={LIST_SCROLLER}>
+                {shownGroups.length === 0 ? (
+                  <EmptyState
+                    icon={Icons.Users}
+                    title="No groups found"
+                    description="Try adjusting your search term."
+                    ctaLabel="Clear search"
+                    onCta={() => setGroupQuery("")}
+                  />
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {shownGroups.map(g => {
+                      const on = groupIds.includes(g.id)
+                      return (
+                        <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} className="pointer-events-none" />
+                            <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
+                            <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                                {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContainer>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/*
-            A role is a preset of permissions, which is why it sits beside
-            studios and groups rather than being a step of its own: all three
-            answer "what can this person reach". Thom's spec had it as its own
-            stage marked Optional — a stage nobody has to complete is a
-            section.
+            Right — what the choices on the left add up to. Studios, groups and
+            a role each grant access on their own, and nobody can hold four
+            lists in their head to work out the overlap. PermissionsBreakdown
+            is the DS component for per-studio counts, so this reads the same
+            here as it does on the member's own profile.
           */}
-          <div>
-            <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
-              Assign a role
+          <div style={{ position: "sticky", top: 8 }}>
+            <FormSectionLabel hint="Everything selected on the left, added up.">
+              Access preview
             </FormSectionLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
-                <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
-                    Member gets access via groups or direct permissions only.
-                  </span>
+            {reachedStudios.length === 0 ? (
+              <CardContainer size="sm" variant="dashed">
+                <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.5, textAlign: "center", padding: "12px 4px" }}>
+                  Nothing selected yet. Pick a studio, a group or a role and this fills in.
                 </div>
               </CardContainer>
-              {ROLES.map(r => {
-                const on = selectedRoleId === r.id
-                return (
-                  <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
-                    <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.label}</span>
-                        <Tag variant={r.system ? "secondary" : "informative"} size="sm">
-                          {r.system ? "System" : "Custom"}
-                        </Tag>
-                      </div>
-                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>{r.desc}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)" }}>
-                        {ROLE_PERM_COUNTS[r.id]?.total ?? 0} permissions
-                      </span>
-                    </div>
-                  </CardContainer>
-                )
-              })}
-            </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                  <Tag variant="neutral" size="sm">
+                    {reachedStudios.length} studio{reachedStudios.length !== 1 ? "s" : ""}
+                  </Tag>
+                  <Tag variant={grantedTotal > 0 ? "success" : "neutral"} size="sm">
+                    {grantedTotal} permission{grantedTotal !== 1 ? "s" : ""}
+                  </Tag>
+                  {chosenGroups.length > 0 && (
+                    <Tag variant="neutral" size="sm">
+                      {chosenGroups.length} group{chosenGroups.length !== 1 ? "s" : ""}
+                    </Tag>
+                  )}
+                </div>
+                <PermissionsBreakdown rows={previewRows} />
+                {grantedTotal === 0 && (
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
+                    They can open these studios but hold no permissions inside them yet.
+                    Assign a role, or grant permissions from their profile later.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -3816,6 +3930,11 @@ function InviteWizard({ onCancel, onSend }: {
           )}
         </div>
       )}
+
+      {/* The footer below is fixed, and ScreenLayout drops its own 64px bottom
+          padding when stickyFooter is on — so without this the last card in a
+          scrolled step sits underneath it, half visible. */}
+      <div style={{ height: 96 }} aria-hidden />
 
       {/* The flow completes here, never in the Header. */}
       {createPortal(
