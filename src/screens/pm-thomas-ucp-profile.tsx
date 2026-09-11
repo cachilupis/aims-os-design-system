@@ -2547,23 +2547,49 @@ function ActivityTab({
           which is where a second level belongs: a flat row of every leaf is a
           filter nobody reads, and three of the seven would sit at zero on most
           records. */}
+      {/*
+        THE COUNT MOVED INTO THE TOOLTIP — Michael, 2026-09-11.
+
+        "Communications (6)" is two things in one label, and the number is the
+        half that changes while you type in the search box beside it — so the
+        chip row appeared to twitch as you filtered, and a control that moves
+        while you use it reads as unstable. A chip says WHICH slice you are
+        choosing; how big the slice is belongs to the answer, not the question.
+
+        It is not hidden, it is moved. Hovering or focusing any chip states the
+        count in words, so nothing became unavailable — and the reader who
+        wants it asks for it once rather than being shown five numbers they
+        did not ask for.
+      */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <Chip size="s" variant={group === "all" ? "primary" : "secondary"} onClick={() => { onGroupChange("all"); onKindChange(undefined) }}>
-          All ({all.length})
-        </Chip>
-        {ACTIVITY_GROUPS.map(g => (
-          <Chip
-            key={g.id}
-            size="s"
-            variant={group === g.id ? "primary" : "secondary"}
-            // Leaving Communications drops the kind with it — a kind that
-            // cannot apply to the selected group is a filter still narrowing
-            // something the reader can no longer see.
-            onClick={() => { onGroupChange(g.id); if (g.id !== "communication") onKindChange(undefined) }}
-          >
-            {g.label} ({all.filter(a => CHANNEL_GROUP[a.channel] === g.id).length})
+        <Tooltip side="cursor" content={`${all.length} item${all.length === 1 ? "" : "s"} on this record`}>
+          <Chip size="s" variant={group === "all" ? "primary" : "secondary"} onClick={() => { onGroupChange("all"); onKindChange(undefined) }}>
+            All
           </Chip>
-        ))}
+        </Tooltip>
+        {ACTIVITY_GROUPS.map(g => {
+          const n = all.filter(a => CHANNEL_GROUP[a.channel] === g.id).length
+          return (
+            <Tooltip
+              key={g.id}
+              side="cursor"
+              /* Zero is worth saying out loud. A chip that leads nowhere is
+                 better known before the click than after it. */
+              content={n === 0 ? `No ${g.label.toLowerCase()} on this record` : `${n} ${n === 1 ? "item" : "items"}`}
+            >
+              <Chip
+                size="s"
+                variant={group === g.id ? "primary" : "secondary"}
+                // Leaving Communications drops the kind with it — a kind that
+                // cannot apply to the selected group is a filter still narrowing
+                // something the reader can no longer see.
+                onClick={() => { onGroupChange(g.id); if (g.id !== "communication") onKindChange(undefined) }}
+              >
+                {g.label}
+              </Chip>
+            </Tooltip>
+          )
+        })}
       </div>
 
       {filtered.length === 0 ? (
