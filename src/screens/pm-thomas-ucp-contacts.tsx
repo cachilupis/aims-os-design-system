@@ -875,6 +875,13 @@ function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenReco
  *   Tooltip     REUSED for the collapsed rail, where a row is an icon and an
  *               icon-only control without a label is unreadable.
  *
+ * NAMED EntityCategoryRail, not CategoryRail: the Widget Marketplace already
+ * has a `CategoryRail` and it is a different thing — business-function
+ * categories with colour dots. Two screens declaring one name is exactly the
+ * drift the duplicate-component check exists to catch, and the fix is a name,
+ * not a shared abstraction: these two rails have nothing in common but a
+ * shape.
+ *
  * WHAT I ADDED: this function. It is a column with a border and a list — a
  * composition of four DS components in a screen file, which is the case
  * CLAUDE.md says NOT to turn into a component. If a second screen wants a
@@ -886,7 +893,7 @@ const RAIL_COLLAPSED_WIDTH = 56
  *  used to justify not having one. */
 const RAIL_SEARCH_MIN      = 6
 
-function CategoryRail({
+function EntityCategoryRail({
   categories, activeId, onSelect, collapsed, onCollapsedChange, query, onQueryChange,
 }: {
   categories: { id: string; label: string; icon: string; count: number }[]
@@ -1330,7 +1337,7 @@ export default function PMThomasUcpContactsScreen() {
         sortKey, openSlot, the FiltersSlideout) is still wired.
       */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
-        <CategoryRail
+        <EntityCategoryRail
           categories={ALL_TYPE_TABS.map(t => ({
             id:    t.id,
             label: t.label,
