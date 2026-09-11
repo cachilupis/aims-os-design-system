@@ -1453,21 +1453,16 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
                 <Icons.RefreshCw size={13} /> Resend invite
               </Button>
             ) : null}
+            {/* Reset password and Reset MFA are ABOVE, under `hasSignedIn`.
+                They used to be repeated here too, so an active member who had
+                signed in got each button twice — the pair above with a toast
+                and a confirmation, the pair here with an alert(). Suspend is
+                the only action this branch actually owns. */}
             {!isInvited && !isPending && (
-              <>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => alert(`Password reset email sent to ${member.email}`)}>
-                  <Icons.KeyRound size={13} /> Reset password
-                </Button>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => alert(`MFA enrollment reset for ${member.name}`)}>
-                  <Icons.ShieldOff size={13} /> Reset MFA
-                </Button>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => { onToggleSuspend(member.id); onBack() }}>
-                  {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
-                </Button>
-              </>
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => { onToggleSuspend(member.id); onBack() }}>
+                {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
+              </Button>
             )}
             {!confirmRemove ? (
               <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
