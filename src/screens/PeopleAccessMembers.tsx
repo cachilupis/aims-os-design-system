@@ -4804,6 +4804,232 @@ function members_forWizard(query: string) {
   return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
 }
 
+/**
+ * Every resource any member holds, deduped by name — the catalogue a new group
+ * can be granted from. Built off MEMBER_RESOURCES rather than a fixture of its
+ * own, so the names here are the same ones the member Resources tab shows.
+ */
+const RESOURCE_CATALOG: MemberResource[] = (() => {
+  const seen = new Map<string, MemberResource>()
+  Object.values(MEMBER_RESOURCES).flat().forEach(r => {
+    if (!seen.has(r.name)) seen.set(r.name, r)
+  })
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+})()
+
+/**
+ * Create a group — a full-page wizard, same shell as New role and Invite.
+ *
+ * Three stages, not the five things Michael listed. Name and description are
+ * two fields, not two stages. And ACTIVITY IS NOT A STAGE: a group that does
+ * not exist yet has no history, so there is nothing to fill in — it is a tab
+ * on the group once it exists, and creating one is its first entry.
+ */
+function CreateGroupWizard({ onCancel, onCreate }: {
+  onCancel: () => void
+  onCreate: (group: Group) => void
+}) {
+  const [step, setStep]         = useState<0 | 1 | 2>(0)
+  const [name, setName]         = useState("")
+  const [desc, setDesc]         = useState("")
+  const [studios, setStudios]   = useState<string[]>([])
+  const [memberIds, setMemberIds]     = useState<string[]>([])
+  const [resourceIds, setResourceIds] = useState<string[]>([])
+  const [memberQuery, setMemberQuery]     = useState("")
+  const [resourceQuery, setResourceQuery] = useState("")
+
+  const steps: StepItem[] = [
+    { label: "Details",   state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Members",   state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Resources", state: step === 2 ? "active" : "default" },
+  ]
+
+  const canContinue = step === 0 ? name.trim().length > 0 : true
+
+  const shownMembers = (() => {
+    const q = memberQuery.trim().toLowerCase()
+    if (!q) return MEMBERS
+    return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+  })()
+
+  const shownResources = (() => {
+    const q = resourceQuery.trim().toLowerCase()
+    if (!q) return RESOURCE_CATALOG
+    return RESOURCE_CATALOG.filter(r => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q))
+  })()
+
+  function finish() {
+    onCreate({
+      id: name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      name: name.trim(),
+      // `color` is never read anywhere — AvatarCircle hashes its own from the
+      // name and the card colours come from STUDIO_TAG. It stays on the type
+      // only because the fixture rows carry it.
+      color: "var(--muted)",
+      desc: desc.trim(),
+      memberIds,
+      studios,
+    })
+  }
+
+  return (
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title="New group"
+          description="A group bundles people so access and permissions can be granted to all of them at once."
+          backButton
+          onBack={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} />
+      </div>
+
+      {/* ── 1 · Details ───────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
+          <div>
+            <FormSectionLabel>Group name</FormSectionLabel>
+            <Input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Risk & Compliance" />
+          </div>
+          <div>
+            <FormSectionLabel optional>Description</FormSectionLabel>
+            <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
+              placeholder="What do the people in this group have in common?" />
+          </div>
+          <div>
+            <FormSectionLabel optional hint="A group grants its studios to everyone in it. Leave it empty and the group organises people without granting anything.">
+              Studio access
+            </FormSectionLabel>
+            {/* A studio here is selected/unselected, which is what Chip is for —
+                the same call the group's own Settings tab already makes. */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {STUDIO_TABS.map(t => {
+                const on = studios.includes(t.id)
+                return (
+                  <Chip
+                    key={t.id}
+                    size="m"
+                    variant={on ? "primary" : "secondary"}
+                    onClick={() => setStudios(s => on ? s.filter(x => x !== t.id) : [...s, t.id])}
+                  >
+                    {t.label}
+                  </Chip>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2 · Members ───────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
+          <FormSectionLabel optional hint="You can add people later, from the group or from their own profile.">
+            Add members
+          </FormSectionLabel>
+          <Input value={memberQuery} onChange={e => setMemberQuery(e.target.value)} placeholder="Search members…" />
+          {shownMembers.length === 0 ? (
+            <EmptyState icon={Icons.UserSearch} title="No members found"
+              description="Try a different name or email."
+              ctaLabel="Clear search" onCta={() => setMemberQuery("")} />
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {shownMembers.map(m => {
+                const on = memberIds.includes(m.id)
+                return (
+                  <CardContainer key={m.id} size="sm" selected={on}
+                    onClick={() => setMemberIds(prev => on ? prev.filter(x => x !== m.id) : [...prev, m.id])}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Checkbox size="sm" checked={on} id={`grp-member-${m.id}`} className="pointer-events-none" />
+                      <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                        avatarStyle={m.status === "active" ? "text" : "empty"} />
+                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{m.name}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                      </div>
+                      <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 3 · Resources ─────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
+          <FormSectionLabel optional hint="Everyone in the group gets these. Resources granted here show as “via {group}” on each member's own Resources tab.">
+            Grant resources
+          </FormSectionLabel>
+          <Input value={resourceQuery} onChange={e => setResourceQuery(e.target.value)} placeholder="Search resources…" />
+          {shownResources.length === 0 ? (
+            <EmptyState icon={Icons.Layers} title="No resources found"
+              description="Try a different name or type."
+              ctaLabel="Clear search" onCta={() => setResourceQuery("")} />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {shownResources.map(r => {
+                const on = resourceIds.includes(r.id)
+                return (
+                  <CardContainer key={r.id} size="sm" selected={on}
+                    onClick={() => setResourceIds(prev => on ? prev.filter(x => x !== r.id) : [...prev, r.id])}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Checkbox size="sm" checked={on} id={`grp-res-${r.id}`} className="pointer-events-none" />
+                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0, pointerEvents: "none" }}>
+                        {RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, fontFamily: "monospace", fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", pointerEvents: "none" }}>
+                        {r.name}
+                      </span>
+                      <Tag variant={RESOURCE_TYPE_TAG[r.type] ?? "neutral"} size="sm">{r.type}</Tag>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* The fixed footer would otherwise sit on top of the last card. */}
+      <div style={{ height: 96 }} aria-hidden />
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2 ? "Create group" : "Next"}
+            nextDisabled={!canContinue}
+            onNext={step === 2 ? finish : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+          />
+        </div>,
+        document.body,
+      )}
+    </ScreenLayout>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
@@ -4834,6 +5060,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   : undefined
   const [showInvite, setShowInvite]     = useState(false)
   const [creatingRole, setCreatingRole] = useState(false)
+  const [creatingGroup, setCreatingGroup] = useState(false)
   const toast = useToast()
 
   function handleRoleCreate(saved: Role, assigned: string[]) {
@@ -4913,6 +5140,23 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         },
       )
     }
+  }
+
+  /**
+   * GROUPS is a module fixture read directly by half a dozen call sites, so a
+   * new group is written into it rather than lifted into state — the same
+   * reason handleInvite writes there. A wizard lands on what it created.
+   */
+  function handleGroupCreate(saved: Group) {
+    GROUPS.push(saved)
+    setCreatingGroup(false)
+    setDetailView({ type: "group", group: saved })
+    toast.success(`Group "${saved.name}" created`, {
+      description: [
+        saved.memberIds.length > 0 ? `${saved.memberIds.length} member${saved.memberIds.length === 1 ? "" : "s"}` : null,
+        saved.studios.length > 0 ? `${saved.studios.length} studio${saved.studios.length === 1 ? "" : "s"}` : null,
+      ].filter(Boolean).join(" · ") || "Add members and studios whenever you are ready.",
+    })
   }
 
   const counts = useMemo(() => ({
@@ -5072,6 +5316,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     return <NewRoleWizard onCancel={() => setCreatingRole(false)} onCreate={handleRoleCreate} />
   }
 
+  if (creatingGroup) {
+    return <CreateGroupWizard onCancel={() => setCreatingGroup(false)} onCreate={handleGroupCreate} />
+  }
+
   if (showInvite) {
     return <InviteWizard onCancel={() => setShowInvite(false)} onSend={handleInvite} />
   }
@@ -5151,7 +5399,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
               : mainTab === "roles"
               ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setCreatingRole(true) }
-              : { label: "New group",     icon: Icons.FolderPlus }
+              : { label: "New group",     icon: Icons.FolderPlus, onClick: () => setCreatingGroup(true) }
           }
         />
       )}
