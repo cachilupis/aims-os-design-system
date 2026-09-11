@@ -81,6 +81,7 @@ import { Skeleton }          from "@/components/ui/skeleton"
 import { Tooltip }           from "@/components/ui/tooltip"
 import { EntityHeader }      from "@/components/ui/entity-header"
 import type { EntityHeaderTag, RecordField, SecondaryMetadataItem } from "@/components/ui/entity-header"
+import { SECONDARY_METADATA_MAX } from "@/components/ui/entity-header"
 import * as LucideIcons from "lucide-react"
 import { Sparkle, Send, ScanLine, Inbox, HardDrive, FileSearch, Lock } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -2473,19 +2474,20 @@ function drivePreviewData(d: UcpDrive, citedCount: number, contact: UcpContact):
  * three-card metric grid above the thing the reader opened it to read has the
  * order backwards. The claims are the list section, and they come after.
  *
- * CONSISTENCY WITH GOVERNANCE. `scope` is one of SANDBOX_SCOPES and each
- * claim's status is one of TRUTH_STATUSES — the same words, with the same
- * meanings, as the Sandbox and Truth Plane shelves in the Knowledge tab, and
- * as the live Governance views those came from. A note is a Sandbox artefact,
- * so it is described in Sandbox's language rather than in a vocabulary this
- * panel invented for itself.
+ * CONSISTENCY WITH GOVERNANCE. `scope` is one of SANDBOX_SCOPES — the same
+ * word, with the same meaning, as the Sandbox shelf in the Knowledge tab and
+ * as the live Governance views it came from. A note is a Sandbox artefact, so
+ * it is described in Sandbox's language rather than in a vocabulary this panel
+ * invented for itself.
+ *
+ * THE CLAIMS LIST IS GONE — Michael, 2026-09-11: "borra Claims for this note."
+ * It listed each claim with its Truth status, which is the Knowledge tab's own
+ * job done a second time in a preview: the same three statuses, the same
+ * words, against a list this panel cannot act on. What survives is the Details
+ * row that COUNTS them ("3 in the Sandbox plane") — enough to know the note
+ * had consequences, without restating the plane's own shelf. Anyone who needs
+ * the claims themselves is going to Knowledge either way.
  */
-const CLAIM_STATUS_TAG: Record<string, "success" | "alert" | "error"> = {
-  "Verified":       "success",
-  "Pending review": "alert",
-  "Due to expire":  "error",
-}
-
 function NotePreview({
   note, title, agentName, comments, onComment, open, onClose,
 }: {
@@ -2609,6 +2611,60 @@ function NotePreview({
                 </div>
               </div>
 
+
+              {/* ── Comments ───────────────────────────────────────────────
+                  Michael, 2026-09-11, revised the same day: they belong in
+                  the LEFT column, under the note, because a comment is a
+                  reply to the prose. Filing them in the metadata rail would
+                  make a conversation an attribute of the note, and putting
+                  them below both columns — where they were for an hour —
+                  detached them from the thing being replied to.
+
+                  They are deliberately NOT claims and cannot become one. A
+                  claim is what the note asserts about the record and it goes
+                  to the Sandbox plane to be sourced; a comment is a
+                  colleague arguing with the author. The note's own scope
+                  decides who can see the thread — a comment cannot be more
+                  visible than the thing it hangs off, so there is no
+                  per-comment audience control to get wrong. */}
+              <div className="flex flex-col gap-[8px]">
+                <div className="flex flex-col gap-[2px]">
+                  <SectionLabel>
+                    Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
+                  </SectionLabel>
+                  <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                    Visible to everyone the note is — {note.scope.toLowerCase()}. A comment is not a claim
+                    and never reaches the Truth plane.
+                  </span>
+                </div>
+
+                {comments.length === 0 ? (
+                  <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                    No comments yet.
+                  </span>
+                ) : (
+                  <div className="flex flex-col gap-[12px]">
+                    {comments.map((cm, i) => (
+                      <div key={`${cm.author}-${i}`} className="flex items-start gap-[8px]">
+                        <AvatarCircle name={cm.author} sizeKey="md" avatarStyle="text" />
+                        <div className="flex flex-col gap-[2px] min-w-0 flex-1">
+                          <div className="flex items-baseline gap-[6px] flex-wrap">
+                            <span className="text-[12px] font-semibold" style={{ color: "var(--color-text-title)" }}>
+                              {cm.author}
+                            </span>
+                            <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                              {cm.role} · {cm.at}
+                            </span>
+                          </div>
+                          <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                            {cm.text}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ── Right: the details ─────────────────────────────────────── */}
@@ -2626,22 +2682,54 @@ function NotePreview({
                 ]} />
               </div>
 
+              {/* LINKED RECORDS ARE NOT ENTITY ROWS HERE — Michael,
+                  2026-09-11: "usa una card que use menos espacio interno,
+                  título más pequeño."
+
+                  They were one `CardContainer` + `EntityList` per record,
+                  which is the roster row's shape: a 14px title, an icon tile,
+                  a second metadata line and the padding to hold all three.
+                  That is the right weight for a list you are browsing and the
+                  wrong one for a rail beside the note, where two of them took
+                  more height than the Details table above them.
+
+                  So: ONE card holding all of them, `size="sm"`, rows of icon +
+                  12px title + 11px kind. Still `CardContainer` and still
+                  `HighlightIcon` — the thing that shrank is the composition
+                  inside, not the vocabulary. The type colour survives, which
+                  is what keeps an email here the same blue it is everywhere
+                  else. One card for a set of pointers is not the "one card
+                  per item" rule being broken: these are references, not
+                  records you act on — the click is what opens the record. */}
               {note.linked.length > 0 && (
                 <div className="flex flex-col gap-[8px]">
                   <SectionLabel>Linked records</SectionLabel>
-                  <div className="flex flex-col gap-[8px]">
-                    {note.linked.map(l => (
-                      <CardContainer key={l.title} size="sm" className="!p-0 overflow-hidden">
-                        <EntityList items={[{
-                          id:            l.title,
-                          title:         l.title,
-                          iconName:      l.icon,
-                          iconVariant:   "info",
-                          secondaryMeta: [{ iconName: "Info", label: l.kind }],
-                        }]} />
-                      </CardContainer>
-                    ))}
-                  </div>
+                  <CardContainer size="sm" className="!p-[8px]">
+                    <div className="flex flex-col gap-[2px]">
+                      {note.linked.map(l => {
+                        const LinkIcon = (LucideIcons[l.icon as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon
+                        return (
+                          <Tooltip key={l.title} content={`${l.title} · ${l.kind}`}>
+                            <div
+                              className="flex items-center gap-[8px] rounded-[6px] px-[6px] py-[5px] cursor-pointer min-w-0"
+                              onMouseEnter={e => { e.currentTarget.style.background = "var(--el-row-hover)" }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "transparent" }}
+                            >
+                              <LinkIcon size={13} strokeWidth={1.75} style={{ color: "var(--hi-informative-icon)", flexShrink: 0 }} />
+                              <div className="flex flex-col min-w-0">
+                                <span className="block truncate text-[12px] font-medium leading-[1.35]" style={{ color: "var(--color-text-title)" }}>
+                                  {l.title}
+                                </span>
+                                <span className="block truncate text-[11px] leading-[1.35]" style={{ color: "var(--field-supporting)" }}>
+                                  {l.kind}
+                                </span>
+                              </div>
+                            </div>
+                          </Tooltip>
+                        )
+                      })}
+                    </div>
+                  </CardContainer>
                 </div>
               )}
 
@@ -2679,106 +2767,48 @@ function NotePreview({
             </div>
           </div>
 
-          {/* A list section with the Title–Description variant: the count
-              alone does not say what a claim IS on this record, and this
-              is the one thing in the panel with consequences outside it. */}
-          {note.claims.length > 0 && (
-            <div className="flex flex-col gap-[8px]">
-              <div className="flex flex-col gap-[2px]">
-                <SectionLabel>Claims from this note</SectionLabel>
-                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                  Written into the Sandbox plane. Each needs a source before it can reach Truth.
-                </span>
-              </div>
-              <div className="flex flex-col gap-[8px]">
-                {note.claims.map(c => (
-                  <CardContainer key={c.label} size="sm" className="!p-0 overflow-hidden">
-                    <EntityList items={[{
-                      id:          c.label,
-                      title:       c.label,
-                      iconName:    "FileCheck",
-                      iconVariant: c.status === "Verified" ? "success" : c.status === "Due to expire" ? "error" : "yellow",
-                      state:       { label: c.status, variant: CLAIM_STATUS_TAG[c.status] ?? "neutral" },
-                    }]} />
-                  </CardContainer>
-                ))}
-              </div>
+          {/* ── The composer, STUCK TO THE BOTTOM ────────────────────────────
+              Michael, 2026-09-11: "el add comment que sea sticky para que no
+              se oculte."
+
+              It is the one control in this panel and it was at the end of the
+              longest column — three paragraphs of note plus every comment
+              already left. Anyone who read the thread to the end was already
+              past it, and anyone who wanted to reply first had to scroll to
+              find it. Sticky at `bottom: 0` it is reachable at any scroll
+              position without becoming a second footer: the panel's own CTA
+              footer is off for this preview (`showCta={false}`), so there is
+              nothing underneath it to collide with.
+
+              The negative inline margin cancels the scroller's own 16px
+              padding so the bar spans the full panel and the content behind
+              it is covered rather than showing through at the edges — the
+              padding is what lets CardContainer's hover halo escape the clip,
+              so it has to stay, and this is the one element that has to
+              ignore it. The 16px back as padding puts the field at the same
+              left edge as everything above it. */}
+          <div
+            className="sticky bottom-0 flex items-center gap-[8px] pt-[12px] pb-[8px] px-[16px] -mx-[16px]"
+            style={{
+              background: "var(--slide-out-bg)",
+              borderTop:  "0.5px solid var(--field-border)",
+            }}
+          >
+            <div className="flex-1 min-w-0">
+              <Input
+                placeholder="Add a comment"
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                /* Enter sends. The only other control in reach is the panel's
+                   own close, and a comment lost to a stray Esc is worse than
+                   one sent a sentence early. */
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submit() } }}
+                rightIcon={null}
+              />
             </div>
-          )}
-
-          {/* ── Comments ─────────────────────────────────────────────────
-              Michael, 2026-09-11. They run the FULL WIDTH under both
-              columns, not inside the note's own, because a comment is a
-              reply to the prose and a reply needs a measure to read in —
-              filing them in the metadata rail would make a conversation an
-              attribute of the note, and squeezing them into a 300px column
-              beside the rail would wrap every sentence three times. The
-              claims above them are there for the same reason: both are
-              things produced FROM the note, and the two columns above are
-              the note itself and what is true of it.
-
-              They are deliberately NOT claims and cannot become one. A
-              claim is what the note asserts about the record and it goes
-              to the Sandbox plane to be sourced; a comment is a colleague
-              arguing with the author. The note's own scope still decides
-              who can see the thread — a comment cannot be more visible
-              than the thing it is attached to, so there is no per-comment
-              audience control to get wrong. */}
-          <div className="flex flex-col gap-[8px]">
-            <div className="flex flex-col gap-[2px]">
-              <SectionLabel>
-                Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
-              </SectionLabel>
-              <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                Visible to everyone the note is — {note.scope.toLowerCase()}. A comment is not a claim
-                and never reaches the Truth plane.
-              </span>
-            </div>
-
-            {comments.length === 0 ? (
-              <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
-                No comments yet.
-              </span>
-            ) : (
-              <div className="flex flex-col gap-[12px]">
-                {comments.map((cm, i) => (
-                  <div key={`${cm.author}-${i}`} className="flex items-start gap-[8px]">
-                    <AvatarCircle name={cm.author} sizeKey="md" avatarStyle="text" />
-                    <div className="flex flex-col gap-[2px] min-w-0 flex-1">
-                      <div className="flex items-baseline gap-[6px] flex-wrap">
-                        <span className="text-[12px] font-semibold" style={{ color: "var(--color-text-title)" }}>
-                          {cm.author}
-                        </span>
-                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                          {cm.role} · {cm.at}
-                        </span>
-                      </div>
-                      <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-                        {cm.text}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* The composer. Enter sends, because the only other control
-                in reach is the panel's own close and a comment lost to a
-                stray Esc is worse than one sent a sentence early. */}
-            <div className="flex items-center gap-[8px]">
-              <div className="flex-1 min-w-0">
-                <Input
-                  placeholder="Add a comment"
-                  value={draft}
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submit() } }}
-                  rightIcon={null}
-                />
-              </div>
-              <Button variant="primary" size="sm" onClick={submit} disabled={!draft.trim()}>
-                Comment
-              </Button>
-            </div>
+            <Button variant="primary" size="sm" onClick={submit} disabled={!draft.trim()}>
+              Comment
+            </Button>
           </div>
         </div>
       )}
@@ -3745,26 +3775,80 @@ export function UcpProfileView({
    *
    * It goes FIRST, and it is the one item here that is time-bound — everything
    * else in this row is a count or a status that will read the same next week.
-   * The cap is six and the aim is four; this record ships four, so the clock
-   * lands inside the budget rather than pushing something out.
+   *
+   * EMAIL AND PHONE COME NEXT — Michael, 2026-09-11. They are the two facts on
+   * a contact record that someone actually leaves the page to use, and until
+   * now they were only inside the ⓘ Information panel, two clicks from a
+   * record whose entire subject is a person you are trying to reach.
+   *
+   * They sit above the counts because reaching someone outranks knowing how
+   * many facts they have. They sit below the clock because the clock is the
+   * only thing here that expires.
+   *
+   * THE COMPONENT ALREADY OWNS THE TRUNCATION. `secondaryMetadata` caps each
+   * item at `24ch` and truncates with an ellipsis — never an abbreviation,
+   * which would look like the real value — and its Tooltip shows on hover AND
+   * on focus whether or not the text was cut. So the answer to "what about
+   * sandra.torres@meridian.com" is to pass the whole address and let the row
+   * cut it: the full value is one hover away, always, and no call site has to
+   * invent a character budget of its own. What the call site DOES owe is a
+   * tooltip that repeats the value in full — a tooltip saying only "Email"
+   * next to a cut-off address is the one way to make this worse.
+   *
+   * THE AGENT TIER COMES OUT to pay for them. The cap is six and it is
+   * enforced by the component, so without a deliberate cut the seventh item
+   * would vanish silently and a different one would vanish on each record.
+   * The tier is the right one to lose: the assigned agent is already the Ask
+   * button in this card's own action cluster, with the agent named in its
+   * tooltip, and it is on the roster row this page was opened from. It was
+   * the only item here that was pure duplication.
    */
   const secondaryMetadata = useMemo<SecondaryMetadataItem[]>(
     () => {
       const days = renewalInDays(contact)
-      const base = contact.meta.map(m => ({
-        icon:    (LucideIcons[m.iconName as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon,
-        text:    m.label,
-        tooltip: m.tooltip,
-      }))
-      if (days === null) return base
-      return [
+      const base = contact.meta
+        /* The agent-tier item, dropped — see above. Matched on its icon
+           because that is what the fixtures agree on; the label differs
+           ("Tier 1", "Tier 3") and the tooltip is prose. */
+        .filter(m => m.iconName !== "Bot")
+        .map(m => ({
+          icon:    (LucideIcons[m.iconName as keyof typeof LucideIcons] ?? LucideIcons.CircleDot) as LucideIcon,
+          text:    m.label,
+          tooltip: m.tooltip,
+        }))
+
+      const reach: SecondaryMetadataItem[] = [
         {
-          icon:    LucideIcons.CalendarClock as LucideIcon,
-          text:    `Renewal in ${days} days`,
-          tooltip: `Renewal · closes in ${days} days. The dated commercial event every open question on this record is measured against.`,
+          icon:    LucideIcons.Mail as LucideIcon,
+          text:    contact.email,
+          tooltip: `Email · ${contact.email}. The address every thread on this record was sent to or from.`,
         },
-        ...base,
+        {
+          icon:    LucideIcons.Phone as LucideIcon,
+          text:    contact.phone,
+          tooltip: `Phone · ${contact.phone}. The number every call and SMS on this record used.`,
+        },
       ]
+
+      const head: SecondaryMetadataItem[] = days === null
+        ? reach
+        : [
+            {
+              icon:    LucideIcons.CalendarClock as LucideIcon,
+              text:    `Renewal in ${days} days`,
+              tooltip: `Renewal · closes in ${days} days. The dated commercial event every open question on this record is measured against.`,
+            },
+            ...reach,
+          ]
+
+      /* The cut is made HERE, not left to the component.
+         `SECONDARY_METADATA_MAX` is enforced by EntityHeader, so an
+         over-budget array still renders six items — it just renders a
+         different six on each record, and which fact disappeared is decided
+         by the order a fixture happened to be written in. Slicing the tail
+         off `base` makes it one rule: the clock and the two ways to reach
+         this person are never what goes, and the counts yield from the end. */
+      return [...head, ...base.slice(0, SECONDARY_METADATA_MAX - head.length)]
     },
     [contact],
   )
