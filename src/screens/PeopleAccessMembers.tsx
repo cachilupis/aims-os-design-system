@@ -375,6 +375,20 @@ const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informa
   admin:      "informative",
 }
 /**
+ * A role has no colour of its own in the fixture — `Role.color` is optional
+ * and not one of the six sets it, so every `background: role.color` dot on
+ * this screen has been rendering invisible. The identity comes from the
+ * component instead, rotated across the palette so a column of roles does not
+ * come out as six identical blue squares.
+ */
+const ROLE_HI_CYCLE = ["informative", "purple", "lime", "light-blue", "yellow", "neutral"] as const
+function roleHi(id: string): (typeof ROLE_HI_CYCLE)[number] {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
+  return ROLE_HI_CYCLE[h % ROLE_HI_CYCLE.length]
+}
+
+/**
  * A studio's identity colour lives on its HighlightIcon and its Tag, never a
  * raw hex dot — CLAUDE.md's rule, and the reason the four studios had drifted
  * into three different greens across this file.
@@ -1916,46 +1930,56 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
         />
       )}
 
-      {/* Assign Role modal */}
-      {assignOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
-          onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
-            <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Role</div>
-              <button onClick={() => setAssignOpen(false)} style={{ cursor: "pointer", color: "var(--muted-foreground)" }}><Icons.X size={16} /></button>
+      {/* Assign Role — a ModalDialog, not a hand-built overlay with its own
+          scrim, its own shadow, a raw <input> and rows made of <button>. */}
+      <ModalDialog
+        isOpen={assignOpen}
+        onClose={() => { setAssignOpen(false); setRoleSearch("") }}
+        variant="content"
+        tone="default"
+        iconName="ShieldCheck"
+        title="Assign a role"
+        description={`A role is a preset of permissions. ${member.name} keeps everything they already have and gains what the role grants.`}
+        showClose
+        slotUnstyled
+        slot={
+          <div>
+            <div style={{ marginBottom: 10 }}>
+              <Input value={roleSearch} onChange={e => setRoleSearch(e.target.value)}
+                placeholder="Search roles…" size="sm" leftIcon={<Icons.Search />} />
             </div>
-            <div style={{ padding: "12px 20px 8px" }}>
-              <div style={{ position: "relative" }}>
-                <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                <input value={roleSearch} onChange={e => setRoleSearch(e.target.value)} placeholder="Search roles…"
-                  style={{ width: "100%", boxSizing: "border-box", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none" }} />
+            {filteredUnassigned.length === 0 ? (
+              <EmptyState
+                bare
+                icon={Icons.ShieldCheck}
+                title={roleSearch.trim() ? "No roles match" : "Every role is already assigned"}
+                description={roleSearch.trim()
+                  ? "Try a different search term."
+                  : `${member.name} already holds all ${allRoles.length} roles in this workspace.`}
+                {...(roleSearch.trim() ? { ctaLabel: "Clear search", onCta: () => setRoleSearch("") } : {})}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 4 * 72, overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+                {filteredUnassigned.map(role => (
+                  <CardContainer key={role.id} size="sm"
+                    onClick={() => { onAssignRole(role.id); setAssignOpen(false); setRoleSearch("") }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, pointerEvents: "none" }}>
+                      <HighlightIcon size="md" variant={roleHi(role.id)} iconName="ShieldCheck" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{role.label}</div>
+                        {role.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{role.desc}</div>}
+                      </div>
+                      <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                        {role.system ? "System" : "Custom"}
+                      </Tag>
+                    </div>
+                  </CardContainer>
+                ))}
               </div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
-              {filteredUnassigned.length === 0 && (
-                <div style={{ padding: "24px 8px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                  {roleSearch.trim() ? "No roles match your search" : "All roles are already assigned"}
-                </div>
-              )}
-              {filteredUnassigned.map(role => (
-                <button key={role.id} onClick={() => { onAssignRole(role.id); setAssignOpen(false); setRoleSearch("") }}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "")}
-                >
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", flexShrink: 0, background: role.color }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</div>
-                    {role.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{role.desc}</div>}
-                  </div>
-                  {role.system && <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)", flexShrink: 0 }}>System</span>}
-                </button>
-              ))}
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        }
+      />
 
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -1968,11 +1992,13 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
       </div>
 
       {assignedRoles.length === 0 && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.Shield size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No roles assigned</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Permissions are inherited from the member's user type only.</div>
-        </div>
+        <EmptyState
+          icon={Icons.Shield}
+          title="No roles assigned"
+          description="Permissions come from this member's user type and direct grants only."
+          ctaLabel="Assign a role"
+          onCta={() => setAssignOpen(true)}
+        />
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1981,19 +2007,15 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
           const blocked = isLastAdminInRole(member.id, role.id, allRoles)
           const isEditingThis = editingRole === role.id
           return (
-            <div key={role.id} style={{
-              border: `1px solid ${isEditingThis ? "var(--primary)" : "var(--border)"}`,
-              borderRadius: 10, background: "var(--surface)", overflow: "hidden",
-              transition: "border-color 0.15s",
-            }}>
+            <CardContainer key={role.id} size="sm" className="!p-0 overflow-hidden" selected={isEditingThis}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", flexShrink: 0, background: role.color }} />
+                <HighlightIcon size="md" variant={roleHi(role.id)} iconName="ShieldCheck" />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</span>
-                    {role.system && (
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>System</span>
-                    )}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{role.label}</span>
+                    <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                      {role.system ? "System" : "Custom"}
+                    </Tag>
                   </div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{role.desc}</div>
                 </div>
@@ -2003,15 +2025,14 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
                   </div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned by Admin · 14 days ago</div>
                 </div>
-                <button
-                  title="Go to role"
-                  onClick={() => onNavigateToRole(role.id)}
-                  style={{ cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-                >
-                  <Icons.ExternalLink size={13} />
-                </button>
+                {/* An icon-only control needs a Tooltip — `title` is slow,
+                    unstyled and invisible to touch. */}
+                <Tooltip content={`Open ${role.label}`}>
+                  <Button variant="tertiary" size="sm" aria-label={`Open ${role.label}`}
+                    onClick={() => onNavigateToRole(role.id)}>
+                    <Icons.ExternalLink size={13} />
+                  </Button>
+                </Tooltip>
                 {!isEditingThis && (
                   <Button variant="secondary" size="sm" onClick={() => setEditingRole(role.id)}>
                     <Icons.Pencil size={11} /> Edit
@@ -2020,16 +2041,19 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
               </div>
               {isEditingThis && (
                 <div style={{
-                  borderTop: "1px solid color-mix(in srgb, var(--primary) 20%, var(--border))",
-                  background: "color-mix(in srgb, var(--primary) 3%, transparent)",
+                  borderTop: "1px solid var(--border)",
                   padding: "12px 18px", display: "flex", alignItems: "center", gap: 8,
                 }}>
                   <Button variant="secondary" size="sm" onClick={() => setEditingRole(null)}>Done</Button>
                   <div style={{ flex: 1 }} />
                   {blocked ? (
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>
-                      Cannot remove — last admin in this role
-                    </span>
+                    <Tooltip content="Every role needs at least one admin. Assign somebody else first.">
+                      <span style={{ display: "inline-block" }}>
+                        <Button variant="warning" size="sm" disabled className="pointer-events-none">
+                          <Icons.Trash2 size={11} /> Remove from role
+                        </Button>
+                      </span>
+                    </Tooltip>
                   ) : (
                     <Button variant="warning" size="sm" onClick={() => { setEditingRole(null); setPendingRemove(role) }}>
                       <Icons.Trash2 size={11} /> Remove from role
@@ -2037,7 +2061,7 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
                   )}
                 </div>
               )}
-            </div>
+            </CardContainer>
           )
         })}
       </div>
@@ -2078,6 +2102,70 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
     }
   }
 
+  /**
+   * One modal, defined once. It was written out twice — once for the empty
+   * state and once for the populated one — which is how the two copies had
+   * already started to differ (`backgroundColor` in one, `background` in the
+   * other) before either could be fixed.
+   */
+  const assignGroupModal = (
+    <ModalDialog
+      isOpen={assignOpen}
+      onClose={() => { setAssignOpen(false); setGroupSearch("") }}
+      variant="content"
+      tone="default"
+      iconName="Users"
+      title="Add to a group"
+      description="A group grants its studio access and permissions to everyone in it."
+      showClose
+      slotUnstyled
+      slot={
+        <div>
+          <div style={{ marginBottom: 10 }}>
+            <Input value={groupSearch} onChange={e => setGroupSearch(e.target.value)}
+              placeholder="Search groups…" size="sm" leftIcon={<Icons.Search />} />
+          </div>
+          {filteredUnassigned.length === 0 ? (
+            <EmptyState
+              bare
+              icon={Icons.Users}
+              title={groupSearch.trim() ? "No groups match" : "Already in every group"}
+              description={groupSearch.trim()
+                ? "Try a different search term."
+                : `${member.name} belongs to all ${allGroups.length} groups in this workspace.`}
+              {...(groupSearch.trim() ? { ctaLabel: "Clear search", onCta: () => setGroupSearch("") } : {})}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 4 * 72, overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+              {filteredUnassigned.map(g => (
+                <CardContainer key={g.id} size="sm"
+                  onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, pointerEvents: "none" }}>
+                    {/* A group is a set of people, so it gets an avatar — the
+                        tinted initials square it used to draw was AvatarCircle
+                        with a hex tint bolted on. */}
+                    <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                        {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {g.studios.map(st => (
+                        <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">{STUDIO_SHORT[st] ?? st}</Tag>
+                      ))}
+                    </div>
+                  </div>
+                </CardContainer>
+              ))}
+            </div>
+          )}
+        </div>
+      }
+    />
+  )
+
   function handleUndo() {
     if (!undoState) return
     clearTimeout(undoState.timer)
@@ -2088,57 +2176,19 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
   if (memberGroups.length === 0 && !undoState) {
     return (
       <>
-        {/* Assign Group modal — shown even on empty state */}
-        {assignOpen && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
-            onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
-              <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Group</div>
-                <button onClick={() => setAssignOpen(false)} style={{ cursor: "pointer", color: "var(--muted-foreground)" }}><Icons.X size={16} /></button>
-              </div>
-              <div style={{ padding: "12px 20px 8px" }}>
-                <div style={{ position: "relative" }}>
-                  <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                  <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Search groups…"
-                    style={{ width: "100%", boxSizing: "border-box", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none" }} />
-                </div>
-              </div>
-              <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
-                {filteredUnassigned.length === 0 && (
-                  <div style={{ padding: "24px 8px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                    {groupSearch.trim() ? "No groups match your search" : "Member is already in all groups"}
-                  </div>
-                )}
-                {filteredUnassigned.map(g => (
-                  <button key={g.id} onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", textAlign: "left" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "")}
-                  >
-                    <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, backgroundColor: `${g.color}22`, borderWidth: 1, borderStyle: "solid", borderColor: `${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontWeight: 700, fontSize: 11 }}>
-                      {g.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{g.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{g.memberIds.length} members · {g.studios.length} studios</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+      {assignGroupModal}
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
           <Button variant="secondary" size="sm" onClick={() => setAssignOpen(true)}>
             <Icons.Plus size={13} /> Assign Group
           </Button>
         </div>
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.Users size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>Not in any groups</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Groups define shared studio access and can be used to batch-assign permissions.</div>
-        </div>
+        <EmptyState
+          icon={Icons.Users}
+          title="Not in any groups"
+          description="Groups define shared studio access, and are how permissions get assigned to several people at once."
+          ctaLabel="Add to a group"
+          onCta={() => setAssignOpen(true)}
+        />
       </>
     )
   }
@@ -2156,47 +2206,7 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
           onCancel={() => setPendingRemove(null)}
         />
       )}
-      {/* Assign Group modal */}
-      {assignOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
-          onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
-            <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Group</div>
-              <button onClick={() => setAssignOpen(false)} style={{ cursor: "pointer", color: "var(--muted-foreground)" }}><Icons.X size={16} /></button>
-            </div>
-            <div style={{ padding: "12px 20px 8px" }}>
-              <div style={{ position: "relative" }}>
-                <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Search groups…"
-                  style={{ width: "100%", boxSizing: "border-box", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none" }} />
-              </div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
-              {filteredUnassigned.length === 0 && (
-                <div style={{ padding: "24px 8px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                  {groupSearch.trim() ? "No groups match your search" : "Member is already in all groups"}
-                </div>
-              )}
-              {filteredUnassigned.map(g => (
-                <button key={g.id} onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "")}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: `${g.color}22`, border: `1px solid ${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontWeight: 700, fontSize: 11 }}>
-                    {g.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{g.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{g.memberIds.length} members · {g.studios.length} studios</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {assignGroupModal}
       {undoState && (
         <UndoToast
           message={`Removed from "${undoState.group.name}"`}
@@ -2223,56 +2233,39 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {memberGroups.map(group => (
-          <div key={group.id} style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
-            background: "var(--surface)",
-          }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-              background: `${group.color}22`, border: `1px solid ${group.color}44`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: group.color, fontWeight: 700, fontSize: 12,
-            }}>
-              {group.name.slice(0, 2).toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{group.name}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+          <CardContainer key={group.id} size="sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <AvatarCircle name={group.name} initials={group.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 2 }}>{group.name}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                  {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+                </div>
               </div>
+              {/* Studio tags keep the studio's own colour, so the same studio
+                  reads the same here as it does in the Apps tab. */}
+              <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 160 }}>
+                {group.studios.slice(0, 2).map(s => (
+                  <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{STUDIO_SHORT[s] ?? s}</Tag>
+                ))}
+                {group.studios.length > 2 && (
+                  <Tag variant="neutral" size="sm">+{group.studios.length - 2}</Tag>
+                )}
+              </div>
+              <Tooltip content={`Open ${group.name}`}>
+                <Button variant="tertiary" size="sm" aria-label={`Open ${group.name}`}
+                  onClick={() => onNavigateToGroup(group.id)}>
+                  <Icons.ExternalLink size={13} />
+                </Button>
+              </Tooltip>
+              <Tooltip content={`Remove ${member.name} from ${group.name}`}>
+                <Button variant="tertiary" size="sm" aria-label={`Remove from ${group.name}`}
+                  onClick={() => handleRemoveClick(group)}>
+                  <Icons.X size={14} />
+                </Button>
+              </Tooltip>
             </div>
-            <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 140 }}>
-              {group.studios.slice(0, 2).map(s => (
-                <span key={s} style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                  background: "var(--surface-raised)", color: "var(--muted-foreground)",
-                  border: "1px solid var(--border)",
-                }}>{STUDIO_META[s]?.label ?? s}</span>
-              ))}
-              {group.studios.length > 2 && (
-                <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{group.studios.length - 2}</span>
-              )}
-            </div>
-            <button
-              title="Go to group"
-              onClick={() => onNavigateToGroup(group.id)}
-              style={{ cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-            >
-              <Icons.ExternalLink size={13} />
-            </button>
-            <button
-              title="Remove from group"
-              onClick={() => handleRemoveClick(group)}
-              style={{ cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-            >
-              <Icons.X size={14} />
-            </button>
-          </div>
+          </CardContainer>
         ))}
       </div>
     </>
