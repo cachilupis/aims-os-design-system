@@ -405,6 +405,11 @@ const STUDIO_HI: Record<string, "lime" | "purple" | "light-blue" | "informative"
   agentic:    "light-blue",
   admin:      "informative",
 }
+/** HighlightIcon's variant name → its token stem. They differ by a hyphen. */
+const HI_TOKEN: Record<string, string> = {
+  lime: "lime", purple: "purple", "light-blue": "lightblue",
+  informative: "informative", neutral: "neutral",
+}
 const STUDIO_ICON_NAME: Record<string, string> = {
   governance: "ShieldCheck",
   datastudio: "Database",
@@ -501,8 +506,10 @@ function RemoveConfirmModal({
                       const meta = STUDIO_META[s]
                       return (
                         <div key={s} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-                          <span style={{ fontWeight: 600 }}>{meta.label}</span>
+                          {/* A studio's identity colour is its Tag, never a raw
+                              hex dot — CLAUDE.md, and the reason the four had
+                              drifted into three different greens. */}
+                          <Tag variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{meta.label}</Tag>
                         </div>
                       )
                     })}
@@ -598,12 +605,14 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
  * the change and the list it was handed only contained what was already on.
  * The editor passes both and owns the answer.
  */
-function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle }: {
+function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle, scopeOf, onScopeChange }: {
   node: PermNode
   depth?: number
   isEditing?: boolean
   granted?: (id: string) => boolean
   onToggle?: (id: string, on: boolean) => void
+  scopeOf?: (id: string) => string
+  onScopeChange?: (id: string, scope: string) => void
 }) {
   const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
   const [localChecked, setLocalChecked] = useState(node.state === "g-direct" || node.state === "g-inh")
@@ -639,7 +648,9 @@ function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle }:
             {/* A pill with a label in it is a Tag — this one was hand-drawn
                 with its own radius, its own tint and its own border. */}
             {node.role && <Tag variant="informative" size="sm">via {node.role}</Tag>}
-            {node.scope && (
+            {/* The chips say the reach while editing; printing it here too
+                would say it twice, and disagree the moment it is changed. */}
+            {node.scope && !isEditing && (
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
             )}
           </div>
@@ -647,7 +658,32 @@ function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle }:
             <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>
           )}
         </div>
-        <div onClick={e => e.stopPropagation()}>
+        {/* Scope and the switch are this row's two controls, so they sit
+            together on the right with a hairline between them — the same
+            shape as the role editor, which is where this came from. */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}
+          onClick={e => e.stopPropagation()}>
+          {isEditing && scopeOf && (
+            <>
+              <div style={{
+                display: "flex", gap: 4,
+                // Reach only means something once the permission is on, and
+                // an inherited one is the role's to change, not this panel's.
+                opacity: checked && !isInherited ? 1 : 0.35,
+                pointerEvents: checked && !isInherited ? "auto" : "none",
+              }}>
+                {SCOPE_ITEMS.map(sc => (
+                  <Chip key={sc.id} size="s"
+                    variant={scopeOf(node.id) === sc.id ? "primary" : "secondary"}
+                    onClick={() => onScopeChange?.(node.id, sc.id)}
+                    aria-label={`${sc.label} scope for ${node.label}`}>
+                    {sc.label}
+                  </Chip>
+                ))}
+              </div>
+              <div style={{ width: 1, alignSelf: "stretch", background: "var(--color-border-neutral-subtle)" }} />
+            </>
+          )}
           <Toggle
             checked={checked}
             disabled={!isEditing || isInherited}
@@ -658,7 +694,7 @@ function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle }:
       </div>
       {expanded && hasChildren && node.children!.map(child => (
         <PermTreeNode key={child.id} node={child} depth={depth + 1} isEditing={isEditing}
-          granted={granted} onToggle={onToggle} />
+          granted={granted} onToggle={onToggle} scopeOf={scopeOf} onScopeChange={onScopeChange} />
       ))}
     </div>
   )
@@ -1581,6 +1617,8 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
    * Empty means "exactly what the role and the direct grants say".
    */
   const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  /** Reach per permission, by id. Empty means "whatever the grant says". */
+  const [scopes, setScopes] = useState<Record<string, string>>({})
   const flat = useMemo(() => nodes.flatMap(n => [n, ...(n.children ?? [])]), [nodes])
   const isOn = (id: string) => {
     if (overrides[id] !== undefined) return overrides[id]
@@ -1600,10 +1638,17 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
   const onIds      = flat.filter(n => isOn(n.id)).map(n => n.id)
   const inhCount   = onIds.filter(isInherited).length
   const directCount = onIds.length - inhCount
-  const changedCount = Object.keys(overrides).filter(id => {
+  const toggledCount = Object.keys(overrides).filter(id => {
     const n = flat.find(x => x.id === id)
     return n ? overrides[id] !== (n.state === "g-direct" || n.state === "g-inh") : false
   }).length
+  // Narrowing a permission from Tenant to Own is as real a change as turning
+  // one off, so Save has to count it or it stays disabled on a real edit.
+  const scopedCount = Object.keys(scopes).filter(id => {
+    const n = flat.find(x => x.id === id)
+    return n ? scopes[id] !== scopeTier(n.scope) : false
+  }).length
+  const changedCount = toggledCount + scopedCount
 
   return (
     <div style={{ borderTop: `1px solid ${isEditing ? "var(--primary)" : "var(--border)"}` }}>
@@ -1639,17 +1684,19 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
             {granted.map(n => (
               <PermTreeNode key={n.id} node={n} depth={0} isEditing={isEditing}
                 granted={isEditing ? isOn : undefined}
-                onToggle={isEditing ? (id, on) => setOverrides(o => ({ ...o, [id]: on })) : undefined} />
+                onToggle={isEditing ? (id, on) => setOverrides(o => ({ ...o, [id]: on })) : undefined}
+                scopeOf={isEditing ? (id => scopes[id] ?? scopeTier(flat.find(x => x.id === id)?.scope)) : undefined}
+                onScopeChange={isEditing ? ((id, sc) => setScopes(m => ({ ...m, [id]: sc }))) : undefined} />
             ))}
           </div>
         )}
         {isEditing && (
           <div style={{ display: "flex", gap: 8, paddingBottom: 12, alignItems: "center" }}>
             <Button variant="primary" size="sm" disabled={changedCount === 0}
-              onClick={() => { onSave?.(changedCount); setOverrides({}) }}>
+              onClick={() => { onSave?.(changedCount); setOverrides({}); setScopes({}) }}>
               {changedCount === 0 ? "Save changes" : `Save ${changedCount} change${changedCount === 1 ? "" : "s"}`}
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => { setOverrides({}); onCancel?.() }}>Cancel</Button>
+            <Button variant="secondary" size="sm" onClick={() => { setOverrides({}); setScopes({}); onCancel?.() }}>Cancel</Button>
             <div style={{ flex: 1 }} />
             <Button variant="warning" size="sm" onClick={onRemove}><Icons.Trash2 size={11} /> Remove access</Button>
           </div>
@@ -2281,11 +2328,23 @@ const GRANTED_STATES: PermState[] = ["g-direct", "g-inh"]
 type PermMode = "audit" | "edit"
 type PermOverrides = Record<string, PermState>
 
+/**
+ * The three reach tiers a permission can have. Fixture rows carry a raw
+ * `scope` that is sometimes a department name — "Analytics", "IT", "Ops",
+ * "Risk" — because that is what the tier means in practice for that person.
+ * `scopeTier` folds those onto Department so a chip can be selected; the raw
+ * value is still what the read-only views print.
+ */
 const SCOPE_ITEMS: { id: string; label: string }[] = [
-  { id: "Own",    label: "Own" },
-  { id: "Team",   label: "Team" },
-  { id: "Tenant", label: "Tenant" },
+  { id: "Own",        label: "Own" },
+  { id: "Department", label: "Department" },
+  { id: "Tenant",     label: "Tenant" },
 ]
+function scopeTier(raw: string | undefined): string {
+  if (!raw) return "Own"
+  if (raw === "Own" || raw === "Tenant") return raw
+  return "Department"
+}
 
 function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOverrides, onScopeChange }: {
   node: PermNode; depth: number; overrides: PermOverrides; onToggle: (id: string, on: boolean) => void
@@ -2357,7 +2416,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
                 pointerEvents: isDirect ? "auto" : "none",
               }}>
                 {SCOPE_ITEMS.map(sc => {
-                  const active = (scopeOverrides[node.id] ?? node.scope ?? "Own") === sc.id
+                  const active = (scopeOverrides[node.id] ?? scopeTier(node.scope)) === sc.id
                   return (
                     <Chip key={sc.id} size="s" variant={active ? "primary" : "secondary"}
                       onClick={() => onScopeChange(node.id, sc.id)}
@@ -2475,13 +2534,6 @@ const RESOURCE_TYPE_TAG: Record<string, "informative" | "purple" | "lightBlue" |
   Model:       "purple",
   "Event Bus": "lightBlue",
   Sandbox:     "neutral",
-}
-
-const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
-  Dataset:    <Icons.Database size={13} />,
-  Model:      <Icons.Cpu size={13} />,
-  "Event Bus":<Icons.Zap size={13} />,
-  Sandbox:    <Icons.Box size={13} />,
 }
 
 // ─── Remove Access Modal ──────────────────────────────────────────────────────
@@ -3032,11 +3084,12 @@ function RoleDetailPage({ role, onBack, onDelete, onMemberClick, allRoles, onRem
               )}
             </div>
             {members.length === 0 ? (
-              <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
-                <Icons.Users size={28} style={{ opacity: 0.3, marginBottom: 10 }} />
-                <div style={{ fontSize: 14, fontWeight: 500 }}>No members assigned</div>
-                <div style={{ fontSize: 13, marginTop: 4 }}>Assign members to grant them this role's permissions</div>
-              </div>
+              <EmptyState
+                bare
+                icon={Icons.Users}
+                title="No members assigned"
+                description="Assign people to this role and they gain every permission it grants."
+              />
             ) : members.map(m => {
               return (
                 <div
@@ -3373,7 +3426,10 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
         />
       )}
 
-      <DetailTabs tabs={["Members", "Resources"]} active={activeTab} onChange={setActiveTab} />
+      {/* Activity is the third tab everywhere else a record has a history —
+          Roles has it, the member profile has it, and a group's membership
+          changing over time is exactly the thing an admin is audited on. */}
+      <DetailTabs tabs={["Members", "Resources", "Activity"]} active={activeTab} onChange={setActiveTab} />
 
       <div style={{ marginTop: 20 }}>
         {/* Members */}
@@ -3389,11 +3445,12 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
               <Button variant="tertiary" size="sm">+ Add member</Button>
             </div>
             {groupMembers.length === 0 ? (
-              <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
-                <Icons.Users size={28} style={{ opacity: 0.3, marginBottom: 10 }} />
-                <div style={{ fontSize: 14, fontWeight: 500 }}>No members yet</div>
-                <div style={{ fontSize: 13, marginTop: 4 }}>Add members to this group to grant them shared access</div>
-              </div>
+              <EmptyState
+                bare
+                icon={Icons.Users}
+                title="No members yet"
+                description="Add people to this group and they inherit whatever it grants."
+              />
             ) : groupMembers.map(m => {
               return (
                 <div
@@ -3474,6 +3531,7 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
 
         {/* Resources */}
         {activeTab === 1 && <GroupResourcesPanel groupId={group.id} />}
+        {activeTab === 2 && <ActivityPanel />}
       </div>
     </ScreenLayout>
   )
@@ -3482,17 +3540,11 @@ function GroupDetailPage({ group: initialGroup, onBack, onMemberClick, allGroups
 function GroupResourcesPanel({ groupId }: { groupId: string }) {
   void groupId
   return (
-    <div style={{
-      padding: "56px 20px", textAlign: "center",
-      color: "var(--muted-foreground)",
-      border: "1px solid var(--border)", borderRadius: 12,
-    }}>
-      <Icons.FolderOpen size={28} style={{ opacity: 0.3, marginBottom: 10 }} />
-      <div style={{ fontSize: 14, fontWeight: 500, color: "var(--foreground)" }}>No resources yet</div>
-      <div style={{ fontSize: 13, marginTop: 4 }}>
-        Resources shared with this group will appear here.
-      </div>
-    </div>
+    <EmptyState
+      icon={Icons.FolderOpen}
+      title="No resources shared yet"
+      description="Resources granted to this group are available to every member of it, and show as “via this group” on each person's own Resources tab."
+    />
   )
 }
 
@@ -4602,11 +4654,17 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
   const members = role.memberIds.map(id => MEMBERS.find(m => m.id === id)).filter(Boolean) as Member[]
   const perms = ROLE_PERM_COUNTS[role.id] ?? { governance: 0, datastudio: 0, agentic: 0, admin: 0, total: 0 }
 
+  /**
+   * The studio keys, so the colour comes from STUDIO_HI like it does
+   * everywhere else. These rows used to carry four hard-coded hexes that did
+   * not even agree with STUDIO_META's — Governance was purple here and green
+   * there — which is the drift the token rule exists to stop.
+   */
   const permRows = [
-    { label: "Governance",  value: perms.governance, max: 10, color: "#8b5cf6" },  // audit-ignore: prototype fixture data
-    { label: "Data Studio", value: perms.datastudio, max: 10, color: "#10b981" },  // audit-ignore: prototype fixture data
-    { label: "Agentic",     value: perms.agentic,    max: 10, color: "#f97316" },  // audit-ignore: prototype fixture data
-    { label: "Admin",       value: perms.admin,       max: 10, color: "#6366f1" },  // audit-ignore: prototype fixture data
+    { id: "governance", label: "Governance",  value: perms.governance, max: 10 },
+    { id: "datastudio", label: "Data Studio", value: perms.datastudio, max: 10 },
+    { id: "agentic",    label: "Agentic",     value: perms.agentic,    max: 10 },
+    { id: "admin",      label: "Admin",       value: perms.admin,      max: 10 },
   ]
 
   return (
@@ -4654,15 +4712,15 @@ function RolePreview({ role, onViewFull, onMemberClick }: { role: Role; onViewFu
               <div key={s.label} style={{ border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{s.label}</span>
+                    <HighlightIcon size="sm" variant={STUDIO_HI[s.id] ?? "neutral"} iconName={STUDIO_ICON_NAME[s.id] ?? "AppWindow"} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{s.label}</span>
                   </div>
                   <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                     <span style={{ fontWeight: 700, color: s.value > 0 ? "var(--primary)" : "var(--muted-foreground)" }}>{s.value}</span>
                   </span>
                 </div>
                 <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.min((s.value / s.max) * 100, 100)}%`, background: s.value > 0 ? s.color : "transparent", borderRadius: 2, transition: "width 0.3s" }} />
+                  <div style={{ height: "100%", width: `${Math.min((s.value / s.max) * 100, 100)}%`, background: s.value > 0 ? `var(--hi-${HI_TOKEN[STUDIO_HI[s.id] ?? "neutral"]}-icon)` : "transparent", borderRadius: 2, transition: "width 0.3s" }} />
                 </div>
               </div>
             ))}
@@ -4752,10 +4810,12 @@ function GroupPreview({ group, onViewFull: _onViewFull, onMemberClick }: { group
                   {group.studios.map(s => {
                     const meta = STUDIO_META[s]
                     return (
-                      <div key={s} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface)" }}>
-                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</span>
-                      </div>
+                      <CardContainer key={s} size="sm">
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <HighlightIcon size="sm" variant={STUDIO_HI[s] ?? "neutral"} iconName={STUDIO_ICON_NAME[s] ?? "AppWindow"} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{meta.label}</span>
+                        </div>
+                      </CardContainer>
                     )
                   })}
                 </div>
@@ -4847,25 +4907,12 @@ function NewRoleWizard({ onCancel, onCreate }: {
   const [step, setStep]       = useState(0)
   const [name, setName]       = useState("")
   const [desc, setDesc]       = useState("")
-  const [basedOn, setBasedOn] = useState<string | null>(null)
   const [studios, setStudios] = useState<string[]>([])
   const [activeStudio, setActiveStudio] = useState<string | null>(null)
   const [overrides, setOverrides]           = useState<PermOverrides>({})
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string>>({})
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [memberQuery, setMemberQuery] = useState("")
-
-  // Picking a source role copies the studios it covers. It does NOT copy
-  // permissions — the fixture holds one shared tree, not a grant list per role,
-  // so claiming otherwise would be a lie the UI cannot back up.
-  function chooseBase(id: string | null) {
-    setBasedOn(id)
-    const src = id ? ROLES.find(r => r.id === id) : null
-    if (src) {
-      setStudios(src.studios ?? [])
-      setActiveStudio((src.studios ?? [])[0] ?? null)
-    }
-  }
 
   function toggleStudio(id: string) {
     setStudios(prev => {
@@ -4942,19 +4989,6 @@ function NewRoleWizard({ onCancel, onCreate }: {
             <FormSectionLabel optional>Description</FormSectionLabel>
             <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
               placeholder="What does this role allow members to do?" />
-          </div>
-          <div>
-            <FormSectionLabel optional hint="Copies which studios that role covers. Permissions are chosen in the next step either way.">
-              Start from
-            </FormSectionLabel>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <Chip size="s" variant={basedOn === null ? "primary" : "secondary"} onClick={() => chooseBase(null)}>Blank</Chip>
-              {ROLES.map(r => (
-                <Chip key={r.id} size="s" variant={basedOn === r.id ? "primary" : "secondary"} onClick={() => chooseBase(r.id)}>
-                  {r.label}
-                </Chip>
-              ))}
-            </div>
           </div>
         </div>
       )}
@@ -5086,19 +5120,6 @@ function members_forWizard(query: string) {
 }
 
 /**
- * Every resource any member holds, deduped by name — the catalogue a new group
- * can be granted from. Built off MEMBER_RESOURCES rather than a fixture of its
- * own, so the names here are the same ones the member Resources tab shows.
- */
-const RESOURCE_CATALOG: MemberResource[] = (() => {
-  const seen = new Map<string, MemberResource>()
-  Object.values(MEMBER_RESOURCES).flat().forEach(r => {
-    if (!seen.has(r.name)) seen.set(r.name, r)
-  })
-  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
-})()
-
-/**
  * Create a group — a full-page wizard, same shell as New role and Invite.
  *
  * Three stages, not the five things Michael listed. Name and description are
@@ -5110,19 +5131,15 @@ function CreateGroupWizard({ onCancel, onCreate }: {
   onCancel: () => void
   onCreate: (group: Group) => void
 }) {
-  const [step, setStep]         = useState<0 | 1 | 2>(0)
+  const [step, setStep]         = useState<0 | 1>(0)
   const [name, setName]         = useState("")
   const [desc, setDesc]         = useState("")
-  const [studios, setStudios]   = useState<string[]>([])
   const [memberIds, setMemberIds]     = useState<string[]>([])
-  const [resourceIds, setResourceIds] = useState<string[]>([])
-  const [memberQuery, setMemberQuery]     = useState("")
-  const [resourceQuery, setResourceQuery] = useState("")
+  const [memberQuery, setMemberQuery] = useState("")
 
   const steps: StepItem[] = [
-    { label: "Details",   state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
-    { label: "Members",   state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
-    { label: "Resources", state: step === 2 ? "active" : "default" },
+    { label: "Details", state: step === 0 ? "active" : "completed" },
+    { label: "Members", state: step === 1 ? "active" : "default"   },
   ]
 
   const canContinue = step === 0 ? name.trim().length > 0 : true
@@ -5131,12 +5148,6 @@ function CreateGroupWizard({ onCancel, onCreate }: {
     const q = memberQuery.trim().toLowerCase()
     if (!q) return MEMBERS
     return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
-  })()
-
-  const shownResources = (() => {
-    const q = resourceQuery.trim().toLowerCase()
-    if (!q) return RESOURCE_CATALOG
-    return RESOURCE_CATALOG.filter(r => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q))
   })()
 
   function finish() {
@@ -5149,7 +5160,11 @@ function CreateGroupWizard({ onCancel, onCreate }: {
       color: "var(--muted)",
       desc: desc.trim(),
       memberIds,
-      studios,
+      // A group starts granting nothing. Studios are chosen from the group's
+      // own Settings tab once it exists — asking for them at creation put a
+      // permissions decision in front of somebody who is still naming a list
+      // of people.
+      studios: [],
     })
   }
 
@@ -5187,28 +5202,6 @@ function CreateGroupWizard({ onCancel, onCreate }: {
             <FormSectionLabel optional>Description</FormSectionLabel>
             <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
               placeholder="What do the people in this group have in common?" />
-          </div>
-          <div>
-            <FormSectionLabel optional hint="A group grants its studios to everyone in it. Leave it empty and the group organises people without granting anything.">
-              Studio access
-            </FormSectionLabel>
-            {/* A studio here is selected/unselected, which is what Chip is for —
-                the same call the group's own Settings tab already makes. */}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {STUDIO_TABS.map(t => {
-                const on = studios.includes(t.id)
-                return (
-                  <Chip
-                    key={t.id}
-                    size="m"
-                    variant={on ? "primary" : "secondary"}
-                    onClick={() => setStudios(s => on ? s.filter(x => x !== t.id) : [...s, t.id])}
-                  >
-                    {t.label}
-                  </Chip>
-                )
-              })}
-            </div>
           </div>
         </div>
       )}
@@ -5249,45 +5242,6 @@ function CreateGroupWizard({ onCancel, onCreate }: {
         </div>
       )}
 
-      {/* ── 3 · Resources ─────────────────────────────────────────────── */}
-      {step === 2 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
-          <FormSectionLabel optional hint="Everyone in the group gets these. Resources granted here show as “via {group}” on each member's own Resources tab.">
-            Grant resources
-          </FormSectionLabel>
-          <Input value={resourceQuery} onChange={e => setResourceQuery(e.target.value)} placeholder="Search resources…" />
-          {shownResources.length === 0 ? (
-            <EmptyState icon={Icons.Layers} title="No resources found"
-              description="Try a different name or type."
-              ctaLabel="Clear search" onCta={() => setResourceQuery("")} />
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {shownResources.map(r => {
-                const on = resourceIds.includes(r.id)
-                return (
-                  <CardContainer key={r.id} size="sm" selected={on}
-                    onClick={() => setResourceIds(prev => on ? prev.filter(x => x !== r.id) : [...prev, r.id])}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Checkbox size="sm" checked={on} id={`grp-res-${r.id}`} className="pointer-events-none" />
-                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0, pointerEvents: "none" }}>
-                        {RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />}
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0, fontFamily: "monospace", fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", pointerEvents: "none" }}>
-                        {r.name}
-                      </span>
-                      <Tag variant={RESOURCE_TYPE_TAG[r.type] ?? "neutral"} size="sm">{r.type}</Tag>
-                    </div>
-                  </CardContainer>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* The fixed footer would otherwise sit on top of the last card. */}
-      <div style={{ height: 96 }} aria-hidden />
-
       {/* The flow completes here, never in the Header. */}
       {createPortal(
         <div style={{
@@ -5299,10 +5253,10 @@ function CreateGroupWizard({ onCancel, onCreate }: {
             variant={step === 0 ? "cancel-next" : "back-next"}
             cancelLabel="Cancel"
             onCancel={onCancel}
-            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
-            nextLabel={step === 2 ? "Create group" : "Next"}
+            onBack={() => setStep(0)}
+            nextLabel={step === 1 ? "Create group" : "Next"}
             nextDisabled={!canContinue}
-            onNext={step === 2 ? finish : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+            onNext={step === 1 ? finish : () => setStep(1)}
           />
         </div>,
         document.body,
