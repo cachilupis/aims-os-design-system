@@ -1588,7 +1588,13 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       id: "a5b", channel: "sms", title: `Outbound SMS · ${c.phone}`,
       meta: `${c.owner} · 5:12 PM · After the timeline request`,
       timestamp: "Aug 18, 2026 · 17:12",
-      state: { label: "Read", variant: "success" },
+      /* DELIVERED, NOT READ — Michael, 2026-09-11. A read receipt needs the
+         handset to send one back, and SMS gives us no such signal; the
+         carrier confirms delivery and nothing after that. Thom's prototype
+         carries both words because his fixture came from a channel that has
+         them, and copying the vocabulary without the capability is how a
+         prototype promises something the product cannot do. */
+      state: { label: "Delivered", variant: "success" },
       smsBody: `Hi ${who} — picking up your note about the migration timeline. I am confirming the date internally and will come back in writing this week.`,
     },
     {
@@ -2958,5 +2964,173 @@ export function getProfile(c: UcpContact): UcpProfile | null {
       { text: "Brought finance into the last two calls", evidence: { label: "Outbound call · Sep 2",      destination: "activity" } },
       { text: `Blocked on one date, not on price`,       evidence: { label: `${who}'s security review`,   destination: "activity" } },
     ],
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COMMUNICATION THREADS — the Email / SMS / Call preview
+   ══════════════════════════════════════════════════════════════════════════
+
+   Figma: Unified Customer Profile, sections Email (7698:2032), SMS
+   (7698:2033) and Call (7698:2034). Michael, 2026-09-11: build that design,
+   adapted to the design system, using its tokens and components.
+
+   ONE SHAPE, THREE CHANNELS. The three Figma sections are the same panel with
+   different content — a header, Conversation | Details tabs, an AI summary, a
+   thread, and a details sheet. Building three components would have meant
+   three places to fix the next thing, so the model is one type with a
+   `channel` discriminator and the panel branches on content, never on layout.
+
+   WHAT THE THREAD CAN CONTAIN, from the design:
+
+     message   a bubble. Outbound sits right and tinted with a delivery
+               receipt; inbound sits left with no fill. That asymmetry is the
+               whole reason a thread reads as a conversation rather than a log.
+     system    what the platform did, on a success tint — "Appointment booked",
+               "Routed to a human".
+     note      an internal note on an alert tint, with its author. Visible to
+               the team and never to the contact, which is why it cannot look
+               like a message.
+     separator a date break. The Activity feed already has ElapsedSeparator
+               and it is the same device, so the panel reuses it.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export type ThreadEntryKind = "message" | "system" | "note" | "separator"
+
+export interface ThreadEntry {
+  kind:      ThreadEntryKind
+  /** Messages only. Outbound is us; inbound is them. */
+  direction?: "outbound" | "inbound"
+  /** Who said it — drives the avatar's initials and its colour. */
+  author?:   string
+  body:      string
+  /** Clock time on a message, a date on a system line or a note. */
+  at?:       string
+  /**
+   * Delivery, on outbound messages only, and ONLY what the channel can
+   * actually report. Email knows it was opened; SMS knows the carrier took
+   * it and nothing after that — there is no read receipt to have.
+   */
+  receipt?:  "sent" | "delivered" | "opened"
+}
+
+export interface CommsAttachment { name: string; kind: "doc" | "txt" | "image" }
+
+export interface CommsThread {
+  channel:   "email" | "sms" | "call"
+  /** The panel's title — a subject for email, the number for SMS and calls. */
+  title:     string
+  /** Under the title. */
+  when:      string
+  /** The purple summary card. Null when there is nothing worth summarising —
+   *  a two-line SMS exchange is shorter than any summary of it. */
+  summary:   string | null
+  entries:   ThreadEntry[]
+  /** The Details tab, in the design's own order. */
+  status:    { label: string; variant: TagVariantLite }
+  assigned:  string
+  dueBy?:    { at: string; overdueIn: string }
+  sentiment?: "Positive" | "Neutral" | "Negative"
+  created:   string
+  lastActivity: string
+  attachments: CommsAttachment[]
+  /** Calls only: what the transcript and the recording say. */
+  duration?: string
+  recording?: string
+}
+
+/**
+ * The thread behind one Activity row. Returns null for anything that is not a
+ * communication — an event or a task has no conversation to open.
+ */
+export function getThread(c: UcpContact, a: UcpActivity): CommsThread | null {
+  if (CHANNEL_GROUP[a.channel] !== "communication") return null
+  const who   = c.name.split(" ")[0]
+  const agent = c.agent.name
+
+  if (a.channel === "email") {
+    const inbound = a.title.startsWith("Inbound")
+    return {
+      channel: "email",
+      title:   inbound ? "Migration timeline" : "Governance addendum for review",
+      when:    a.timestamp,
+      summary: a.aiSummary ?? null,
+      entries: inbound ? [
+        { kind: "separator", body: "August 2026" },
+        { kind: "message", direction: "inbound", author: c.name, at: "7:55 AM",
+          body: `Following up on the migration timeline — could you send it in writing? Our security review cannot start until we can attach a date to it.` },
+        { kind: "note", author: c.owner, at: "Aug 18, 2026",
+          body: "Second ask. I do not have a date I can commit to yet — checking with delivery before replying." },
+        { kind: "system", at: "Aug 18, 2026", body: `${agent} drafted a reply and held it — no attested delivery date` },
+      ] : [
+        { kind: "separator", body: "August 2026" },
+        { kind: "message", direction: "outbound", author: c.owner, at: "9:40 AM", receipt: "opened",
+          body: `Hi ${who} — the redlined addendum is attached for Legal to countersign. Shout if anything in clause 7 needs another pass.` },
+        { kind: "system", at: "Aug 28, 2026", body: `Opened twice by ${who}. No reply yet.` },
+      ],
+      status:   inbound ? { label: "Awaiting reply", variant: "alert" } : { label: "Sent", variant: "success" },
+      assigned: c.owner,
+      dueBy:    inbound ? { at: "Sep 12, 17:00", overdueIn: "Due in 2d" } : undefined,
+      sentiment: "Neutral",
+      created:  a.timestamp,
+      lastActivity: "6 days ago",
+      attachments: inbound ? [] : [
+        { name: "Addendum_v3_redlined.pdf", kind: "doc" },
+        { name: "Clause-7-changes.txt",     kind: "txt" },
+      ],
+    }
+  }
+
+  if (a.channel === "sms") {
+    return {
+      channel: "sms",
+      title:   c.phone,
+      when:    a.timestamp,
+      /* No summary. The whole exchange is two messages — a summary of it
+         would be longer than it is. */
+      summary: null,
+      entries: [
+        { kind: "message", direction: "outbound", author: c.owner, at: "5:12 PM", receipt: "delivered",
+          body: a.smsBody ?? "" },
+      ],
+      status:   { label: "Delivered", variant: "success" },
+      assigned: c.owner,
+      created:  a.timestamp,
+      lastActivity: "3 weeks ago",
+      attachments: [],
+    }
+  }
+
+  // Call
+  const inbound = a.title.startsWith("Inbound")
+  return {
+    channel: "call",
+    title:   c.phone,
+    when:    a.timestamp,
+    summary: a.aiSummary ?? null,
+    entries: inbound ? [
+      { kind: "system", at: a.timestamp, body: `${agent} answered · identity verified` },
+      { kind: "message", direction: "inbound", author: c.name, at: "10:42 AM",
+        body: "I need the audit evidence pack for the Q3 review — can someone send it today?" },
+      { kind: "message", direction: "outbound", author: agent, at: "10:44 AM",
+        body: "I can see the pack on the Legal drive. Putting you through to the account owner to release it." },
+      { kind: "system", at: a.timestamp, body: `Escalated to ${c.owner}` },
+      { kind: "note", author: c.owner, at: "Aug 12, 2026",
+        body: "Sent the evidence pack the same afternoon. Nothing outstanding from this call." },
+    ] : [
+      { kind: "system", at: a.timestamp, body: `${c.owner} dialled out` },
+      { kind: "message", direction: "inbound", author: c.name, at: "2:07 PM",
+        body: "The evaluation is still funded for this cycle. What I need is the migration timeline in writing." },
+      { kind: "message", direction: "outbound", author: c.owner, at: "2:09 PM",
+        body: "Understood — I will confirm the date internally and send it through this week." },
+    ],
+    status:   inbound ? { label: "Escalated", variant: "alert" } : { label: "Resolved", variant: "success" },
+    assigned: inbound ? agent : c.owner,
+    sentiment: inbound ? "Neutral" : "Positive",
+    created:  a.timestamp,
+    lastActivity: inbound ? "4 weeks ago" : "1 week ago",
+    attachments: [{ name: "call-recording.mp3", kind: "doc" }],
+    duration:  inbound ? "6:41" : "6:18",
+    recording: "Available · 90-day retention",
   }
 }

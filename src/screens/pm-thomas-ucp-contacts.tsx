@@ -137,7 +137,19 @@ const CREATE_LABEL: Record<string, string> = {
  * phone nobody has yet and an owner nobody has decided are both normal states
  * for a record created the moment somebody appears in an inbox.
  */
-type CreateFieldKind = "text" | "select" | "search" | "phones"
+/**
+ * `repeat` is the phone field generalised — Michael, 2026-09-11 asked for
+ * secondary emails with a primary selector, "igual a como lo haces en número
+ * de teléfono".
+ *
+ * It was `"phones"`, a kind named after one field, with its list and its
+ * primary index held in two `useState`s called `phones` and `primary`. A
+ * second repeatable field would have meant a third and fourth state with the
+ * same shape and a renderer copied beside it. The kind is now about the
+ * BEHAVIOUR — one or many, one of them primary — and the lists live in a
+ * record keyed by field, so a third one costs a line in CREATE_FIELDS.
+ */
+type CreateFieldKind = "text" | "select" | "search" | "repeat"
 
 interface CreateField {
   key:       string
@@ -145,27 +157,36 @@ interface CreateField {
   kind:      CreateFieldKind
   optional?: boolean
   options?:  string[]
+  /** `repeat` only: what one entry is called, for the placeholder and the
+   *  add button. "number", "email address". */
+  noun?:     string
 }
 
 const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
   person: [
     { key: "name",     label: "Full name",     kind: "text"                                        },
     { key: "email",    label: "Email",         kind: "text"                                        },
-    { key: "phones",   label: "Phone",         kind: "phones", optional: true                      },
+    { key: "phones",   label: "Phone",         kind: "repeat", noun: "number", optional: true      },
     { key: "location", label: "Location",      kind: "select", options: CREATE_LOCATIONS           },
     { key: "owner",    label: "Account owner", kind: "search", options: CREATE_OWNERS, optional: true },
   ],
   employee: [
     { key: "name",       label: "Full name",  kind: "text"                                  },
     { key: "email",      label: "Work email", kind: "text"                                  },
-    { key: "phones",     label: "Phone",      kind: "phones", optional: true                },
+    { key: "phones",     label: "Phone",      kind: "repeat", noun: "number", optional: true },
     { key: "department", label: "Department", kind: "text"                                  },
     { key: "location",   label: "Location",   kind: "select", options: CREATE_LOCATIONS     },
   ],
   company: [
-    { key: "name",     label: "Legal name",    kind: "text"                                        },
-    { key: "email",    label: "Account email", kind: "text"                                        },
-    { key: "phones",   label: "Phone",         kind: "phones", optional: true                      },
+    /* "Company name", not "Legal name" — Michael, 2026-09-11. The legal
+       entity is a governance fact that arrives with the contract; what
+       somebody types into a create form is what the company is called. */
+    { key: "name",     label: "Company name",  kind: "text"                                        },
+    /* "Mail", and repeatable. An organisation has a billing address, an AP
+       address and whoever actually answers — one field forced a choice the
+       record should not have to make. */
+    { key: "emails",   label: "Mail",          kind: "repeat", noun: "email address"               },
+    { key: "phones",   label: "Phone",         kind: "repeat", noun: "number", optional: true      },
     { key: "location", label: "Headquarters",  kind: "select", options: CREATE_LOCATIONS           },
     { key: "owner",    label: "Account owner", kind: "search", options: CREATE_OWNERS, optional: true },
   ],
@@ -276,10 +297,23 @@ function CreateContactWizard({
   )
   const [values, setValues] = useState<Record<string, string>>({})
   const [tried,  setTried]  = useState(false)
-  /** One entry per phone row. Starts as a single empty row — an optional field
-   *  still shows one line, or nobody discovers it is there. */
-  const [phones, setPhones] = useState<string[]>([""])
-  const [primary, setPrimary] = useState(0)
+  /** Every repeatable field's rows, keyed by field. Each starts as a single
+   *  empty row — an optional field still shows one line, or nobody discovers
+   *  it is there. */
+  const [lists, setLists] = useState<Record<string, string[]>>({})
+  /** Which row of each list is primary. */
+  const [primaries, setPrimaries] = useState<Record<string, number>>({})
+
+  const rowsOf    = (key: string) => lists[key] ?? [""]
+  /* Declared HERE, with the other readers, because the duplicate-check memo
+     below closes over it — a `const` arrow used above its own declaration is
+     a temporal-dead-zone crash at first render, not a type error, so tsc says
+     nothing and the screen goes blank. */
+  const filledOf  = (key: string) => rowsOf(key).map(v => v.trim()).filter(Boolean)
+  const primaryOf = (key: string) => primaries[key] ?? 0
+  const setRows   = (key: string, next: string[]) => setLists(m => ({ ...m, [key]: next }))
+  /** The phone list, which the duplicate check reads. */
+  const phones    = rowsOf("phones")
   /** Which Select or search field has its Menu open, and where to anchor it. */
   const [openSel, setOpenSel] = useState<string | null>(null)
   const [selAnchor, setSelAnchor] = useState<DropdownAnchor | null>(null)
@@ -291,8 +325,13 @@ function CreateContactWizard({
 
   const fields = CREATE_FIELDS[type]
   const byKey  = (k: string) => fields.find(f => f.key === k)
+  /* IDENTITY IS NAME + HOW YOU REACH THEM BY MAIL, whatever that field is
+     called for this type — "email" on a person, "emails" on a company since
+     an organisation has several. Listing only "email" here silently dropped
+     the company's Mail field from the form: it was declared in CREATE_FIELDS,
+     belonged to no stage, and therefore rendered nowhere. */
   const STEP_KEYS: Record<0 | 1, string[]> = {
-    0: ["name", "email"],
+    0: ["name", "email", "emails"],
     1: ["phones", "location", "owner"],
   }
   const stepFields = (i: 0 | 1) =>
@@ -306,14 +345,21 @@ function CreateContactWizard({
    * next field and start filling in a record that will not be created.
    */
   const match: CreateMatch | null = useMemo(
-    () => matchExistingRecords({ name: values.name, email: values.email, phones }),
-    [values.name, values.email, phones],
+    /* The email a company types into its repeatable list counts for the
+       duplicate check exactly as a person's single field does — the primary
+       one, since that is the address the record will be known by. */
+    () => matchExistingRecords({
+      name:   values.name,
+      email:  values.email ?? filledOf("emails")[primaryOf("emails")],
+      phones,
+    }),
+    [values.name, values.email, lists, primaries, phones],
   )
   const blocked = match?.blocks === true
 
   const missingIn = (i: 0 | 1) => stepFields(i).filter(f =>
     f.optional ? false
-      : f.kind === "phones" ? phones.every(p => p.trim() === "")
+      : f.kind === "repeat" ? rowsOf(f.key).every(v => v.trim() === "")
       : (values[f.key] ?? "").trim() === "",
   )
   const missing = missingIn(step === 2 ? 1 : (step as 0 | 1))
@@ -333,28 +379,36 @@ function CreateContactWizard({
     ...(step < i ? { hint: `Complete ${WIZARD_STEPS[i - 1]} first.` } : {}),
   }))
 
-  const setPhone = (i: number, v: string) =>
-    setPhones(list => list.map((p, j) => (j === i ? v : p)))
+  const setRow = (key: string, i: number, v: string) =>
+    setRows(key, rowsOf(key).map((x, j) => (j === i ? v : x)))
 
-  const removePhone = (i: number) => {
-    setPhones(list => list.filter((_, j) => j !== i))
+  const removeRow = (key: string, i: number) => {
+    const next = rowsOf(key).filter((_, j) => j !== i)
+    setRows(key, next)
     // The primary moves with the list and never past its end. Deleting the
     // primary promotes the row that took its place.
-    setPrimary(pi => (i < pi ? pi - 1 : Math.min(pi, phones.length - 2)))
+    setPrimaries(m => {
+      const pi = m[key] ?? 0
+      return { ...m, [key]: i < pi ? pi - 1 : Math.min(pi, next.length - 1) }
+    })
   }
 
-  const filled = phones.map(p => p.trim()).filter(Boolean)
 
   const field = (f: CreateField) => {
     const invalid = tried && !f.optional && missing.includes(f)
 
-    if (f.kind === "phones") {
+    if (f.kind === "repeat") {
+      const rows    = rowsOf(f.key)
+      const primary = primaryOf(f.key)
+      const noun    = f.noun ?? "entry"
       return (
         <div key={f.key}>
-          <FormLabel optional hint="More than one is fine — mark which to use first.">{f.label}</FormLabel>
+          <FormLabel optional={f.optional} hint={`More than one is fine — mark which to use first.`}>
+            {f.label}
+          </FormLabel>
           {/*
             THE PRIMARY IS A RADIO, AND IT ONLY EXISTS FROM THE SECOND ROW ON.
-            One phone is the primary by definition, and a radio group of one is
+            One entry is the primary by definition, and a radio group of one is
             a control that cannot be used — it renders a selected dot the user
             can neither change nor understand. It appears when there is a
             choice to make. A radio and not a Chip because these are mutually
@@ -362,29 +416,31 @@ function CreateContactWizard({
             a Chip row does not promise.
           */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {phones.map((value, i) => (
+            {rows.map((value, i) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {phones.length > 1 && (
+                {rows.length > 1 && (
                   <RadioGroup
-                    legend={`Use phone ${i + 1} first`}
+                    legend={`Use ${noun} ${i + 1} first`}
                     hideLegend
                     size="sm"
                     value={primary === i ? "on" : ""}
-                    onChange={() => setPrimary(i)}
+                    onChange={() => setPrimaries(m => ({ ...m, [f.key]: i }))}
                     options={[{ value: "on", label: "" }]}
-                    name={`primary-phone-${i}`}
+                    name={`primary-${f.key}-${i}`}
                   />
                 )}
                 <div style={{ flex: 1 }}>
                   <Input
-                    placeholder={i === 0 ? "+1 (555) 000-0000" : "Another number"}
+                    placeholder={i === 0
+                      ? (f.key === "phones" ? "+1 (555) 000-0000" : "name@company.com")
+                      : `Another ${noun}`}
                     value={value}
-                    onChange={e => setPhone(i, e.target.value)}
+                    onChange={e => setRow(f.key, i, e.target.value)}
                   />
                 </div>
-                {phones.length > 1 && (
-                  <Tooltip content="Remove this number" side="cursor">
-                    <Button variant="tertiary" size="sm" onClick={() => removePhone(i)} aria-label="Remove this number">
+                {rows.length > 1 && (
+                  <Tooltip content={`Remove this ${noun}`} side="cursor">
+                    <Button variant="tertiary" size="sm" onClick={() => removeRow(f.key, i)} aria-label={`Remove this ${noun}`}>
                       <Trash2 size={14} />
                     </Button>
                   </Tooltip>
@@ -393,12 +449,12 @@ function CreateContactWizard({
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 8 }}>
-            <Button variant="tertiary" size="sm" onClick={() => setPhones(l => [...l, ""])}>
-              <Plus size={12} /> Add another number
+            <Button variant="tertiary" size="sm" onClick={() => setRows(f.key, [...rows, ""])}>
+              <Plus size={12} /> {`Add another ${noun}`}
             </Button>
-            {phones.length > 1 && (
+            {rows.length > 1 && (
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                {phones[primary]?.trim() ? `${phones[primary].trim()} is primary` : "Pick the primary number"}
+                {rows[primary]?.trim() ? `${rows[primary].trim()} is primary` : `Pick the primary ${noun}`}
               </span>
             )}
           </div>
@@ -620,18 +676,37 @@ function CreateContactWizard({
               <ReviewRow icon={TYPE_ICON[type]} variant="informative" label={TYPE_LABEL[type]}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{name}</span>
               </ReviewRow>
-              <ReviewRow icon="Mail" variant="neutral" label="Email">
-                <Tag variant="neutral" size="sm">{(values.email ?? "").trim()}</Tag>
-              </ReviewRow>
-              <ReviewRow icon="Phone" variant="neutral" label={filled.length > 1 ? `${filled.length} numbers` : "Phone"}>
-                {filled.length === 0
-                  ? <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--muted-foreground)" }}>None</span>
-                  : filled.map((p, i) => (
-                      <Tag key={p} variant={i === primary ? "informative" : "neutral"} size="sm">
-                        {i === primary ? `${p} · primary` : p}
-                      </Tag>
-                    ))}
-              </ReviewRow>
+              {/* Review reads the same repeatable lists the form wrote, so a
+                  type whose mail is a single field and one whose mail is a
+                  list both summarise correctly without a branch here. */}
+              {byKey("email") && (
+                <ReviewRow icon="Mail" variant="neutral" label="Email">
+                  <Tag variant="neutral" size="sm">{(values.email ?? "").trim()}</Tag>
+                </ReviewRow>
+              )}
+              {(["emails", "phones"] as const).map(key => {
+                const f = byKey(key)
+                if (!f) return null
+                const rows = filledOf(key)
+                const pi   = primaryOf(key)
+                const noun = f.noun ?? "entry"
+                return (
+                  <ReviewRow
+                    key={key}
+                    icon={key === "phones" ? "Phone" : "Mail"}
+                    variant="neutral"
+                    label={rows.length > 1 ? `${rows.length} ${noun}s` : f.label}
+                  >
+                    {rows.length === 0
+                      ? <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--muted-foreground)" }}>None</span>
+                      : rows.map((v, i) => (
+                          <Tag key={v} variant={i === pi ? "informative" : "neutral"} size="sm">
+                            {i === pi ? `${v} · primary` : v}
+                          </Tag>
+                        ))}
+                  </ReviewRow>
+                )
+              })}
               <ReviewRow icon="MapPin" variant="neutral" label={byKey("location")?.label ?? "Location"}>
                 <Tag variant="neutral" size="sm">{values.location}</Tag>
               </ReviewRow>
@@ -951,7 +1026,7 @@ function EntityCategoryRail({
       <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: collapsed ? "center" : "space-between" }}>
         {!collapsed && (
           <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
-            Categories
+            Entities
           </span>
         )}
         {/* The DS's own wording for this control, so it reads the same as the
@@ -962,7 +1037,7 @@ function EntityCategoryRail({
             icon={collapsed
               ? <PanelLeftOpen  size={16} strokeWidth={1.75} />
               : <PanelLeftClose size={16} strokeWidth={1.75} />}
-            aria-label={collapsed ? "Expand categories" : "Collapse categories"}
+            aria-label={collapsed ? "Expand entities" : "Collapse entities"}
             onClick={() => onCollapsedChange(!collapsed)}
           />
         </Tooltip>

@@ -71,6 +71,7 @@ import { EntityList }        from "@/components/ui/entity-list"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import { AvatarCircle }      from "@/components/ui/avatar"
 import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { Pagination }        from "@/components/ui/pagination"
@@ -92,7 +93,7 @@ import {
   SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
   RESOLVED_STATUSES, DISMISS_REASONS, TRAIN_ME_REASON, emitIntelligence,
   defaultExpandedRow, sincePhrase, QUEUE_DEFAULT_ROWS, mostUrgentSignal,
-  getProfile, renderableTraits, renderableBullets,
+  getProfile, renderableTraits, renderableBullets, getThread,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, PLANE_ORDER, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
@@ -103,8 +104,8 @@ import {
 } from "./ucpShared"
 import type {
   MetricVariant, StudyRow,
-  ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
-  UcpNote, TagVariantLite,
+  ActivityChannel, ActivityGroup, UcpActivity, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
+  UcpNote, TagVariantLite, CommsThread, ThreadEntry, CommsAttachment,
   VerdictEntity, SignalSeverity, ConfidenceState, SuggestionSort, SuggestionStatus, UcpSuggestion,
   UcpProfile, ProfileBullet, UcpVerdict, UcpSignal,
 } from "./ucpShared"
@@ -1760,6 +1761,283 @@ function DetailTable({ rows }: { rows: [string, React.ReactNode | null][] }) {
 }
 
 /**
+ * ── The communication preview ──────────────────────────────────────────────
+ *
+ * Figma: Unified Customer Profile → Email (7698:2032), SMS (7698:2033),
+ * Call (7698:2034). Michael, 2026-09-11: that design, adapted to the DS with
+ * its own tokens and components.
+ *
+ * WHAT CAME FROM FIGMA and what came from the DS, because the two are
+ * different questions and the answer to the second is "everything it has":
+ *
+ *   Figma gave     the structure — header, Conversation | Details tabs, a
+ *                  purple summary, an asymmetric thread, a details sheet with
+ *                  Details / Timeline / Attachments.
+ *   The DS gave    SlideOut (header, tabs, close, the CTA footer),
+ *                  HighlightIcon, AvatarCircle, Tag, Button, and every colour
+ *                  through a token. Nothing here is a hex.
+ *
+ * THE ASYMMETRY IS THE POINT. Outbound sits right, tinted, with a delivery
+ * receipt; inbound sits left with no fill at all. That is what makes a thread
+ * read as a conversation instead of a log, and it is the one thing that would
+ * be lost by rendering both sides the same.
+ *
+ * WHAT I DID NOT COPY. Figma's bubbles carry a radial-gradient background and
+ * a drop shadow. Both are decoration the DS has no token for, and CLAUDE.md is
+ * explicit that a value not on the scale is a conversation rather than a new
+ * token — so the bubble takes the flat surface tint its tone already
+ * publishes. The shape, the spacing and the hierarchy are Figma's; the
+ * material is the DS's.
+ */
+const RECEIPT_LABEL: Record<NonNullable<ThreadEntry["receipt"]>, string> = {
+  sent:      "Sent",
+  delivered: "Delivered",
+  opened:    "Opened",
+}
+
+const ATTACHMENT_ICON: Record<CommsAttachment["kind"], { icon: string; variant: HighlightIconVariant }> = {
+  doc:   { icon: "FileText",  variant: "light-blue" },
+  txt:   { icon: "FileType2", variant: "informative" },
+  image: { icon: "Image",     variant: "lime" },
+}
+
+const CHANNEL_ICON: Record<CommsThread["channel"], string> = {
+  email: "Mail",
+  sms:   "MessageSquare",
+  call:  "Phone",
+}
+
+function ThreadMessage({ entry }: { entry: ThreadEntry }) {
+  const outbound = entry.direction === "outbound"
+  const bubble = (
+    <div
+      style={{
+        flex: 1, minWidth: 0,
+        display: "flex", flexDirection: "column", gap: 4,
+        padding: "12px",
+        borderRadius: 8,
+        /* Outbound is tinted, inbound is bare. The tint is the DS's own
+           surface token, not Figma's gradient — see the note above. */
+        background: outbound ? "var(--color-surface-primary-subtle)" : "transparent",
+      }}
+    >
+      <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)" }}>{entry.body}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: outbound ? "flex-end" : "flex-start" }}>
+        <span style={{ fontSize: 11, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--color-text-caption)" }}>
+          {entry.at}
+        </span>
+        {/* Only what the channel can actually report. */}
+        {entry.receipt && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 11, color: "var(--color-text-caption)" }}>
+            <LucideIcons.Check size={12} />
+            {RECEIPT_LABEL[entry.receipt]}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+
+  const avatar = (
+    <AvatarCircle name={entry.author ?? ""} sizeKey="md" avatarStyle="text" />
+  )
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 8, width: "100%",
+      paddingLeft:  outbound ? 40 : 0,
+      paddingRight: outbound ? 0  : 40,
+    }}>
+      {!outbound && avatar}
+      {bubble}
+      {outbound && avatar}
+    </div>
+  )
+}
+
+function CommsPreview({ thread, contact, open, onClose, onGo }: {
+  thread:  CommsThread | null
+  contact: UcpContact
+  open:    boolean
+  onClose: () => void
+  onGo:    (destination: string) => void
+}) {
+  const [tab, setTab] = useState(0)
+  const [showSummary, setShowSummary] = useState(true)
+
+  return (
+    <SlideOut
+      open={open}
+      onClose={onClose}
+      type="with-variants"
+      size="m"
+      title={thread?.title ?? ""}
+      subtitle={thread?.when ?? ""}
+      showIcon
+      iconContent={thread
+        ? <HighlightIcon size="sm" variant="light-blue" iconName={CHANNEL_ICON[thread.channel]} />
+        : undefined}
+      showStatus
+      statusLabel={thread?.status.label}
+      showTopButton={false}
+      showTabs
+      showTab3={false}
+      tabLabels={["Conversation", "Details", ""]}
+      activeTab={tab}
+      onTabChange={setTab}
+      showSearchBar={false}
+      showChips={false}
+      /* Figma's own actions row: reply to the thread, or leave a note only the
+         team sees. Small buttons — a 350px footer truncates M ones. */
+      showCta={!!thread}
+      ctaSize="sm"
+      ctaPrimaryLabel="Reply"
+      onCtaPrimary={() => onGo("activity")}
+      showCtaSecondary={!!thread}
+      ctaSecondaryLabel="Internal note"
+      onCtaSecondary={() => onGo("activity")}
+    >
+      {thread && (
+        <div className={PANEL_CONTENT_CLASS}>
+          {tab === 0 ? (
+            <>
+              {/* The purple summary, dismissible exactly as in Figma. Absent
+                  when there is nothing worth summarising — a two-message SMS
+                  exchange is shorter than any summary of it. */}
+              {thread.summary && showSummary && (
+                <div
+                  className="flex flex-col gap-[8px] rounded-[8px] p-[12px]"
+                  style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}
+                >
+                  <div className="flex items-center gap-[6px]">
+                    <Sparkle size={12} style={{ color: "var(--color-text-purple)" }} />
+                    <span className="text-[13px] font-semibold" style={{ color: "var(--color-text-purple)" }}>Summary</span>
+                    <div style={{ flex: 1 }} />
+                    <Button variant="tertiary" size="sm" className="!px-0" aria-label="Hide the summary" onClick={() => setShowSummary(false)}>
+                      <LucideIcons.X size={14} />
+                    </Button>
+                  </div>
+                  <p className="text-[12px] leading-[1.6] m-0" style={{ color: "var(--color-text-purple)" }}>
+                    {thread.summary}
+                  </p>
+                </div>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {thread.entries.map((entry, i) => {
+                  if (entry.kind === "separator") {
+                    /* The same device the Activity feed uses. One separator in
+                       the product, not two that drift. */
+                    return <ElapsedSeparator key={i} label={entry.body} />
+                  }
+                  if (entry.kind === "system") {
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                          padding: 12, borderRadius: 8,
+                          background: "var(--color-surface-success-more-subtle)",
+                          border: "0.5px solid var(--field-border)",
+                        }}
+                      >
+                        <LucideIcons.Check size={14} style={{ color: "var(--color-text-success)" }} />
+                        <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--color-text-success)" }}>{entry.body}</span>
+                        <span style={{ fontSize: 10, color: "var(--color-text-success)" }}>{entry.at}</span>
+                      </div>
+                    )
+                  }
+                  if (entry.kind === "note") {
+                    /* An internal note must NOT look like a message. It is
+                       visible to the team and never to the contact, and the
+                       alert tint is what stops somebody reading it as
+                       something that was sent. */
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex", flexDirection: "column", gap: 4,
+                          padding: 12, borderRadius: 8,
+                          background: "var(--color-surface-alert-more-subtle)",
+                          border: "0.5px solid var(--field-border)",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-alert)" }}>Internal note</span>
+                          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{entry.author}</span>
+                          <div style={{ flex: 1 }} />
+                          <span style={{ fontSize: 10, color: "var(--color-text-alert)" }}>{entry.at}</span>
+                        </div>
+                        <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--color-text-alert)" }}>{entry.body}</span>
+                      </div>
+                    )
+                  }
+                  return <ThreadMessage key={i} entry={entry} />
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Details</SectionLabel>
+                <DetailTable rows={[
+                  ["Status",   <Tag variant={thread.status.variant} size="sm">{thread.status.label}</Tag>],
+                  ["Assigned", thread.assigned],
+                  ["Due by",   thread.dueBy
+                    ? <span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        {thread.dueBy.at}
+                        <Tag variant="alert" size="sm">{thread.dueBy.overdueIn}</Tag>
+                      </span>
+                    : null],
+                  ["Sentiment", thread.sentiment ?? null],
+                  ["Duration",  thread.duration ?? null],
+                  ["Recording", thread.recording ?? null],
+                ]} />
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Timeline</SectionLabel>
+                <DetailTable rows={[
+                  ["Created",       thread.created],
+                  ["Last activity", thread.lastActivity],
+                ]} />
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>{`Attachments (${thread.attachments.length})`}</SectionLabel>
+                {thread.attachments.length === 0 ? (
+                  <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Nothing attached to this one.</span>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {thread.attachments.map(f => (
+                      <CardContainer key={f.name} size="sm" className="!p-0 overflow-hidden">
+                        <EntityList items={[{
+                          id:          f.name,
+                          title:       f.name,
+                          iconName:    ATTACHMENT_ICON[f.kind].icon,
+                          iconVariant: f.kind === "image" ? "success" : f.kind === "txt" ? "info" : "light-blue",
+                          actions:     [{ label: "Open", variant: "tertiary", icon: "ArrowUpRight", onClick: () => onGo("knowledge") }],
+                        }]} />
+                      </CardContainer>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>How this is used</SectionLabel>
+                <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                  {`${contact.agent.name} can quote anything in this thread with its citation. An internal note is never sent and never leaves the team.`}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </SlideOut>
+  )
+}
+
+/**
  * ── The Governance preview, as one component ───────────────────────────────
  *
  * Michael, 2026-09-11: the Sandbox, Truth Plane and Drives previews should
@@ -2423,7 +2701,7 @@ function filterActivity(
 
 function ActivityTab({
   contact, group, onGroupChange, kind, onKindChange, search, onSearchChange,
-  status, onStatusChange, period, onPeriodChange, now, page, pageSize, onPreview,
+  status, onStatusChange, period, onPeriodChange, now, page, pageSize, onPreview, onPreviewThread,
 }: {
   contact:  UcpContact
   /** The four kinds of thing an activity row can be. */
@@ -2448,6 +2726,8 @@ function ActivityTab({
   pageSize: number
   /** Opens the note preview. Only note rows carry one. */
   onPreview: (n: UcpNote, title: string) => void
+  /** Opens the conversation preview. Communications only. */
+  onPreviewThread: (a: UcpActivity) => void
 }) {
   const all      = useMemo(() => getActivity(contact), [contact])
   const filtered = useMemo(
@@ -2508,9 +2788,15 @@ function ActivityTab({
        row is a first line and the thing itself is somewhere else, so it is the
        one row that earns a preview. CLAUDE.md: omit the button entirely rather
        than render a disabled one. */
+    /* A NOTE opens its own panel; a COMMUNICATION opens the conversation.
+       Everything else — an event, a task — is already whole in its row and
+       gets no Eye, which is the rule that has governed this list since the
+       note preview: a button with nothing behind it is worse than none. */
     actions: a.note
       ? [{ label: "Preview", variant: "tertiary" as const, icon: "Eye", onClick: () => onPreview(a.note!, a.title) }]
-      : undefined,
+      : CHANNEL_GROUP[a.channel] === "communication"
+        ? [{ label: "Preview", variant: "tertiary" as const, icon: "Eye", onClick: () => onPreviewThread(a) }]
+        : undefined,
   }))
 
   const q = search.trim().toLowerCase()
@@ -3212,6 +3498,7 @@ export function UcpProfileView({
   const [drivePeek,  setDrivePeek]  = useState<UcpDrive | null>(null)
   const [notePeek,   setNotePeek]   = useState<{ note: UcpNote; title: string } | null>(null)
   const [factPeek,   setFactPeek]   = useState<UcpFact | null>(null)
+  const [threadPeek, setThreadPeek] = useState<CommsThread | null>(null)
 
   // Ask and Information both open on the side — opening one closes the other,
   // and the panel requested last wins.
@@ -3658,6 +3945,7 @@ export function UcpProfileView({
               page={actPage}
               pageSize={actSize}
               onPreview={(note, title) => setNotePeek({ note, title })}
+              onPreviewThread={a => setThreadPeek(getThread(contact, a))}
             />
           )}
           {tab === "knowledge" && <KnowledgeTab contact={contact} onPreview={setDrivePeek} onPreviewFact={setFactPeek} />}
@@ -3737,6 +4025,14 @@ export function UcpProfileView({
         onClose={() => setFactPeek(null)}
         onGo={id => { setFactPeek(null); goTab(id) }}
         data={factPeek ? factPreviewData(factPeek, contact) : null}
+      />
+
+      <CommsPreview
+        thread={threadPeek}
+        contact={contact}
+        open={threadPeek !== null}
+        onClose={() => setThreadPeek(null)}
+        onGo={id => { setThreadPeek(null); goTab(id) }}
       />
 
       <NotePreview
