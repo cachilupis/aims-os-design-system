@@ -1871,6 +1871,13 @@ function CommsPreview({ thread, contact, open, onClose, onGo }: {
       onClose={onClose}
       type="with-variants"
       size="m"
+      /* MEDIUM, 450px — Michael, 2026-09-11. A thread is a column of bubbles
+         and the title is often a phone number, which is the one string that
+         must not be truncated: "+1 (212) 5…" identifies nobody. At 350 the
+         header cut it mid-area-code with the status tag beside it. Not half,
+         the way the note preview is: a note is paragraphs and wants the
+         width, a chat bubble past ~400px stops reading as a message. */
+      initialSnap="medium"
       title={thread?.title ?? ""}
       subtitle={thread?.when ?? ""}
       showIcon
@@ -1888,7 +1895,8 @@ function CommsPreview({ thread, contact, open, onClose, onGo }: {
       showSearchBar={false}
       showChips={false}
       /* Figma's own actions row: reply to the thread, or leave a note only the
-         team sees. Small buttons — a 350px footer truncates M ones. */
+         team sees. Small buttons — the footer sizes from the panel width and
+         an M button truncates its own label in a narrow one. */
       showCta={!!thread}
       ctaSize="sm"
       ctaPrimaryLabel="Reply"
@@ -2435,8 +2443,9 @@ function drivePreviewData(d: UcpDrive, citedCount: number, contact: UcpContact):
 /**
  * ── The note preview ───────────────────────────────────────────────────────
  *
- * Michael, 2026-09-10: a note opened from the Activity feed gets Overview and
- * Details tabs, built from the SlideOut/SidePanel — Content page's vocabulary.
+ * Michael, 2026-09-10: a note opened from the Activity feed gets a preview
+ * built from the SlideOut/SidePanel — Content page's vocabulary. Two columns
+ * since 2026-09-11; it had tabs before, and why it does not is below.
  *
  * WHY A NOTE IS THE ONE ACTIVITY ROW WITH A PREVIEW. Every other row in that
  * feed is already whole: a call row carries its duration, its outcome and the
@@ -2446,17 +2455,20 @@ function drivePreviewData(d: UcpDrive, citedCount: number, contact: UcpContact):
  * Sandbox plane, each now waiting on a source. That is content the row has
  * nowhere to put, which is what earns the Eye.
  *
- * THE SPLIT BETWEEN THE TABS is what was written versus what the system did
- * with it. Overview is the note: the agent's read of it, the body as typed,
- * the claims it produced and the records it names. Details is the note's
- * metadata: who wrote it, where, when, who can see it. Somebody who opened
- * this to read the note should not have to walk past a provenance table to
- * reach the first sentence, and somebody auditing the scope should not have
- * to scroll three paragraphs to find it.
+ * THE SPLIT BETWEEN THE COLUMNS is what was written versus what is true of
+ * it. The left column is the note: the agent's read, the body as typed, the
+ * claims it produced, and the comments people left on it. The right column is
+ * the note's metadata: who wrote it, where, when, who can see it, what it is
+ * attached to. Somebody who opened this to read the note should not have to
+ * walk past a provenance table to reach the first sentence, and somebody
+ * auditing the scope should not have to scroll three paragraphs to find it —
+ * which a tab also solved, at the cost of a click and of never showing the
+ * two at once. Side by side, the provenance qualifies the sentence you are
+ * reading instead of waiting behind it.
  *
- * ORDER INSIDE OVERVIEW follows that page's fixed content order — AI Summary
- * first, then list sections — with one deliberate departure: the BODY sits
- * second, between the summary and the lists. The body is not a zone in that
+ * ORDER INSIDE THE LEFT COLUMN follows that page's fixed content order — AI
+ * Summary first, then list sections — with one deliberate departure: the BODY
+ * sits second, between the summary and the lists. The body is not a zone in that
  * vocabulary at all; it is the record itself, and a panel that puts a
  * three-card metric grid above the thing the reader opened it to read has the
  * order backwards. The claims are the list section, and they come after.
@@ -2475,15 +2487,29 @@ const CLAIM_STATUS_TAG: Record<string, "success" | "alert" | "error"> = {
 }
 
 function NotePreview({
-  note, title, agentName, open, onClose,
+  note, title, agentName, comments, onComment, open, onClose,
 }: {
   note:      UcpNote | null
   title:     string
   agentName: string
+  comments:  UcpNote["comments"]
+  onComment: (text: string) => void
   open:      boolean
   onClose:   () => void
 }) {
-  const [tab, setTab] = useState(0)
+  const [draft, setDraft] = useState("")
+
+  /* A new note clears whatever was half-typed against the previous one. A
+     draft that follows the reader into a different note is how a comment
+     lands on the wrong record. */
+  useEffect(() => { setDraft("") }, [note])
+
+  const submit = () => {
+    const text = draft.trim()
+    if (!text) return
+    onComment(text)
+    setDraft("")
+  }
 
   return (
     <SlideOut
@@ -2495,7 +2521,8 @@ function NotePreview({
          skim: a fact, a drive, a signal, all of them a value and a few
          attributes that read fine in 350px. A note is PROSE somebody wrote,
          three paragraphs of it, and at 350 every sentence wraps three times.
-         The panel that exists to be read gets the width to read in. */
+         The panel that exists to be read gets the width to read in — and it
+         is the width the second column is paid for out of. */
       initialSnap="half"
       title={title}
       subtitle={note ? `Note · ${note.author}` : ""}
@@ -2508,19 +2535,48 @@ function NotePreview({
       showStatus
       statusLabel={note?.scope}
       showTopButton={false}
-      showTabs
-      showTab3={false}
-      tabLabels={["Overview", "Details", ""]}
-      activeTab={tab}
-      onTabChange={setTab}
+      showTabs={false}
       showSearchBar={false}
       showChips={false}
       showCta={false}
     >
       {note && (
         <div className={PANEL_CONTENT_CLASS}>
-          {tab === 0 ? (
-            <>
+          {/* TWO COLUMNS, NO TABS — Michael, 2026-09-11: "elimina el tab de
+              details y ese contenido muestralo a la derecha teniendo dos
+              columnas de contenido, las notas y sus detalles a la derecha."
+
+              The tab was paying for itself only at 350px. At half-screen the
+              panel has room for both, and a tab there costs a click to learn
+              something — who wrote this, what scope it carries — that changes
+              how you read the sentence you are already looking at. Provenance
+              beside the prose is the point; provenance one tab away is a
+              footnote nobody opens.
+
+              It WRAPS rather than committing to two columns: drag the panel
+              back to 350 and the rail falls under the note instead of
+              squeezing both into unreadable measures. `flex-[N_1_basis]`, not
+              a media query — the panel is resizable, so the breakpoint has to
+              be the container's, and flex-wrap is the one that already is.
+
+              The bases add up to 500 against a half-screen panel's ~670 of
+              content, so two columns hold with room to spare and the 350px
+              default still wraps. They are NOT equal by weight: the rail has
+              to fit "Call wrap-up · outbound call at 14:05" in a key/value
+              table without turning it into four lines, so it grows at 2 to
+              the note's 3 rather than taking only what is left over.
+
+              ONLY the note and its details are in the row. Claims and
+              comments sit below it at full width — a claim row carries a
+              title and a status Tag and truncates the title to nothing at
+              300px, and a comment is prose. Everything that needs a measure
+              gets the whole panel; everything that is a lookup gets a
+              column. */}
+          <div className="flex flex-wrap items-start gap-[24px]">
+
+            {/* ── Left: the note ─────────────────────────────────────────── */}
+            <div className="flex flex-col gap-[16px] flex-[3_1_280px] min-w-0">
+
               {/* Zone 1 — AI Summary. Always first when present. */}
               <div
                 className="flex flex-col gap-[6px] rounded-[8px] p-[12px]"
@@ -2553,33 +2609,22 @@ function NotePreview({
                 </div>
               </div>
 
-              {/* Zone 3 — a list section, with the Title–Description variant:
-                  the count alone does not say what a claim IS on this record,
-                  and this is the one thing in the panel that has consequences
-                  outside it. */}
-              {note.claims.length > 0 && (
-                <div className="flex flex-col gap-[8px]">
-                  <div className="flex flex-col gap-[2px]">
-                    <SectionLabel>Claims from this note</SectionLabel>
-                    <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
-                      Written into the Sandbox plane. Each needs a source before it can reach Truth.
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-[8px]">
-                    {note.claims.map(c => (
-                      <CardContainer key={c.label} size="sm" className="!p-0 overflow-hidden">
-                        <EntityList items={[{
-                          id:          c.label,
-                          title:       c.label,
-                          iconName:    "FileCheck",
-                          iconVariant: c.status === "Verified" ? "success" : c.status === "Due to expire" ? "error" : "yellow",
-                          state:       { label: c.status, variant: CLAIM_STATUS_TAG[c.status] ?? "neutral" },
-                        }]} />
-                      </CardContainer>
-                    ))}
-                  </div>
-                </div>
-              )}
+            </div>
+
+            {/* ── Right: the details ─────────────────────────────────────── */}
+            <div className="flex flex-col gap-[16px] flex-[2_1_220px] min-w-0">
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Details</SectionLabel>
+                <DetailTable rows={[
+                  ["Author",     note.author],
+                  ["Role",       note.authorRole],
+                  ["Written in", note.writtenIn],
+                  ["Created",    note.createdAt],
+                  ["Edited",     note.editedAt ?? null],
+                  ["Scope",      <Tag variant="neutral" size="sm">{note.scope}</Tag>],
+                  ["Claims",     `${note.claims.length} in the Sandbox plane`],
+                ]} />
+              </div>
 
               {note.linked.length > 0 && (
                 <div className="flex flex-col gap-[8px]">
@@ -2599,21 +2644,6 @@ function NotePreview({
                   </div>
                 </div>
               )}
-            </>
-          ) : (
-            <>
-              <div className="flex flex-col gap-[8px]">
-                <SectionLabel>Details</SectionLabel>
-                <DetailTable rows={[
-                  ["Author",     note.author],
-                  ["Role",       note.authorRole],
-                  ["Written in", note.writtenIn],
-                  ["Created",    note.createdAt],
-                  ["Edited",     note.editedAt ?? null],
-                  ["Scope",      <Tag variant="neutral" size="sm">{note.scope}</Tag>],
-                  ["Claims",     `${note.claims.length} in the Sandbox plane`],
-                ]} />
-              </div>
 
               {note.attachments.length > 0 && (
                 <div className="flex flex-col gap-[8px]">
@@ -2646,8 +2676,110 @@ function NotePreview({
                   Scope decides who sees the note; it does not change what the claims are worth.
                 </span>
               </div>
-            </>
+            </div>
+          </div>
+
+          {/* A list section with the Title–Description variant: the count
+              alone does not say what a claim IS on this record, and this
+              is the one thing in the panel with consequences outside it. */}
+          {note.claims.length > 0 && (
+            <div className="flex flex-col gap-[8px]">
+              <div className="flex flex-col gap-[2px]">
+                <SectionLabel>Claims from this note</SectionLabel>
+                <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                  Written into the Sandbox plane. Each needs a source before it can reach Truth.
+                </span>
+              </div>
+              <div className="flex flex-col gap-[8px]">
+                {note.claims.map(c => (
+                  <CardContainer key={c.label} size="sm" className="!p-0 overflow-hidden">
+                    <EntityList items={[{
+                      id:          c.label,
+                      title:       c.label,
+                      iconName:    "FileCheck",
+                      iconVariant: c.status === "Verified" ? "success" : c.status === "Due to expire" ? "error" : "yellow",
+                      state:       { label: c.status, variant: CLAIM_STATUS_TAG[c.status] ?? "neutral" },
+                    }]} />
+                  </CardContainer>
+                ))}
+              </div>
+            </div>
           )}
+
+          {/* ── Comments ─────────────────────────────────────────────────
+              Michael, 2026-09-11. They run the FULL WIDTH under both
+              columns, not inside the note's own, because a comment is a
+              reply to the prose and a reply needs a measure to read in —
+              filing them in the metadata rail would make a conversation an
+              attribute of the note, and squeezing them into a 300px column
+              beside the rail would wrap every sentence three times. The
+              claims above them are there for the same reason: both are
+              things produced FROM the note, and the two columns above are
+              the note itself and what is true of it.
+
+              They are deliberately NOT claims and cannot become one. A
+              claim is what the note asserts about the record and it goes
+              to the Sandbox plane to be sourced; a comment is a colleague
+              arguing with the author. The note's own scope still decides
+              who can see the thread — a comment cannot be more visible
+              than the thing it is attached to, so there is no per-comment
+              audience control to get wrong. */}
+          <div className="flex flex-col gap-[8px]">
+            <div className="flex flex-col gap-[2px]">
+              <SectionLabel>
+                Comments{comments.length > 0 ? ` · ${comments.length}` : ""}
+              </SectionLabel>
+              <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                Visible to everyone the note is — {note.scope.toLowerCase()}. A comment is not a claim
+                and never reaches the Truth plane.
+              </span>
+            </div>
+
+            {comments.length === 0 ? (
+              <span className="text-[12px]" style={{ color: "var(--field-supporting)" }}>
+                No comments yet.
+              </span>
+            ) : (
+              <div className="flex flex-col gap-[12px]">
+                {comments.map((cm, i) => (
+                  <div key={`${cm.author}-${i}`} className="flex items-start gap-[8px]">
+                    <AvatarCircle name={cm.author} sizeKey="md" avatarStyle="text" />
+                    <div className="flex flex-col gap-[2px] min-w-0 flex-1">
+                      <div className="flex items-baseline gap-[6px] flex-wrap">
+                        <span className="text-[12px] font-semibold" style={{ color: "var(--color-text-title)" }}>
+                          {cm.author}
+                        </span>
+                        <span className="text-[11px]" style={{ color: "var(--field-supporting)" }}>
+                          {cm.role} · {cm.at}
+                        </span>
+                      </div>
+                      <p className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
+                        {cm.text}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* The composer. Enter sends, because the only other control
+                in reach is the panel's own close and a comment lost to a
+                stray Esc is worse than one sent a sentence early. */}
+            <div className="flex items-center gap-[8px]">
+              <div className="flex-1 min-w-0">
+                <Input
+                  placeholder="Add a comment"
+                  value={draft}
+                  onChange={e => setDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); submit() } }}
+                  rightIcon={null}
+                />
+              </div>
+              <Button variant="primary" size="sm" onClick={submit} disabled={!draft.trim()}>
+                Comment
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </SlideOut>
@@ -3299,7 +3431,14 @@ function ConciergeChat({
       titleIcon={<Sparkle size={14} />}
       titleTag="Online"
       titleTagVariant="success"
-      showCollapsedStrip
+      /*
+        A CLOSE, NOT A COLLAPSE. The collapsed strip keeps a sliver of the
+        panel on screen for ever, and this is a surface somebody opens to ask
+        one question — a permanent 48px reminder of a chat nobody is having is
+        the panel refusing to leave. Ask is what brings it back, and it is one
+        click away in the record header.
+      */
+      showCollapsedStrip={false}
       showMenu={false}
       showSearch={false}
       footer={
@@ -3523,6 +3662,12 @@ export function UcpProfileView({
   const [infoOpen,   setInfoOpen]   = useState(false)
   const [drivePeek,  setDrivePeek]  = useState<UcpDrive | null>(null)
   const [notePeek,   setNotePeek]   = useState<{ note: UcpNote; title: string } | null>(null)
+  /* Comments added in this session, keyed by the note's title — the fixtures
+     are read-only, so anything typed here lives beside them rather than in
+     them. Held at SCREEN level, not inside the preview: a comment that
+     vanished because you closed the panel and opened the same note again
+     would read as the comment having failed to post. */
+  const [noteComments, setNoteComments] = useState<Record<string, UcpNote["comments"]>>({})
   const [factPeek,   setFactPeek]   = useState<UcpFact | null>(null)
   const [threadPeek, setThreadPeek] = useState<CommsThread | null>(null)
 
@@ -3819,6 +3964,19 @@ export function UcpProfileView({
       sidebarItems={UCP_SIDEBAR_ITEMS}
       activeSidebarId="contacts"
       onSidebarItemClick={onSidebarItemClick}
+      /*
+        THE CONCIERGE DIVIDES THE PAGE — Michael, 2026-09-11: it should be the
+        height of the whole page, not of whatever content happens to be under
+        the header, the way Gmail runs its Gemini panel.
+
+        It lived in `children` before, which put it inside the scroll container
+        and below the header zone — so it started where the content started and
+        scrolled with it. ScreenLayout's `sidePanel` slot renders it beside the
+        main column instead, and everything else on the page yields its width.
+      */
+      sidePanel={
+        <ConciergeChat contact={contact} open={chatOpen} onClose={() => setChatOpen(false)} />
+      }
       header={isScrolled => (
         <>
           <Header
@@ -3941,20 +4099,6 @@ export function UcpProfileView({
         />
       </div>
 
-      {/*
-        THE BODY AND THE CONCIERGE SHARE A ROW — and they have to, because
-        SidePanel is a LAYOUT panel and not an overlay. It sits in the flow
-        and shifts the content beside it; rendered as a loose sibling further
-        down the tree it lands wherever document order puts it, which on the
-        first attempt was the far left of the column, 350px wide, pushing the
-        record sideways.
-
-        A flex row with the body at `flex: 1` and the panel after it is the
-        composition the DS's own SidePanel example uses, and it is what makes
-        "shifts main content when open" true rather than aspirational.
-      */}
-      <div style={{ display: "flex", alignItems: "stretch", gap: 0, minHeight: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
       {/* The body follows the header's state. Three mutually exclusive cases,
           in the order the header resolves them: in flight, governed, readable. */}
       {loading ? (
@@ -3992,10 +4136,6 @@ export function UcpProfileView({
         </>
       )}
 
-        </div>
-
-        <ConciergeChat contact={contact} open={chatOpen} onClose={() => setChatOpen(false)} />
-      </div>
 
       {/* Information — where the fields in the header came from. Not the
           Overview and not the Knowledge tab: it explains what is on screen
@@ -4082,6 +4222,20 @@ export function UcpProfileView({
         note={notePeek?.note ?? null}
         title={notePeek?.title ?? ""}
         agentName={contact.agent.name}
+        comments={notePeek ? [...notePeek.note.comments, ...(noteComments[notePeek.title] ?? [])] : []}
+        onComment={text => {
+          if (!notePeek) return
+          const key = notePeek.title
+          setNoteComments(prev => ({
+            ...prev,
+            [key]: [...(prev[key] ?? []), {
+              author: "Michael Orellana",
+              role:   "Product Design",
+              at:     "Just now",
+              text,
+            }],
+          }))
+        }}
         open={notePeek !== null}
         onClose={() => setNotePeek(null)}
       />
