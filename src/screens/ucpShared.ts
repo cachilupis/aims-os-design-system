@@ -809,10 +809,13 @@ export const CONTACTS: UcpContact[] = [
     email: "sandra.torres@meridian.com", phone: "+1 (212) 555-0155", company: "Meridian Corp",
     owner: "Priya Nair", status: "Active", lastInteraction: "Sep 2, 2026",
     source: { label: "Salesforce", iconName: "Cloud" },
-    tags: [
-      { label: "Awaiting us", role: "signal", tone: "error", severity: 4, tooltip: "Migration timeline asked twice · still unanswered since Aug 18" },
-      { label: "Buyer",       role: "classification" },
-    ],
+    /* TWO TAGS CAME OFF HERE on 2026-09-11, both duplicates rather than
+       decoration. "Awaiting us" is a SIGNAL, and signals are a block in
+       Intelligence with a duration and an evidence link — the header pill said
+       the same word with neither. "Buyer" is a decision role, and the Profile
+       block now names it properly as "Economic Buyer"; two taxonomies for one
+       fact is how a reader ends up unsure which is authoritative. */
+    tags: [],
     meta: [
       { iconName: "ShieldCheck", label: "10 facts",  tooltip: "Verified facts · 5 on the Truth plane, 5 across Sandbox and Sources." },
       { iconName: "Inbox",       label: "1 open",    tooltip: "Open items · migration timeline request, unanswered for 15 days." },
@@ -2116,6 +2119,17 @@ export type SignalSeverity = "critical" | "attention" | "watch"
 export interface UcpSignal {
   type:     SignalType
   label:    string
+  /**
+   * WHAT ACTUALLY HAPPENED, on this record. This is the line; `label` is the
+   * grey tag beside it.
+   *
+   * The rows used to lead with the catalog's generic sentence — "Something was
+   * promised and not delivered" — and push "Two escalations raised again at
+   * the QBR" to the right in smaller type. That is backwards: the generic copy
+   * is true of every open commitment ever, and the reader already knows what
+   * an open commitment is by the second time they see one.
+   */
+  detail:   string
   severity: SignalSeverity
   /** Always present. Duration is what makes a signal actionable — "awaiting us"
    *  is a fact, "awaiting us · 6 days" is a decision. */
@@ -2129,6 +2143,33 @@ export interface UcpSignal {
 
 /** Severity first, then recency. The strip is scanned, not read. */
 const SEVERITY_ORDER: Record<SignalSeverity, number> = { critical: 0, attention: 1, watch: 2 }
+
+/**
+ * Days behind a `since` string, for the tie-break. Returns -1 when the string
+ * is not a duration ("since Jun 2026"), which sorts it last — a signal that
+ * cannot say how long it has been going is not the most urgent one.
+ */
+function sinceDays(since: string): number {
+  const m = since.trim().match(/^(\d+)\s+(day|days|week|weeks|month|months)\b/)
+  if (!m) return -1
+  const n = Number(m[1])
+  return m[2].startsWith("week") ? n * 7 : m[2].startsWith("month") ? n * 30 : n
+}
+
+/**
+ * The most urgent signal, and the tie-break is EXPLICIT because there are two
+ * criticals and the collapsed line names one of them.
+ *
+ * Severity first; at equal severity the one that has been running longest.
+ * "Awaiting us for 6 days" and "Open commitment for 19 days" are both
+ * critical, and the second has been true three times as long — picking by
+ * array order would have been a choice nobody could see or argue with.
+ */
+export function mostUrgentSignal(signals: UcpSignal[]): UcpSignal | undefined {
+  return [...signals].sort((a, b) =>
+    SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || sinceDays(b.since) - sinceDays(a.since),
+  )[0]
+}
 
 /** Drops any signal that cannot be checked. The rule is "a signal with no
  *  evidence link does not render", and a rule enforced at the call site is a
@@ -2386,12 +2427,11 @@ export function getVerdict(c: UcpContact): UcpVerdict | null {
 
   if (c.type === "company") {
     return {
-      text: `Get the governance addendum countersigned this week — it gates a ${value} renewal that closes in ${days} days.`,
+      text: "Get the governance addendum countersigned this week — it gates the renewal.",
       generatedAt: "Today, 08:12",
       entities: [
-        { text: "governance addendum", destination: "Knowledge", tooltip: "Knowledge · the addendum on the Legal drive" },
-        { text: value,                 destination: "Opportunity", tooltip: "Opportunity · the renewal this figure belongs to" },
-        { text: `${days} days`,        destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days` },
+        { text: "governance addendum", destination: "Knowledge",   tooltip: "Knowledge · the addendum on the Legal drive" },
+        { text: "the renewal",         destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days, ${value}` },
       ],
     }
   }
@@ -2406,47 +2446,64 @@ export function getVerdict(c: UcpContact): UcpVerdict | null {
     here that is not true of this person tomorrow.
   */
   return {
-    text: `Answer ${who === c.name ? "them" : "her"} today — it is the only open question before a ${value} renewal that closes in ${days} days.`,
+    /* NO CLOCK AND NO FIGURE. Both live in the record header — "Renewal in 19
+       days" as a pill, "$480K" in the metadata row — and repeating them here
+       made this the second and third place the same two numbers appeared. The
+       verdict's job is the imperative; the header already carries the stakes. */
+    text: `Answer ${who === c.name ? "them" : "her"} today — it is the only open question before the renewal.`,
     generatedAt: "Today, 08:12",
-    /* "migration timeline" left with the first sentence; linking a phrase the
-       text no longer contains would render nothing and look like a bug. */
+    /* One entity left. "migration timeline" went with the first sentence and
+       the two figures went to the header, so linking either here would target
+       a phrase the text no longer contains — which renders nothing and reads
+       as a bug. */
     entities: [
-      { text: value,          destination: "Opportunity", tooltip: "Opportunity · the renewal this figure belongs to" },
-      { text: `${days} days`, destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days` },
+      { text: "the renewal", destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days, ${value}` },
     ],
   }
 }
 
 export function getSignals(c: UcpContact): UcpSignal[] {
   if (c.type !== "person" && c.type !== "company") return []
-  const days = renewalInDays(c) ?? 0
+  const days  = renewalInDays(c) ?? 0
   const conns = getConnections(c).length
+  const who   = c.name.split(" ")[0]
+
+  /* The renewal's REAL DATE, not "in N days". The days figure lives in the
+     record header and appears exactly once in the whole view; a signal row
+     that repeated it was the third place the same number showed up. */
+  const closes = new Date(KNOWLEDGE_NOW.getTime() + days * 86_400_000)
+    .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 
   return [
     {
+      type: "open_commitment", label: SIGNAL_CATALOG.open_commitment.label,
+      detail: "Two escalations raised again at the QBR",
+      severity: "critical", since: "19 days",
+      evidence: { label: "Quarterly business review", destination: "Activity" },
+      suggestionId: "s2",
+    },
+    {
       type: "response_debt", label: SIGNAL_CATALOG.response_debt.label,
+      detail: "No written answer since Sep 2",
       severity: "critical", since: "6 days",
       evidence: { label: "Migration timeline requested · Aug 18", destination: "Activity" },
       suggestionId: "s1",
     },
     {
-      type: "open_commitment", label: SIGNAL_CATALOG.open_commitment.label,
-      severity: "critical", since: "19 days",
-      evidence: { label: "Two escalations raised again at the QBR", destination: "Activity" },
-      suggestionId: "s2",
-    },
-    {
       type: "contract_clock", label: SIGNAL_CATALOG.contract_clock.label,
-      severity: "attention", since: `${days} days out`,
-      evidence: { label: "Renewal · governance addendum outstanding", destination: "Knowledge" },
+      detail: `Closes ${closes}`,
+      severity: "attention", since: "the governance addendum is outstanding",
+      evidence: { label: "Governance addendum · Legal drive", destination: "Knowledge" },
     },
     ...(conns <= 3 ? [{
       type: "single_thread" as SignalType, label: SIGNAL_CATALOG.single_thread.label,
+      detail: `${who} is the only live contact`,
       severity: "attention" as SignalSeverity, since: "since Jun 2026",
       evidence: { label: `${conns} live contact${conns === 1 ? "" : "s"} on this account`, destination: "Overview" },
     }] : []),
     {
       type: "engagement_velocity", label: SIGNAL_CATALOG.engagement_velocity.label,
+      detail: "Contact frequency down since Jul",
       severity: "watch", since: "2 months",
       evidence: { label: "4 touchpoints in Aug, 2 in Sep", destination: "Activity" },
     },
@@ -2455,13 +2512,14 @@ export function getSignals(c: UcpContact): UcpSignal[] {
 
 export function getSuggestions(c: UcpContact): UcpSuggestion[] {
   if (c.type !== "person" && c.type !== "company") return []
-  const days  = renewalInDays(c) ?? 0
   const owner = "Priya Nair"
 
   return [
     {
       id: "s1", title: "Send the migration timeline",
-      reason: `asked twice · renewal in ${days} days`,
+      /* "renewal in N days" came off — it is in the record header, and a
+         subtitle that repeats the header is the reader reading it twice. */
+      reason: "asked twice",
       reasonFull: `${c.name.split(" ")[0]} asked for a written migration timeline on Aug 18 and again on the Sep 2 call. `
         + `Nothing has gone out. Their own security review cannot start without a date, so this is the only open question before the renewal.`,
       reasonEntities: [
@@ -2718,6 +2776,15 @@ export interface ProfileEvidence { label: string; destination: string }
 
 export interface ProfileTrait {
   label:    string
+  /**
+   * The same trait as a clause inside a sentence. "Quiet on calls" is a chip;
+   * "stays quiet on calls" is English, and the block reads as prose now.
+   *
+   * Stored rather than derived, because turning a label into a clause is a
+   * writing job — a rule that lowercases and prefixes produces "asks for
+   * written proof" correctly and "escalates to finance" only by luck.
+   */
+  prose:    string
   category: TraitCategory
   source:   TraitSource
   /** Required. A trait with nothing behind it does not render — `renderable`
@@ -2739,6 +2806,10 @@ export interface ProfileChannel {
   /** Observed median, always explicit. "~2 days", never "quickly". */
   responseTime: string
   lastTouch:    string
+  /** The same four facts as one sentence, for the prose block. A middot-
+   *  separated run of metadata is a different register from the line above it,
+   *  and mixing the two is most of why the block read as a data dump. */
+  prose:        string
 }
 
 export interface UcpProfile {
@@ -2804,15 +2875,15 @@ export function getProfile(c: UcpContact): UcpProfile | null {
       styleState:   "Inferred",
     },
     traits: [
-      { label: "Asks for written proof",  category: "decision-style",    source: "attested",
+      { label: "Asks for written proof",  prose: "asks for written proof",     category: "decision-style",    source: "attested",
         evidence: { label: "Migration timeline requested · Aug 18", destination: "activity" } },
-      { label: "Replies within 2 days",   category: "response-pattern",  source: "inferred",
+      { label: "Replies within 2 days",   prose: "replies within two days",    category: "response-pattern",  source: "inferred",
         evidence: { label: "11 replies, median 1.8 days",          destination: "activity" } },
-      { label: "Escalates to finance",    category: "escalation",        source: "inferred",
+      { label: "Escalates to finance",    prose: "escalates to finance",       category: "escalation",        source: "inferred",
         evidence: { label: "Finance joined the last two calls",    destination: "activity" } },
-      { label: "Quiet on calls",          category: "response-pattern",  source: "inferred",
+      { label: "Quiet on calls",          prose: "stays quiet on calls",       category: "response-pattern",  source: "inferred",
         evidence: { label: "QBR · 52 min, 6 attendees",            destination: "activity" } },
-      { label: "Prefers email over calls", category: "format-preference", source: "attested",
+      { label: "Prefers email over calls", prose: "prefers email over calls",  category: "format-preference", source: "attested",
         evidence: { label: "Channel preference · Sandbox",         destination: "knowledge" } },
     ],
     channel: {
@@ -2820,6 +2891,7 @@ export function getProfile(c: UcpContact): UcpProfile | null {
       window:       "mornings",
       responseTime: "~2 days",
       lastTouch:    "30m ago",
+      prose:        "Email, mornings, replies in about two days.",
     },
     lands: [
       { text: "Written timelines",          evidence: { label: "Asked twice, in writing both times", destination: "activity" } },

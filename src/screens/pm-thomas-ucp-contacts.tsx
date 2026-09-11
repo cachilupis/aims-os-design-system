@@ -24,6 +24,7 @@ import { useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { ScreenLayout }      from "@/components/layouts/screen-layout"
 import { Header }            from "@/components/ui/header"
+import { Filters }           from "@/components/ui/filters"
 import { FiltersSlideout }   from "@/components/ui/filters-slideout"
 import { Menu, MenuItem }    from "@/components/ui/menu-item"
 import { Button }            from "@/components/ui/button"
@@ -49,7 +50,7 @@ import { InformativeCard }   from "@/components/ui/informative-card"
 import { useToast }          from "@/components/ui/toast"
 import { anchorFromElement, anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
-import { Plus, Lock, Trash2, Search, PanelLeftOpen, PanelLeftClose, Contact as ContactIcon } from "lucide-react"
+import { Plus, Lock, Trash2, PanelLeftOpen, PanelLeftClose, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
@@ -889,24 +890,17 @@ function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenReco
  */
 const RAIL_WIDTH           = 232
 const RAIL_COLLAPSED_WIDTH = 56
-/** Below this a search field is furniture — the same threshold the `+` picker
- *  used to justify not having one. */
-const RAIL_SEARCH_MIN      = 6
 
 function EntityCategoryRail({
-  categories, activeId, onSelect, collapsed, onCollapsedChange, query, onQueryChange,
+  categories, activeId, onSelect, collapsed, onCollapsedChange,
 }: {
   categories: { id: string; label: string; icon: string; count: number }[]
   activeId:   string
   onSelect:   (id: string) => void
   collapsed:  boolean
   onCollapsedChange: (next: boolean) => void
-  query:      string
-  onQueryChange: (next: string) => void
 }) {
-  const q       = query.trim().toLowerCase()
-  const shown   = categories.filter(c => !q || c.label.toLowerCase().includes(q))
-  const showSearch = categories.length >= RAIL_SEARCH_MIN
+  const shown = categories
 
   return (
     <div
@@ -954,19 +948,11 @@ function EntityCategoryRail({
         </Tooltip>
       </div>
 
-      {/* The search filters CATEGORIES, not records — it is the thing that
-          replaces a cap once the list is long. Hidden while the list is short
-          enough to read at a glance. */}
-      {!collapsed && showSearch && (
-        <Input
-          size="sm"
-          placeholder="Find a category…"
-          value={query}
-          onChange={e => onQueryChange(e.target.value)}
-          leftIcon={<Search size={14} />}
-        />
-      )}
-
+      {/* NO SEARCH HERE — Michael, 2026-09-11. Two search fields on one screen
+          is two, and the one that matters is the one over the list: a reader
+          types a person's name far more often than a category's. The rail has
+          six rows you can read at a glance; when it has thirty, the search
+          comes back here and not before. */}
       <div style={{
         display: "flex", flexDirection: "column", gap: 2,
         /* Collapsed, a row is one icon, so the column centres on the rail's
@@ -1001,12 +987,6 @@ function EntityCategoryRail({
             ? <Tooltip key={c.id} side="cursor" content={`${c.label} · ${c.count} records`}>{row}</Tooltip>
             : row
         })}
-
-        {!collapsed && shown.length === 0 && (
-          <span style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "8px 4px" }}>
-            {`No category matches “${query.trim()}”.`}
-          </span>
-        )}
       </div>
     </div>
   )
@@ -1050,7 +1030,6 @@ export default function PMThomasUcpContactsScreen() {
     enough categories to be worth searching.
   */
   const [railCollapsed, setRailCollapsed] = useState(false)
-  const [railQuery,     setRailQuery]     = useState("")
 
   const [preview,    setPreview]    = useState<UcpContact | null>(null)
   // El anchor y el "abrir" tienen que cambiar en el MISMO commit. useDropdownPosition
@@ -1382,11 +1361,51 @@ export default function PMThomasUcpContactsScreen() {
           }}
           collapsed={railCollapsed}
           onCollapsedChange={setRailCollapsed}
-          query={railQuery}
-          onQueryChange={setRailQuery}
         />
 
         <div style={{ flex: 1, minWidth: 0 }}>
+          {/*
+            THE FILTERS BAR IS BACK, ABOVE THE LIST — Michael, 2026-09-11.
+
+            Taking it out with the tabs was the wrong half. The rail answers
+            "which KIND of record", which is a navigation question and belongs
+            on the left; search and the facets answer "which of THESE", which
+            is a question about the list you are looking at and belongs over
+            it. Removing both left the roster with no way to find a person by
+            name, which is the single most common thing anybody does here.
+
+            It sits inside the right column rather than above both, so it
+            spans the list it filters and not the rail it does not.
+          */}
+          <div className="mb-[24px]" onClickCapture={e => setAnchor(anchorFromEvent(e))}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search by name, company, owner or ID…"
+              searchValue={search}
+              onSearchChange={v => { setSearch(v); resetPage() }}
+              /* Which facets are visible is the TYPE's call, not the screen's —
+                 an asset has no Owner in the sense a customer does. The rest
+                 live behind All filters. */
+              slots={facets.filter(f => f.inline).map(f => ({
+                placeholder: f.label,
+                value: applied[f.id],
+                onOpen: () => setOpenSlot(f.id),
+                onRemove: () => {
+                  setApplied(a => { const n = { ...a }; delete n[f.id]; return n })
+                  resetPage()
+                },
+              }))}
+              showAllFilters
+              onAllFiltersClick={() => setSlideOpen(true)}
+              showClearFilters={hasFilters}
+              onClearFilters={clearAll}
+              showSort
+              sortLabel={SORT_OPTIONS.find(o => o.key === sortKey)?.label}
+              onSortClick={() => setOpenSlot("sort")}
+              showViewToggle={false}
+            />
+          </div>
+
       {clearedOn && (
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--field-supporting)" }}>
           <HighlightIcon size="sm" variant="neutral" iconName="Info" />

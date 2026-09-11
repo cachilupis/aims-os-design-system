@@ -58,7 +58,6 @@ import { Tabs }              from "@/components/ui/tabs"
 import { Filters }           from "@/components/ui/filters"
 import { Menu, MenuItem }    from "@/components/ui/menu-item"
 import { ModalDialog }       from "@/components/ui/modal-dialog"
-import { InformativeCard }   from "@/components/ui/informative-card"
 import { useToast }          from "@/components/ui/toast"
 import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
@@ -88,12 +87,12 @@ import type { CanvasEntry, ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS,
   KNOWLEDGE_NOW,
-  getVerdict, getSignals, getSuggestions, getAgentReads, readAreas, renewalInDays,
+  getVerdict, getSignals, getSuggestions, getAgentReads, renewalInDays,
   renderableSignals, renderableReads, sortSuggestions, confirmLabel,
-  verdictWordCount, VERDICT_WORD_CAP, SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
+  SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
   RESOLVED_STATUSES, DISMISS_REASONS, TRAIN_ME_REASON, emitIntelligence,
-  SIGNAL_CATALOG, defaultExpandedRow, sincePhrase, QUEUE_DEFAULT_ROWS,
-  getProfile, renderableTraits, renderableBullets, PROFILE_TRAITS_MAX,
+  defaultExpandedRow, sincePhrase, QUEUE_DEFAULT_ROWS, mostUrgentSignal,
+  getProfile, renderableTraits, renderableBullets,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
@@ -107,7 +106,7 @@ import type {
   ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
   UcpNote, TagVariantLite,
   VerdictEntity, SignalSeverity, ConfidenceState, SuggestionSort, SuggestionStatus, UcpSuggestion,
-  UcpProfile, ProfileBullet,
+  UcpProfile, ProfileBullet, UcpVerdict, UcpSignal,
 } from "./ucpShared"
 
 export const UCP_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -665,17 +664,12 @@ const PLANE_ICON_VARIANT: Record<KnowledgePlane, HighlightIconVariant> = {
    be able to open a row programmatically. Extended, not forked.
    ══════════════════════════════════════════════════════════════════════════ */
 
-const SIGNAL_TAG: Record<SignalSeverity, TagVariantLite> = {
-  critical:  "error",
-  attention: "alert",
-  watch:     "neutral",
-}
-
-const CONFIDENCE_TAG: Record<ConfidenceState, TagVariantLite> = {
-  Inferred:   "neutral",
-  "In review": "alert",
-  Verified:   "success",
-}
+/* SIGNAL_TAG and CONFIDENCE_TAG were both pill-variant maps, and there are no
+   pills left for them to colour. Severity is now a text colour on the signal's
+   grey label (SIGNAL_LABEL_COLOR below), and an attestation state is said in
+   words — "— inferred", "Draft · in review". A pill for each would have been
+   two different meanings wearing one shape, which is the thing that stops a
+   reader trusting either. */
 
 /**
  * Text with its evidence spans rendered as links.
@@ -799,235 +793,236 @@ function LinkedText({ text, entities, onGo }: {
  * component file. It is a CardContainer header plus a conditional body, which
  * is exactly the case CLAUDE.md says to compose in the screen rather than put
  * in ui/. If a third screen needs it, that is when it earns a file.
+ *
+ * SUPERSEDED 2026-09-11. DisclosureBlock wrapped each collapsed block in a
+ * CardContainer, which is a box drawn around a sentence. Signals and Agent
+ * reads are now a line of text with a chevron and no container at all — the
+ * disclosure behaviour survives, its chrome does not.
  */
-const QUEUE_SORT_MIN_ROWS = 1
-/** Below this the reads list gets no search and no filter. Controls for a
- *  list you can take in at a glance are noise. */
-const READS_FILTER_MIN = 8
-
-function DisclosureBlock({
-  summary, count, expanded, onToggle, lead, children,
-}: {
-  /** The whole collapsed line, as a sentence. Never "Signals (3)". */
-  summary:  string
-  count:    number
-  expanded: boolean
-  onToggle: () => void
-  /** Rendered before the summary — the severity Tag, so a critical signal
-   *  reads without expanding anything. */
-  lead?:    React.ReactNode
-  children: React.ReactNode
-}) {
-  /* A zero block states its empty copy and does not open. There is nothing
-     behind it, and a chevron that reveals nothing is a broken control. */
-  const empty = count === 0
-  return (
-    <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <CardContainer size="sm" onClick={empty ? undefined : onToggle}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "none" }}>
-          {lead}
-          <span style={{ fontSize: 13, color: empty ? "var(--muted-foreground)" : "var(--color-text-title)" }}>
-            {summary}
-          </span>
-          <div style={{ flex: 1 }} />
-          {!empty && (expanded
-            ? <LucideIcons.ChevronUp   size={16} style={{ color: "var(--muted-foreground)" }} />
-            : <LucideIcons.ChevronDown size={16} style={{ color: "var(--muted-foreground)" }} />)}
-        </div>
-      </CardContainer>
-      {expanded && children}
-    </section>
-  )
-}
+/* QUEUE_SORT_MIN_ROWS and READS_FILTER_MIN went with the controls they
+   guarded: the sort shows above one visible row inline now, and Agent reads
+   lost its search and area filter entirely — four reads never needed either,
+   and the chrome budget has no room for controls over a list this short. */
 
 /**
- * ── Block 1 · Profile ──────────────────────────────────────────────────────
+ * ── Profile and verdict, as one block of prose ─────────────────────────────
  *
- * The dispositional layer, and the reason the rest of the section stops
- * reading as a pile of loose facts: a signal means something different once
- * you know you are talking to a cautious evaluator who owns the budget.
+ * Michael, 2026-09-11. The content was right and the CHROME was the problem:
+ * seven nested containers and fourteen pills in the default state. At that
+ * density a pill stops meaning anything — it is just the shape text comes in —
+ * and the page reads as a wall however good the words are.
  *
- * THREE LINES BY DEFAULT — a named archetype, the behaviour traits, and how to
- * reach her. Not collapsible, because a profile you have to open is a profile
- * nobody reads; expandable, because what lands and what does not is worth
- * having and is not worth three lines of everyone's screen.
+ * The reference is Lightfield, Fibery and Tana: a record sheet is plain text,
+ * grey labels and plain values, no boxes. A container is reserved for the
+ * thing you can act on, which here is exactly one thing — the expanded
+ * suggestion.
  *
- * INFERRED AND ATTESTED ARE DIFFERENT COLOURS, and that is the architecture
- * showing through rather than decoration. An attested trait has been through
- * KCON and the organisation stands behind it; an inferred one is the system's
- * read. `success` for attested is the same tint the Truth Plane carries
- * everywhere else in this product, so the two agree without anybody learning
- * a second colour language.
+ * SO THE TRAITS ARE PROSE. Chips are for filtering; prose is for
+ * understanding, and nobody filters a contact by "quiet on calls". Five chips
+ * became one sentence, and the sentence is shorter than the chips were.
  *
- * A Tag and not a Chip. The spec says "chips", and CLAUDE.md is explicit that
- * a Chip is something you SELECT and a Tag is something a thing IS — these are
- * not selectable and clicking one does not filter anything. Same pill, right
- * component, and the token distinction that was actually being asked for
- * survives either way.
- *
- * THE COPY TEST governs every string: if Sandra read this, she would have to
- * recognise herself, not feel diagnosed. Observations in the third person and
- * the present tense, nothing about what she feels, no personality framework.
+ * ATTESTATION IS SAID IN WORDS, NOT COLOUR. "— inferred" in grey at the end of
+ * the archetype line. Colour alone communicates nothing without a legend, and
+ * this block has no room for one; a trait that IS attested gets an underline
+ * on its own words, which is an affordance rather than a paint job.
  */
-function ProfileBlock({ profile, contact, expanded, onToggle, onGo, onReject }: {
+function ProfileProse({ profile, verdict, contact, expanded, onToggle, onGo, onReject, onConfirm, confirmed }: {
   profile:  UcpProfile | null
+  verdict:  UcpVerdict | null
   contact:  UcpContact
   expanded: boolean
   onToggle: () => void
   onGo:     (destination: string) => void
   onReject: (field: string) => void
+  onConfirm:(field: string) => void
+  confirmed: string[]
 }) {
-  const toast = useToast()
-  /* // STUB: entitlement, same stub as Agent reads. Proposing is not
-     attesting — a user who cannot attest still sees the action, renamed. */
-  const canAttest = false
-  const [confirmed, setConfirmed] = useState<string[]>([])
-
   if (profile === null) {
     return (
-      <CardContainer size="sm">
-        <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-          Not enough history to read a profile yet.
-        </span>
-      </CardContainer>
+      <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+        Not enough history to read a profile yet.
+      </span>
     )
   }
 
-  const traits  = renderableTraits(profile.traits).slice(0, PROFILE_TRAITS_MAX)
-  const lands   = renderableBullets(profile.lands)
-  const doesnt  = renderableBullets(profile.doesntLand)
-  const lights  = renderableBullets(profile.highlights)
-  const primaryState = confirmed.includes("archetype.primary")
-    ? (canAttest ? "Verified" : "In review")
-    : profile.archetype.primaryState
-
-  const confirm = (field: string) => {
-    emitIntelligence({ name: "trait_confirmed", field, proposed: !canAttest })
-    setConfirmed(list => [...list, field])
-    toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
-      description: canAttest
-        ? "It is on the Truth Plane now, and it moves to Overview — Intelligence shows what the system believes, Overview shows what the organisation stands behind."
-        : "Sent to the domain owner to attest. It graduates to Overview once it lands.",
-    })
-  }
+  const traits = renderableTraits(profile.traits)
+  const lands  = renderableBullets(profile.lands)
+  const doesnt = renderableBullets(profile.doesntLand)
+  const lights = renderableBullets(profile.highlights)
 
   return (
-    <CardContainer size="sm">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    /* NO CONTAINER. This is the whole point of the block. */
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
 
-        {/* ── Line 1 · the archetype, NAMED and never scored ── */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>
-            {profile.archetype.primary}
-          </span>
-          <Tag variant={CONFIDENCE_TAG[primaryState]} size="sm">{primaryState}</Tag>
-          <span style={{ fontSize: 15, color: "var(--muted-foreground)" }}>·</span>
-          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>
-            {profile.archetype.style}
-          </span>
-          <Tag variant={CONFIDENCE_TAG[profile.archetype.styleState]} size="sm">{profile.archetype.styleState}</Tag>
-          <div style={{ flex: 1 }} />
-          <Button
-            variant="tertiary" size="sm"
-            aria-expanded={expanded}
-            aria-label={expanded ? "Hide how to work with this contact" : "Show how to work with this contact"}
-            onClick={onToggle}
-          >
-            {expanded
-              ? <LucideIcons.ChevronUp   size={16} />
-              : <LucideIcons.ChevronDown size={16} />}
-          </Button>
-        </div>
+      {/* Line 1 — the archetype, and its state in words. */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>
+          {`${profile.archetype.primary} · ${profile.archetype.style}`}
+        </span>
+        <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+          {confirmed.includes("archetype.primary") ? "— proposed as fact" : "— inferred"}
+        </span>
+        <div style={{ flex: 1 }} />
+        <Button
+          variant="tertiary" size="sm"
+          aria-expanded={expanded}
+          aria-label={expanded ? "Hide how to work with this contact" : "Show how to work with this contact"}
+          onClick={onToggle}
+        >
+          {expanded
+            ? <LucideIcons.ChevronUp   size={16} />
+            : <LucideIcons.ChevronDown size={16} />}
+        </Button>
+      </div>
 
-        {/* ── Line 2 · behaviour traits ── */}
-        {traits.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            {/*
-              EVERY TRAIT IS A LINK TO ITS EVIDENCE, not just a pill with a
-              tooltip. The rule is that nothing here renders without evidence,
-              and a tooltip states the evidence without letting anybody go
-              CHECK it — which is most of the point on a card that makes
-              claims about a person.
-
-              Tag has no onClick and should not grow one: it is a label for
-              what a thing IS, and making every Tag in the product clickable
-              to serve this one card is the tail wagging the dog. So the Tag
-              is wrapped in a button that draws nothing — the reset comes from
-              classes so the audit reads it as unsetting chrome rather than
-              drawing a control, same as the verdict's inline links.
-            */}
-            {traits.map(t => (
-              <Tooltip
-                key={t.label}
-                side="cursor"
-                content={t.source === "attested"
-                  ? `Attested · ${t.evidence.label}. The organisation stands behind this one — open it.`
-                  : `Inferred · ${t.evidence.label}. The system's read, not yet attested — open it.`}
-              >
+      {/* Line 2 — the traits, as one sentence. An attested trait underlines
+          its own words and links to the evidence; an inferred one is plain
+          text. That is the affordance replacing the colour. */}
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)", margin: 0 }}>
+        {traits.map((t, i) => (
+          <span key={t.label}>
+            {/* Commas throughout, no final "and". Five clauses with a
+                conjunction reads as a sentence being wound up; five with
+                commas reads as a list of observations, which is what it is. */}
+            {i > 0 && ", "}
+            {t.source === "attested" ? (
+              <Tooltip side="cursor" content={`Attested · ${t.evidence.label}. The organisation stands behind this one — open it.`}>
                 <button
                   className="appearance-none bg-transparent border-0 p-0 cursor-pointer"
                   onClick={() => onGo(t.evidence.destination)}
-                  aria-label={`${t.label} — ${t.source === "attested" ? "attested" : "inferred"} from ${t.evidence.label}`}
+                  style={{ font: "inherit", color: "inherit", textDecoration: "underline", textDecorationStyle: "dotted", textUnderlineOffset: 3 }}
                 >
-                  <Tag variant={t.source === "attested" ? "success" : "neutral"} size="sm">
-                    {t.label}
-                  </Tag>
+                  {i === 0 ? t.prose.charAt(0).toUpperCase() + t.prose.slice(1) : t.prose}
                 </button>
               </Tooltip>
-            ))}
-          </div>
-        )}
-
-        {/* ── Line 3 · how to reach her, derived from where she replies ── */}
-        {profile.channel === null ? (
-          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            Not enough contact history to read a channel preference.
+            ) : (
+              <span>{i === 0 ? t.prose.charAt(0).toUpperCase() + t.prose.slice(1) : t.prose}</span>
+            )}
+            {i === traits.length - 1 && "."}
           </span>
-        ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-              {`${profile.channel.preferred} · ${profile.channel.window} · replies in ${profile.channel.responseTime} · last contact ${profile.channel.lastTouch}`}
-            </span>
-            {/* STRUCTURAL, so it can become a fact. The channel is read off
-                where she actually answers, not off a declared field, which is
-                what makes it checkable in the first place. */}
-            {!confirmed.includes("channel.preferred") && (
-              <Button variant="tertiary" size="sm" className="!px-0" onClick={() => confirm("channel.preferred")}>
-                {confirmLabel(canAttest)}
+        ))}
+      </p>
+
+      {/* Line 3 — the channel, same register. */}
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--foreground)", margin: 0 }}>
+        {profile.channel?.prose ?? "Not enough contact history to read a channel preference."}
+      </p>
+
+      {/* Line 4 — the verdict. The imperative carries the weight, and the
+          clock is gone: it is a pill in the record header and appears there
+          once. */}
+      {verdict && (
+        <p style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.6, color: "var(--color-text-title)", margin: "2px 0 0" }}>
+          <LinkedText text={verdict.text} entities={verdict.entities} onGo={onGo} />
+        </p>
+      )}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+          {`Generated ${verdict?.generatedAt.toLowerCase() ?? "—"}`}
+        </span>
+        <div style={{ flex: 1 }} />
+        <Tooltip content="This reads right" side="cursor">
+          <Button variant="tertiary" size="sm" aria-label="This reads right"
+            onClick={() => { emitIntelligence({ name: "verdict_rated", contactId: contact.id, rating: "up" }) }}>
+            <LucideIcons.ThumbsUp size={14} />
+          </Button>
+        </Tooltip>
+        <Tooltip content="This is off — tell us why" side="cursor">
+          <Button variant="tertiary" size="sm" aria-label="This is off" onClick={() => onReject("verdict")}>
+            <LucideIcons.ThumbsDown size={14} />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Regenerate this verdict" side="cursor">
+          <Button variant="tertiary" size="sm" aria-label="Regenerate"
+            onClick={() => emitIntelligence({ name: "verdict_regenerated", contactId: contact.id })}>
+            <LucideIcons.RefreshCw size={14} />
+          </Button>
+        </Tooltip>
+      </div>
+
+      {expanded && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 10, marginTop: 4, borderTop: "0.5px solid var(--field-border)" }}>
+          <ProfileBullets title="What lands"   bullets={lands}  onGo={onGo} />
+          <ProfileBullets title="What doesn't" bullets={doesnt} onGo={onGo} />
+          <ProfileBullets title="Highlights"   bullets={lights} onGo={onGo} />
+
+          {/* NAMED ACTIONS, not a loose link at the end of a line. "Propose as
+              fact" on its own never said WHAT it would propose. */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {!confirmed.includes("channel.preferred") && profile.channel && (
+              <Button variant="primary" size="sm" onClick={() => onConfirm("channel.preferred")}>
+                Propose channel preference as fact
               </Button>
             )}
-          </div>
-        )}
-
-        {/* ── Expanded ── */}
-        {expanded && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 10, borderTop: "0.5px solid var(--field-border)" }}>
-            {/* INTERPRETIVE, both of them — a reading of what works with a
-                person, never persisted as a fact about them. No Confirm. */}
-            <ProfileBullets title="What lands"      bullets={lands}  onGo={onGo} />
-            <ProfileBullets title="What doesn't"    bullets={doesnt} onGo={onGo} />
-            <ProfileBullets title="Highlights"      bullets={lights} onGo={onGo} />
-
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {/* The archetype is structural — observable and checkable — so
-                  it is the one thing in this block that carries Confirm. */}
-              {!confirmed.includes("archetype.primary") && primaryState !== "Verified" && (
-                <Button variant="primary" size="sm" onClick={() => confirm("archetype.primary")}>
-                  {`${confirmLabel(canAttest)} · ${profile.archetype.primary}`}
-                </Button>
-              )}
-              <Button variant="tertiary" size="sm" onClick={() => onReject("archetype.primary")}>
-                This is wrong
+            {!confirmed.includes("archetype.primary") && (
+              <Button variant="secondary" size="sm" onClick={() => onConfirm("archetype.primary")}>
+                {`Propose ${profile.archetype.primary.toLowerCase()} as fact`}
               </Button>
-              <div style={{ flex: 1 }} />
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                {`Read from ${contact.agent.name}'s observation of this record. Attested traits move to Overview.`}
-              </span>
-            </div>
+            )}
+            <Button variant="tertiary" size="sm" onClick={() => onReject("trait:archetype.primary")}>
+              This is wrong
+            </Button>
           </div>
-        )}
-      </div>
-    </CardContainer>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * One signal, one line, no container.
+ *
+ * THE REAL CASE IS THE LINE AND THE CATALOG NAME IS THE LABEL. It used to be
+ * the other way round — "Something was promised and not delivered" in the
+ * prominent slot, "Two escalations raised again at the QBR" small and to the
+ * right. The generic sentence is true of every open commitment that has ever
+ * existed; the reader learns it once and then needs the other one.
+ *
+ * SEVERITY IS THE LABEL'S COLOUR, not a pill beside it. Three levels, and the
+ * lowest absorbed what used to be a fourth.
+ */
+const SIGNAL_LABEL_COLOR: Record<SignalSeverity, string> = {
+  critical:  "var(--color-text-error)",
+  attention: "var(--color-text-alert)",
+  watch:     "var(--muted-foreground)",
+}
+
+function SignalLine({ signal, canResolve, onGo, onResolve }: {
+  signal:     UcpSignal
+  canResolve: boolean
+  onGo:       (destination: string) => void
+  onResolve:  () => void
+}) {
+  const [hover, setHover] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+        padding: "7px 0",
+        borderBottom: "0.5px solid var(--field-border)",
+      }}
+    >
+      <span style={{ width: 132, flexShrink: 0, fontSize: 12, fontWeight: 600, color: SIGNAL_LABEL_COLOR[signal.severity] }}>
+        {signal.label}
+      </span>
+      <button
+        className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left"
+        onClick={() => onGo(signal.evidence!.destination.toLowerCase())}
+        style={{ font: "inherit", fontSize: 12, color: "var(--foreground)", flex: 1, minWidth: 180 }}
+      >
+        {`${signal.detail} · ${signal.since}`}
+      </button>
+      {/* Only where there is one, and only on hover or focus — an action that
+          is always visible on every row is five actions competing. */}
+      {canResolve && (
+        <span style={{ visibility: hover ? "visible" : "hidden" }}>
+          <Button variant="tertiary" size="sm" onClick={onResolve}>Resolve</Button>
+        </span>
+      )}
+    </div>
   )
 }
 
@@ -1073,27 +1068,18 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
   const [sortAnchor, setSortAnchor] = useState<DropdownAnchor | null>(null)
   const sortDrop = useDropdownPosition(sortAnchor)
 
-  /* Signals and Agent reads are mutually exclusive; neither closes the queue. */
   const [openBlock, setOpenBlock] = useState<"signals" | "reads" | null>(null)
-  /* Profile is NOT part of the signals/reads accordion. It is never collapsed
-     and opening it closes nothing — it is the frame the rest is read against,
-     so it does not compete with them for the one open slot. */
   const [profileOpen, setProfileOpen] = useState(false)
-  /** Exactly one, chosen by defaultExpandedRow — a held row among the first
-   *  three, else the first. Never null while the queue has rows. */
   const [openRow,  setOpenRow]  = useState<string | null>(
     () => defaultExpandedRow(getSuggestions(contact)),
   )
-  const [openSignal, setOpenSignal] = useState<string | null>(null)
   const [openRead,   setOpenRead]   = useState<string | null>(null)
   const [showAllRows, setShowAllRows] = useState(false)
-  const [selected, setSelected] = useState<string[]>([])
   const [reasonFor, setReasonFor] = useState<{ id: string; kind: "suggestion" | "read" } | null>(null)
   const [supplyFor, setSupplyFor] = useState<string | null>(null)
   const [supplied,  setSupplied]  = useState("")
+  const [confirmed, setConfirmed] = useState<string[]>([])
 
-  const [readQuery, setReadQuery] = useState("")
-  const [readArea,  setReadArea]  = useState<string | undefined>(undefined)
   const [readState, setReadState] = useState<Record<string, ConfidenceState>>({})
   const [rejected,  setRejected]  = useState<string[]>([])
 
@@ -1112,35 +1098,35 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
 
   const reads = allReads
     .filter(r => !rejected.includes(r.id))
-    .filter(r => !readArea || r.area === readArea)
-    .filter(r => {
-      const q = readQuery.trim().toLowerCase()
-      return !q || r.headline.toLowerCase().includes(q) || r.body.toLowerCase().includes(q)
-    })
   const unreviewed = reads.filter(r => (readState[r.id] ?? r.state) === "Inferred").length
-  /* Only once the block is open AND the list is past the point where you can
-     take it in at a glance. A search box above four rows is furniture. */
-  const showReadFilters = openBlock === "reads" && reads.length > READS_FILTER_MIN
 
-  /* THE EMIT IS OUTSIDE THE UPDATER. It was inside, which made the updater
-     impure — and React calls an impure updater twice in StrictMode, so one
-     click logged two block_expanded events. Acceptance rate and open rate are
-     the two numbers this section is judged on; a metric that double-counts in
-     development is one nobody will trust in production either. */
   const toggleBlock = (block: "signals" | "reads", count: number) => {
     const opening = openBlock !== block
     setOpenBlock(opening ? block : null)
     if (opening) emitIntelligence({ name: "block_expanded", block, count })
   }
 
-  const worst = signals[0]
+  const confirmField = (field: string) => {
+    emitIntelligence({ name: "trait_confirmed", field, proposed: !canAttest })
+    setConfirmed(list => [...list, field])
+    toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
+      description: canAttest
+        ? "It is on the Truth Plane now, and it moves to Overview."
+        : "Sent to the domain owner to attest. It graduates to Overview once it lands.",
+    })
+  }
+
+  /* THE TIE-BREAK IS EXPLICIT. Two signals are critical; the collapsed line
+     names one, and it is the one that has been running longest. */
+  const worst = mostUrgentSignal(signals)
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* ── 1 · Profile — who this is, always visible ────────────────────── */}
-      <ProfileBlock
+      {/* ── 1 · Profile and verdict, one block, no container ─────────────── */}
+      <ProfileProse
         profile={profile}
+        verdict={verdict}
         contact={contact}
         expanded={profileOpen}
         onToggle={() => {
@@ -1149,119 +1135,49 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
           if (opening) emitIntelligence({ name: "profile_expanded", contactId: contact.id })
         }}
         onGo={onGoTab}
-        onReject={field => setReasonFor({ id: `trait:${field}`, kind: "read" })}
+        onReject={field => setReasonFor({ id: field === "verdict" ? "verdict" : field, kind: "read" })}
+        onConfirm={confirmField}
+        confirmed={confirmed}
       />
 
-      {/* ── 2 · Now — the imperative, then the work ──────────────────────────
-          One sentence. The first half of the old verdict said who this person
-          is, which is the Profile block's job three lines above — saying it
-          twice made this the second place a reader met the same fact, and the
-          weaker one. What is left is the only part that is not still true of
-          her tomorrow. */}
+      {/* ── 2 · Signals — a line of text, no container, no pill ──────────── */}
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {verdict === null ? (
-          <CardContainer size="sm">
-            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
-              Not enough signal yet. This will fill in as activity and documents come in.
-            </span>
-          </CardContainer>
-        ) : (
-          <CardContainer size="sm">
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--color-text-title)", margin: 0 }}>
-                <LinkedText text={verdict.text} entities={verdict.entities} onGo={onGoTab} />
-              </p>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                  {`Generated ${verdict.generatedAt} · ${verdictWordCount(verdict.text)} of ${VERDICT_WORD_CAP} words`}
-                </span>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <Tooltip content="This reads right" side="cursor">
-                    <Button variant="tertiary" size="sm" aria-label="This reads right"
-                      onClick={() => { emitIntelligence({ name: "verdict_rated", contactId: contact.id, rating: "up" }); toast.success("Thanks — noted.") }}>
-                      <LucideIcons.ThumbsUp size={14} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="This is off — tell us why" side="cursor">
-                    <Button variant="tertiary" size="sm" aria-label="This is off"
-                      onClick={() => setReasonFor({ id: "verdict", kind: "read" })}>
-                      <LucideIcons.ThumbsDown size={14} />
-                    </Button>
-                  </Tooltip>
-                  <Tooltip content="Regenerate this verdict" side="cursor">
-                    <Button variant="tertiary" size="sm" aria-label="Regenerate"
-                      onClick={() => { emitIntelligence({ name: "verdict_regenerated", contactId: contact.id }); toast.success("Regenerating", { description: "The verdict updates for everyone on this record." }) }}>
-                      <LucideIcons.RefreshCw size={14} />
-                    </Button>
-                  </Tooltip>
-                </div>
-              </div>
-            </div>
-          </CardContainer>
+        <button
+          className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left"
+          aria-expanded={openBlock === "signals"}
+          onClick={() => signals.length > 0 && toggleBlock("signals", signals.length)}
+          style={{ display: "flex", alignItems: "center", gap: 8, font: "inherit" }}
+        >
+          <span style={{ fontSize: 13, color: signals.length ? "var(--color-text-title)" : "var(--muted-foreground)" }}>
+            {signals.length === 0
+              ? "No signals"
+              : `${signals.length} signals — most urgent: ${worst!.label.toLowerCase()} ${sincePhrase(worst!.since)}`}
+          </span>
+          {signals.length > 0 && (openBlock === "signals"
+            ? <LucideIcons.ChevronUp   size={15} style={{ color: "var(--muted-foreground)" }} />
+            : <LucideIcons.ChevronDown size={15} style={{ color: "var(--muted-foreground)" }} />)}
+        </button>
+
+        {openBlock === "signals" && (
+          <div style={{ display: "flex", flexDirection: "column", borderTop: "0.5px solid var(--field-border)" }}>
+            {signals.map(sig => (
+              <SignalLine
+                key={sig.type}
+                signal={sig}
+                canResolve={!!sig.suggestionId && live.some(s => s.id === sig.suggestionId)}
+                onGo={onGoTab}
+                onResolve={() => { setShowAllRows(true); setOpenRow(sig.suggestionId!) }}
+              />
+            ))}
+          </div>
         )}
       </section>
 
-      {/* ── 3 · Signals — one line until opened ──────────────────────────────
-          THE SEVERITY IS IN THE COLLAPSED LINE, as a Tag before the text, so
-          a critical signal is readable without expanding anything. That is
-          the one thing this block must never hide: the whole reason to
-          collapse it is that most visits do not need the detail, and the one
-          visit that does has to be able to tell. */}
-      <DisclosureBlock
-        count={signals.length}
-        expanded={openBlock === "signals"}
-        onToggle={() => toggleBlock("signals", signals.length)}
-        lead={worst ? <Tag variant={SIGNAL_TAG[worst.severity]} size="sm">{worst.label}</Tag> : undefined}
-        summary={signals.length === 0
-          ? "Signals · none active"
-          : `Signals · ${signals.length} active — most severe: ${worst.label.toLowerCase()} ${sincePhrase(worst.since)}`}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {signals.map(sig => (
-            <CardContainer key={sig.type} size="sm" className="!p-0 overflow-hidden">
-              <EntityList items={[{
-                id:    sig.type,
-                title: sig.label,
-                iconName: SIGNAL_CATALOG[sig.type].icon,
-                iconVariant: sig.severity === "critical" ? "error" : sig.severity === "attention" ? "yellow" : "neutral",
-                /* Collapsed: label, severity, duration. Nothing else. */
-                primaryMeta: [{ iconName: "Clock", label: sig.since }],
-                state: { label: sig.severity === "critical" ? "Critical" : sig.severity === "attention" ? "Attention" : "Watch", variant: SIGNAL_TAG[sig.severity] },
-                expandable: {
-                  expanded: openSignal === sig.type,
-                  onToggle: () => setOpenSignal(id => id === sig.type ? null : sig.type),
-                  label:    openSignal === sig.type ? "Hide the evidence" : "Show the evidence",
-                  content: (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{SIGNAL_CATALOG[sig.type].firesWhen}.</span>
-                      <div style={{ flex: 1 }} />
-                      <Button variant="tertiary" size="sm" onClick={() => onGoTab(sig.evidence!.destination.toLowerCase())}>
-                        {sig.evidence!.label}
-                        <LucideIcons.ArrowUpRight size={12} />
-                      </Button>
-                      {sig.suggestionId && live.some(s => s.id === sig.suggestionId) && (
-                        <Button variant="secondary" size="sm" onClick={() => { setShowAllRows(true); setOpenRow(sig.suggestionId!) }}>
-                          Resolve
-                        </Button>
-                      )}
-                    </div>
-                  ),
-                },
-              }]} />
-            </CardContainer>
-          ))}
-        </div>
-      </DisclosureBlock>
-
-      {/* ── The queue sits under Now, not in a block of its own ─────────── */}
-      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {/* ── 3 · Suggestions — the section's ONE container, on the open row ── */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <SectionLabel>{`Suggestions · ${live.length}`}</SectionLabel>
-          {/* The sort moved into this header and appears only when there is
-              more than one row to order. It stays visible — the criterion has
-              to remain explainable — but it no longer spends a row of its own
-              on a queue of one. */}
-          {visible.length > QUEUE_SORT_MIN_ROWS && (
+          {visible.length > 1 && (
             <div onClickCapture={e => setSortAnchor(anchorFromEvent(e))}>
               <Button variant="tertiary" size="sm" onClick={() => setSortOpen(v => !v)}>
                 <LucideIcons.ArrowDownUp size={12} />
@@ -1272,25 +1188,15 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         </div>
 
         {live.length === 0 ? (
-          <CardContainer size="sm">
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <HighlightIcon size="sm" variant="success" iconName="Check" />
-              <span style={{ fontSize: 13, color: "var(--color-text-title)" }}>Nothing pending on this contact.</span>
-            </div>
-          </CardContainer>
+          <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Nothing pending on this contact.</span>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {visible.map(s => (
               <SuggestionRow
                 key={s.id}
                 suggestion={s}
                 expanded={openRow === s.id}
-                /* Expanding a row collapses the one that was open. Never two,
-                   and — because a click on the open row's own chevron closes
-                   it — the reader can still get to zero deliberately. */
                 onToggle={() => setOpenRow(id => id === s.id ? null : s.id)}
-                selected={selected.includes(s.id)}
-                onSelect={() => setSelected(list => list.includes(s.id) ? list.filter(x => x !== s.id) : [...list, s.id])}
                 onGo={onGoTab}
                 onSend={variant => {
                   emitIntelligence({ name: "draft_sent", suggestionId: s.id, variant })
@@ -1316,11 +1222,8 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
               />
             ))}
 
-            {/* Always name the number. "See more" makes the reader guess
-                whether it is worth the click, which is the same failure the
-                collapsed headers exist to avoid. */}
             {hidden > 0 && (
-              <Button variant="tertiary" size="sm" className="self-start" onClick={() => setShowAllRows(true)}>
+              <Button variant="tertiary" size="sm" className="self-start !px-0" onClick={() => setShowAllRows(true)}>
                 {`Show all ${sorted.length}`}
               </Button>
             )}
@@ -1328,113 +1231,91 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         )}
 
         {accepted.length > 0 && (
-          <Button variant="tertiary" size="sm" className="self-start" onClick={() => toast.success("Opening your inbox", { description: `${accepted.length} accepted from this contact.` })}>
+          <Button variant="tertiary" size="sm" className="self-start !px-0" onClick={() => toast.success("Opening your inbox", { description: `${accepted.length} accepted from this contact.` })}>
             {`${accepted.length} accepted`}
             <LucideIcons.ArrowUpRight size={12} />
           </Button>
         )}
       </section>
 
-      {/* ── 4 · Agent reads — situations only; dispositions feed Profile ─── */}
-      <DisclosureBlock
-        count={reads.length}
-        expanded={openBlock === "reads"}
-        onToggle={() => toggleBlock("reads", reads.length)}
-        summary={reads.length === 0
-          ? "Agent reads · none yet"
-          : `Agent reads · ${reads.length} — ${unreviewed} unreviewed`}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {showReadFilters && (
-            <Filters
-              showSearch
-              searchPlaceholder="Search reads…"
-              searchValue={readQuery}
-              onSearchChange={setReadQuery}
-              slots={[{
-                placeholder: "Area",
-                value:       readArea,
-                options:     readAreas(allReads),
-                onSelect:    setReadArea,
-                onRemove:    () => setReadArea(undefined),
-              }]}
-              showClearFilters={!!readArea || readQuery !== ""}
-              onClearFilters={() => { setReadArea(undefined); setReadQuery("") }}
-              showViewToggle={false}
-              showAllFilters={false}
-              showSort={false}
-            />
-          )}
+      {/* ── 4 · Agent reads — a line of text until opened ────────────────── */}
+      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button
+          className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left"
+          aria-expanded={openBlock === "reads"}
+          onClick={() => reads.length > 0 && toggleBlock("reads", reads.length)}
+          style={{ display: "flex", alignItems: "center", gap: 8, font: "inherit" }}
+        >
+          <span style={{ fontSize: 13, color: reads.length ? "var(--color-text-title)" : "var(--muted-foreground)" }}>
+            {reads.length === 0 ? "No agent reads yet" : `${reads.length} agent reads — ${unreviewed} unreviewed`}
+          </span>
+          {reads.length > 0 && (openBlock === "reads"
+            ? <LucideIcons.ChevronUp   size={15} style={{ color: "var(--muted-foreground)" }} />
+            : <LucideIcons.ChevronDown size={15} style={{ color: "var(--muted-foreground)" }} />)}
+        </button>
 
-          {reads.map(r => {
-            const state = readState[r.id] ?? r.state
-            const isStructural = r.kind === "structural"
-            return (
-              <CardContainer key={r.id} size="sm" className="!p-0 overflow-hidden">
-                <EntityList items={[{
-                  id:    r.id,
-                  /* Collapsed: headline and state label. Nothing more. */
-                  title: r.headline,
-                  iconName:    isStructural ? "Network" : "MessageCircle",
-                  iconVariant: isStructural ? "info" : "purple",
-                  state: { label: state, variant: CONFIDENCE_TAG[state] },
-                  expandable: {
-                    expanded: openRead === r.id,
-                    onToggle: () => setOpenRead(id => id === r.id ? null : r.id),
-                    label:    openRead === r.id ? "Hide this read" : "Show this read",
-                    content: (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>{r.body}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{`${r.agent} · ${r.area}`}</span>
-                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>·</span>
-                          {r.evidence.map(e => (
-                            <Button key={e.label} variant="tertiary" size="sm" onClick={() => onGoTab(e.destination.toLowerCase())}>
-                              {e.label}
-                              <LucideIcons.ArrowUpRight size={11} />
-                            </Button>
-                          ))}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                          {isStructural ? (
-                            state === "Verified" ? (
-                              <span style={{ fontSize: 11, color: "var(--color-text-success)" }}>Attested — now a Truth Plane fact.</span>
-                            ) : (
-                              <Button
-                                variant="primary" size="sm"
-                                onClick={() => {
-                                  emitIntelligence({ name: "read_confirmed", readId: r.id, proposed: !canAttest })
-                                  setReadState(m => ({ ...m, [r.id]: canAttest ? "Verified" : "In review" }))
-                                  toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
-                                    description: canAttest
-                                      ? "It is on the Truth Plane. The facts count on this record has gone up."
-                                      : "Sent to the domain owner for attestation. You will see it here when it lands.",
-                                  })
-                                }}
-                              >
-                                {confirmLabel(canAttest)}
-                              </Button>
-                            )
-                          ) : (
-                            <Tooltip content="A read of tone or intent is never attested as a fact about a person." side="cursor">
-                              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Interpretive — expires, never attested.</span>
-                            </Tooltip>
-                          )}
-                          <Button variant="tertiary" size="sm" onClick={() => setReasonFor({ id: r.id, kind: "read" })}>
-                            Reject
+        {openBlock === "reads" && (
+          <div style={{ display: "flex", flexDirection: "column", borderTop: "0.5px solid var(--field-border)" }}>
+            {reads.map(r => {
+              const state = readState[r.id] ?? r.state
+              const open  = openRead === r.id
+              return (
+                <div key={r.id} style={{ padding: "8px 0", borderBottom: "0.5px solid var(--field-border)", display: "flex", flexDirection: "column", gap: 8 }}>
+                  <button
+                    className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left"
+                    aria-expanded={open}
+                    onClick={() => setOpenRead(id => id === r.id ? null : r.id)}
+                    style={{ display: "flex", alignItems: "center", gap: 12, font: "inherit" }}
+                  >
+                    <span style={{ flex: 1, fontSize: 12, color: "var(--foreground)" }}>{r.headline}</span>
+                    <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{state.toLowerCase()}</span>
+                    {open
+                      ? <LucideIcons.ChevronUp   size={14} style={{ color: "var(--muted-foreground)" }} />
+                      : <LucideIcons.ChevronDown size={14} style={{ color: "var(--muted-foreground)" }} />}
+                  </button>
+
+                  {open && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>{r.body}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{`${r.agent} · ${r.area}`}</span>
+                        {r.evidence.map(e => (
+                          <Button key={e.label} variant="tertiary" size="sm" className="!px-0" onClick={() => onGoTab(e.destination.toLowerCase())}>
+                            {e.label}
+                            <LucideIcons.ArrowUpRight size={11} />
                           </Button>
-                        </div>
+                        ))}
                       </div>
-                    ),
-                  },
-                }]} />
-              </CardContainer>
-            )
-          })}
-        </div>
-      </DisclosureBlock>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        {r.kind === "structural" ? (
+                          state === "Verified" ? (
+                            <span style={{ fontSize: 11, color: "var(--color-text-success)" }}>Attested — now a Truth Plane fact.</span>
+                          ) : (
+                            <Button
+                              variant="primary" size="sm"
+                              onClick={() => {
+                                emitIntelligence({ name: "read_confirmed", readId: r.id, proposed: !canAttest })
+                                setReadState(m => ({ ...m, [r.id]: canAttest ? "Verified" : "In review" }))
+                                toast.success(canAttest ? "Confirmed" : "Proposed as fact")
+                              }}
+                            >
+                              {confirmLabel(canAttest)}
+                            </Button>
+                          )
+                        ) : (
+                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Interpretive — expires, never attested.</span>
+                        )}
+                        <Button variant="tertiary" size="sm" onClick={() => setReasonFor({ id: r.id, kind: "read" })}>Reject</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
-      {/* ── The sort menu ── */}
       {sortOpen && sortAnchor && (
         <div ref={sortDrop.ref} style={{ position: "fixed", zIndex: 10001, ...sortDrop.style }}>
           <Menu>
@@ -1455,13 +1336,7 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         title="Supply the date"
         description="It enters the Sandbox Plane as a candidate claim and goes to the domain owner to attest. The draft releases on its own once it lands."
         slotUnstyled
-        slot={
-          <Input
-            placeholder="e.g. 14 November 2026"
-            value={supplied}
-            onChange={e => setSupplied(e.target.value)}
-          />
-        }
+        slot={<Input placeholder="e.g. 14 November 2026" value={supplied} onChange={e => setSupplied(e.target.value)} />}
         ctaPrimary={{
           label: "Send for confirmation",
           disabled: supplied.trim() === "",
@@ -1504,8 +1379,6 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
                   } else if (reasonFor.kind === "suggestion") {
                     emitIntelligence({ name: "suggestion_dismissed", suggestionId: reasonFor.id, reason })
                     setStatus(reasonFor.id, "dismissed")
-                    /* The queue never ends up with nothing open because a row
-                       left it. */
                     setOpenRow(id => id === reasonFor.id ? null : id)
                   } else {
                     emitIntelligence({ name: "read_rejected", readId: reasonFor.id, reason })
@@ -1539,21 +1412,27 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
 }
 
 /**
- * One row of the queue.
+ * One row of the queue — and the section's ONE container, on the open row.
  *
- * COLLAPSED it is one scannable line: status, verb-plus-object, one clause of
- * reason. EXPANDED it carries the draft, which is the asset rather than an
- * attachment — the draft IS the reason to open a row.
+ * A COLLAPSED ROW IS A LINE OF TEXT, not a card. It used to be a
+ * CardContainer wrapping an EntityList, which meant three containers on
+ * screen for three rows of which two showed a title and a clause. The chrome
+ * budget allows exactly one container in the default state and spends it
+ * here, on the row you can act on.
+ *
+ * NOTHING NESTS INSIDE IT EITHER. The held state was an InformativeCard and
+ * the draft was a bordered box, so the expanded row was three boxes deep. The
+ * held state is one line with the explanation behind `Why?`, and the draft is
+ * a typographic quote — a rule down its left edge, no border, no fill. It is
+ * already inside the row's container; a second border says nothing the first
+ * one did not.
  */
 function SuggestionRow({
-  suggestion: s, expanded, onToggle, selected, onSelect,
-  onGo, onSend, onAccept, onSupply, onDismiss, onAsk,
+  suggestion: s, expanded, onToggle, onGo, onSend, onAccept, onSupply, onDismiss, onAsk,
 }: {
   suggestion: UcpSuggestion
   expanded:   boolean
   onToggle:   () => void
-  selected:   boolean
-  onSelect:   () => void
   onGo:       (destination: string) => void
   onSend:     (variant: "full" | "without_commitment") => void
   onAccept:   () => void
@@ -1561,9 +1440,10 @@ function SuggestionRow({
   onDismiss:  () => void
   onAsk:      () => void
 }) {
-  const held = s.status === "held" ? s.held : undefined
+  const held  = s.status === "held" ? s.held : undefined
+  const draft = s.draft
   const [showFullDraft, setShowFullDraft] = useState(false)
-  const draft = held ? s.draft : s.draft
+  const [showWhy,       setShowWhy]       = useState(false)
 
   const statusVariant: TagVariantLite =
     s.status === "held" ? "alert"
@@ -1571,171 +1451,148 @@ function SuggestionRow({
     : s.status === "ready" ? "success"
     : "neutral"
 
+  /* The one line every row shows, open or shut. */
+  const header = (
+    <button
+      className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left w-full"
+      aria-expanded={expanded}
+      onClick={onToggle}
+      style={{ display: "flex", alignItems: "center", gap: 10, font: "inherit" }}
+    >
+      {/* A pill HERE and nowhere else in the section — this is an actionable
+          row, which is the one place the spec keeps them. Nothing else on
+          screen shares its shape. */}
+      <Tag variant={statusVariant} size="sm">{SUGGESTION_STATUS_LABEL[s.status]}</Tag>
+      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{s.title}</span>
+      <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{`· ${s.reason}`}</span>
+      <div style={{ flex: 1 }} />
+      {expanded
+        ? <LucideIcons.ChevronUp   size={15} style={{ color: "var(--muted-foreground)" }} />
+        : <LucideIcons.ChevronDown size={15} style={{ color: "var(--muted-foreground)" }} />}
+    </button>
+  )
+
+  if (!expanded) {
+    return (
+      <div style={{ padding: "6px 0", borderBottom: "0.5px solid var(--field-border)" }}>
+        {header}
+      </div>
+    )
+  }
+
   return (
-    <CardContainer size="sm" className="!p-0 overflow-hidden">
-      <EntityList items={[{
-        id:    s.id,
-        title: s.title,
-        iconName: s.status === "held" ? "ShieldAlert"
-          : s.status === "pending_confirmation" ? "Hourglass"
-          : s.status === "ready" ? "PenLine" : "Sparkle",
-        iconVariant: s.status === "held" ? "yellow"
-          : s.status === "pending_confirmation" ? "info"
-          : s.status === "ready" ? "success" : "neutral",
-        /* One clause, never a paragraph. The full version is in the
-           expansion, with its evidence linked inline. */
-        primaryMeta: [{ iconName: "Info", label: s.reason }],
-        state: { label: SUGGESTION_STATUS_LABEL[s.status], variant: statusVariant },
-        /* Multi-select — this list is processed, not contemplated. */
-        showMenu: false,
-        onClick: onSelect,
-        expandable: {
-          expanded,
-          onToggle,
-          label: expanded ? "Hide the draft" : "Show the draft",
-          content: (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
-                <LinkedText text={s.reasonFull} entities={s.reasonEntities} onGo={onGo} />
+    <CardContainer size="sm">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {header}
+
+        <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
+          <LinkedText text={s.reasonFull} entities={s.reasonEntities} onGo={onGo} />
+        </span>
+
+        {/* ONE LINE. The three-line explanation of what The Council is and why
+            it holds is right during onboarding and noise on visit forty, so it
+            lives behind Why? and is not lost. */}
+        {held && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, color: "var(--color-text-alert)" }}>
+                {`Held — ${held.missing} is not attested yet.`}
               </span>
-
-              {/* ── THE HELD STATE ──
-                  The most important row in this section, and it is the
-                  product's core claim working correctly: The Council blocked
-                  a draft because a fact it referenced is not attested.
-
-                  IT READS AS AN INVITATION, never as an error or a log entry.
-                  Two paths, both visible — and the fast one still fires the
-                  confirmation request, or it becomes the default and the gap
-                  never closes. */}
-              {held && (
-                <InformativeCard
-                  state="alert"
-                  size="sm"
-                  title="Your reply is ready. One date needs confirming before it can go out."
-                  description={`The draft references ${held.missing} that is not attested in the Truth Plane. The Council holds anything that commits to an unattested fact — that is what stops an agent promising something nobody has verified.`}
-                />
-              )}
-
-              {s.status === "pending_confirmation" && s.held && (
-                <InformativeCard
-                  state="informative"
-                  size="sm"
-                  title={`With ${s.held.owner} · ${s.held.withOwnerFor ?? "just now"}`}
-                  description="Waiting on attestation. The draft releases here on its own once it lands — you do not have to come back and check."
-                  cta={{ label: `Chase ${s.held.owner.split(" ")[0]}`, onClick: onAsk }}
-                />
-              )}
-
-              {/* ── The draft ──
-                  Three lines collapsed. It is the main reason to expand a
-                  row, so it gets the room. */}
-              {draft && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {/* The expand control sits ON the label row, not under the
-                      draft. A row of its own cost 27px of a default state
-                      that has to fit one screen, and the label row had the
-                      width going spare. */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <SectionLabel>{held ? "Draft — the full reply" : "Draft"}</SectionLabel>
-                    <Button variant="tertiary" size="sm" className="!px-0" onClick={() => setShowFullDraft(v => !v)}>
-                      {showFullDraft ? "Show less" : `Show all ${draft.body.length} lines`}
-                    </Button>
-                    <div style={{ flex: 1 }} />
-                    <Tag variant={CONFIDENCE_TAG[s.confidence]} size="sm">{s.confidence}</Tag>
-                  </div>
-                  <div
-                    style={{
-                      display: "flex", flexDirection: "column", gap: 6,
-                      padding: 12, borderRadius: 8,
-                      background: "var(--color-surface-neutral-subtle)",
-                      border: "0.5px solid var(--field-border)",
-                    }}
-                  >
-                    {/*
-                      THREE VISUAL LINES, not three paragraphs. The spec says
-                      "three lines, expandable" and this was rendering the
-                      first three ITEMS of the body — full sentences that wrap
-                      to seven lines between them, which made the draft 158px
-                      of a default state that has to fit one screen. A clamp
-                      counts what the reader counts.
-
-                      -webkit-line-clamp is the only thing that does this in
-                      CSS and it is supported everywhere this ships; the
-                      fallback if it ever is not is a taller block, never a
-                      cut sentence.
-                    */}
-                    <div
-                      style={showFullDraft ? undefined : {
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {draft.body.map((line, i) => (
-                        <span key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "var(--foreground)", display: showFullDraft ? "block" : "inline" }}>
-                          {line}{showFullDraft ? "" : " "}
-                        </span>
-                      ))}
-                    </div>
-
-                  </div>
-
-                  {/* Which Truth Plane facts the draft used. A draft with no
-                      grounding is a draft nobody can check. */}
-                  {draft.grounding.length > 0 && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Grounded in</span>
-                      {draft.grounding.map(g => (
-                        <Button key={g.factId} variant="tertiary" size="sm" onClick={() => onGo("knowledge")}>
-                          {g.label}
-                          <LucideIcons.ArrowUpRight size={11} />
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {s.expired && (
-                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{s.expired}</span>
-              )}
-
-              {/* ── Actions ── */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                {held ? (
-                  <>
-                    <Button variant="primary" size="sm" onClick={onSupply}>Supply the date</Button>
-                    {/* Secondary, and it is not a shortcut: it sends a variant
-                        that commits to nothing AND fires the confirmation
-                        request in the background. */}
-                    <Button variant="secondary" size="sm" onClick={() => onSend("without_commitment")}>
-                      Reply without committing
-                    </Button>
-                  </>
-                ) : s.status === "ready" ? (
-                  /* IN PLACE. The rep is not routed to a chat surface to
-                     send a reply the queue already drafted. */
-                  <Button variant="primary" size="sm" onClick={() => onSend("full")}>Review and send</Button>
-                ) : s.status === "pending_confirmation" ? null : (
-                  /* Scheduled work rather than an immediate send, so ACCEPT
-                     is the action — a first-class button, not a link, because
-                     it is the gesture that creates a task. */
-                  <Button variant="primary" size="sm" onClick={onAccept}>Accept</Button>
-                )}
-                {s.status !== "pending_confirmation" && (
-                  <Button variant="tertiary" size="sm" onClick={onAsk}>Edit</Button>
-                )}
-                <Button variant="tertiary" size="sm" onClick={onDismiss}>Dismiss</Button>
-                {selected && (
-                  <span style={{ fontSize: 11, color: "var(--primary)" }}>Selected</span>
-                )}
-              </div>
+              <Button variant="tertiary" size="sm" className="!px-0" onClick={() => setShowWhy(v => !v)}>
+                {showWhy ? "Hide" : "Why?"}
+              </Button>
             </div>
-          ),
-        },
-      }]} />
+            {showWhy && (
+              <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>
+                The draft references {held.missing} that is not attested in the Truth Plane. The Council
+                holds anything that commits to an unattested fact — that is what stops an agent promising
+                something nobody has verified.
+              </span>
+            )}
+          </div>
+        )}
+
+        {s.status === "pending_confirmation" && s.held && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+              {`With ${s.held.owner} · ${s.held.withOwnerFor ?? "just now"} — the draft releases here once it is attested.`}
+            </span>
+            <Button variant="tertiary" size="sm" className="!px-0" onClick={onAsk}>
+              {`Chase ${s.held.owner.split(" ")[0]}`}
+            </Button>
+          </div>
+        )}
+
+        {draft && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* No pill. The draft's "in review" and the profile's state used to
+                be the same component meaning two different things, which is
+                what stops a reader trusting either. */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+                {`Draft · ${s.confidence.toLowerCase()}`}
+              </span>
+              <div style={{ flex: 1 }} />
+              <Button variant="tertiary" size="sm" className="!px-0" onClick={() => setShowFullDraft(v => !v)}>
+                {showFullDraft ? "Show less" : `Show all ${draft.body.length} lines`}
+              </Button>
+            </div>
+
+            {/* A quote, not a box: a rule down the left edge and nothing else. */}
+            <div
+              style={{
+                paddingLeft: 12,
+                borderLeft: "2px solid var(--field-border)",
+                ...(showFullDraft ? {} : {
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical" as const,
+                  overflow: "hidden",
+                }),
+              }}
+            >
+              {draft.body.map((line, i) => (
+                <span key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "var(--foreground)", display: showFullDraft ? "block" : "inline" }}>
+                  {line}{showFullDraft ? "" : " "}
+                </span>
+              ))}
+            </div>
+
+            {draft.grounding.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Grounded in</span>
+                {draft.grounding.map(g => (
+                  <Button key={g.factId} variant="tertiary" size="sm" className="!px-0" onClick={() => onGo("knowledge")}>
+                    {g.label}
+                    <LucideIcons.ArrowUpRight size={11} />
+                  </Button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {s.expired && <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{s.expired}</span>}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {held ? (
+            <>
+              <Button variant="primary" size="sm" onClick={onSupply}>Supply the date</Button>
+              <Button variant="secondary" size="sm" onClick={() => onSend("without_commitment")}>
+                Reply without committing
+              </Button>
+            </>
+          ) : s.status === "ready" ? (
+            <Button variant="primary" size="sm" onClick={() => onSend("full")}>Review and send</Button>
+          ) : s.status === "pending_confirmation" ? null : (
+            <Button variant="primary" size="sm" onClick={onAccept}>Accept</Button>
+          )}
+          {s.status !== "pending_confirmation" && (
+            <Button variant="tertiary" size="sm" onClick={onAsk}>Edit</Button>
+          )}
+          <Button variant="tertiary" size="sm" onClick={onDismiss}>Dismiss</Button>
+        </div>
+      </div>
     </CardContainer>
   )
 }
@@ -3219,9 +3076,19 @@ export function UcpProfileView({
   // tone of "neutral" is the absence of a tone, not a third colour.
   const headerTags = useMemo<EntityHeaderTag[]>(
     () => [
-      // Only when the visual is an avatar. A highlight icon already names the
-      // type, so a tag repeating it is the same fact twice.
-      ...(AVATAR_TYPES.includes(contact.type)
+      /*
+        Only when the visual is an avatar — a highlight icon already names the
+        type, so a tag repeating it is the same fact twice.
+
+        AND ONLY WHEN THE RECORD HAS NO PROFILE BLOCK (2026-09-11). Intelligence
+        now names this person's role in the decision — "Economic Buyer" — and a
+        "Customer" pill in the header beside it is a second taxonomy for the
+        same question, with no way for a reader to tell which one is
+        authoritative. The condition is `getProfile`, not the type, so a company
+        or an employee keeps its classification: there is no profile block up
+        there to have said it already.
+      */
+      ...(AVATAR_TYPES.includes(contact.type) && getProfile(contact) === null
         ? [{ label: TYPE_LABEL[contact.type], role: "classification" as const }]
         : []),
       ...contact.tags.map(t => ({
