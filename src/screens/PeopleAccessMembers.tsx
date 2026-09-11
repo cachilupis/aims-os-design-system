@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import { createPortal } from "react-dom"
-import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
@@ -384,10 +383,16 @@ const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informa
  * come out as six identical blue squares.
  */
 const ROLE_HI_CYCLE = ["informative", "purple", "lime", "light-blue", "yellow", "neutral"] as const
+/**
+ * By POSITION in the catalogue, not by a hash of the id. A hash is stable but
+ * it collides — four of the six roles came out the same blue — and the whole
+ * point of varying the colour is that a column of roles reads as six things.
+ * Position gives every role a different one for as long as the list is no
+ * longer than the cycle, and repeats predictably after that.
+ */
 function roleHi(id: string): (typeof ROLE_HI_CYCLE)[number] {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return ROLE_HI_CYCLE[h % ROLE_HI_CYCLE.length]
+  const i = ROLES.findIndex(r => r.id === id)
+  return ROLE_HI_CYCLE[(i < 0 ? 0 : i) % ROLE_HI_CYCLE.length]
 }
 
 /**
@@ -1704,7 +1709,9 @@ function AppsPanel({ member }: { member: Member }) {
       tone="default"
       iconName="KeyRound"
       title="Grant studio access"
-      description="Select a studio to give this member access. You can configure individual permissions after granting."
+      description={available.length === 0
+        ? "There is nothing to grant."
+        : "Select a studio to give this member access. You can configure individual permissions after granting."}
       showClose
       slotUnstyled
       slot={
@@ -2650,7 +2657,7 @@ function ResourcesPanel({ member }: { member: Member }) {
   const initialResources = MEMBER_RESOURCES[member.id] ?? []
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
   const [pendingRemove, setPendingRemove] = useState<MemberResource | null>(null)
-  const [justRemoved, setJustRemoved] = useState<string | null>(null)
+  const toast = useToast()
   const [activeType, setActiveType] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
@@ -2659,16 +2666,18 @@ function ResourcesPanel({ member }: { member: Member }) {
   const allResources = initialResources.filter(r => !removedIds.has(r.id))
   const uniqueTypes = Array.from(new Set(initialResources.map(r => r.type)))
 
-  const { containerRef: typeContainerRef, slot: typeSlot, menu: typeMenu } = useFilterDropdown({
+  // Filters positions this menu itself — see the note on the members list.
+  const TYPE_OPTIONS = [
+    { id: "all", label: `All types · ${allResources.length}` },
+    ...uniqueTypes.map(t => ({ id: t, label: `${t} · ${allResources.filter(r => r.type === t).length}` })),
+  ]
+  const typeSlot = {
     placeholder: "Type",
-    value: activeType,
-    defaultValue: "all" as const,
-    options: [
-      { id: "all", label: "All types", count: allResources.length },
-      ...uniqueTypes.map(t => ({ id: t, label: t, count: allResources.filter(r => r.type === t).length })),
-    ],
-    onChange: (id) => { setActiveType(id); setPage(1) },
-  })
+    value: activeType === "all" ? undefined : TYPE_OPTIONS.find(o => o.id === activeType)?.label,
+    options: TYPE_OPTIONS.map(o => o.label),
+    onSelect: (label: string) => { setActiveType(TYPE_OPTIONS.find(o => o.label === label)?.id ?? "all"); setPage(1) },
+    onRemove: () => { setActiveType("all"); setPage(1) },
+  }
 
   const typeFiltered = activeType === "all" ? allResources : allResources.filter(r => r.type === activeType)
   const resources = searchQuery.trim()
@@ -2681,18 +2690,20 @@ function ResourcesPanel({ member }: { member: Member }) {
   function handleRemoveConfirm() {
     if (!pendingRemove) return
     setRemovedIds(prev => new Set(prev).add(pendingRemove.id))
-    setJustRemoved(pendingRemove.name)
+    // The screen used to draw its own fixed-position toast, shadow and all.
+    toast.success("Resource access removed", {
+      description: `${member.name} no longer has ${pendingRemove.access} access to ${pendingRemove.name}.`,
+    })
     setPendingRemove(null)
-    setTimeout(() => setJustRemoved(null), 3000)
   }
 
   if (allResources.length === 0 && removedIds.size === 0) {
     return (
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-        <Icons.Package size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources assigned</div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Resources are datasets, models, and event buses this member can access.</div>
-      </div>
+      <EmptyState
+        icon={Icons.Package}
+        title="No resources assigned"
+        description="Resources are the datasets, models, event buses and sandboxes this member can reach. Access comes from a role, a group, or a direct grant."
+      />
     )
   }
 
@@ -2708,35 +2719,19 @@ function ResourcesPanel({ member }: { member: Member }) {
         />
       )}
 
-      {/* Success toast */}
-      {justRemoved && (
-        <div style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 10200,
-          background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
-          padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)", // audit-ignore: toast shadow
-          animation: "tab-indicator-in 180ms ease-out both",
-        }}>
-          <Icons.CheckCircle size={15} style={{ color: "var(--badge-success)", flexShrink: 0 }} />
-          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>
-            Access to <strong>{justRemoved}</strong> removed
-          </span>
-        </div>
-      )}
-
       {/* Empty state after removing all */}
       {allResources.length === 0 && removedIds.size > 0 && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.ShieldOff size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources remaining</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>All resource access has been removed for this member.</div>
-        </div>
+        <EmptyState
+          icon={Icons.ShieldOff}
+          title="No resources remaining"
+          description="Every resource grant has been removed for this member."
+        />
       )}
 
       {allResources.length > 0 && (
         <>
           {/* Filters row */}
-          <div ref={typeContainerRef} style={{ position: "relative", marginBottom: 16 }}>
+          <div style={{ marginBottom: 16 }}>
             <Filters
               showSearch
               searchPlaceholder="Search resources…"
@@ -2747,7 +2742,6 @@ function ResourcesPanel({ member }: { member: Member }) {
               showSort={false}
               showViewToggle={false}
             />
-            {typeMenu}
           </div>
 
           {/* The DS Table, not a CSS grid pretending to be one. It owns the
@@ -5428,19 +5422,26 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     suspended: members.filter(m => m.status === "suspended").length,
   }), [members])
 
-  const { containerRef: statusContainerRef, slot: statusSlot, menu: statusMenu } = useFilterDropdown({
-    placeholder:  "Status",
-    value:        statusFilter,
-    defaultValue: "all" as const,
-    options: [
-      { id: "all",       label: "All members", count: counts.all       },
-      { id: "active",    label: "Active",      count: counts.active    },
-      { id: "invited",   label: "Invited",     count: counts.invited   },
-      { id: "pending",   label: "Pending",     count: counts.pending   },
-      { id: "suspended", label: "Suspended",   count: counts.suspended },
-    ],
-    onChange: (id) => setStatusFilter(id as "all" | MemberStatus),
-  })
+  /**
+   * The Filters bar renders and positions this menu itself. It used to be
+   * wired by hand with `useFilterDropdown` — a Menu plus dropdown-anchor
+   * sitting beside the bar — which is the thing CLAUDE.md says not to do now
+   * that `slots[].options` exists.
+   */
+  const STATUS_OPTIONS: { id: "all" | MemberStatus; label: string }[] = [
+    { id: "all",       label: `All members · ${counts.all}`     },
+    { id: "active",    label: `Active · ${counts.active}`       },
+    { id: "invited",   label: `Invited · ${counts.invited}`     },
+    { id: "pending",   label: `Pending · ${counts.pending}`     },
+    { id: "suspended", label: `Suspended · ${counts.suspended}` },
+  ]
+  const statusSlot = {
+    placeholder: "Status",
+    value: statusFilter === "all" ? undefined : STATUS_OPTIONS.find(o => o.id === statusFilter)?.label,
+    options: STATUS_OPTIONS.map(o => o.label),
+    onSelect: (label: string) => setStatusFilter(STATUS_OPTIONS.find(o => o.label === label)?.id ?? "all"),
+    onRemove: () => setStatusFilter("all"),
+  }
 
   const filtered = useMemo(() => {
     let result = members
@@ -5682,7 +5683,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
 
       {/* Filters row */}
       {mainTab === "members" && (
-        <div ref={statusContainerRef} style={{ position: "relative", marginTop: 16, marginBottom: 16 }}>
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
           <Filters
             showSearch
             searchPlaceholder="Search members…"
@@ -5695,7 +5696,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             viewMode={membersView}
             onViewModeChange={setMembersView}
           />
-          {statusMenu}
         </div>
       )}
 
