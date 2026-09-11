@@ -93,6 +93,7 @@ import {
   verdictWordCount, VERDICT_WORD_CAP, SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
   RESOLVED_STATUSES, DISMISS_REASONS, TRAIN_ME_REASON, emitIntelligence,
   SIGNAL_CATALOG, defaultExpandedRow, sincePhrase, QUEUE_DEFAULT_ROWS,
+  getProfile, renderableTraits, renderableBullets, PROFILE_TRAITS_MAX,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
@@ -106,6 +107,7 @@ import type {
   ActivityChannel, ActivityGroup, ConciergeTurn, KnowledgePlane, StudyState, UcpContact, UcpDrive, UcpFact,
   UcpNote, TagVariantLite,
   VerdictEntity, SignalSeverity, ConfidenceState, SuggestionSort, SuggestionStatus, UcpSuggestion,
+  UcpProfile, ProfileBullet,
 } from "./ucpShared"
 
 export const UCP_SIDEBAR_ITEMS: SidebarItem[] = [
@@ -838,11 +840,229 @@ function DisclosureBlock({
   )
 }
 
+/**
+ * ── Block 1 · Profile ──────────────────────────────────────────────────────
+ *
+ * The dispositional layer, and the reason the rest of the section stops
+ * reading as a pile of loose facts: a signal means something different once
+ * you know you are talking to a cautious evaluator who owns the budget.
+ *
+ * THREE LINES BY DEFAULT — a named archetype, the behaviour traits, and how to
+ * reach her. Not collapsible, because a profile you have to open is a profile
+ * nobody reads; expandable, because what lands and what does not is worth
+ * having and is not worth three lines of everyone's screen.
+ *
+ * INFERRED AND ATTESTED ARE DIFFERENT COLOURS, and that is the architecture
+ * showing through rather than decoration. An attested trait has been through
+ * KCON and the organisation stands behind it; an inferred one is the system's
+ * read. `success` for attested is the same tint the Truth Plane carries
+ * everywhere else in this product, so the two agree without anybody learning
+ * a second colour language.
+ *
+ * A Tag and not a Chip. The spec says "chips", and CLAUDE.md is explicit that
+ * a Chip is something you SELECT and a Tag is something a thing IS — these are
+ * not selectable and clicking one does not filter anything. Same pill, right
+ * component, and the token distinction that was actually being asked for
+ * survives either way.
+ *
+ * THE COPY TEST governs every string: if Sandra read this, she would have to
+ * recognise herself, not feel diagnosed. Observations in the third person and
+ * the present tense, nothing about what she feels, no personality framework.
+ */
+function ProfileBlock({ profile, contact, expanded, onToggle, onGo, onReject }: {
+  profile:  UcpProfile | null
+  contact:  UcpContact
+  expanded: boolean
+  onToggle: () => void
+  onGo:     (destination: string) => void
+  onReject: (field: string) => void
+}) {
+  const toast = useToast()
+  /* // STUB: entitlement, same stub as Agent reads. Proposing is not
+     attesting — a user who cannot attest still sees the action, renamed. */
+  const canAttest = false
+  const [confirmed, setConfirmed] = useState<string[]>([])
+
+  if (profile === null) {
+    return (
+      <CardContainer size="sm">
+        <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
+          Not enough history to read a profile yet.
+        </span>
+      </CardContainer>
+    )
+  }
+
+  const traits  = renderableTraits(profile.traits).slice(0, PROFILE_TRAITS_MAX)
+  const lands   = renderableBullets(profile.lands)
+  const doesnt  = renderableBullets(profile.doesntLand)
+  const lights  = renderableBullets(profile.highlights)
+  const primaryState = confirmed.includes("archetype.primary")
+    ? (canAttest ? "Verified" : "In review")
+    : profile.archetype.primaryState
+
+  const confirm = (field: string) => {
+    emitIntelligence({ name: "trait_confirmed", field, proposed: !canAttest })
+    setConfirmed(list => [...list, field])
+    toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
+      description: canAttest
+        ? "It is on the Truth Plane now, and it moves to Overview — Intelligence shows what the system believes, Overview shows what the organisation stands behind."
+        : "Sent to the domain owner to attest. It graduates to Overview once it lands.",
+    })
+  }
+
+  return (
+    <CardContainer size="sm">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+
+        {/* ── Line 1 · the archetype, NAMED and never scored ── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>
+            {profile.archetype.primary}
+          </span>
+          <Tag variant={CONFIDENCE_TAG[primaryState]} size="sm">{primaryState}</Tag>
+          <span style={{ fontSize: 15, color: "var(--muted-foreground)" }}>·</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-title)" }}>
+            {profile.archetype.style}
+          </span>
+          <Tag variant={CONFIDENCE_TAG[profile.archetype.styleState]} size="sm">{profile.archetype.styleState}</Tag>
+          <div style={{ flex: 1 }} />
+          <Button
+            variant="tertiary" size="sm"
+            aria-expanded={expanded}
+            aria-label={expanded ? "Hide how to work with this contact" : "Show how to work with this contact"}
+            onClick={onToggle}
+          >
+            {expanded
+              ? <LucideIcons.ChevronUp   size={16} />
+              : <LucideIcons.ChevronDown size={16} />}
+          </Button>
+        </div>
+
+        {/* ── Line 2 · behaviour traits ── */}
+        {traits.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            {/*
+              EVERY TRAIT IS A LINK TO ITS EVIDENCE, not just a pill with a
+              tooltip. The rule is that nothing here renders without evidence,
+              and a tooltip states the evidence without letting anybody go
+              CHECK it — which is most of the point on a card that makes
+              claims about a person.
+
+              Tag has no onClick and should not grow one: it is a label for
+              what a thing IS, and making every Tag in the product clickable
+              to serve this one card is the tail wagging the dog. So the Tag
+              is wrapped in a button that draws nothing — the reset comes from
+              classes so the audit reads it as unsetting chrome rather than
+              drawing a control, same as the verdict's inline links.
+            */}
+            {traits.map(t => (
+              <Tooltip
+                key={t.label}
+                side="cursor"
+                content={t.source === "attested"
+                  ? `Attested · ${t.evidence.label}. The organisation stands behind this one — open it.`
+                  : `Inferred · ${t.evidence.label}. The system's read, not yet attested — open it.`}
+              >
+                <button
+                  className="appearance-none bg-transparent border-0 p-0 cursor-pointer"
+                  onClick={() => onGo(t.evidence.destination)}
+                  aria-label={`${t.label} — ${t.source === "attested" ? "attested" : "inferred"} from ${t.evidence.label}`}
+                >
+                  <Tag variant={t.source === "attested" ? "success" : "neutral"} size="sm">
+                    {t.label}
+                  </Tag>
+                </button>
+              </Tooltip>
+            ))}
+          </div>
+        )}
+
+        {/* ── Line 3 · how to reach her, derived from where she replies ── */}
+        {profile.channel === null ? (
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            Not enough contact history to read a channel preference.
+          </span>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+              {`${profile.channel.preferred} · ${profile.channel.window} · replies in ${profile.channel.responseTime} · last contact ${profile.channel.lastTouch}`}
+            </span>
+            {/* STRUCTURAL, so it can become a fact. The channel is read off
+                where she actually answers, not off a declared field, which is
+                what makes it checkable in the first place. */}
+            {!confirmed.includes("channel.preferred") && (
+              <Button variant="tertiary" size="sm" className="!px-0" onClick={() => confirm("channel.preferred")}>
+                {confirmLabel(canAttest)}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ── Expanded ── */}
+        {expanded && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 10, borderTop: "0.5px solid var(--field-border)" }}>
+            {/* INTERPRETIVE, both of them — a reading of what works with a
+                person, never persisted as a fact about them. No Confirm. */}
+            <ProfileBullets title="What lands"      bullets={lands}  onGo={onGo} />
+            <ProfileBullets title="What doesn't"    bullets={doesnt} onGo={onGo} />
+            <ProfileBullets title="Highlights"      bullets={lights} onGo={onGo} />
+
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {/* The archetype is structural — observable and checkable — so
+                  it is the one thing in this block that carries Confirm. */}
+              {!confirmed.includes("archetype.primary") && primaryState !== "Verified" && (
+                <Button variant="primary" size="sm" onClick={() => confirm("archetype.primary")}>
+                  {`${confirmLabel(canAttest)} · ${profile.archetype.primary}`}
+                </Button>
+              )}
+              <Button variant="tertiary" size="sm" onClick={() => onReject("archetype.primary")}>
+                This is wrong
+              </Button>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                {`Read from ${contact.agent.name}'s observation of this record. Attested traits move to Overview.`}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </CardContainer>
+  )
+}
+
+/** One expanded group. Every bullet carries its evidence — a statement about
+ *  how to treat a person with nothing observable behind it does not render. */
+function ProfileBullets({ title, bullets, onGo }: {
+  title:   string
+  bullets: ProfileBullet[]
+  onGo:    (destination: string) => void
+}) {
+  if (bullets.length === 0) return null
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <SectionLabel>{title}</SectionLabel>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {bullets.map(b => (
+          <div key={b.text} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "var(--foreground)" }}>{`· ${b.text}`}</span>
+            <Button variant="tertiary" size="sm" className="!px-0" onClick={() => onGo(b.evidence.destination)}>
+              {b.evidence.label}
+              <LucideIcons.ArrowUpRight size={11} />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function IntelligenceTab({ contact, onGoTab, onAsk }: {
   contact: UcpContact
   onGoTab: (id: string) => void
   onAsk:   () => void
 }) {
+  const profile     = useMemo(() => getProfile(contact), [contact])
   const verdict     = useMemo(() => getVerdict(contact), [contact])
   const signals     = useMemo(() => renderableSignals(getSignals(contact)), [contact])
   const allReads    = useMemo(() => renderableReads(getAgentReads(contact)), [contact])
@@ -855,6 +1075,10 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
 
   /* Signals and Agent reads are mutually exclusive; neither closes the queue. */
   const [openBlock, setOpenBlock] = useState<"signals" | "reads" | null>(null)
+  /* Profile is NOT part of the signals/reads accordion. It is never collapsed
+     and opening it closes nothing — it is the frame the rest is read against,
+     so it does not compete with them for the one open slot. */
+  const [profileOpen, setProfileOpen] = useState(false)
   /** Exactly one, chosen by defaultExpandedRow — a held row among the first
    *  three, else the first. Never null while the queue has rows. */
   const [openRow,  setOpenRow]  = useState<string | null>(
@@ -914,7 +1138,26 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* ── 1 · Verdict — always open, never collapsible ─────────────────── */}
+      {/* ── 1 · Profile — who this is, always visible ────────────────────── */}
+      <ProfileBlock
+        profile={profile}
+        contact={contact}
+        expanded={profileOpen}
+        onToggle={() => {
+          const opening = !profileOpen
+          setProfileOpen(opening)
+          if (opening) emitIntelligence({ name: "profile_expanded", contactId: contact.id })
+        }}
+        onGo={onGoTab}
+        onReject={field => setReasonFor({ id: `trait:${field}`, kind: "read" })}
+      />
+
+      {/* ── 2 · Now — the imperative, then the work ──────────────────────────
+          One sentence. The first half of the old verdict said who this person
+          is, which is the Profile block's job three lines above — saying it
+          twice made this the second place a reader met the same fact, and the
+          weaker one. What is left is the only part that is not still true of
+          her tomorrow. */}
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {verdict === null ? (
           <CardContainer size="sm">
@@ -958,7 +1201,7 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         )}
       </section>
 
-      {/* ── 2 · Signals — one line until opened ──────────────────────────────
+      {/* ── 3 · Signals — one line until opened ──────────────────────────────
           THE SEVERITY IS IN THE COLLAPSED LINE, as a Tag before the text, so
           a critical signal is readable without expanding anything. That is
           the one thing this block must never hide: the whole reason to
@@ -1010,7 +1253,7 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         </div>
       </DisclosureBlock>
 
-      {/* ── 3 · Suggestion queue — the working surface, never collapsed ───── */}
+      {/* ── The queue sits under Now, not in a block of its own ─────────── */}
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <SectionLabel>{`Suggestions · ${live.length}`}</SectionLabel>
@@ -1092,7 +1335,7 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         )}
       </section>
 
-      {/* ── 4 · Agent reads — one line until opened ──────────────────────── */}
+      {/* ── 4 · Agent reads — situations only; dispositions feed Profile ─── */}
       <DisclosureBlock
         count={reads.length}
         expanded={openBlock === "reads"}
@@ -1241,7 +1484,9 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         variant="content"
         iconName="MessageSquareWarning"
         iconVariant="yellow"
-        title={reasonFor?.kind === "suggestion" ? "Why is this not right?" : "Why is this read wrong?"}
+        title={reasonFor?.kind === "suggestion" ? "Why is this not right?"
+          : reasonFor?.id.startsWith("trait:") ? "Why is this profile wrong?"
+          : "Why is this read wrong?"}
         description="Required. It is the only thing that stops the same suggestion coming back."
         slotUnstyled
         slot={
@@ -1254,6 +1499,8 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
                   if (!reasonFor) return
                   if (reasonFor.id === "verdict") {
                     emitIntelligence({ name: "verdict_rated", contactId: contact.id, rating: "down" })
+                  } else if (reasonFor.id.startsWith("trait:")) {
+                    emitIntelligence({ name: "trait_rejected", field: reasonFor.id.slice(6), reason })
                   } else if (reasonFor.kind === "suggestion") {
                     emitIntelligence({ name: "suggestion_dismissed", suggestionId: reasonFor.id, reason })
                     setStatus(reasonFor.id, "dismissed")

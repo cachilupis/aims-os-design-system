@@ -2272,8 +2272,32 @@ export function sortSuggestions(items: UcpSuggestion[], sort: SuggestionSort): U
  */
 export type ReadKind = "structural" | "interpretive"
 
+/**
+ * WHAT THE READ IS ABOUT, which is a different question from whether it can
+ * be attested.
+ *
+ *   situation    something that is happening — an escalation left undated,
+ *                a tone shift on a thread. Renders in Agent reads.
+ *   disposition  something stable about the person — "economic buyer on this
+ *                renewal". Feeds the Profile block and does NOT render in
+ *                Agent reads.
+ *
+ * Michael, 2026-09-11: route by kind, do not delete data. So a disposition
+ * read still exists, still carries its evidence, and is simply consumed
+ * somewhere else — which is also why Agent reads' counter has to count what
+ * it actually shows.
+ *
+ * This is a SECOND axis, not a third value of `kind`. "Structural vs
+ * interpretive" asks whether it can become a fact; "situation vs disposition"
+ * asks where it belongs on the page. Folding them into one enum is how a
+ * disposition ends up unattestable by accident.
+ */
+export type ReadSubject = "situation" | "disposition"
+
 export interface UcpAgentRead {
   id:       string
+  /** Defaults to "situation" at the call site; only dispositions say so. */
+  subject?: ReadSubject
   headline: string
   body:     string
   agent:    string
@@ -2285,8 +2309,10 @@ export interface UcpAgentRead {
   evidence: { label: string; destination: string }[]
 }
 
+/** Evidence-bearing SITUATION reads. Dispositions are routed to the Profile
+ *  block, not filtered out of existence — see ReadSubject. */
 export function renderableReads(reads: UcpAgentRead[]): UcpAgentRead[] {
-  return reads.filter(r => r.evidence.length > 0)
+  return reads.filter(r => r.evidence.length > 0 && (r.subject ?? "situation") === "situation")
 }
 
 /**
@@ -2323,6 +2349,11 @@ export type IntelligenceEvent =
      "nobody opens Signals" and "nobody opens Signals when it says zero" are
      different findings. */
   | { name: "block_expanded";       block: string; count: number }
+  /* If Profile is almost never expanded, the three-line default is doing its
+     job — that is not evidence the block is surplus. */
+  | { name: "profile_expanded";     contactId: string }
+  | { name: "trait_confirmed";      field: string; proposed: boolean }
+  | { name: "trait_rejected";       field: string; reason: DismissReason }
 
 export function emitIntelligence(event: IntelligenceEvent): void {
   // eslint-disable-next-line no-console
@@ -2355,8 +2386,7 @@ export function getVerdict(c: UcpContact): UcpVerdict | null {
 
   if (c.type === "company") {
     return {
-      text: `${c.name} runs its evaluation through one committee and has not signed the governance addendum. `
-          + `Get the addendum countersigned this week — it gates a ${value} renewal that closes in ${days} days.`,
+      text: `Get the governance addendum countersigned this week — it gates a ${value} renewal that closes in ${days} days.`,
       generatedAt: "Today, 08:12",
       entities: [
         { text: "governance addendum", destination: "Knowledge", tooltip: "Knowledge · the addendum on the Legal drive" },
@@ -2366,14 +2396,23 @@ export function getVerdict(c: UcpContact): UcpVerdict | null {
     }
   }
 
+  /*
+    ONE SENTENCE, and it used to be two. The first said who this person is and
+    what they care about — which is now the Profile block's whole job, three
+    lines higher up and in a form you can act on. Saying it twice made the
+    verdict the second place a reader met the same fact, and the weaker one.
+
+    What is left is the imperative plus the clock, which is the only thing
+    here that is not true of this person tomorrow.
+  */
   return {
-    text: `${who} owns the budget line at ${c.company} and has been asking for the migration timeline. `
-        + `Answer ${who === c.name ? "them" : "her"} today — it is the only open question before a ${value} renewal that closes in ${days} days.`,
+    text: `Answer ${who === c.name ? "them" : "her"} today — it is the only open question before a ${value} renewal that closes in ${days} days.`,
     generatedAt: "Today, 08:12",
+    /* "migration timeline" left with the first sentence; linking a phrase the
+       text no longer contains would render nothing and look like a bug. */
     entities: [
-      { text: "migration timeline", destination: "Activity",    tooltip: "Activity · the email that requested it, Aug 18" },
-      { text: value,                destination: "Opportunity", tooltip: "Opportunity · the renewal this figure belongs to" },
-      { text: `${days} days`,       destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days` },
+      { text: value,          destination: "Opportunity", tooltip: "Opportunity · the renewal this figure belongs to" },
+      { text: `${days} days`, destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days` },
     ],
   }
 }
@@ -2512,6 +2551,11 @@ export function getAgentReads(c: UcpContact): UcpAgentRead[] {
       headline: `${who} controls the budget line, not just the evaluation`,
       body: `Two calls and one email thread put ${who} as the person approving spend rather than recommending it. `
         + "The account record still lists them as an evaluator, which is what the drafts have been assuming.",
+      /* A DISPOSITION, and it is the archetype. It said the same thing the
+         Profile block now leads with, one screen further down and in longer
+         words — which is the duplicate rendering this section keeps growing
+         back. Routed, not deleted. */
+      subject: "disposition",
       agent, area: "Commercial", state: "In review", kind: "structural",
       evidence: [
         { label: "Outbound call · Sep 2",       destination: "Activity"  },
@@ -2544,6 +2588,9 @@ export function getAgentReads(c: UcpContact): UcpAgentRead[] {
       headline: "Auditability is the deciding criterion",
       body: `${who} has raised evidence, attestation and audit trails in every substantive conversation, and never raised price. `
         + "A pitch that leads on speed is answering a question they are not asking.",
+      /* Also a disposition — it is "what lands" on this person, which is a
+         Profile bullet rather than a read of a situation. */
+      subject: "disposition",
       agent, area: "Commercial", state: "In review", kind: "interpretive",
       evidence: [
         { label: "Stated priority · Sandbox",  destination: "Knowledge" },
@@ -2598,4 +2645,196 @@ export const QUEUE_DEFAULT_ROWS = 3
  */
 export function sincePhrase(since: string): string {
   return /^\d+\s+\w+$/.test(since.trim()) ? `for ${since}` : since
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROFILE — the dispositional layer
+   ══════════════════════════════════════════════════════════════════════════
+
+   Michael, 2026-09-11. Intelligence answered what is happening and what to
+   do, and never answered WHO THIS PERSON IS. Everything sat at one level of
+   abstraction — events and actions — so every signal read as a loose fact and
+   the reader had to assemble the model themselves. That, not the volume, is
+   what made the section feel complex.
+
+   THE ARCHITECTURAL RULE, and it is the one that keeps this honest:
+
+     A trait INFERRED from behaviour lives in Intelligence.
+     A trait ATTESTED through KCON lives in Overview.
+
+   When a trait is attested onto the Truth Plane it stops rendering here and
+   graduates. Intelligence shows what the system BELIEVES; Overview shows what
+   the organisation STANDS BEHIND. That is why `source` exists on a trait and
+   why it is not cosmetic.
+
+   THE COPY TEST, which governs every string below: if Sandra read her own
+   profile, she would have to RECOGNISE herself, not feel diagnosed. So these
+   are observations in the third person and the present tense — "Asks for
+   written proof", never "Prefers documentation" and never anything about what
+   she feels. No personality framework, no clinical language, no emotional
+   state. A profile of a person is a thing that person should be able to read.
+
+   NOTHING IS SCORED. An archetype is a NAME — "Cautious Evaluator" — never
+   "Caution: 72". A number on a person is a judgement wearing a decimal point,
+   which is the same reason there is no risk score on a contact.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Closed catalog. The role this person occupies in the decision. */
+export const ARCHETYPES = [
+  "Economic Buyer", "Champion", "Technical Evaluator",
+  "Blocker", "End User", "Gatekeeper", "Executive Sponsor",
+] as const
+export type Archetype = typeof ARCHETYPES[number]
+
+/** Closed catalog. How they decide — not who they are. */
+export const DECISION_STYLES = [
+  "Cautious Evaluator", "Fast Mover", "Consensus Builder", "Detail Seeker", "Delegator",
+] as const
+export type DecisionStyle = typeof DECISION_STYLES[number]
+
+/**
+ * Where a trait came from, and it is the whole architecture in one field.
+ * `inferred` — the system's read of observed behaviour. Renders here.
+ * `attested` — passed KCON, on the Truth Plane. Renders in Overview.
+ */
+export type TraitSource = "inferred" | "attested"
+
+/** Four categories, and an agent picks FROM them rather than inventing. */
+export type TraitCategory = "decision-style" | "response-pattern" | "format-preference" | "escalation"
+
+/**
+ * The closed trait catalog. An agent selects from this list; it cannot write a
+ * new sentence about a person and put it on their record. That is the
+ * difference between a profile and an opinion.
+ */
+export const TRAIT_CATALOG: Record<TraitCategory, string[]> = {
+  "decision-style":    ["Asks for written proof", "Decides after one review", "Waits for consensus", "Reads the appendix"],
+  "response-pattern":  ["Replies within 2 days", "Replies same day", "Goes quiet between milestones", "Quiet on calls"],
+  "format-preference": ["Prefers email over calls", "Asks for documents, not decks", "Wants numbers first"],
+  "escalation":        ["Escalates to finance", "Escalates to legal", "Brings a second decision-maker"],
+}
+
+export interface ProfileEvidence { label: string; destination: string }
+
+export interface ProfileTrait {
+  label:    string
+  category: TraitCategory
+  source:   TraitSource
+  /** Required. A trait with nothing behind it does not render — `renderable`
+   *  below enforces it rather than trusting each call site. */
+  evidence: ProfileEvidence
+}
+
+export interface ProfileBullet { text: string; evidence: ProfileEvidence }
+
+/**
+ * How to reach this person, DERIVED FROM WHERE THEY ACTUALLY REPLY rather
+ * than from a declared preference field. A contact record's "preferred
+ * channel" is whatever somebody typed into a form once; this is the channel
+ * that has produced answers.
+ */
+export interface ProfileChannel {
+  preferred:    string
+  window:       string
+  /** Observed median, always explicit. "~2 days", never "quickly". */
+  responseTime: string
+  lastTouch:    string
+}
+
+export interface UcpProfile {
+  archetype: {
+    primary:      Archetype
+    primaryState: ConfidenceState
+    style:        DecisionStyle
+    styleState:   ConfidenceState
+  }
+  traits:     ProfileTrait[]
+  /** Null when there is not enough history to read one. The line then says so
+   *  rather than guessing. */
+  channel:    ProfileChannel | null
+  lands:      ProfileBullet[]
+  doesntLand: ProfileBullet[]
+  highlights: ProfileBullet[]
+}
+
+/** Five in the default state. Past that the line stops being a line. */
+export const PROFILE_TRAITS_MAX = 5
+
+/** Same rule as signals and reads: no evidence, no render, enforced here. */
+export function renderableTraits(traits: ProfileTrait[]): ProfileTrait[] {
+  return traits.filter(t => !!t.evidence && !!t.evidence.label)
+}
+export function renderableBullets(bullets: ProfileBullet[]): ProfileBullet[] {
+  return bullets.filter(b => !!b.evidence && !!b.evidence.label)
+}
+
+/**
+ * WHICH PARTS OF A PROFILE CAN BECOME A FACT.
+ *
+ * The same structural/interpretive guardrail that governs Agent reads, applied
+ * one level up. Structural claims are observable, checkable and promotable;
+ * interpretive ones are a reading, and a reading about a person is never
+ * persisted as an attested fact about them.
+ *
+ *   structural    archetype.primary, channel.preferred, channel.responseTime
+ *   interpretive  archetype.style, What lands, What doesn't
+ *
+ * Only the structural ones carry Confirm.
+ */
+export const PROFILE_STRUCTURAL = ["archetype.primary", "channel.preferred", "channel.responseTime"] as const
+export type ProfileStructuralField = typeof PROFILE_STRUCTURAL[number]
+
+export function getProfile(c: UcpContact): UcpProfile | null {
+  /* A company is not an interlocutor and has no decision style. Employees and
+     assets are not people you are selling to. The profile is a customer thing
+     until the product says otherwise. */
+  if (c.type !== "person") return null
+
+  const who = c.name.split(" ")[0]
+
+  return {
+    archetype: {
+      primary:      "Economic Buyer",
+      /* Structural and observable — two calls and an email thread put her
+         approving spend rather than recommending it — but nobody has attested
+         it, so it reads Inferred and carries Confirm. */
+      primaryState: "In review",
+      style:        "Cautious Evaluator",
+      /* Interpretive. It never reaches Verified because it is never attested. */
+      styleState:   "Inferred",
+    },
+    traits: [
+      { label: "Asks for written proof",  category: "decision-style",    source: "attested",
+        evidence: { label: "Migration timeline requested · Aug 18", destination: "activity" } },
+      { label: "Replies within 2 days",   category: "response-pattern",  source: "inferred",
+        evidence: { label: "11 replies, median 1.8 days",          destination: "activity" } },
+      { label: "Escalates to finance",    category: "escalation",        source: "inferred",
+        evidence: { label: "Finance joined the last two calls",    destination: "activity" } },
+      { label: "Quiet on calls",          category: "response-pattern",  source: "inferred",
+        evidence: { label: "QBR · 52 min, 6 attendees",            destination: "activity" } },
+      { label: "Prefers email over calls", category: "format-preference", source: "attested",
+        evidence: { label: "Channel preference · Sandbox",         destination: "knowledge" } },
+    ],
+    channel: {
+      preferred:    "Email",
+      window:       "mornings",
+      responseTime: "~2 days",
+      lastTouch:    "30m ago",
+    },
+    lands: [
+      { text: "Written timelines",          evidence: { label: "Asked twice, in writing both times", destination: "activity" } },
+      { text: "Numbers before narrative",   evidence: { label: "Opened the QBR on usage figures",    destination: "activity" } },
+      { text: "Short emails with one ask",  evidence: { label: "Replied same day to the 2-line note", destination: "activity" } },
+    ],
+    doesntLand: [
+      { text: "Calls without an agenda",         evidence: { label: "Declined two ad-hoc invites",      destination: "activity" } },
+      { text: "Vague commitments",               evidence: { label: "Asked for a date, not a quarter",  destination: "activity" } },
+      { text: "Long threads with multiple asks", evidence: { label: "Answered 1 of 3 questions in Aug", destination: "activity" } },
+    ],
+    highlights: [
+      { text: `Owns the budget line on ${c.company}`,   evidence: { label: "Decision role · Sandbox",     destination: "knowledge" } },
+      { text: "Brought finance into the last two calls", evidence: { label: "Outbound call · Sep 2",      destination: "activity" } },
+      { text: `Blocked on one date, not on price`,       evidence: { label: `${who}'s security review`,   destination: "activity" } },
+    ],
+  }
 }
