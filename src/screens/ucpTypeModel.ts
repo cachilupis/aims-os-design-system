@@ -77,7 +77,30 @@ export interface ProfileWidgetRow {
  * has nothing for them (`contact.governance === "empty"` and friends) — the
  * order is the type's, the presence is the record's.
  */
-export type CanvasWidget = "self" | "governance" | "risk" | "connections" | "activity"
+/**
+ * ── The widget shapes a canvas can place ───────────────────────────────────
+ *
+ * Michael, 2026-09-11: vary the TYPES of widget so the same ones do not show
+ * up every time. The composition already differed per entity type, but it was
+ * drawn from four renderers and two of them — Governance and Risk — were the
+ * same three-counter row with different numbers. A canvas of three widgets
+ * where two are the same shape reads as one widget repeated.
+ *
+ * These map onto the widget catalog's own shapes rather than being invented
+ * here: `profile-card`, `stat-row`, `alerts`, `board`, `kpi`, `connections`
+ * and `feed` are all entries in src/lib/widget-catalog.ts. A prototype that
+ * shows a shape the catalog has never heard of is the hallucination the
+ * catalog exists to prevent.
+ */
+export type CanvasWidget =
+  | "self"        // profile-card — the type's own fields
+  | "governance"  // stat-row     — three counters
+  | "risk"        // stat-row     — three counters
+  | "connections" // connections  — who else is on this record
+  | "activity"    // feed         — what happened, newest first
+  | "alerts"      // alerts       — open problems, worst first
+  | "planes"      // board        — counts grouped by knowledge plane
+  | "kpi"         // kpi          — one headline number with its context
 
 export interface CanvasEntry {
   widget: CanvasWidget
@@ -116,9 +139,13 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
          beside it because a company is where policy attaches. Connections
          goes full width: on a company they are the PEOPLE, and a column of
          three names with the rest hidden is the widget failing. */
+      /* profile-card · board · connections · feed — four different shapes.
+         The board replaces a second counter row: a company's knowledge is a
+         composition (how much is attested vs proposed vs raw material), and a
+         composition is what a board shows. */
       canvas: [
         { widget: "self",        span: 2 },
-        { widget: "governance",  span: 1 },
+        { widget: "planes",      span: 1 },
         { widget: "connections", span: 3 },
         { widget: "activity",    span: 3 },
       ],
@@ -146,6 +173,9 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
          exists so somebody can answer "is this person trained, cleared and
          signed off" — that is the Governance study, and a risk score on a
          colleague is a thing this product should not be computing. */
+      /* profile-card · stat-row · feed. Governance keeps the counter row here
+         because "12 of 12 policies signed" IS three counters — it is the one
+         place that shape is the right answer rather than the default one. */
       canvas: [
         { widget: "self",       span: 1 },
         { widget: "governance", span: 2 },
@@ -175,10 +205,12 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
          effective date — so they take two columns, and Governance beside them
          says how the tenant is doing against it. Nothing else applies: a
          policy has no relationships and no risk of its own. */
+      /* profile-card · board · feed. A policy's question is how much evidence
+         stands behind it, which is a composition, not three counters. */
       canvas: [
-        { widget: "self",       span: 2 },
-        { widget: "governance", span: 1 },
-        { widget: "activity",   span: 3 },
+        { widget: "self",   span: 2 },
+        { widget: "planes", span: 1 },
+        { widget: "activity", span: 3 },
       ],
       widget: {
         uid: "policy", title: "Policy",
@@ -204,9 +236,14 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
          On a person a risk score is a read of a relationship; on a vehicle it
          is the service interval, the overdue mileage and the condition — the
          asset\u0027s own state, which is most of what the record is for. */
+      /* profile-card · kpi · stat-row · feed — four shapes, and the only
+         canvas with a KPI. An asset has ONE number that decides what happens
+         to it next, and a headline figure is what that deserves; the risk
+         counters sit beside it as the detail behind it. */
       canvas: [
         { widget: "self",     span: 1 },
-        { widget: "risk",     span: 2 },
+        { widget: "kpi",      span: 1 },
+        { widget: "risk",     span: 1 },
         { widget: "activity", span: 3 },
       ],
       widget: {
@@ -248,9 +285,14 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
      is the number. Governance is absent: a contact is not a policy subject. */
   return {
     extraTabs: [],
+    /* profile-card · alerts · connections · feed. Four shapes, no repeats.
+       Risk's counter row gave way to the alerts list: the counters restated a
+       score whose reasoning now lives in Intelligence, while the alerts show
+       WHICH conditions are open on this person — the same data the Intelligence
+       signals block ranks, in the place somebody lands first. */
     canvas: [
       { widget: "self",        span: 1 },
-      { widget: "risk",        span: 1 },
+      { widget: "alerts",      span: 1 },
       { widget: "connections", span: 1 },
       { widget: "activity",    span: 3 },
     ],

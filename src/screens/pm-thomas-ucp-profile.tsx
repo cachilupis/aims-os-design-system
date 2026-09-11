@@ -95,7 +95,7 @@ import {
   getProfile, renderableTraits, renderableBullets,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
-  PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
+  PLANE_META, PLANE_ORDER, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
   CONTACTS,
   AVATAR_TYPES, TYPE_ICON, TYPE_LABEL, entityState, restrictionFor, getRecordFields,
   getActivity, getConciergeOpening, getConnections, getDrives,
@@ -277,6 +277,125 @@ function StatRowContent({ counters, checked }: {
           </span>
         </Tooltip>
       )}
+    </div>
+  )
+}
+
+/**
+ * ── Three widget shapes the canvas was missing ─────────────────────────────
+ *
+ * Michael, 2026-09-11: vary the widget types so the same ones do not appear
+ * every time. The canvas had four renderers and two of them — Governance and
+ * Risk — were the same three-counter row, so a three-widget canvas read as one
+ * widget repeated.
+ *
+ * All three take the RECORD's own data. The Widget Builder's
+ * `CandidateWidgetContent` renders every catalogued shape already, and it was
+ * the obvious thing to reach for — but it renders SAMPLE data, which is right
+ * for a builder preview and wrong on a real record. A profile showing a
+ * stranger's numbers is worse than a profile showing one shape twice.
+ */
+
+/** `alerts` — open problems, worst first. Fed by the record's own signals, so
+ *  Overview and Intelligence cannot disagree about what is wrong. */
+function AlertsContent({ contact, onGoTab }: { contact: UcpContact; onGoTab: (id: string) => void }) {
+  const signals = useMemo(() => renderableSignals(getSignals(contact)), [contact])
+  if (signals.length === 0) {
+    return (
+      <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>No open signals on this record.</span>
+    )
+  }
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      {signals.slice(0, 4).map(sig => (
+        <button
+          key={sig.type}
+          className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left"
+          onClick={() => onGoTab("intelligence")}
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", font: "inherit" }}
+        >
+          <span
+            style={{
+              width: 6, height: 6, borderRadius: 999, flexShrink: 0,
+              background: sig.severity === "critical" ? "var(--color-text-error)"
+                : sig.severity === "attention" ? "var(--color-text-alert)"
+                : "var(--color-border-neutral-default)",
+            }}
+          />
+          <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {sig.detail}
+          </span>
+          <span style={{ fontSize: 11, color: "var(--muted-foreground)", whiteSpace: "nowrap" }}>{sig.since}</span>
+        </button>
+      ))}
+      {signals.length > 4 && (
+        <Button variant="tertiary" size="sm" className="self-start !px-0" onClick={() => onGoTab("intelligence")}>
+          {`${signals.length - 4} more in Intelligence`}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/** `board` — counts grouped by lifecycle state. Here the state is the
+ *  knowledge plane, which is the one composition this record actually has:
+ *  how much of what is known about it is attested, proposed, or raw material. */
+function PlanesBoardContent({ contact, onGoTab }: { contact: UcpContact; onGoTab: (id: string) => void }) {
+  const facts = useMemo(() => getFacts(contact), [contact])
+  const total = facts.length || 1
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {PLANE_ORDER.map(plane => {
+        const n = facts.filter(f => f.plane === plane).length
+        return (
+          <button
+            key={plane}
+            className="appearance-none bg-transparent border-0 p-0 cursor-pointer text-left"
+            onClick={() => onGoTab("knowledge")}
+            style={{ display: "flex", flexDirection: "column", gap: 4, font: "inherit" }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{n}</span>
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{PLANE_META[plane].label}</span>
+            </div>
+            {/* The bar is the composition — the thing a board shows that three
+                counters side by side do not. */}
+            <div style={{ height: 4, borderRadius: 999, background: "var(--color-surface-neutral-subtle)", overflow: "hidden" }}>
+              <div style={{ width: `${Math.round((n / total) * 100)}%`, height: "100%", background: PLANE_BAR[plane] }} />
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+const PLANE_BAR: Record<KnowledgePlane, string> = {
+  truth:   "var(--color-text-success)",
+  sandbox: "var(--color-text-alert)",
+  sources: "var(--primary)",
+}
+
+/**
+ * `kpi` — one headline number with the sentence that makes it matter.
+ *
+ * The shape CLAUDE.md documents for a KPI slot, and the only canvas that uses
+ * it is the asset's: a vehicle has ONE number that decides what happens to it
+ * next, and a headline figure is what that deserves.
+ */
+function KpiContent({ value, feedback, iconName, iconVariant }: {
+  value:       string
+  feedback:    string
+  iconName:    string
+  iconVariant: HighlightIconVariant
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <span style={{ fontSize: 24, fontWeight: 700, lineHeight: 1, color: "var(--color-text-title)" }}>{value}</span>
+        <HighlightIcon size="lg" variant={iconVariant} iconName={iconName} />
+      </div>
+      <span style={{ fontSize: 12, color: "var(--color-text-subtitle)", marginTop: 6, display: "block" }}>{feedback}</span>
     </div>
   )
 }
@@ -3211,19 +3330,65 @@ export function UcpProfileView({
   const overviewSlots = useMemo<CanvasSlot[]>(() => {
     const widthOf = (span: 1 | 2 | 3) => (span === 3 ? "full" : span === 2 ? "wide" : undefined)
 
+    /* NO REFRESH AND NO ⋯ ON ANY OF THESE — Michael, 2026-09-11: neither has
+       a clear action yet. WidgetFather defaults both to on, and a control that
+       does nothing is worse than a missing one: it reads as broken rather than
+       as absent, and a reader who presses Refresh and sees nothing change
+       learns not to trust the data either. CanvasSlot already carries the two
+       flags, so this is a call-site decision and not a DS change — another
+       screen that HAS wired them keeps them. */
+    const chrome = { showRefresh: false, showMenu: false }
+
     const build = (entry: CanvasEntry): CanvasSlot | null => {
       const width = widthOf(entry.span)
       switch (entry.widget) {
         case "self":
           return {
+            ...chrome,
             uid: spec.widget.uid, title: spec.widget.title,
             colSpan: entry.span, widthClass: width, rowSpan: 4,
             content: <MetricRows rows={spec.widget.rows} />,
           }
+        case "alerts":
+          if (getSignals(contact).length === 0) return null
+          return {
+            ...chrome,
+            uid: "alerts", title: "Open signals",
+            colSpan: entry.span, widthClass: width, rowSpan: 4,
+            content: <AlertsContent contact={contact} onGoTab={goTab} />,
+          }
+        case "planes":
+          return {
+            ...chrome,
+            uid: "planes", title: "Knowledge",
+            colSpan: entry.span, widthClass: width, rowSpan: 4,
+            content: <PlanesBoardContent contact={contact} onGoTab={goTab} />,
+          }
+        case "kpi": {
+          /* The asset's own number, read off its metadata rather than
+             invented — and the sentence under it is the next best action this
+             record already carries, so the widget and the NBA cannot disagree. */
+          const odometer = contact.meta.find(m => /km|mi\b/.test(m.label))?.label
+          if (!odometer) return null
+          return {
+            ...chrome,
+            uid: "kpi", title: "Odometer",
+            colSpan: entry.span, widthClass: width, rowSpan: 3, maxRowSpan: 3,
+            content: (
+              <KpiContent
+                value={odometer}
+                feedback={contact.nba?.title ?? "No service due."}
+                iconName="Gauge"
+                iconVariant={contact.nba ? "alert" : "success"}
+              />
+            ),
+          }
+        }
         case "governance": {
           if (contact.governance === "empty") return null
           const gov = getGovernance(contact)
           return {
+            ...chrome,
             uid: "governance", title: "Governance",
             colSpan: entry.span, widthClass: width, rowSpan: 4,
             content: (
@@ -3237,6 +3402,7 @@ export function UcpProfileView({
           if (contact.risk === "empty") return null
           const risk = getRisk(contact)
           return {
+            ...chrome,
             uid: "risk", title: "Risk",
             colSpan: entry.span, widthClass: width, rowSpan: 4,
             content: (
@@ -3251,6 +3417,7 @@ export function UcpProfileView({
         case "connections":
           if (contact.connections === "empty") return null
           return {
+            ...chrome,
             uid: "connections", title: "Connections",
             colSpan: entry.span, widthClass: width, rowSpan: 4,
             content: (
@@ -3261,6 +3428,7 @@ export function UcpProfileView({
           }
         case "activity":
           return {
+            ...chrome,
             uid: "recent-activity", title: "Recent activity",
             colSpan: entry.span, widthClass: width, rowSpan: 5,
             content: (
