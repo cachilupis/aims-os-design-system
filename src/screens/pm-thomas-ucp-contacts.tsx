@@ -21,13 +21,12 @@
  */
 
 import { useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { ScreenLayout }      from "@/components/layouts/screen-layout"
 import { Header }            from "@/components/ui/header"
-import { Tabs }              from "@/components/ui/tabs"
 import { Filters }           from "@/components/ui/filters"
 import { FiltersSlideout }   from "@/components/ui/filters-slideout"
 import { Menu, MenuItem }    from "@/components/ui/menu-item"
-import { Tag }               from "@/components/ui/tag"
 import { Button }            from "@/components/ui/button"
 import { CardContainer }     from "@/components/ui/card-container"
 import { EntityList }        from "@/components/ui/entity-list"
@@ -37,23 +36,31 @@ import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
 import { ModalDialog }       from "@/components/ui/modal-dialog"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { Tooltip }           from "@/components/ui/tooltip"
-import { Checkbox }          from "@/components/ui/checkbox"
 import { AiSummaryWidget }   from "@/components/experimental/ai-summary-widget"
 import { Input }             from "@/components/ui/input"
-import { Chip }              from "@/components/ui/chip"
-import { anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
+import { Select }            from "@/components/ui/select"
+import { RadioGroup }        from "@/components/ui/radio"
+import { Stepper }           from "@/components/ui/stepper"
+import type { StepItem }     from "@/components/ui/stepper"
+import { StepperNavFooter }  from "@/components/ui/stepper-nav-footer"
+import { Tag }               from "@/components/ui/tag"
+import { InformativeCard }   from "@/components/ui/informative-card"
+import { useToast }          from "@/components/ui/toast"
+import { anchorFromElement, anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
-import { Sparkle, Send, Plus, Lock, Contact as ContactIcon } from "lucide-react"
+import { Plus, Lock, Trash2, Search, PanelLeftOpen, PanelLeftClose, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
-  CONTACTS, CONCIERGE_PROMPTS, PLANE_META, PEOPLE_TYPES,
+  CONTACTS, PEOPLE_TYPES, CONTACT_TYPES,
   TYPE_ICON, TYPE_LABEL, TYPE_PLURAL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
+  matchExistingRecords, CREATE_LOCATIONS, CREATE_OWNERS,
 } from "./ucpShared"
-import type { UcpContact, UcpEntityType } from "./ucpShared"
+import type { CreateMatch, UcpContact, UcpEntityType } from "./ucpShared"
 
 const PAGE_SIZE = 10
 
@@ -89,15 +96,13 @@ const ALL_TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[
   // a person is where it stops meaning anything, and its replacement is the
   // global search rather than a wider table.
   { id: "all", label: "All", type: "all" },
-  ...(["person", "employee", "company", "repair-order", "policy", "asset"] as UcpEntityType[])
+  ...(["person", "employee", "company", "policy", "asset"] as UcpEntityType[])
     .map(t => ({ id: t, label: TYPE_PLURAL[t], type: t })),
 ]
 
-/** What a new user sees. Not alphabetical — the types most people work in. */
-const DEFAULT_TAB_IDS = ["all", "person", "employee", "company"]
-
-/** Six visible at most, including All. */
-const MAX_VISIBLE_TABS = 6
+/* DEFAULT_TAB_IDS and MAX_VISIBLE_TABS lived here. Both were answers to "a
+   horizontal bar runs out of room", and the rail is vertical — it shows every
+   category, so there is no default subset to pick and no ceiling to enforce. */
 
 /**
  * The create CTA names what it will make, so it tracks the active tab. On All
@@ -107,24 +112,118 @@ const MAX_VISIBLE_TABS = 6
 const CREATE_LABEL: Record<string, string> = {
   all: "Create New Contact",
   ...Object.fromEntries(
-    (["person", "employee", "company", "repair-order", "policy", "asset"] as UcpEntityType[])
+    (["person", "employee", "company", "policy", "asset"] as UcpEntityType[])
       .map(t => [t, `Create New ${TYPE_LABEL[t]}`]),
   ),
 }
 
-/** Which fields the create form asks for, per type. Six at most — past that it
- *  stops being a panel and becomes a page. */
-const CREATE_FIELDS: Record<UcpEntityType, string[]> = {
-  person:         ["Full name", "Title", "Company", "Email", "Phone", "Account owner"],
-  employee:       ["Full name", "Role", "Department", "Work email", "Manager", "Access role"],
-  company:        ["Legal name", "Industry", "Headcount", "Account email", "Account owner", "Primary contact"],
-  // A create form asks what the OBJECT needs, never what the pattern needs.
-  // Nothing about these three is person-shaped, and that is the whole reason
-  // they are in this prototype.
-  "repair-order": ["Order code", "Vehicle", "Store", "Reported issue", "Service advisor"],
-  policy:         ["Policy name", "Scope", "Owner", "Effective date", "Review cycle"],
-  asset:          ["Asset code", "Type", "Assigned site", "Acquired", "Custodian"],
+/**
+ * ── Which fields the create form asks for, per type ────────────────────────
+ *
+ * FIVE, AND FIVE IS NOT A COINCIDENCE. The Create pattern's cascade ends at
+ * step 5 with a threshold: a standalone create of five fields or fewer is a
+ * `ModalDialog variant="content"`, and above that it is a full-page form. The
+ * contact fields Michael specified come to exactly five — name, email, phone,
+ * location, owner — so the modal is what the pattern gives it, and the other
+ * four types are kept at five so that one roster does not open two different
+ * surfaces depending on which tab you were standing on.
+ *
+ * Trimming was the price of that, and each cut went to a field the record
+ * gets somewhere better: an employee's access role is set in People & Access,
+ * a company's primary contact is a link you make once both records exist, and
+ * headcount is a number that arrives from the sync rather than from a form.
+ *
+ * `optional` is real, not decorative: the primary CTA unlocks without it. A
+ * phone nobody has yet and an owner nobody has decided are both normal states
+ * for a record created the moment somebody appears in an inbox.
+ */
+/**
+ * `repeat` is the phone field generalised — Michael, 2026-09-11 asked for
+ * secondary emails with a primary selector, "igual a como lo haces en número
+ * de teléfono".
+ *
+ * It was `"phones"`, a kind named after one field, with its list and its
+ * primary index held in two `useState`s called `phones` and `primary`. A
+ * second repeatable field would have meant a third and fourth state with the
+ * same shape and a renderer copied beside it. The kind is now about the
+ * BEHAVIOUR — one or many, one of them primary — and the lists live in a
+ * record keyed by field, so a third one costs a line in CREATE_FIELDS.
+ */
+type CreateFieldKind = "text" | "select" | "search" | "repeat"
+
+interface CreateField {
+  key:       string
+  label:     string
+  kind:      CreateFieldKind
+  optional?: boolean
+  options?:  string[]
+  /** `repeat` only: what one entry is called, for the placeholder and the
+   *  add button. "number", "email address". */
+  noun?:     string
 }
+
+const CREATE_FIELDS: Record<UcpEntityType, CreateField[]> = {
+  person: [
+    { key: "name",     label: "Full name",     kind: "text"                                        },
+    { key: "email",    label: "Email",         kind: "text"                                        },
+    { key: "phones",   label: "Phone",         kind: "repeat", noun: "number", optional: true      },
+    { key: "location", label: "Location",      kind: "select", options: CREATE_LOCATIONS           },
+    { key: "owner",    label: "Account owner", kind: "search", options: CREATE_OWNERS, optional: true },
+  ],
+  employee: [
+    { key: "name",       label: "Full name",  kind: "text"                                  },
+    { key: "email",      label: "Work email", kind: "text"                                  },
+    { key: "phones",     label: "Phone",      kind: "repeat", noun: "number", optional: true },
+    { key: "department", label: "Department", kind: "text"                                  },
+    { key: "location",   label: "Location",   kind: "select", options: CREATE_LOCATIONS     },
+  ],
+  company: [
+    /* "Company name", not "Legal name" — Michael, 2026-09-11. The legal
+       entity is a governance fact that arrives with the contract; what
+       somebody types into a create form is what the company is called. */
+    { key: "name",     label: "Company name",  kind: "text"                                        },
+    /* "Mail", and repeatable. An organisation has a billing address, an AP
+       address and whoever actually answers — one field forced a choice the
+       record should not have to make. */
+    { key: "emails",   label: "Mail",          kind: "repeat", noun: "email address"               },
+    { key: "phones",   label: "Phone",         kind: "repeat", noun: "number", optional: true      },
+    { key: "location", label: "Headquarters",  kind: "select", options: CREATE_LOCATIONS           },
+    { key: "owner",    label: "Account owner", kind: "search", options: CREATE_OWNERS, optional: true },
+  ],
+  // A create form asks what the OBJECT needs, never what the pattern needs.
+  // Nothing about these two is person-shaped, and that is the whole reason
+  // they are in this prototype — no email, no phone, so no duplicate check
+  // either: there is no field here this data treats as unique.
+  policy: [
+    { key: "name",   label: "Policy name",    kind: "text"                              },
+    { key: "scope",  label: "Scope",          kind: "text"                              },
+    { key: "owner",  label: "Owner",          kind: "search", options: CREATE_OWNERS    },
+    { key: "from",   label: "Effective date", kind: "text"                              },
+    { key: "cycle",  label: "Review cycle",   kind: "text",   optional: true            },
+  ],
+  asset: [
+    { key: "name",      label: "Asset code",   kind: "text"                              },
+    { key: "kind",      label: "Type",         kind: "text"                              },
+    { key: "location",  label: "Assigned site", kind: "select", options: CREATE_LOCATIONS },
+    { key: "acquired",  label: "Acquired",     kind: "text"                              },
+    { key: "custodian", label: "Custodian",    kind: "search", options: CREATE_OWNERS, optional: true },
+  ],
+}
+
+/**
+ * The types this flow offers, and it is two of the five.
+ *
+ * One reason covers all three exclusions: none of them is a person somebody
+ * meets and types in. An employee arrives from Workday, a policy is authored
+ * in Governance, a fleet asset comes off the DMS sync. They keep their roster
+ * tabs — the records exist and are governed — and lose the claim that a form
+ * called "New contact" is where they come from. Employee went last, on
+ * Michael's instruction (2026-09-10); the other two went with the modal.
+ *
+ * Their field lists stay in CREATE_FIELDS for whenever they get a create
+ * surface of their own. Nothing here offers one.
+ */
+const CREATABLE_TYPES: UcpEntityType[] = ["person", "company"]
 
 type SortKey = "recent" | "name" | "owner"
 
@@ -135,201 +234,887 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
 ]
 
 
-// ── Roster concierge ──────────────────────────────────────────────────────────
-// DS-GAP: agent chat panel — no chat component exists in src/components/ui/.
-// Composed from SlideOut + Tag + Chip + Input + Button; the bubbles only
-// rearrange existing tokens.
+// The roster concierge lived here — a SlideOut chat opened by an `Ask` button
+// in the page Header. Michael took the button out (2026-09-10), and the panel
+// went with it: nothing else could open it, so keeping it would have left an
+// unreachable surface in the file and an unused import behind it. The record's
+// own concierge is untouched — it opens from the Entity Header's `Ask`, which
+// is a different thing: that one answers about one record from its own planes.
+// ── Create ────────────────────────────────────────────────────────────────────
+/**
+ * ── Creating a contact is a full page with a Stepper ───────────────────────
+ *
+ * THIS SURFACE HAS MOVED TWICE, and both moves are worth keeping written down
+ * because the reasoning is what makes the current one right rather than just
+ * newest.
+ *
+ * It began as a `SlideOut`, justified with "a create form is non-destructive,
+ * so it is a SlideOut and not a ModalDialog". That is not the test — the
+ * Create pattern's test is whether the user can ignore the surface and keep
+ * working in the background — so it became a `ModalDialog variant="content"`,
+ * which is where the cascade lands a standalone five-field create.
+ *
+ * Michael then asked for stages (2026-09-10), and stages change the answer
+ * outright. The pattern's staged-flows table has exactly two rows: one stage
+ * is a panel, and "two or more stages, or any branching" is a full-page wizard
+ * with `Stepper` and `StepperNavFooter`. There is no `Stepper` inside a modal
+ * and no `StepperNavFooter` inside a panel, so this is not a preference.
+ *
+ * WHY THE STAGES ARE NOT PADDING ON FIVE FIELDS. They are three different
+ * questions, and the first one is a gate:
+ *
+ *   1 · Identity   Who is this, and does the platform already know them?
+ *                  The duplicate check lives here and BLOCKS here. A known
+ *                  duplicate should never be carried through two more stages
+ *                  to be refused at the end.
+ *   2 · Details    How to reach them and who owns the relationship.
+ *   3 · Review     What is about to be written, and what happens to it. A
+ *                  record created by hand starts on the Sandbox Plane rather
+ *                  than arriving attested from a source system, and that is a
+ *                  governance consequence — it gets stated before the button
+ *                  that causes it, not in a toast afterwards.
+ *
+ * NO SIDEBAR for the duration (`hideSidebar`) — the pattern's own rule for
+ * full-page create surfaces, so the only ways out are the Header's back arrow
+ * and the footer's Cancel. `Header` carries a title and `backButton` only; the
+ * flow completes in the footer and never in the bar.
+ */
+const WIZARD_STEPS = ["Identity", "Details", "Review"] as const
 
-type RosterTurn = { id: string; from: "agent" | "user"; text: string; planes?: ("truth" | "sandbox" | "sources")[] }
+function CreateContactWizard({
+  lockedType, onCancel, onCreate, onOpenRecord,
+}: {
+  /** The tab the user pressed the CTA on, when it names a creatable type. */
+  lockedType:   UcpEntityType | null
+  onCancel:     () => void
+  onCreate:     (type: UcpEntityType, name: string) => void
+  /** The duplicate card's way out: open the record that already exists. */
+  onOpenRecord: (id: string) => void
+}) {
+  const [step,   setStep]   = useState<0 | 1 | 2>(0)
+  const [type,   setType]   = useState<UcpEntityType>(
+    lockedType && CREATABLE_TYPES.includes(lockedType) ? lockedType : "person",
+  )
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [tried,  setTried]  = useState(false)
+  /** Every repeatable field's rows, keyed by field. Each starts as a single
+   *  empty row — an optional field still shows one line, or nobody discovers
+   *  it is there. */
+  const [lists, setLists] = useState<Record<string, string[]>>({})
+  /** Which row of each list is primary. */
+  const [primaries, setPrimaries] = useState<Record<string, number>>({})
 
-function RosterConcierge({ open, onClose, total }: { open: boolean; onClose: () => void; total: number }) {
-  const [turns, setTurns] = useState<RosterTurn[]>([
-    {
-      id: "t1", from: "agent",
-      text: `I'm the Contacts concierge. I can read across all ${total} records in this roster and tell you which ones need a decision — I answer from each record's own planes, never from outside them.`,
-    },
-  ])
-  const [draft, setDraft] = useState("")
+  const rowsOf    = (key: string) => lists[key] ?? [""]
+  /* Declared HERE, with the other readers, because the duplicate-check memo
+     below closes over it — a `const` arrow used above its own declaration is
+     a temporal-dead-zone crash at first render, not a type error, so tsc says
+     nothing and the screen goes blank. */
+  const filledOf  = (key: string) => rowsOf(key).map(v => v.trim()).filter(Boolean)
+  const primaryOf = (key: string) => primaries[key] ?? 0
+  const setRows   = (key: string, next: string[]) => setLists(m => ({ ...m, [key]: next }))
+  /** The phone list, which the duplicate check reads. */
+  const phones    = rowsOf("phones")
+  /** Which Select or search field has its Menu open, and where to anchor it. */
+  const [openSel, setOpenSel] = useState<string | null>(null)
+  const [selAnchor, setSelAnchor] = useState<DropdownAnchor | null>(null)
+  const selDrop = useDropdownPosition(selAnchor)
+  /** What has been typed into a `search` field, kept apart from `values` so
+   *  that abandoning a search without picking anything leaves the committed
+   *  value alone. */
+  const [query, setQuery] = useState<Record<string, string>>({})
 
-  const ask = (question: string) => {
-    if (!question.trim()) return
-    setTurns(prev => [
-      ...prev,
-      { id: `u-${prev.length}`, from: "user", text: question },
-      {
-        id: `a-${prev.length + 1}`, from: "agent",
-        text: "Three records carry an open commitment right now: Meridian Corp (renewal in 12 days), Sandra Torres (migration timeline asked twice, unanswered) and Kestrel Logistics (dormant 80 days since the pilot closed). Open any of them and I'll carry the context over.",
-        planes: ["truth", "sandbox"],
-      },
-    ])
-    setDraft("")
+  const fields = CREATE_FIELDS[type]
+  const byKey  = (k: string) => fields.find(f => f.key === k)
+  /* IDENTITY IS NAME + HOW YOU REACH THEM BY MAIL, whatever that field is
+     called for this type — "email" on a person, "emails" on a company since
+     an organisation has several. Listing only "email" here silently dropped
+     the company's Mail field from the form: it was declared in CREATE_FIELDS,
+     belonged to no stage, and therefore rendered nowhere. */
+  const STEP_KEYS: Record<0 | 1, string[]> = {
+    0: ["name", "email", "emails"],
+    1: ["phones", "location", "owner"],
+  }
+  const stepFields = (i: 0 | 1) =>
+    STEP_KEYS[i].map(byKey).filter((f): f is CreateField => !!f)
+
+  /**
+   * The duplicate check, and it runs on every keystroke rather than on blur.
+   * Blur is the tempting choice — fewer lookups, no card appearing mid-word —
+   * and it is the wrong one: the card that matters appears when the email is
+   * COMPLETE, and a blur-triggered check has by then let the user move to the
+   * next field and start filling in a record that will not be created.
+   */
+  const match: CreateMatch | null = useMemo(
+    /* The email a company types into its repeatable list counts for the
+       duplicate check exactly as a person's single field does — the primary
+       one, since that is the address the record will be known by. */
+    () => matchExistingRecords({
+      name:   values.name,
+      email:  values.email ?? filledOf("emails")[primaryOf("emails")],
+      phones,
+    }),
+    [values.name, values.email, lists, primaries, phones],
+  )
+  const blocked = match?.blocks === true
+
+  const missingIn = (i: 0 | 1) => stepFields(i).filter(f =>
+    f.optional ? false
+      : f.kind === "repeat" ? rowsOf(f.key).every(v => v.trim() === "")
+      : (values[f.key] ?? "").trim() === "",
+  )
+  const missing = missingIn(step === 2 ? 1 : (step as 0 | 1))
+
+  /* Identity cannot be left with a KNOWN duplicate. The two email cases are
+     certain — an email is the one field this data treats as unique — so Next
+     is closed and the card carries the way out. A phone or a name match warns
+     and lets the user through: a switchboard is not a duplicate, and the
+     person filling the form is the one who knows which it is. */
+  const canContinue = step === 0 ? missingIn(0).length === 0 && !blocked
+                    : step === 1 ? missingIn(1).length === 0
+                    : true
+
+  const steps: StepItem[] = WIZARD_STEPS.map((label, i) => ({
+    label,
+    state: step === i ? "active" : step > i ? "completed" : "default",
+    ...(step < i ? { hint: `Complete ${WIZARD_STEPS[i - 1]} first.` } : {}),
+  }))
+
+  const setRow = (key: string, i: number, v: string) =>
+    setRows(key, rowsOf(key).map((x, j) => (j === i ? v : x)))
+
+  const removeRow = (key: string, i: number) => {
+    const next = rowsOf(key).filter((_, j) => j !== i)
+    setRows(key, next)
+    // The primary moves with the list and never past its end. Deleting the
+    // primary promotes the row that took its place.
+    setPrimaries(m => {
+      const pi = m[key] ?? 0
+      return { ...m, [key]: i < pi ? pi - 1 : Math.min(pi, next.length - 1) }
+    })
   }
 
-  return (
-    <SlideOut
-      open={open}
-      onClose={onClose}
-      type="with-variants"
-      size="m"
-      title="Concierge"
-      subtitle={`Contacts · ${total} records`}
-      showIcon
-      iconContent={<Sparkle size={14} />}
-      showStatus
-      statusLabel="Online"
-      showTopButton={false}
-      showTabs={false}
-      showSearchBar={false}
-      showChips={false}
-      showCta={false}
-    >
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingTop: 20, paddingBottom: 8, paddingInline: 16, marginInline: -16, display: "flex", flexDirection: "column", gap: 12 }}>
-          {turns.map(turn => (
-            <div
-              key={turn.id}
-              style={{
-                alignSelf: turn.from === "user" ? "flex-end" : "flex-start",
-                maxWidth: "90%", display: "flex", flexDirection: "column", gap: 6,
-              }}
-            >
-              <div
-                style={{
-                  background: turn.from === "user" ? "var(--field-bg)" : "var(--tag-purple-bg)",
-                  border: `1px solid ${turn.from === "user" ? "var(--field-border)" : "var(--tag-purple-bd)"}`,
-                  borderRadius: 10, padding: "10px 12px", fontSize: 12, lineHeight: 1.6,
-                  color: turn.from === "user" ? "var(--foreground)" : "var(--tag-purple-fg)",
-                }}
-              >
-                {turn.text}
-              </div>
-              {turn.planes && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {turn.planes.map(p => (
-                    <Tag key={p} variant={PLANE_META[p].tag} size="sm">{PLANE_META[p].label} plane</Tag>
-                  ))}
+
+  const field = (f: CreateField) => {
+    const invalid = tried && !f.optional && missing.includes(f)
+
+    if (f.kind === "repeat") {
+      const rows    = rowsOf(f.key)
+      const primary = primaryOf(f.key)
+      const noun    = f.noun ?? "entry"
+      return (
+        <div key={f.key}>
+          <FormLabel optional={f.optional} hint={`More than one is fine — mark which to use first.`}>
+            {f.label}
+          </FormLabel>
+          {/*
+            THE PRIMARY IS A RADIO, AND IT ONLY EXISTS FROM THE SECOND ROW ON.
+            One entry is the primary by definition, and a radio group of one is
+            a control that cannot be used — it renders a selected dot the user
+            can neither change nor understand. It appears when there is a
+            choice to make. A radio and not a Chip because these are mutually
+            exclusive: selecting one deselects the rest, which is the one thing
+            a Chip row does not promise.
+          */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {rows.map((value, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {rows.length > 1 && (
+                  <RadioGroup
+                    legend={`Use ${noun} ${i + 1} first`}
+                    hideLegend
+                    size="sm"
+                    value={primary === i ? "on" : ""}
+                    onChange={() => setPrimaries(m => ({ ...m, [f.key]: i }))}
+                    options={[{ value: "on", label: "" }]}
+                    name={`primary-${f.key}-${i}`}
+                  />
+                )}
+                <div style={{ flex: 1 }}>
+                  <Input
+                    placeholder={i === 0
+                      ? (f.key === "phones" ? "+1 (555) 000-0000" : "name@company.com")
+                      : `Another ${noun}`}
+                    value={value}
+                    onChange={e => setRow(f.key, i, e.target.value)}
+                  />
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <div style={{ paddingTop: 8, paddingBottom: 20, display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 10 }}>
-            {CONCIERGE_PROMPTS.map(p => (
-              <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
+                {rows.length > 1 && (
+                  <Tooltip content={`Remove this ${noun}`} side="cursor">
+                    <Button variant="tertiary" size="sm" onClick={() => removeRow(f.key, i)} aria-label={`Remove this ${noun}`}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </Tooltip>
+                )}
+              </div>
             ))}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Input
-              placeholder="Ask about the roster…"
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") ask(draft) }}
-            />
-            <Button variant="primary" size="default" icon={<Send size={14} />} iconPosition="alone" aria-label="Send" onClick={() => ask(draft)} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 8 }}>
+            <Button variant="tertiary" size="sm" onClick={() => setRows(f.key, [...rows, ""])}>
+              <Plus size={12} /> {`Add another ${noun}`}
+            </Button>
+            {rows.length > 1 && (
+              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                {rows[primary]?.trim() ? `${rows[primary].trim()} is primary` : `Pick the primary ${noun}`}
+              </span>
+            )}
           </div>
         </div>
+      )
+    }
+
+    /*
+      A SEARCH FIELD, NOT A SELECT — Michael, 2026-09-10: "en Account owner haz
+      que sea un campo donde se pueda escribir y se despliegue un dropdown
+      menu, tipo busqueda inteligente".
+
+      Owners are the one option list here that grows with the tenant. Five
+      names fit in a Select; two hundred do not, and a Select's answer to two
+      hundred is a scrollbar and a reader hunting alphabetically. Typing is the
+      only interaction that stays the same size as the list.
+
+      Substring matching, not prefix, and case-insensitive: somebody looking
+      for Priya Nair types "nair" as readily as "priya".
+
+      // DS-GAP: no Combobox / typeahead in src/components/ui/. The closest is
+      // Select, a trigger with no text entry. Composed here from Input + Menu
+      // + dropdown-anchor — the same pair every other dropdown uses — rather
+      // than adding a component from inside a PM prototype.
+    */
+    if (f.kind === "search") {
+      const q      = query[f.key] ?? ""
+      const chosen = values[f.key] ?? ""
+      const hits   = (f.options ?? []).filter(o => o.toLowerCase().includes(q.trim().toLowerCase()))
+      const isOpen = openSel === f.key
+
+      return (
+        <div key={f.key}>
+          <FormLabel
+            optional={f.optional}
+            hint="Type to search. Leave it empty and the record goes to the unassigned queue."
+          >
+            {f.label}
+          </FormLabel>
+          <div onClickCapture={e => setSelAnchor(anchorFromEvent(e))}>
+            <Input
+              placeholder={chosen || `Search ${f.label.toLowerCase()}…`}
+              value={isOpen ? q : chosen}
+              state={invalid ? "error" : undefined}
+              /* Anchored off the FIELD, not off a click — Tab into this
+                 input and the menu still lands under it. Focus is the event
+                 that opens the list, so focus is the event that has to
+                 position it. */
+              onFocus={e => { setSelAnchor(anchorFromElement(e.currentTarget)); setOpenSel(f.key); setQuery(v => ({ ...v, [f.key]: "" })) }}
+              /* The anchor is set here too, not only on focus. Typing is the
+                 other event that opens this list — a field that already had
+                 focus when the user started typing fires no focus event, and
+                 the menu would then have a state saying "open" and no
+                 position to open at. Both events open it, so both position
+                 it. */
+              onChange={e => { setSelAnchor(anchorFromElement(e.currentTarget)); setOpenSel(f.key); setQuery(v => ({ ...v, [f.key]: e.target.value })) }}
+              onKeyDown={e => {
+                // Enter commits the only remaining match — the whole point of
+                // typing is that three letters usually leave one name.
+                if (e.key === "Enter" && hits.length === 1) {
+                  setValues(v => ({ ...v, [f.key]: hits[0] })); setOpenSel(null)
+                }
+                if (e.key === "Escape") setOpenSel(null)
+              }}
+            />
+          </div>
+          {isOpen && q.trim() !== "" && hits.length === 0 && (
+            <span style={{ display: "block", marginTop: 6, fontSize: 11, color: "var(--muted-foreground)" }}>
+              {`Nobody matches “${q.trim()}”. Leave it empty and assign later.`}
+            </span>
+          )}
+        </div>
+      )
+    }
+
+    if (f.kind === "select") {
+      return (
+        <div key={f.key}>
+          <FormLabel optional={f.optional}>{f.label}</FormLabel>
+          {/* Select is a trigger only — the options come from the DS Menu,
+              positioned by dropdown-anchor. The same mechanism Filters uses,
+              which is why there is no second implementation in this file. */}
+          <div onClickCapture={e => setSelAnchor(anchorFromEvent(e))}>
+            <Select
+              placeholder={f.label}
+              value={values[f.key] ?? ""}
+              state={invalid ? "error" : undefined}
+              open={openSel === f.key}
+              onClick={() => setOpenSel(k => (k === f.key ? null : f.key))}
+              onClear={values[f.key] ? () => setValues(v => ({ ...v, [f.key]: "" })) : undefined}
+            />
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div key={f.key}>
+        <FormLabel optional={f.optional}>{f.label}</FormLabel>
+        <Input
+          placeholder={f.label}
+          value={values[f.key] ?? ""}
+          state={invalid ? "error" : undefined}
+          onChange={e => setValues(v => ({ ...v, [f.key]: e.target.value }))}
+        />
       </div>
-    </SlideOut>
-  )
-}
+    )
+  }
 
-// ── Create panel ──────────────────────────────────────────────────────────────
-// A create form is non-destructive, so it is a SlideOut and not a ModalDialog.
-// No `label` prop on Input — placeholder is the only field hint on desktop.
+  const selField = fields.find(f => f.key === openSel && (f.kind === "select" || f.kind === "search"))
+  /** What the open menu lists: every option for a Select, the matches for a
+   *  search field. Capped at eight — past that the reader should type another
+   *  letter, not scroll. */
+  const selOptions = selField
+    ? (selField.kind === "search"
+        ? (selField.options ?? []).filter(o => o.toLowerCase().includes((query[selField.key] ?? "").trim().toLowerCase())).slice(0, 8)
+        : (selField.options ?? []))
+    : []
 
-function CreatePanel({
-  open, onClose, lockedType, onCreate,
-}: {
-  open:        boolean
-  onClose:     () => void
-  /** Set when a type tab is active; null on All, where the user picks. */
-  lockedType:  UcpEntityType | null
-  onCreate:    (type: UcpEntityType) => void
-}) {
-  const [type, setType]     = useState<UcpEntityType>(lockedType ?? "person")
-  const [values, setValues] = useState<Record<string, string>>({})
-  const [tried, setTried]   = useState(false)
-
-  // Reopening on a different tab should follow the tab, not the last pick.
-  const activeType = lockedType ?? type
-  const fields     = CREATE_FIELDS[activeType]
-  const complete   = fields.every(f => (values[f] ?? "").trim().length > 0)
+  const name = (values.name ?? "").trim()
 
   return (
-    <SlideOut
-      open={open}
-      onClose={onClose}
-      type="with-variants"
-      size="m"
-      title={`New ${TYPE_LABEL[activeType]}`}
-      subtitle={`Contacts · ${fields.length} fields`}
-      showIcon
-      iconContent={<Plus size={14} />}
-      showStatus={false}
-      showTopButton={false}
-      showTabs={false}
-      showSearchBar={false}
-      showChips={false}
-      showCta
-      ctaPrimaryLabel={`Create ${TYPE_LABEL[activeType]}`}
-      ctaSecondaryLabel="Cancel"
-      onCtaPrimary={() => {
-        if (!complete) { setTried(true); return }
-        onCreate(activeType)
-        setValues({})
-        setTried(false)
-      }}
-      onCtaSecondary={onClose}
+    <ScreenLayout
+      workspaceName="Acme Corp"
+      userName="Thomas González"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={UCP_SIDEBAR_ITEMS}
+      activeSidebarId="contacts"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title={`New ${TYPE_LABEL[type].toLowerCase()}`}
+          description="A record created here has no source system. Its facts start on the Sandbox Plane and are promoted as they are verified."
+          backButton
+          onBack={onCancel}
+        />
+      )}
     >
-      <div className="flex flex-col gap-[24px]">
-        {!lockedType && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>What are you creating?</span>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {(Object.keys(CREATE_FIELDS) as UcpEntityType[]).map(t => (
-                <Chip
-                  key={t}
-                  size="s"
-                  variant={activeType === t ? "primary" : "secondary"}
-                  onClick={() => { setType(t); setValues({}) }}
-                >
-                  {TYPE_LABEL[t]}
-                </Chip>
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} onStepClick={i => { if (i < step) setStep(i as 0 | 1 | 2) }} />
+      </div>
+
+      {/* ── 1 · Identity ──────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          {/* Customer or Company, and neither Employee, Policy nor Asset.
+              Michael took all three out (2026-09-10). The reason is one
+              reason: none of them is a person you meet and type in. An
+              employee arrives from Workday, a policy is authored in
+              Governance, a fleet asset comes off the DMS sync. They keep
+              their roster tabs — the records exist — and lose the claim that
+              this form is where they come from. */}
+          <div>
+            <FormLabel hint="What kind of record this is. It decides the fields and the icon it carries everywhere after.">
+              What are you creating?
+            </FormLabel>
+            <div role="radiogroup" aria-label="Record type" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {CREATABLE_TYPES.map(t => (
+                <CardContainer key={t} size="sm" selected={type === t} onClick={() => { setType(t); setTried(false) }}>
+                  <div style={{ pointerEvents: "none", display: "flex", alignItems: "center", gap: 10 }}>
+                    <HighlightIcon size="sm" variant={type === t ? "informative" : "neutral"} iconName={TYPE_ICON[t]} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{TYPE_LABEL[t]}</span>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                        {t === "person" ? "A person you sell to or support." : "An organisation, with people under it."}
+                      </span>
+                    </div>
+                  </div>
+                </CardContainer>
               ))}
             </div>
           </div>
-        )}
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {fields.map(field => (
-            <Input
-              key={field}
-              placeholder={field}
-              value={values[field] ?? ""}
-              onChange={e => setValues(v => ({ ...v, [field]: e.target.value }))}
-            />
-          ))}
+          {/* The edge case, on the stage that can still act on it — and it
+              gates this stage rather than the final button. */}
+          {match && <DuplicateCard match={match} onOpenRecord={onOpenRecord} />}
+
+          {stepFields(0).map(field)}
+
+          {tried && missingIn(0).length > 0 && (
+            <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
+              {missingIn(0).length === 1
+                ? `${missingIn(0)[0].label} is still empty.`
+                : `${missingIn(0).map(f => f.label).join(" and ")} are still empty.`}
+            </span>
+          )}
         </div>
+      )}
 
-        <span style={{ fontSize: 12, color: "var(--field-supporting)", lineHeight: 1.6 }}>
-          A record created here has no source system — its facts start on the Sandbox
-          plane and get promoted as they are verified.
-        </span>
+      {/* ── 2 · Details ───────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          {stepFields(1).map(field)}
 
-        {tried && !complete && (
-          <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
-            {`Every field is required. ${fields.filter(f => !(values[f] ?? "").trim()).length} still empty.`}
+          {/* A phone entered HERE can collide with a record the identity
+              stage never saw, so the card follows the data rather than the
+              stage. It never blocks: two people at one switchboard is a
+              normal shape for this data. */}
+          {match && !match.blocks && match.kind === "phone" && (
+            <DuplicateCard match={match} onOpenRecord={onOpenRecord} />
+          )}
+
+          {tried && missingIn(1).length > 0 && (
+            <span style={{ fontSize: 12, color: "var(--field-text-error)" }}>
+              {`${missingIn(1).map(f => f.label).join(" and ")} is still empty.`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ── 3 · Review ────────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+          <div>
+            <FormLabel hint="This is the record that gets written, and where its facts land.">Review</FormLabel>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <ReviewRow icon={TYPE_ICON[type]} variant="informative" label={TYPE_LABEL[type]}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{name}</span>
+              </ReviewRow>
+              {/* Review reads the same repeatable lists the form wrote, so a
+                  type whose mail is a single field and one whose mail is a
+                  list both summarise correctly without a branch here. */}
+              {byKey("email") && (
+                <ReviewRow icon="Mail" variant="neutral" label="Email">
+                  <Tag variant="neutral" size="sm">{(values.email ?? "").trim()}</Tag>
+                </ReviewRow>
+              )}
+              {(["emails", "phones"] as const).map(key => {
+                const f = byKey(key)
+                if (!f) return null
+                const rows = filledOf(key)
+                const pi   = primaryOf(key)
+                const noun = f.noun ?? "entry"
+                return (
+                  <ReviewRow
+                    key={key}
+                    icon={key === "phones" ? "Phone" : "Mail"}
+                    variant="neutral"
+                    label={rows.length > 1 ? `${rows.length} ${noun}s` : f.label}
+                  >
+                    {rows.length === 0
+                      ? <span style={{ fontSize: 12, fontStyle: "italic", color: "var(--muted-foreground)" }}>None</span>
+                      : rows.map((v, i) => (
+                          <Tag key={v} variant={i === pi ? "informative" : "neutral"} size="sm">
+                            {i === pi ? `${v} · primary` : v}
+                          </Tag>
+                        ))}
+                  </ReviewRow>
+                )
+              })}
+              <ReviewRow icon="MapPin" variant="neutral" label={byKey("location")?.label ?? "Location"}>
+                <Tag variant="neutral" size="sm">{values.location}</Tag>
+              </ReviewRow>
+              <ReviewRow icon="User" variant={values.owner ? "neutral" : "yellow"} label="Account owner">
+                {values.owner
+                  ? <Tag variant="neutral" size="sm">{values.owner}</Tag>
+                  : <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Unassigned — goes to the queue</span>}
+              </ReviewRow>
+            </div>
+          </div>
+
+          {/* The domain link is the one match worth repeating here, because it
+              is not a warning — it is a consequence of saving, and this is the
+              stage that states consequences. */}
+          {match?.kind === "domain" && <DuplicateCard match={match} onOpenRecord={onOpenRecord} />}
+
+          <InformativeCard
+            state="informative"
+            size="sm"
+            title="Everything here starts on the Sandbox Plane"
+            description={`Nothing typed into a form is attested. ${name || "This record"}'s facts are candidate claims until a source corroborates them or a domain owner confirms them — until then an agent can cite them and cannot treat them as true.`}
+          />
+        </div>
+      )}
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2 ? `Create ${TYPE_LABEL[type].toLowerCase()}` : "Next"}
+            nextDisabled={step < 2 && !canContinue && tried}
+            onNext={() => {
+              if (step === 2) { onCreate(type, name); return }
+              if (!canContinue) { setTried(true); return }
+              setTried(false)
+              setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)
+            }}
+          />
+        </div>,
+        document.body,
+      )}
+
+      {/*
+        Z-INDEX 200 IS THE FOOTER'S, and a dropdown has to clear it. It also
+        has to clear nothing else: this is a full page, not an overlay, so the
+        10001 the roster's own filter menus use is more than enough. The modal
+        this flow replaced needed 10030 to get out from under `z-[10020]`;
+        that problem left with the modal.
+      */}
+      {openSel && selAnchor && selField && selOptions.length > 0 && (
+        <div ref={selDrop.ref} style={{ position: "fixed", zIndex: 10001, ...selDrop.style }}>
+          <Menu>
+            {selOptions.map(opt => (
+              <MenuItem
+                key={opt}
+                size="sm"
+                label={opt}
+                onClick={() => { setValues(v => ({ ...v, [selField.key]: opt })); setOpenSel(null) }}
+              />
+            ))}
+          </Menu>
+        </div>
+      )}
+    </ScreenLayout>
+  )
+}
+
+/** A field's label, and the one line of context that stops it needing one. */
+function FormLabel({ children, hint, optional }: { children: React.ReactNode; hint?: string; optional?: boolean }) {
+  return (
+    <div style={{ marginBottom: hint ? 8 : 6 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>
+        {children}{optional && <span style={{ fontWeight: 400, color: "var(--muted-foreground)" }}> (optional)</span>}
+      </div>
+      {hint && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 4 }}>{hint}</div>}
+    </div>
+  )
+}
+
+/** One reviewed fact: what it is on the left, the actual values on the right. */
+function ReviewRow({ icon, variant, label, children }: {
+  icon:     string
+  variant:  HighlightIconVariant
+  label:    string
+  children: React.ReactNode
+}) {
+  return (
+    <CardContainer size="sm">
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <HighlightIcon size="sm" variant={variant} iconName={icon} />
+        <span style={{ width: 140, flexShrink: 0, fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{label}</span>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, minWidth: 0 }}>{children}</div>
+      </div>
+    </CardContainer>
+  )
+}
+
+/**
+ * THE TITLE NAMES THE RECORD, not the rule that fired. Michael, 2026-09-10:
+ * "como se podría visualizar el nombre del otro contacto creado que usa el
+ * mismo nombre o mail".
+ *
+ * "This email is already on a record" is a validation message — it describes
+ * the check. "Sandra Torres already has this email" is an answer: the reader
+ * knows in one line whether they are about to duplicate somebody they meant
+ * to create, or whether a colleague's typo is standing in their way. The
+ * difference costs nothing and it is the whole value of the card.
+ *
+ * Above two matches the name is dropped for the count, because three names in
+ * a title is a list and a title is not the place for one — the rows below
+ * carry them, with the email, the phone and the owner on each.
+ */
+const MATCH_COPY: Record<CreateMatch["kind"], {
+  state: "error" | "alert" | "informative"
+  title: (who: string, on: string, n: number) => string
+  body:  (who: string, on: string, n: number) => string
+}> = {
+  "email-active": {
+    state: "error",
+    title: who => `${who} already has this email`,
+    body:  (who, on) => `${on} is on ${who}'s record. Open it instead of creating a second one — a duplicate has to be merged later, and a merge is a governance event.`,
+  },
+  "email-archived": {
+    state: "alert",
+    title: who => `${who} has this email, on an archived record`,
+    body:  (who, on) => `${on} belongs to ${who}, whose record was archived rather than deleted. The facts and drives are still there. Restore it rather than starting again.`,
+  },
+  phone: {
+    state: "alert",
+    title: (who, _, n) => (n === 1 ? `${who} already has this number` : `${n} records have this number`),
+    body:  (who, on, n) => n === 1
+      ? `${on} is on ${who}'s record, under a different email. That is normal for a switchboard or a shared line — check it is not the same person before you continue.`
+      : `${on} is on ${n} records already, each under a different email. Check none of them is this person before you continue.`,
+  },
+  name: {
+    state: "informative",
+    title: (who, _, n) => (n === 1 ? `${who} already has a record` : `${n} records are already called this`),
+    body:  (who, _, n) => n === 1
+      ? `The email and phone on ${who}'s record are different, so this is probably not the same person. Worth opening it before you create a second.`
+      : "Their emails and phones all differ from what you have entered. Worth a look before you create another.",
+  },
+  domain: {
+    state: "informative",
+    title: (_who, on) => `${on} is already on file`,
+    body:  (who, _, n) => `${n} record${n === 1 ? "" : "s"} share this domain, ${who} among them. The new contact will be linked to it, so you do not have to come back and do it by hand.`,
+  },
+}
+
+function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenRecord: (id: string) => void }) {
+  const copy = MATCH_COPY[match.kind]
+  const n    = match.records.length
+  const head = match.records[0]
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <InformativeCard
+        state={copy.state}
+        size="sm"
+        title={copy.title(head.name, match.on, n)}
+        description={copy.body(head.name, match.on, n)}
+        /* The way out is on the card, next to the reason for it — not a
+           separate button further down the form, where it reads as an
+           unrelated action. Only the two blocking cases get one: a phone or
+           name match already has its answer, which is to keep typing. */
+        cta={match.blocks
+          ? { label: match.kind === "email-archived" ? `Restore ${head.name}` : `Open ${head.name}`, onClick: () => onOpenRecord(head.id) }
+          : undefined}
+      />
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {match.records.slice(0, 3).map(c => (
+          <CardContainer key={c.id} size="sm" className="!p-0 overflow-hidden">
+            <EntityList
+              items={[{
+                id:          c.id,
+                title:       c.name,
+                /* A person gets an avatar and everything else an icon — the
+                   same rule the Entity Header states, and the same one this
+                   roster's own rows already follow. */
+                ...(PEOPLE_TYPES.includes(c.type)
+                  ? { avatarName: c.name }
+                  : { iconName: TYPE_ICON[c.type], iconVariant: "neutral" as const }),
+                /* The collided datum first — it is the reason this row is on
+                   screen. Then who owns it, which is who to ask. */
+                primaryMeta:   [{ iconName: "Mail",  label: c.email }],
+                secondaryMeta: [{ iconName: "Phone", label: c.phone }, { iconName: "User", label: c.owner }],
+                state:       { label: c.status, variant: entityState(c).variant },
+                actions:     [{ label: "Open", variant: "tertiary", icon: "ArrowRight", onClick: () => onOpenRecord(c.id) }],
+              }]}
+            />
+          </CardContainer>
+        ))}
+        {n > 3 && (
+          <span style={{ fontSize: 11, color: "var(--field-supporting)" }}>
+            {`and ${n - 3} more on this domain.`}
           </span>
         )}
       </div>
-    </SlideOut>
+    </div>
+  )
+}
+
+
+/**
+ * ── The category rail ──────────────────────────────────────────────────────
+ *
+ * Michael, 2026-09-11: the entity types can grow a long way, so the category
+ * choice moves out of a tab bar and into a rail to the LEFT of the list — like
+ * SidePanel, but without a container card, with an expand/collapse control and
+ * a divider on its right edge, and with a search so somebody can find a
+ * category instead of scanning for it.
+ *
+ * WHY A TAB BAR WAS ALWAYS GOING TO BREAK HERE. A tab bar is horizontal, so it
+ * is bounded by the width of the screen — which is why this one grew a `+`
+ * picker and a cap of six, and why the picker existed at all. Both of those
+ * were workarounds for a shape that does not scale, and both go: a vertical
+ * list has as many rows as it needs, and a search field is what replaces the
+ * cap when the list gets long. Nothing is hidden behind a preference any more.
+ *
+ * ── COMPONENT INVENTORY, taken before anything was written ──
+ *
+ *   SidePanel   the closest thing, and it is not this. It is an overlay-ish
+ *               panel with its own surface, a title, a menu and a footer, and
+ *               Michael's instruction was explicitly "without a container
+ *               card". Borrowed its BEHAVIOUR — the collapsed strip, the
+ *               right border — not its chrome.
+ *   Sidebar     the app's own nav, at the far left. Two of those on one
+ *               screen is two navigations competing; this rail is a filter,
+ *               not navigation, so it is not that component either.
+ *   MenuItem    REUSED, one per category: leadingIcon, label, subtext, a
+ *               trailing count and a selected state. It is already the row
+ *               the `+` picker used, so a category looks the same wherever
+ *               it is listed.
+ *   Input       REUSED for the search, with its own leftIcon.
+ *   Tooltip     REUSED for the collapsed rail, where a row is an icon and an
+ *               icon-only control without a label is unreadable.
+ *
+ * NAMED EntityCategoryRail, not CategoryRail: the Widget Marketplace already
+ * has a `CategoryRail` and it is a different thing — business-function
+ * categories with colour dots. Two screens declaring one name is exactly the
+ * drift the duplicate-component check exists to catch, and the fix is a name,
+ * not a shared abstraction: these two rails have nothing in common but a
+ * shape.
+ *
+ * WHAT I ADDED: this function. It is a column with a border and a list — a
+ * composition of four DS components in a screen file, which is the case
+ * CLAUDE.md says NOT to turn into a component. If a second screen wants a
+ * category rail, that is when it earns a file in experimental/.
+ */
+/*
+  ── The rail's spacing ──────────────────────────────────────────────────────
+  Michael, 2026-09-11: reduce the padding, 12px or less.
+
+  The padding to the divider was already 8. What was actually spending the
+  space was everything ELSE around it: a 56px collapsed rail holding a 28px
+  icon, and a 24px gap on the other side of the line. Together that was ~88px
+  of chrome to the left of the first card, most of it empty.
+
+  44 + 8 + 12 = 64. The icon keeps its own hit area, the divider still reads
+  as the rail's edge, and the list starts 24px earlier.
+*/
+const RAIL_WIDTH           = 208
+const RAIL_COLLAPSED_WIDTH = 44
+
+function EntityCategoryRail({
+  categories, activeId, onSelect, collapsed, onCollapsedChange, query, onQueryChange,
+}: {
+  categories: { id: string; label: string; icon: string; count: number }[]
+  activeId:   string
+  onSelect:   (id: string) => void
+  collapsed:  boolean
+  onCollapsedChange: (next: boolean) => void
+  query:      string
+  onQueryChange: (next: string) => void
+}) {
+  const q     = query.trim().toLowerCase()
+  /* Collapsed, the filter does not apply — there is no field to have typed
+     into, and hiding icons a reader cannot see the reason for is worse than
+     showing all six. */
+  const shown = collapsed ? categories : categories.filter(c => !q || c.label.toLowerCase().includes(q))
+
+  return (
+    <div
+      style={{
+        width: collapsed ? RAIL_COLLAPSED_WIDTH : RAIL_WIDTH,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        /* 8, not 16 — Michael, 2026-09-11. The gap to the divider is not the
+           gap to the list: the divider belongs to the rail and reads as its
+           edge, so a wide inset makes the rows look like they are floating
+           away from their own boundary. The 24px breathing room lives on the
+           other side of the line, where the list starts. */
+        paddingRight: 8,
+        /* Rows sit tighter than the 12 between the header, the search and the
+           list — a category list is one thing, not three. */
+        /* THE DIVIDER RUNS THE FULL HEIGHT. It used to stop where the rail's
+           own content stopped — six rows, then nothing — which read as a line
+           that had been cut off rather than as the edge of a rail. `stretch`
+           on the row makes the rail as tall as the list beside it, and the
+           minHeight keeps the line honest when the list is shorter than the
+           viewport. */
+        alignSelf: "stretch",
+        minHeight: "calc(100vh - 260px)",
+        borderRight: "1px solid var(--field-border)",
+        transition: "width 150ms ease",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: collapsed ? "center" : "space-between" }}>
+        {!collapsed && (
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+            Entities
+          </span>
+        )}
+        {/* The DS's own wording for this control, so it reads the same as the
+            app Sidebar's toggle one rail over. */}
+        <Tooltip side="cursor" content={collapsed ? "Expand" : "Collapse"}>
+          <Button
+            variant="tertiary" size="sm" iconPosition="alone"
+            icon={collapsed
+              ? <PanelLeftOpen  size={16} strokeWidth={1.75} />
+              : <PanelLeftClose size={16} strokeWidth={1.75} />}
+            aria-label={collapsed ? "Expand entities" : "Collapse entities"}
+            onClick={() => onCollapsedChange(!collapsed)}
+          />
+        </Tooltip>
+      </div>
+
+      {/*
+        A SMALL SEARCH, AND ONLY WHEN EXPANDED — Michael, 2026-09-11.
+
+        This went out a few hours ago and comes back deliberately, so the
+        reasoning is worth keeping straight rather than quietly reversing. The
+        objection then was two search fields competing, and that still holds
+        for the COLLAPSED rail — 44px of icons has nowhere to put one, and a
+        reader scanning six glyphs is not searching. Expanded is a different
+        surface: the labels are there, the list will grow past what anybody
+        scans, and a size-sm field costs one row.
+
+        It filters CATEGORIES. The field over the list filters RECORDS. They
+        never compete because they are never both the obvious thing to type
+        into — one sits inside the rail, the other spans the list.
+      */}
+      {!collapsed && (
+        <Input
+          size="sm"
+          placeholder="Filter entities…"
+          value={query}
+          onChange={e => onQueryChange(e.target.value)}
+          leftIcon={<Search size={14} />}
+        />
+      )}
+      <div style={{
+        display: "flex", flexDirection: "column", gap: 2,
+        /* Collapsed, a row is one icon, so the column centres on the rail's
+           axis instead of leaving every glyph hanging off the left edge with
+           the label's empty space still reserved beside it. */
+        alignItems: collapsed ? "center" : "stretch",
+      }}>
+        {!collapsed && shown.length === 0 && (
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "6px 4px" }}>
+            {`Nothing matches “${query.trim()}”.`}
+          </span>
+        )}
+        {shown.map(c => {
+          const on = c.id === activeId
+          const row = (
+            <MenuItem
+              key={c.id}
+              size="sm"
+              label={collapsed ? "" : c.label}
+              subtext={collapsed ? undefined : `${c.count} records`}
+              state={on ? "focus" : "default"}
+              /* 8px on the selected background. MenuItem is built for a Menu
+                 panel, where a row spans the panel's own radius and squares
+                 off; standing alone in a rail it is a card-shaped target, and
+                 8 is the radius every other card-shaped thing in this product
+                 uses. Collapsed, the row shrinks to its icon so the highlight
+                 does not run the width of an empty label. */
+              className={`rounded-[8px]${collapsed ? " !w-auto !px-[6px]" : " !px-[8px]"}`}
+              leadingIcon={<HighlightIcon size="sm" variant={on ? "informative" : "neutral"} iconName={c.icon} />}
+              onClick={() => onSelect(c.id)}
+            />
+          )
+          /* Collapsed, a row is an icon and nothing else, so it needs the
+             label somewhere — the same rule that makes every icon-only
+             control in this product carry a Tooltip. */
+          return collapsed
+            ? <Tooltip key={c.id} side="cursor" content={`${c.label} · ${c.count} records`}>{row}</Tooltip>
+            : row
+        })}
+      </div>
+    </div>
   )
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function PMThomasUcpContactsScreen() {
+  const toast = useToast()
   const [openId,     setOpenId]     = useState<string | null>(null)
   const [tab,        setTab]        = useState("all")
   const [page,       setPage]       = useState(1)
@@ -351,51 +1136,20 @@ export default function PMThomasUcpContactsScreen() {
   const [anchor,     setAnchor]     = useState<DropdownAnchor | null>(null)
   const dropdown = useDropdownPosition(anchor)
 
-  // ── Which types are tabs ──────────────────────────────────────────────────
-  // Per user, so it survives a reload. In the product this is a user
-  // preference like any other; localStorage is the prototype's stand-in and is
-  // wrapped because a private window throws on read.
-  const [tabIds, setTabIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("ucp.tabIds")
-      const parsed = saved ? (JSON.parse(saved) as string[]) : null
-      // Anything saved that is no longer a type is dropped, so removing a type
-      // from the platform cannot leave a tab pointing at nothing.
-      const valid = parsed?.filter(id => ALL_TYPE_TABS.some(t => t.id === id)) ?? []
-      return valid.length > 0 ? valid : DEFAULT_TAB_IDS
-    } catch { return DEFAULT_TAB_IDS }
-  })
-  const persistTabs = (ids: string[]) => {
-    setTabIds(ids)
-    try { localStorage.setItem("ucp.tabIds", JSON.stringify(ids)) } catch { /* private window */ }
-  }
-  // THE TAB YOU ARE ON IS ALWAYS VISIBLE, even when it is not in the set —
-  // arriving on a record type through search or a link should not hide the tab
-  // you are standing on. It leaves the bar when you leave it.
-  const visibleTabs = useMemo(
-    () => ALL_TYPE_TABS.filter(t => tabIds.includes(t.id) || t.id === tab),
-    [tabIds, tab],
-  )
-  const [typeAnchor, setTypeAnchor] = useState<DropdownAnchor | null>(null)
-  const typeDropdown    = useDropdownPosition(typeAnchor)
-  const typePendingAnchor = useRef<DropdownAnchor | null>(null)
+  /*
+    ── The tab-preference machine is gone ──────────────────────────────────
+    tabIds in localStorage, MAX_VISIBLE_TABS, the `+` picker, its anchor, its
+    checkbox menu, "the last tab stays", "the tab you are on is always
+    visible" — all of it existed to make a HORIZONTAL bar behave when the list
+    of types grows, and the rail is vertical. A list with as many rows as it
+    needs has nothing to cap, nothing to hide and nothing to remember per
+    user, so every one of those guards had nothing left to guard.
 
-  const toggleTab = (id: string) => {
-    const on = tabIds.includes(id)
-    // NEVER ZERO TABS: the last one cannot be turned off. And at the cap,
-    // adding asks you to remove first rather than silently dropping someone
-    // else's choice — HubSpot's mechanic for pinned views.
-    if (on && tabIds.length === 1) return
-    if (!on && tabIds.length >= MAX_VISIBLE_TABS) return
-    const next = on ? tabIds.filter(x => x !== id) : [...tabIds, id]
-    persistTabs(next)
-    // Turning off the tab you are on sends you to the first one that is left,
-    // rather than leaving the list showing a type with no tab.
-    if (on && id === tab) {
-      const fallback = ALL_TYPE_TABS.find(t => next.includes(t.id))
-      if (fallback) { setTab(fallback.id); setApplied({}); resetPage() }
-    }
-  }
+    What replaces the cap is the rail's search, which appears once there are
+    enough categories to be worth searching.
+  */
+  const [railCollapsed, setRailCollapsed] = useState(false)
+  const [railQuery,     setRailQuery]     = useState("")
 
   const [preview,    setPreview]    = useState<UcpContact | null>(null)
   // El anchor y el "abrir" tienen que cambiar en el MISMO commit. useDropdownPosition
@@ -409,16 +1163,18 @@ export default function PMThomasUcpContactsScreen() {
   const [kebab, setKebab] = useState<{ contact: UcpContact; anchor: DropdownAnchor } | null>(null)
   const kebabDropdown = useDropdownPosition(kebab?.anchor ?? null)
   const [archiving,  setArchiving]  = useState<UcpContact | null>(null)
-  const [chatOpen,   setChatOpen]   = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
 
   const activeType = ALL_TYPE_TABS.find(t => t.id === tab)?.type ?? "all"
 
   const facets = useMemo(() => facetsForType(activeType), [activeType])
 
-  /** The tab's rows before any facet is applied — the pool the counts run on. */
+  /** The tab's rows before any facet is applied — the pool the counts run on.
+   *  On All that pool is the CONTACT types, not every record in the fixture —
+   *  see CONTACT_TYPES for why a fleet asset in a contacts list is the repair
+   *  order problem over again. */
   const inType = useMemo(
-    () => CONTACTS.filter(c => activeType === "all" || c.type === activeType),
+    () => CONTACTS.filter(c => activeType === "all" ? CONTACT_TYPES.includes(c.type) : c.type === activeType),
     [activeType],
   )
 
@@ -480,6 +1236,33 @@ export default function PMThomasUcpContactsScreen() {
     setSortKey(key)
     resetPage()
     closeSlot()
+  }
+
+  /* ── The create flow takes over the whole screen ──
+     Not an overlay on top of the roster: the Create pattern hides the Sidebar
+     for a full-page create, and a wizard drawn over a list the user can still
+     see and click is the panel it stopped being. It is checked BEFORE the
+     profile so that a duplicate card's "Open Sandra Torres" leaves the flow
+     and lands on the record, rather than opening it behind the wizard. */
+  if (createOpen) {
+    return (
+      <CreateContactWizard
+        lockedType={activeType === "all" ? null : activeType}
+        onCancel={() => setCreateOpen(false)}
+        onOpenRecord={id => { setCreateOpen(false); setOpenId(id) }}
+        /* Every create ends in a toast — the Create pattern is explicit that a
+           visible landing is not confirmation on its own, because "it appeared
+           in the list" only reads as confirmation to somebody who knows what
+           the list looked like a second ago. The toast says what happened; the
+           roster says where it went. */
+        onCreate={(t, name) => {
+          setCreateOpen(false)
+          toast.success(`${TYPE_LABEL[t]} \u201c${name}\u201d created`, {
+            description: "Its facts start on the Sandbox Plane and are promoted as they are verified.",
+          })
+        }}
+      />
+    )
   }
 
   // ── Profile view takes over the whole screen ──
@@ -638,11 +1421,6 @@ export default function PMThomasUcpContactsScreen() {
             icon:    Plus,
             onClick: () => setCreateOpen(true),
           }}
-          secondaryAction={{
-            label:   "Ask",
-            icon:    Sparkle,
-            onClick: () => setChatOpen(true),
-          }}
         />
       )}
       pagination={
@@ -660,78 +1438,95 @@ export default function PMThomasUcpContactsScreen() {
           : undefined
       }
     >
-      {/* The bar and its `+` share a row. Tabs takes no trailing slot, and it
-          does not need one for this — a Button beside it in the same flex row
-          is the whole composition. If a second screen ever wants the same
-          affordance, THEN it is a prop on Tabs. */}
-      <div className="flex items-end justify-between gap-[12px] mb-[24px]">
-        <Tabs
+      {/*
+        THE TAB BAR AND THE FILTERS BAR ARE BOTH GONE — Michael, 2026-09-11:
+        "no es necesario mantener el componente de filters y tabs, ya que eso
+        lo abordaremos en el Sidebar que va a la izquierda del contenido de
+        lista."
+
+        The tab bar went because it could not grow: horizontal means bounded
+        by the screen, which is why it had sprouted a `+` picker, a cap of six
+        and a per-user preference in localStorage — three mechanisms to hide
+        the fact that the shape does not scale. A vertical rail has as many
+        rows as it needs and a search instead of a cap.
+
+        WHAT LEFT WITH THE FILTERS BAR, stated plainly because it is a real
+        subtraction and not a tidy-up: the record search, the per-type facet
+        slots (Status, Owner), All filters and sort. The rail replaces the
+        CATEGORY half of that and nothing else. Michael's own words are that
+        filtering will be addressed in the rail — future tense — so this is
+        the intermediate state, not the finished one. Everything removed is
+        one component call site to restore, and the state behind it (applied,
+        sortKey, openSlot, the FiltersSlideout) is still wired.
+      */}
+      <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+        <EntityCategoryRail
+          categories={ALL_TYPE_TABS.map(t => ({
+            id:    t.id,
+            label: t.label,
+            icon:  t.type === "all" ? "LayoutGrid" : TYPE_ICON[t.type],
+            count: t.type === "all"
+              ? CONTACTS.filter(c => CONTACT_TYPES.includes(c.type)).length
+              : CONTACTS.filter(c => c.type === t.type).length,
+          }))}
           activeId={tab}
-          onChange={id => {
-            // Facets are published per type, so carrying them across a tab change
-            // would keep a filter the new tab cannot answer. They clear — and the
-            // screen says so, because a list that silently resets reads as broken
-            // rather than reset.
+          onSelect={id => {
+            /* Facets are published per type, so carrying them across a change
+               would keep a filter the new category cannot answer. */
             const had = Object.values(applied).filter(Boolean).length
             setTab(id)
             setApplied({})
             setClearedOn(had > 0 ? (ALL_TYPE_TABS.find(t => t.id === id)?.label ?? null) : null)
             resetPage()
           }}
-          items={visibleTabs.map(t => ({ id: t.id, label: t.label }))}
+          collapsed={railCollapsed}
+          onCollapsedChange={setRailCollapsed}
+          query={railQuery}
+          onQueryChange={setRailQuery}
         />
-        <div onClickCapture={e => { typePendingAnchor.current = anchorFromEvent(e) }}>
-          {/* `side="cursor"` because this trigger sits at the right edge of the
-              content column: `side="top"` centres the bubble on the trigger and
-              a 274px bubble on a trigger 44px from the edge loses half of
-              itself off-screen (measured). Cursor mode portals it and picks the
-              side that fits, which is what the component documents it for.
 
-              The copy carries the count as well as the verb — the tooltip is
-              the only place that says how many types exist, which is the thing
-              a user cannot see from a bar showing five of them. */}
-          <Tooltip
-            side="cursor"
-            content={`Choose which entity types show as tabs — ${tabIds.length} of ${ALL_TYPE_TABS.length} showing`}
-          >
-            <Button
-              variant="tertiary" size="sm" iconPosition="alone"
-              icon={<Plus size={16} strokeWidth={1.75} />}
-              aria-label="Choose which entity types show as tabs"
-              onClick={() => { if (typePendingAnchor.current) setTypeAnchor(typePendingAnchor.current) }}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/*
+            THE FILTERS BAR IS BACK, ABOVE THE LIST — Michael, 2026-09-11.
+
+            Taking it out with the tabs was the wrong half. The rail answers
+            "which KIND of record", which is a navigation question and belongs
+            on the left; search and the facets answer "which of THESE", which
+            is a question about the list you are looking at and belongs over
+            it. Removing both left the roster with no way to find a person by
+            name, which is the single most common thing anybody does here.
+
+            It sits inside the right column rather than above both, so it
+            spans the list it filters and not the rail it does not.
+          */}
+          <div className="mb-[24px]" onClickCapture={e => setAnchor(anchorFromEvent(e))}>
+            <Filters
+              showSearch
+              searchPlaceholder="Search by name, company, owner or ID…"
+              searchValue={search}
+              onSearchChange={v => { setSearch(v); resetPage() }}
+              /* Which facets are visible is the TYPE's call, not the screen's —
+                 an asset has no Owner in the sense a customer does. The rest
+                 live behind All filters. */
+              slots={facets.filter(f => f.inline).map(f => ({
+                placeholder: f.label,
+                value: applied[f.id],
+                onOpen: () => setOpenSlot(f.id),
+                onRemove: () => {
+                  setApplied(a => { const n = { ...a }; delete n[f.id]; return n })
+                  resetPage()
+                },
+              }))}
+              showAllFilters
+              onAllFiltersClick={() => setSlideOpen(true)}
+              showClearFilters={hasFilters}
+              onClearFilters={clearAll}
+              showSort
+              sortLabel={SORT_OPTIONS.find(o => o.key === sortKey)?.label}
+              onSortClick={() => setOpenSlot("sort")}
+              showViewToggle={false}
             />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="mb-[24px]" onClickCapture={e => setAnchor(anchorFromEvent(e))}>
-        <Filters
-          showSearch
-          searchPlaceholder="Search by name, company, owner or ID…"
-          searchValue={search}
-          onSearchChange={v => { setSearch(v); resetPage() }}
-          // Which facets are visible is the type's call, not the screen's. The
-          // rest live behind All filters, exactly the layering FILTERS_SPEC
-          // describes — visible is for high frequency, not for importance.
-          slots={facets.filter(f => f.inline).map(f => ({
-            placeholder: f.label,
-            value: applied[f.id],
-            onOpen: () => setOpenSlot(f.id),
-            onRemove: () => {
-              setApplied(a => { const n = { ...a }; delete n[f.id]; return n })
-              resetPage()
-            },
-          }))}
-          showAllFilters
-          onAllFiltersClick={() => setSlideOpen(true)}
-          showClearFilters={hasFilters}
-          onClearFilters={clearAll}
-          showSort
-          sortLabel={SORT_OPTIONS.find(o => o.key === sortKey)?.label}
-          onSortClick={() => setOpenSlot("sort")}
-          showViewToggle={false}
-        />
-      </div>
+          </div>
 
       {clearedOn && (
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--field-supporting)" }}>
@@ -763,46 +1558,6 @@ export default function PMThomasUcpContactsScreen() {
             </div>
           ))}
         </div>
-      )}
-
-      {/*
-        The type picker. One checkbox list that both adds and removes, which is
-        why there is no `···` per tab: two affordances for one job is how a
-        tab bar ends up with a hidden second way to do the same thing.
-
-        No search field: at seven types it would be furniture. Past ~10 it
-        stops being optional — that is the threshold, not a preference.
-      */}
-      {typeAnchor && (
-        <>
-          <div className="fixed inset-0 z-[10000]" onClick={() => setTypeAnchor(null)} />
-          <div ref={typeDropdown.ref} style={{ position: "fixed", zIndex: 10001, ...typeDropdown.style }}>
-            <Menu>
-              {ALL_TYPE_TABS.map(t => {
-                const on      = tabIds.includes(t.id)
-                const atCap   = !on && tabIds.length >= MAX_VISIBLE_TABS
-                const isLast  = on && tabIds.length === 1
-                const count   = t.type === "all" ? CONTACTS.length : CONTACTS.filter(c => c.type === t.type).length
-                return (
-                  <MenuItem
-                    key={t.id}
-                    size="sm"
-                    label={t.label}
-                    subtext={
-                      atCap  ? `${count} records · remove one to add this`
-                      : isLast ? `${count} records · the last tab stays`
-                      : `${count} records`
-                    }
-                    state={atCap || isLast ? "disabled" : "default"}
-                    checkbox={<Checkbox size="sm" checked={on} onChange={() => toggleTab(t.id)} />}
-                    leadingIcon={<HighlightIcon size="sm" variant="neutral" iconName={t.type === "all" ? "LayoutGrid" : TYPE_ICON[t.type]} />}
-                    onClick={() => toggleTab(t.id)}
-                  />
-                )
-              })}
-            </Menu>
-          </div>
-        </>
       )}
 
       {/* ── Filter slot dropdowns ── */}
@@ -853,6 +1608,9 @@ export default function PMThomasUcpContactsScreen() {
       )}
 
       {/* ── All filters ── */}
+        </div>
+      </div>
+
       <FiltersSlideout
         isOpen={slideOpen}
         onClose={() => setSlideOpen(false)}
@@ -970,14 +1728,7 @@ export default function PMThomasUcpContactsScreen() {
         ctaSecondary={{ label: "Cancel", onClick: () => setArchiving(null) }}
       />
 
-      <CreatePanel
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        lockedType={activeType === "all" ? null : activeType}
-        onCreate={() => setCreateOpen(false)}
-      />
 
-      <RosterConcierge open={chatOpen} onClose={() => setChatOpen(false)} total={CONTACTS.length} />
     </ScreenLayout>
   )
 }

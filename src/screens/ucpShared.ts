@@ -61,11 +61,38 @@ export interface UcpNextBestAction {
  */
 export type UcpEntityType =
   | "person" | "employee" | "company"
-  | "repair-order" | "policy" | "asset"
+  | "policy" | "asset"
 
 /** Types whose records are PEOPLE. Connections, coworkers and initials only
  *  make sense for these — a repair order has no colleagues and no initials. */
 export const PEOPLE_TYPES: UcpEntityType[] = ["person", "employee"]
+
+/**
+ * ── What "All" means in a Contacts roster ──────────────────────────────────
+ *
+ * The three types this module is ABOUT. Michael, 2026-09-11, pointing at
+ * AST-2290 sitting in the All tab: a service loaner whose next best action
+ * reads "Book the overdue 40,000 km service".
+ *
+ * That is the Repair Orders problem again, wearing a different type. He had
+ * already taken repair orders out for the same reason — "no hace sentido" in
+ * Contacts — and the asset came back carrying repair-order CONTENT. A truck
+ * with an overdue service is not something anybody scanning a contacts list
+ * is looking for, and one row like it teaches the reader that this list is
+ * "records" rather than "people and the organisations they belong to", which
+ * is the whole premise of the module.
+ *
+ * POLICIES GO WITH IT, and he did not have to say so: a policy is not
+ * somebody you contact either. It was in All for the same reason the asset
+ * was — because All meant "every row in CONTACTS" rather than "every contact".
+ *
+ * WHAT THIS IS NOT: the types are not deleted, and their tabs still work. A
+ * reader who deliberately opens Assets is asking for assets and gets them,
+ * repair-order next-best-actions included, because there that is the record's
+ * own business. The change is only that All stops mixing them in — "all" is
+ * scoped to the noun in the page title, not to the fixture array.
+ */
+export const CONTACT_TYPES: UcpEntityType[] = ["person", "employee", "company"]
 
 /** An avatar needs a face or a brand. Everything else is an icon, and a
  *  record titled with a code — RO-48291 — can only ever be an icon: there are
@@ -177,7 +204,6 @@ export const TYPE_LABEL: Record<UcpEntityType, string> = {
   person:         "Customer",
   employee:       "Employee",
   company:        "Company",
-  "repair-order": "Repair order",
   policy:         "Policy",
   asset:          "Asset",
 }
@@ -188,7 +214,6 @@ export const TYPE_PLURAL: Record<UcpEntityType, string> = {
   person:         "Customers",
   employee:       "Employees",
   company:        "Companies",
-  "repair-order": "Repair orders",
   policy:         "Policies",
   asset:          "Assets",
 }
@@ -197,7 +222,6 @@ export const TYPE_ICON: Record<UcpEntityType, string> = {
   person:         "UserRound",
   employee:       "IdCard",
   company:        "Building2",
-  "repair-order": "Wrench",
   policy:         "FileCheck2",
   asset:          "Truck",
 }
@@ -206,7 +230,6 @@ export const TYPE_TAG: Record<UcpEntityType, "informative" | "purple" | "lightBl
   person:         "informative",
   employee:       "purple",
   company:        "lightBlue",
-  "repair-order": "informative",
   policy:         "purple",
   asset:          "lightBlue",
 }
@@ -368,6 +391,37 @@ export const PLANE_META: Record<KnowledgePlane, {
 
 export const PLANE_ORDER: KnowledgePlane[] = ["truth", "sandbox", "sources"]
 
+/**
+ * ── The Governance vocabulary ──────────────────────────────────────────────
+ *
+ * Read off the real Governance views on 2026-09-10 (Fuentes/Drive, Plano de
+ * verdad, Sandbox), not invented for this prototype. Michael's instruction was
+ * to take the FILTER INFORMATION and leave their UI alone, so these are the
+ * option sets, translated to the language this screen is in:
+ *
+ *   Drives       Modificar → All · Today · Yesterday · Last 7 days ·
+ *                Last 30 days · Older     +  Todos los departamentos
+ *   Truth Plane  Estado → Verified · Pending review · Due to expire
+ *                Nivel de riesgo → Low · Medium · High
+ *                Atención requerida → Due to expire · Needs review ·
+ *                Has proposals
+ *   Sandbox      Todos los estados → Active · Archived
+ *                Todos los ámbitos → Private · Shared · Workspace ·
+ *                Department · System
+ *
+ * ONE DIFFERENCE WORTH KNOWING: in Governance these filter a list of PLANES —
+ * "BK Ramos 08-07-26 · Hechos: 6 · Propuestas: 244 · Riesgo bajo". Here the
+ * shelves list the facts and claims of ONE record, so the same vocabulary is
+ * applied one level down, to the items themselves. The words are theirs; the
+ * scope is this record's.
+ */
+export const DRIVE_MODIFIED_OPTIONS = ["Today", "Yesterday", "Last 7 days", "Last 30 days", "Older"]
+export const TRUTH_STATUSES         = ["Verified", "Pending review", "Due to expire"]
+export const RISK_LEVELS            = ["Low", "Medium", "High"]
+export const ATTENTION_FLAGS        = ["Due to expire", "Needs review", "Has proposals"]
+export const SANDBOX_STATES         = ["Active", "Archived"]
+export const SANDBOX_SCOPES         = ["Private", "Shared", "Workspace", "Department", "System"]
+
 export interface UcpFact {
   id:         string
   label:      string
@@ -375,18 +429,109 @@ export interface UcpFact {
   plane:      KnowledgePlane
   source:     string
   verifiedAt: string
+  /** Governance's own three axes, filled by `getFacts` — see `governFact`. */
+  status:     string
+  risk:       string
+  attention:  string[]
+  /** Sandbox's two: what state the claim is in and how far it reaches. */
+  state:      string
+  scope:      string
 }
 
 // ── Activity ──────────────────────────────────────────────────────────────────
 
-export type ActivityChannel = "call" | "email" | "meeting" | "agent" | "system"
+/**
+ * ── What an Activity row can be ────────────────────────────────────────────
+ *
+ * Michael's taxonomy, 2026-09-10:
+ *
+ *   Communications   email, SMS, calls — and meetings, see below
+ *   Notes            what somebody wrote down
+ *   Events           workflows that fired
+ *   Tasks            work to do, tied to the next best action
+ *
+ * The channel is the LEAF; `CHANNEL_GROUP` says which of the four it belongs
+ * to. Two levels rather than one flat list because a flat row of seven chips
+ * plus "All" is a filter nobody reads — the four groups are the chips, and
+ * the communication kinds are a dropdown that only appears while
+ * Communications is the selected group.
+ *
+ * MEETINGS ARE A COMMUNICATION, and they are the one kind Michael's list did
+ * not name. The fixtures carry a QBR and a security working session: a
+ * meeting is not a workflow that fired and it is not a note, so filing it
+ * under Events would have been false and deleting it would have been worse.
+ * It joins email, SMS and calls rather than displacing any of them.
+ */
+export type ActivityChannel =
+  | "call" | "email" | "sms" | "meeting"
+  | "note" | "event" | "task"
+
+export type ActivityGroup = "communication" | "note" | "event" | "task"
+
+export const ACTIVITY_GROUPS: { id: ActivityGroup; label: string }[] = [
+  { id: "communication", label: "Communications" },
+  { id: "note",          label: "Notes"          },
+  { id: "event",         label: "Events"         },
+  { id: "task",          label: "Tasks"          },
+]
+
+export const CHANNEL_GROUP: Record<ActivityChannel, ActivityGroup> = {
+  call: "communication", email: "communication", sms: "communication", meeting: "communication",
+  note: "note", event: "event", task: "task",
+}
 
 export const CHANNEL_META: Record<ActivityChannel, { label: string; icon: string }> = {
-  call:    { label: "Calls",    icon: "Phone"    },
-  email:   { label: "Email",    icon: "Mail"     },
-  meeting: { label: "Meetings", icon: "Users"    },
-  agent:   { label: "Agent",    icon: "Bot"      },
-  system:  { label: "System",   icon: "Settings" },
+  call:    { label: "Calls",    icon: "Phone"        },
+  email:   { label: "Email",    icon: "Mail"         },
+  sms:     { label: "SMS",      icon: "MessageSquare"},
+  meeting: { label: "Meetings", icon: "Users"        },
+  note:    { label: "Notes",    icon: "StickyNote"   },
+  event:   { label: "Events",   icon: "Zap"          },
+  task:    { label: "Tasks",    icon: "ListChecks"   },
+}
+
+/** The communication kinds, for the dropdown that refines that group. */
+export const COMMUNICATION_CHANNELS: ActivityChannel[] =
+  (Object.keys(CHANNEL_GROUP) as ActivityChannel[]).filter(ch => CHANNEL_GROUP[ch] === "communication")
+
+/**
+ * ── A note, in full ────────────────────────────────────────────────────────
+ *
+ * An activity row can only ever show a note's FIRST line — it is one row in a
+ * feed of thirteen. The note itself is what somebody actually wrote, and the
+ * reason it matters on this record is what the note DID: the claims it put
+ * into the Sandbox plane, waiting for a source to corroborate them.
+ *
+ * So the preview carries three things the row cannot:
+ *
+ *   · the body, as written, paragraph by paragraph
+ *   · what it produced — claims, each with the Governance status it now has
+ *   · where it came from and who can see it, in Governance's own words
+ *
+ * `scope` is deliberately from SANDBOX_SCOPES rather than a scale of this
+ * panel's own invention. A note is a Sandbox artefact: whoever reads
+ * "Department" here has read the same word on the Sandbox shelf's Scope
+ * filter, and it means the same thing in both places.
+ */
+export interface UcpNote {
+  /** Paragraphs, in order. Rendered as written — never summarised in place. */
+  body:       string[]
+  author:     string
+  authorRole: string
+  createdAt:  string
+  /** Absent when the note has never been edited, which is the common case —
+   *  an "Edited" row that says "never" is a row saying nothing. */
+  editedAt?:  string
+  /** Where it was written: a call wrap-up, a meeting, the record itself. */
+  writtenIn:  string
+  /** One of SANDBOX_SCOPES. Who can see this note. */
+  scope:      string
+  /** Claims this note put into the Sandbox plane, with the status each one
+   *  now carries — the same three words the Truth shelf filters on. */
+  claims:     { label: string; status: string }[]
+  /** Records the note names and is linked to. */
+  linked:     { title: string; kind: string; icon: string }[]
+  attachments: { name: string; meta: string }[]
 }
 
 export interface UcpActivity {
@@ -398,6 +543,118 @@ export interface UcpActivity {
   state:     { label: string; variant: TagVariantLite }
   /** Written by the record's assigned agent — rendered as EntityList's aiInsight. */
   aiSummary?: string
+  /**
+   * ── The fields Thom's voice-channel rows carry ───────────────────────────
+   *
+   * Michael, 2026-09-11: apply the CONTENT of that prototype's items to this
+   * list — the components and the layout stay exactly as they are.
+   *
+   * Read off src/screens/voice-channel/ucp-data.ts rather than the deployed
+   * page, since it is the same repo. Three things its rows have and ours did
+   * not, and each one answers a question ours left open:
+   *
+   *   metaChips  "4:12 · Sammy · 2 tools used" — what it cost and who or what
+   *              handled it. Ours said a call happened and never said whether
+   *              an agent or a person took it.
+   *   smsBody    the message, verbatim. An SMS is short enough to read in
+   *              full, and a row that summarises two sentences has summarised
+   *              nothing.
+   *   sentiment  how it went, on calls only. Distinct from the badge, which
+   *              is what HAPPENED — a call can be Resolved and still tense.
+   *
+   * They land in slots EntityList already publishes: `secondaryMeta`,
+   * `description` and `tags`. No new component, no new prop.
+   */
+  metaChips?: string[]
+  /** Verbatim, for SMS. Rendered through EntityList's own `description`. */
+  smsBody?:   string
+  sentiment?: "positive" | "neutral" | "negative"
+  /** Only on note rows, and only when there is a note to open. The Eye is
+   *  rendered off THIS, not off the channel: CLAUDE.md's rule is that a
+   *  preview button with nothing behind it is worse than no button. */
+  note?:     UcpNote
+}
+
+/**
+ * ── Elapsed time, for the Activity list ────────────────────────────────────
+ *
+ * The fixtures carry timestamps in three shapes, because that is what a real
+ * feed looks like: relative for anything recent ("30m ago", "3d ago"), the
+ * word Today for the same day at a known hour ("Today, 08:12"), and an
+ * absolute date once it stops being recent ("Aug 18, 2026 · 07:55"). One
+ * parser reads all three so the grouping cannot disagree with the label the
+ * row itself shows.
+ *
+ * `now` is injected rather than read from the clock inside these functions —
+ * a list that regroups itself mid-render because a minute ticked over is a
+ * bug, and a caller that memoises on `now` gets a stable list.
+ */
+export function parseActivityAt(timestamp: string, now: Date): Date | null {
+  const rel = timestamp.match(/^(\d+)\s*([mhd])\s+ago$/i)
+  if (rel) {
+    const n = Number(rel[1])
+    const ms = rel[2].toLowerCase() === "m" ? 60_000 : rel[2].toLowerCase() === "h" ? 3_600_000 : 86_400_000
+    return new Date(now.getTime() - n * ms)
+  }
+  const today = timestamp.match(/^Today,\s*(\d{1,2}):(\d{2})/i)
+  if (today) {
+    const d = new Date(now)
+    d.setHours(Number(today[1]), Number(today[2]), 0, 0)
+    return d
+  }
+  // "Aug 18, 2026 · 07:55" — the date half is what matters for grouping.
+  const parsed = new Date(timestamp.split("·")[0].trim())
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/** Whole days between two instants, by calendar day rather than by 24h blocks:
+ *  something logged at 23:00 yesterday is YESTERDAY at 08:00 today, not today. */
+function daysBetween(then: Date, now: Date): number {
+  const a = new Date(then.getFullYear(), then.getMonth(), then.getDate()).getTime()
+  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  return Math.round((b - a) / 86_400_000)
+}
+
+/**
+ * The separator label for a row's age — ALL CAPS, because that is what the
+ * DS's own date-group label is (Notification Center: "TODAY / YESTERDAY /
+ * EARLIER", Caption S Bold) and because Caption S Bold is documented as
+ * all-caps only.
+ *
+ * The ladder is deliberately coarse at the far end: past a couple of months
+ * nobody is counting weeks, and a separator per month would out-number the
+ * rows it separates.
+ */
+export function elapsedGroupLabel(at: Date | null, now: Date): string {
+  if (!at) return "UNDATED"
+  const days = daysBetween(at, now)
+  if (days <= 0)   return "TODAY"
+  if (days === 1)  return "YESTERDAY"
+  if (days < 7)    return "EARLIER THIS WEEK"
+  if (days < 14)   return "A WEEK AGO"
+  if (days < 30)   return `${Math.floor(days / 7)} WEEKS AGO`
+  if (days < 60)   return "A MONTH AGO"
+  if (days < 365)  return `${Math.round(days / 30)} MONTHS AGO`
+  if (days < 730)  return "A YEAR AGO"
+  return `${Math.floor(days / 365)} YEARS AGO`
+}
+
+/** The options the Activity period filter offers, and what each one means.
+ *  Kept together so the label a user picks and the window it applies are one
+ *  fact rather than two that can drift. */
+export const ACTIVITY_PERIODS: { label: string; days: number }[] = [
+  { label: "Today",        days: 0   },
+  { label: "Last 7 days",  days: 7   },
+  { label: "Last 30 days", days: 30  },
+  { label: "Last 90 days", days: 90  },
+]
+
+export function withinPeriod(at: Date | null, periodLabel: string | undefined, now: Date): boolean {
+  if (!periodLabel) return true
+  const period = ACTIVITY_PERIODS.find(p => p.label === periodLabel)
+  if (!period) return true
+  if (!at) return false
+  return daysBetween(at, now) <= period.days
 }
 
 // ── Source Drives ─────────────────────────────────────────────────────────────
@@ -405,6 +662,8 @@ export interface UcpActivity {
 export interface UcpDrive {
   id:       string
   name:     string
+  /** Governance's "Todos los departamentos" filter runs on this. */
+  department: string
   kind:     "Drive" | "Folder" | "Document"
   provider: string
   items:    string
@@ -468,7 +727,7 @@ export const CONTACTS: UcpContact[] = [
         confidence: 82,
       },
       {
-        id: "read-2", category: "Governance", destination: "Snapshot",
+        id: "read-2", category: "Governance", destination: "Knowledge",
         headline: "The integration is the common thread in all three escalations.",
         detail: "Every escalation since July routes through the same integration, and the DPA on file predates it. Governance has one open review; closing it removes the blocker the renewal call would otherwise inherit.",
         confidence: 74,
@@ -497,7 +756,7 @@ export const CONTACTS: UcpContact[] = [
     nba: null,
     insights: [
       {
-        id: "read-1", category: "Deal", destination: "Drives",
+        id: "read-1", category: "Deal", destination: "Knowledge",
         headline: "Technical evaluator, not the economic buyer.",
         detail: "Sarah has driven every compliance question on the Meridian expansion and cleared the data-residency review herself. She has never discussed price. Route commercial terms to Sandra Torres and keep Sarah on audit evidence.",
         confidence: 76,
@@ -576,10 +835,13 @@ export const CONTACTS: UcpContact[] = [
     email: "sandra.torres@meridian.com", phone: "+1 (212) 555-0155", company: "Meridian Corp",
     owner: "Priya Nair", status: "Active", lastInteraction: "Sep 2, 2026",
     source: { label: "Salesforce", iconName: "Cloud" },
-    tags: [
-      { label: "Awaiting us", role: "signal", tone: "error", severity: 4, tooltip: "Migration timeline asked twice · still unanswered since Aug 18" },
-      { label: "Buyer",       role: "classification" },
-    ],
+    /* TWO TAGS CAME OFF HERE on 2026-09-11, both duplicates rather than
+       decoration. "Awaiting us" is a SIGNAL, and signals are a block in
+       Intelligence with a duration and an evidence link — the header pill said
+       the same word with neither. "Buyer" is a decision role, and the Profile
+       block now names it properly as "Economic Buyer"; two taxonomies for one
+       fact is how a reader ends up unsure which is authoritative. */
+    tags: [],
     meta: [
       { iconName: "ShieldCheck", label: "10 facts",  tooltip: "Verified facts · 5 on the Truth plane, 5 across Sandbox and Sources." },
       { iconName: "Inbox",       label: "1 open",    tooltip: "Open items · migration timeline request, unanswered for 15 days." },
@@ -601,7 +863,7 @@ export const CONTACTS: UcpContact[] = [
         confidence: 84,
       },
       {
-        id: "read-2", category: "Governance", destination: "Snapshot",
+        id: "read-2", category: "Governance", destination: "Knowledge",
         headline: "Her budget authority is recorded, not inferred.",
         detail: "The Truth plane carries her as the approver on the Meridian expansion, sourced from the countersigned contract. Nothing needs to be verified before treating her as the decision point.",
         confidence: 88,
@@ -667,7 +929,7 @@ export const CONTACTS: UcpContact[] = [
     nba: null,
     insights: [
       {
-        id: "read-1", category: "Deal", destination: "Snapshot",
+        id: "read-1", category: "Deal", destination: "Knowledge",
         headline: "Technical gatekeeper, currently unblocked.",
         detail: "David signed off on the SSO and data-residency reviews in July. No open questions since. He is the right contact if the migration timeline turns into an implementation plan.",
         confidence: 71,
@@ -762,7 +1024,7 @@ export const CONTACTS: UcpContact[] = [
     nba: null,
     insights: [
       {
-        id: "read-1", category: "Governance", destination: "Snapshot",
+        id: "read-1", category: "Governance", destination: "Knowledge",
         headline: "Superseded as the finance contact.",
         detail: "Amy approved the original Meridian contract in 2024. Finance approvals have routed through Sandra Torres since April. Keep the record for contract history.",
         confidence: 69,
@@ -794,7 +1056,7 @@ export const CONTACTS: UcpContact[] = [
     },
     insights: [
       {
-        id: "read-1", category: "Governance", destination: "Drives",
+        id: "read-1", category: "Governance", destination: "Knowledge",
         headline: "Mid-review, on schedule.",
         detail: "Four of six security checks have cleared. The two open items are network segmentation evidence and the sub-processor list, both assigned to Halden's side.",
         confidence: 74,
@@ -918,7 +1180,7 @@ export const CONTACTS: UcpContact[] = [
         confidence: 79,
       },
       {
-        id: "read-2", category: "Governance", destination: "Drives",
+        id: "read-2", category: "Governance", destination: "Knowledge",
         headline: "Four stores, one master agreement.",
         detail: "The group signs centrally, so a service commitment made for Tampa North applies to all four. The agreement in Drives is the one that governs the backlog conversation.",
         confidence: 71,
@@ -973,64 +1235,6 @@ export const CONTACTS: UcpContact[] = [
   // Everything the screen assumed about contacts shows up here as a bug or as
   // a slot that goes empty, which is the point of having them.
   {
-    id: "RO-48291", type: "repair-order", name: "RO-48291",
-    subtitle: "Transmission diagnostic · Tampa North · 9 days open",
-    email: "service@riverbendauto.com", phone: "+1 (813) 555-0190", company: "Riverbend Auto Group",
-    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 3, 2026",
-    stateBadge: { label: "Overdue", variant: "error" },
-    source: { label: "CDK Global", iconName: "Car" },
-    tags: [
-      { label: "9d overdue", role: "signal", tone: "error", severity: 4, tooltip: "Promised Aug 25, still open — the oldest order in the Tampa North queue" },
-    ],
-    meta: [
-      { iconName: "ShieldCheck", label: "6 facts",     tooltip: "Verified facts · 4 on the Truth plane, 2 across Sandbox and Sources." },
-      { iconName: "Store",       label: "Tampa North", tooltip: "Store · Tampa North, the location carrying 26 of the 41 late orders." },
-      { iconName: "Wrench",      label: "Bay 4",       tooltip: "Bay · 4, allocated since Aug 25 and not released." },
-      { iconName: "Bot",         label: "Tier 2",      tooltip: "Assigned agent · Service Concierge, tier 2." },
-    ],
-    agent: { id: "AGT-09", name: "Service Concierge" },
-    nba: {
-      title: "Release bay 4 or reassign the order to Brandon",
-      timestamp: "2h ago",
-      rationale: "The part arrived Aug 29 and the bay has been allocated without work logged since. Brandon has capacity today.",
-    },
-    insights: [
-      {
-        id: "read-1", category: "Service", destination: "Workflows",
-        headline: "Waiting on a bay, not on a part.",
-        detail: "The transmission arrived Aug 29 and nothing has been logged against this order since. Bay 4 is allocated to it, so the order and the bay are both idle — which is why this one order shows up in two different backlog counts.",
-        confidence: 81,
-      },
-    ],
-    governance: "empty", risk: "loaded", connections: "empty",
-  },
-  {
-    id: "RO-48307", type: "repair-order", name: "RO-48307",
-    subtitle: "Brake recall service · Brandon · 2 days open",
-    email: "service@riverbendauto.com", phone: "+1 (813) 555-0190", company: "Riverbend Auto Group",
-    owner: "Daniel Ruiz", status: "Active", lastInteraction: "Sep 5, 2026",
-    source: { label: "CDK Global", iconName: "Car" },
-    tags: [
-      { label: "Recall", role: "classification" },
-    ],
-    meta: [
-      { iconName: "ShieldCheck", label: "5 facts",  tooltip: "Verified facts · 4 on the Truth plane, 1 on Sources." },
-      { iconName: "Store",       label: "Brandon",  tooltip: "Store · Brandon, running at 60% bay capacity." },
-      { iconName: "Bot",         label: "Tier 2",   tooltip: "Assigned agent · Service Concierge, tier 2." },
-    ],
-    agent: { id: "AGT-09", name: "Service Concierge" },
-    nba: null,
-    insights: [
-      {
-        id: "read-1", category: "Service",
-        headline: "On schedule, and covered by the recall campaign.",
-        detail: "Parts are on site and the labour is billable to the manufacturer campaign rather than the customer. Nothing here needs a decision before the promised date.",
-        confidence: 88,
-      },
-    ],
-    governance: "loaded", risk: "empty", connections: "empty",
-  },
-  {
     id: "POL-0114", type: "policy", name: "Data retention — customer records",
     subtitle: "Tenant-wide · Reviewed quarterly · Effective Jan 2026",
     email: "governance@acme.com", phone: "—", company: "Acme Corp",
@@ -1055,7 +1259,7 @@ export const CONTACTS: UcpContact[] = [
     },
     insights: [
       {
-        id: "read-1", category: "Governance", destination: "Drives",
+        id: "read-1", category: "Governance", destination: "Knowledge",
         headline: "Applies to every studio, evidenced in one.",
         detail: "The policy is tenant-wide but the only attached evidence comes from the Data studio. The other three have nothing on file, which is what made the last two reviews run late.",
         confidence: 76,
@@ -1155,69 +1359,216 @@ export const CONTACTS: UcpContact[] = [
 const COMPANY_SIZE = (c: UcpContact) => c.subtitle.split(" · ")[1] ?? "—"
 const FIRST_FIELD  = (c: UcpContact) => c.subtitle.split(" · ")[0] ?? "—"
 
+/**
+ * Governance's three axes, applied to one fact.
+ *
+ * DERIVED, and only from things the fact already says about itself — its plane
+ * and when it was last verified. That is the honest version: a Truth fact
+ * verified last month is verified; one that has gone stale is due to expire;
+ * a Sandbox claim has not been reviewed yet. Nothing here is a number somebody
+ * made up to fill a filter.
+ *
+ * The staleness window is 60 days, which is the same order as the Risk study's
+ * own "older than 90 days" freshness rule on this record.
+ *
+ * WHY THE FIXTURE DATES ARE SPREAD ACROSS FOUR MONTHS, and why they must stay
+ * that way (2026-09-10). They were all clustered inside one fortnight, which
+ * meant nothing was ever stale — so every Truth fact rendered Verified / Low
+ * risk and every Sandbox claim Pending review / Medium, and the three
+ * Governance filters the Knowledge tab offers each had exactly one value to
+ * offer. A filter that cannot change what you see is worse than no filter: it
+ * says the axis exists and then proves it does not.
+ *
+ * The dates are not decoration either. Each one is a fact that plausibly goes
+ * stale: a phone number read off an email signature in June, because nobody
+ * re-reads a signature; a title from a CRM sync that has not run since May; a
+ * priority stated on one call and never corroborated. Do not normalise them.
+ */
+/** The record's "now". Exported so the preview panel measures attestation
+ *  age against the same clock governFact() uses — two clocks is how a fact
+ *  reads "Due to expire" in a list and "inside the window" in its own panel. */
+export const KNOWLEDGE_NOW = new Date("2026-09-10")
+
+function governFact(f: Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">): UcpFact {
+  const verified = new Date(f.verifiedAt)
+  const days = Number.isNaN(verified.getTime())
+    ? 0
+    : Math.round((KNOWLEDGE_NOW.getTime() - verified.getTime()) / 86_400_000)
+  const stale = days > 60
+
+  const status = f.plane === "truth" ? (stale ? "Due to expire" : "Verified")
+    : f.plane === "sandbox" ? "Pending review"
+    : "Verified"
+
+  const risk = f.plane === "truth" ? (stale ? "Medium" : "Low")
+    : f.plane === "sandbox" ? (stale ? "High" : "Medium")
+    : "Low"
+
+  const attention = [
+    ...(stale ? ["Due to expire"] : []),
+    ...(f.plane === "sandbox" ? ["Needs review"] : []),
+    // A claim whose source is a document has something to promote FROM, which
+    // is what a proposal is in Governance's sense.
+    ...(f.source.startsWith("Shared Drive") || f.source.includes("Studio") ? ["Has proposals"] : []),
+  ]
+
+  return {
+    ...f,
+    status, risk, attention,
+    state: "Active",
+    // Where the claim reaches. A fact sourced from a shared drive or a studio
+    // is workspace-wide; anything read off this record's own traffic is
+    // private to it.
+    scope: f.source.startsWith("Shared Drive") || f.source.includes("Studio") ? "Workspace"
+      : f.source.includes("CRM") || f.source.includes("Workday") || f.source.includes("Billing") ? "Department"
+      : "Private",
+  }
+}
+
 export function getFacts(c: UcpContact): UcpFact[] {
   if (c.type === "company") {
-    return [
+    return ([
       { id: "f1", label: "Legal entity",        value: `${c.name}, Inc.`,           plane: "truth",   source: "Contract · countersigned",            verifiedAt: "Aug 4, 2026"  },
       { id: "f2", label: "Industry",            value: FIRST_FIELD(c),              plane: "truth",   source: "Account record · CRM sync",           verifiedAt: "Aug 4, 2026"  },
       { id: "f3", label: "Headcount",           value: COMPANY_SIZE(c),             plane: "truth",   source: "Account record · CRM sync",           verifiedAt: "Aug 4, 2026"  },
       { id: "f4", label: "Account owner",       value: c.owner,                     plane: "truth",   source: "Territory assignment",                verifiedAt: "Jul 1, 2026"  },
       { id: "f5", label: "Billing contact",     value: c.email,                     plane: "truth",   source: "Billing system",                      verifiedAt: "Aug 4, 2026"  },
-      { id: "f6", label: "Budget cycle",        value: "Calendar year, locked in Q4", plane: "sandbox", source: "Call notes — Aug 22",               verifiedAt: "Aug 22, 2026" },
+      { id: "f6", label: "Budget cycle",        value: "Calendar year, locked in Q4", plane: "sandbox", source: "Governance Studio · draft claim",   verifiedAt: "Aug 22, 2026" },
       { id: "f7", label: "Competing evaluation", value: "Evaluated one other vendor in 2024", plane: "sandbox", source: "Discovery notes",          verifiedAt: "Jun 9, 2026"  },
       { id: "f8", label: "Expansion appetite",  value: "Open to adding sites without a new RFP", plane: "sandbox", source: "Email thread — Aug 18", verifiedAt: "Aug 18, 2026" },
       { id: "f9", label: "Master agreement",    value: `MSA_${c.name.split(" ")[0]}_2026.pdf`, plane: "sources", source: "Shared Drive · Legal",     verifiedAt: "Aug 4, 2026"  },
       { id: "f10", label: "Security questionnaire", value: "SIG Lite, 214 responses", plane: "sources", source: "Shared Drive · Security",           verifiedAt: "Jul 28, 2026" },
       { id: "f11", label: "Org chart",          value: "Slide deck, 3 levels deep",  plane: "sources", source: "Shared Drive · Accounts",            verifiedAt: "May 12, 2026" },
-    ]
+    ] as Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">[]).map(governFact)
   }
   if (c.type === "employee") {
-    return [
+    return ([
       { id: "f1", label: "Full name",       value: c.name,                    plane: "truth",   source: "Workday · HRIS sync",        verifiedAt: "Sep 1, 2026"  },
       { id: "f2", label: "Role",            value: FIRST_FIELD(c),            plane: "truth",   source: "Workday · HRIS sync",        verifiedAt: "Sep 1, 2026"  },
       { id: "f3", label: "Work email",      value: c.email,                   plane: "truth",   source: "Identity provider · SSO",    verifiedAt: "Sep 1, 2026"  },
       { id: "f4", label: "Manager",         value: c.owner,                   plane: "truth",   source: "Workday · HRIS sync",        verifiedAt: "Sep 1, 2026"  },
-      { id: "f5", label: "Access role",     value: "Standard · Operations",   plane: "truth",   source: "Identity provider · SSO",    verifiedAt: "Aug 14, 2026" },
+      { id: "f5", label: "Access role",     value: "Standard · Operations",   plane: "truth",   source: "Identity provider · SSO",    verifiedAt: "Jun 14, 2026" },
       { id: "f6", label: "Career interest", value: "Mentioned interest in a platform role", plane: "sandbox", source: "1:1 notes — Aug 5", verifiedAt: "Aug 5, 2026"  },
       { id: "f7", label: "Working pattern", value: "Prefers async review over live meetings", plane: "sandbox", source: "Team retro — Jul 22", verifiedAt: "Jul 22, 2026" },
       { id: "f8", label: "Signed policies", value: "12 of 12, latest Data Handling v2.1", plane: "sources", source: "Governance Studio",  verifiedAt: "Aug 6, 2026"  },
       { id: "f9", label: "Review history",  value: "6 quarters, all completed on time",  plane: "sources", source: "Shared Drive · People", verifiedAt: "Jul 20, 2026" },
-    ]
+    ] as Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">[]).map(governFact)
   }
-  return [
+  return ([
     { id: "f1", label: "Full name",        value: c.name,                     plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "Aug 28, 2026" },
-    { id: "f2", label: "Title",            value: FIRST_FIELD(c),             plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "Aug 28, 2026" },
+    { id: "f2", label: "Title",            value: FIRST_FIELD(c),             plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "May 30, 2026" },
     { id: "f3", label: "Company",          value: c.company,                  plane: "truth",   source: "Account record · CRM sync",   verifiedAt: "Aug 28, 2026" },
     { id: "f4", label: "Email",            value: c.email,                    plane: "truth",   source: "Verified reply — inbound",    verifiedAt: "Aug 28, 2026" },
-    { id: "f5", label: "Direct line",      value: c.phone,                    plane: "truth",   source: "Email signature",             verifiedAt: "Aug 19, 2026" },
+    { id: "f5", label: "Direct line",      value: c.phone,                    plane: "truth",   source: "Email signature",             verifiedAt: "Jun 24, 2026" },
     { id: "f6", label: "Decision role",    value: "Evaluator, not budget owner", plane: "sandbox", source: "Call notes — Aug 28",      verifiedAt: "Aug 28, 2026" },
-    { id: "f7", label: "Stated priority",  value: "Auditability ahead of speed", plane: "sandbox", source: "Call notes — Aug 12",      verifiedAt: "Aug 12, 2026" },
+    { id: "f7", label: "Stated priority",  value: "Auditability ahead of speed", plane: "sandbox", source: "Call notes — Jun 12",      verifiedAt: "Jun 12, 2026" },
     { id: "f8", label: "Channel preference", value: "Responds fastest to email before 9am ET", plane: "sandbox", source: "Interaction history", verifiedAt: "Aug 28, 2026" },
     { id: "f9", label: "Governance addendum", value: "Addendum_v3_redlined.pdf", plane: "sources", source: "Shared Drive · Legal",     verifiedAt: "Aug 28, 2026" },
     { id: "f10", label: "Meeting transcripts", value: "4 calls, Jun–Aug 2026",  plane: "sources", source: "Communication Hub",        verifiedAt: "Aug 28, 2026" },
-  ]
+  ] as Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">[]).map(governFact)
 }
 
 export function getActivity(c: UcpContact): UcpActivity[] {
   const who   = c.name.split(" ")[0]
   const agent = c.agent.name
   return [
+    /**
+     * A TASK, and it is the record's next best action — the two are the same
+     * object seen from two places (Michael, 2026-09-10: "Tareas: relacionadas
+     * con Next Best Action"). It exists only when the engine has something to
+     * recommend, which is why this is spread rather than listed: a record with
+     * nothing to do has no open task, and inventing one to fill the group
+     * would be inventing work.
+     */
+    ...(c.nba ? [{
+      id: "a0", channel: "task" as ActivityChannel, title: c.nba.title,
+      meta: `Owner · ${c.owner} · from the next best action`, timestamp: c.nba.timestamp,
+      state: { label: "Open", variant: "alert" as TagVariantLite },
+      aiSummary: c.nba.rationale,
+    }] : []),
     {
-      id: "a1", channel: "agent", title: `${agent} refreshed the record snapshot`,
+      id: "a1", channel: "event", title: `${agent} refreshed the record snapshot`,
       meta: "4 facts promoted to Truth plane · 1 claim expired", timestamp: "Today, 08:12",
       state: { label: "Completed", variant: "success" },
       aiSummary: `Re-verified ${who}'s contact fields against the CRM sync and promoted four Sandbox claims after a matching source appeared. One claim about budget timing expired without corroboration and was dropped back to Sandbox.`,
     },
     {
-      id: "a2", channel: "call", title: `Outbound call · ${c.phone}`,
-      meta: `${c.owner} · 18:24 · Discovery follow-up`, timestamp: "Sep 2, 2026 · 14:05",
-      state: { label: "Positive", variant: "success" },
+      /* Thom's row shape: direction and the number in the title, then
+         "who handled it — which desk · duration · clock time" in the meta.
+         Ours said "Outbound call · <number>" and then the owner's name with
+         no indication of whether a person or an agent took it. */
+      id: "a2", channel: "call", title: `Outbound Call · ${c.phone}`,
+      meta: `${c.owner} — Deal Desk · 6:18 · 2:05 PM`, timestamp: "Sep 2, 2026 · 14:05",
+      /* The badge is what HAPPENED; sentiment is how it went. A call can be
+         Resolved and still tense, which is why Thom carries both. */
+      state: { label: "Resolved", variant: "success" },
+      sentiment: "positive",
+      metaChips: ["6:18", c.owner, "2 tools used"],
       aiSummary: `${who} confirmed the evaluation is still funded and asked for a written migration timeline. No pricing objection was raised. The timeline is the one open commitment from this call.`,
     },
     {
-      id: "a3", channel: "email", title: "Governance addendum sent for review",
-      meta: `${c.owner} → ${c.email} · 1 attachment`, timestamp: "Aug 28, 2026 · 09:40",
+      id: "a2b", channel: "note", title: "Discovery follow-up — call wrap-up",
+      meta: `${c.owner} · 3 claims to Sandbox · Shared`, timestamp: "Sep 2, 2026 · 14:40",
+      state: { label: "Saved", variant: "neutral" },
+      aiSummary: `Wrote up the call while it was fresh: the timeline is the only open commitment, and ${who} asked for it in writing rather than on a call.`,
+      note: {
+        body: [
+          `Called ${who} back on the discovery thread. Evaluation is still funded for this cycle — they were explicit about that without being asked, which is worth noting because the July call left it ambiguous.`,
+          `The one thing they want is a written migration timeline. Not a call, not a deck: a document they can forward internally. They said their own security review cannot start until they can attach a date to it.`,
+          `No pricing objection came up. I did not raise it either. My read is that pricing is settled and the timeline is the only thing between us and a decision.`,
+        ],
+        author:     c.owner,
+        authorRole: "Account owner",
+        createdAt:  "Sep 2, 2026 · 14:40",
+        editedAt:   "Sep 2, 2026 · 16:05",
+        writtenIn:  "Call wrap-up · outbound call at 14:05",
+        scope:      "Shared",
+        claims: [
+          { label: "Evaluation is funded",          status: "Verified"       },
+          { label: "Security review needs a date", status: "Pending review" },
+          { label: "Pricing is not an objection",  status: "Pending review" },
+        ],
+        linked: [
+          { title: "Migration timeline requested", kind: "Email · Aug 18",       icon: "Mail"     },
+          { title: "Governance addendum",          kind: "Document · Legal",     icon: "FileText" },
+        ],
+        attachments: [],
+      },
+    },
+    {
+      id: "a3", channel: "email", title: `Outbound Email · ${c.email}`,
+      meta: `${c.owner} · 9:40 AM · Subject: Governance addendum for review`,
+      timestamp: "Aug 28, 2026 · 09:40",
       state: { label: "Opened", variant: "informative" },
+      metaChips: ["1 attachment", "Opened twice"],
+      aiSummary: `Sent the redlined addendum for Legal to countersign. ${who} opened it twice and has not replied; nothing in the thread says it was forwarded on.`,
+    },
+    {
+      id: "a4b", channel: "note", title: "QBR — the two escalations nobody dated",
+      meta: `${c.agent.name} · 1 claim to Sandbox · Department`, timestamp: "Aug 22, 2026 · 12:02",
+      state: { label: "Saved", variant: "neutral" },
+      aiSummary: `Written by the agent straight off the QBR transcript. The escalations from July were raised again and left without a resolution date — the same gap the record's risk score is reading.`,
+      note: {
+        body: [
+          `Transcribed from the quarterly review. Usage and roadmap were covered in full and neither raised a concern.`,
+          `The two escalations first logged in July came up again. Nobody in the room put a resolution date on either one. That is the second consecutive review where they were discussed and not closed.`,
+        ],
+        author:     c.agent.name,
+        authorRole: "Assigned agent",
+        createdAt:  "Aug 22, 2026 · 12:02",
+        writtenIn:  "Meeting transcript · quarterly business review",
+        scope:      "Department",
+        claims: [
+          { label: "Two escalations undated", status: "Due to expire" },
+        ],
+        linked: [
+          { title: "Quarterly business review", kind: "Meeting · 52 min", icon: "Users"    },
+          { title: "Meridian — Meeting transcripts", kind: "Drive · Communication Hub", icon: "Folder" },
+        ],
+        attachments: [
+          { name: "QBR-transcript-aug26.txt", meta: "Text · 41 KB" },
+        ],
+      },
     },
     {
       id: "a4", channel: "meeting", title: "Quarterly business review",
@@ -1226,25 +1577,49 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       aiSummary: `Usage and roadmap were covered in full. Two escalations from July were raised again without a resolution date, which is the thread most likely to carry into the next conversation.`,
     },
     {
-      id: "a5", channel: "system", title: "Record merged from duplicate",
+      id: "a5", channel: "event", title: "Record merged from duplicate",
       meta: `${c.id} absorbed a duplicate created by the inbound form`, timestamp: "Aug 19, 2026 · 16:20",
       state: { label: "Completed", variant: "success" },
     },
     {
-      id: "a6", channel: "email", title: "Migration timeline requested",
-      meta: `${c.email} → ${c.owner}`, timestamp: "Aug 18, 2026 · 07:55",
-      state: { label: "Awaiting reply", variant: "alert" },
+      /* AN SMS CARRIES ITS OWN TEXT. Two sentences is short enough to read in
+         full, and a row that summarises them has summarised nothing — which
+         is why Thom's rows quote the body verbatim instead. */
+      id: "a5b", channel: "sms", title: `Outbound SMS · ${c.phone}`,
+      meta: `${c.owner} · 5:12 PM · After the timeline request`,
+      timestamp: "Aug 18, 2026 · 17:12",
+      /* DELIVERED, NOT READ — Michael, 2026-09-11. A read receipt needs the
+         handset to send one back, and SMS gives us no such signal; the
+         carrier confirms delivery and nothing after that. Thom's prototype
+         carries both words because his fixture came from a channel that has
+         them, and copying the vocabulary without the capability is how a
+         prototype promises something the product cannot do. */
+      state: { label: "Delivered", variant: "success" },
+      smsBody: `Hi ${who} — picking up your note about the migration timeline. I am confirming the date internally and will come back in writing this week.`,
     },
     {
-      id: "a7", channel: "agent", title: `${agent} drafted a follow-up`,
+      id: "a6", channel: "email", title: `Inbound Email · ${c.email}`,
+      meta: `${c.owner} · 7:55 AM · Subject: Migration timeline`,
+      timestamp: "Aug 18, 2026 · 07:55",
+      state: { label: "Awaiting reply", variant: "alert" },
+      metaChips: ["Second ask", "Unanswered 6 days"],
+      aiSummary: `${who} asked for the migration timeline in writing for the second time. The message is shorter than the first and drops the pleasantries — nothing hostile, but she has asked already.`,
+    },
+    {
+      id: "a7", channel: "task", title: `${agent} drafted a follow-up`,
       meta: "Draft held for review · not sent", timestamp: "Aug 18, 2026 · 08:02",
       state: { label: "Needs review", variant: "alert" },
       aiSummary: `A reply to the timeline request was drafted but held, because the delivery date it referenced was not confirmed anywhere in the Truth plane.`,
     },
     {
-      id: "a8", channel: "call", title: `Inbound call · ${c.phone}`,
-      meta: `${agent} · 6:41 · Routed to ${c.owner}`, timestamp: "Aug 12, 2026 · 10:42",
-      state: { label: "Resolved", variant: "success" },
+      id: "a8", channel: "call", title: `Inbound Call · ${c.phone}`,
+      meta: `${agent} — Front Desk · 6:41 · 10:42 AM`, timestamp: "Aug 12, 2026 · 10:42",
+      /* Escalated, not Resolved: the agent did not close this, it handed the
+         call to a person. Thom's vocabulary separates the two, and ours was
+         calling a hand-off a resolution. */
+      state: { label: "Escalated", variant: "alert" },
+      sentiment: "neutral",
+      metaChips: ["6:41", `${agent} → ${c.owner}`, "Identity verified"],
       aiSummary: `${who} called about audit evidence and was routed after the agent confirmed identity. The requested evidence pack was sent the same day.`,
     },
     {
@@ -1253,7 +1628,7 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "Completed", variant: "success" },
     },
     {
-      id: "a10", channel: "system", title: "Source Drive attached",
+      id: "a10", channel: "event", title: "Source Drive attached",
       meta: "Legal · shared folder connected to this record", timestamp: "Jul 28, 2026 · 15:58",
       state: { label: "Completed", variant: "success" },
     },
@@ -1263,10 +1638,15 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "Opened", variant: "informative" },
     },
     {
-      id: "a12", channel: "agent", title: `${agent} flagged a stale fact`,
+      id: "a12", channel: "event", title: `${agent} flagged a stale fact`,
       meta: "Budget cycle claim older than 90 days", timestamp: "Jul 20, 2026 · 06:00",
       state: { label: "Resolved", variant: "success" },
       aiSummary: `The budget-cycle claim passed its freshness window. It was re-confirmed on the Aug 22 review call and returned to the Sandbox plane with a new timestamp.`,
+    },
+    {
+      id: "a12b", channel: "note", title: `Note · ${c.owner}`,
+      meta: "Before the security review", timestamp: "Jul 26, 2026 · 11:20",
+      state: { label: "Saved", variant: "neutral" },
     },
     {
       id: "a13", channel: "call", title: `Outbound call · ${c.phone}`,
@@ -1274,7 +1654,7 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "No answer", variant: "neutral" },
     },
     {
-      id: "a14", channel: "system", title: "Record created",
+      id: "a14", channel: "event", title: "Record created",
       meta: `${c.id} · ingested from the account sync`, timestamp: "Jun 9, 2026 · 08:00",
       state: { label: "Completed", variant: "success" },
     },
@@ -1285,32 +1665,32 @@ export function getDrives(c: UcpContact): UcpDrive[] {
   const slug = c.company.split(" ")[0]
   return [
     {
-      id: "d1", name: `${slug} — Legal`, kind: "Folder", provider: "Google Drive",
+      id: "d1", department: "Legal", name: `${slug} — Legal`, kind: "Folder", provider: "Google Drive",
       items: "24 documents", owner: "Legal Ops", lastSync: "Today, 06:00",
       scope: "Shared with 3 networks", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d2", name: `${slug} — Security & Compliance`, kind: "Folder", provider: "SharePoint",
+      id: "d2", department: "Security", name: `${slug} — Security & Compliance`, kind: "Folder", provider: "SharePoint",
       items: "61 documents", owner: "Security", lastSync: "Today, 06:00",
       scope: "Shared with 2 networks", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d3", name: `MSA_${slug}_2026.pdf`, kind: "Document", provider: "Google Drive",
+      id: "d3", department: "Legal", name: `MSA_${slug}_2026.pdf`, kind: "Document", provider: "Google Drive",
       items: "1 document", owner: "Legal Ops", lastSync: "Aug 4, 2026",
       scope: "Attached to this record only", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d4", name: `${slug} — Meeting transcripts`, kind: "Folder", provider: "Communication Hub",
+      id: "d4", department: "Communications", name: `${slug} — Meeting transcripts`, kind: "Folder", provider: "Communication Hub",
       items: "18 transcripts", owner: c.owner, lastSync: "Sep 2, 2026",
       scope: "Attached to this record only", state: { label: "Synced", variant: "success" },
     },
     {
-      id: "d5", name: "Revenue — Account plans", kind: "Drive", provider: "Box",
+      id: "d5", department: "Revenue Ops", name: "Revenue — Account plans", kind: "Drive", provider: "Box",
       items: "412 documents", owner: "Revenue Ops", lastSync: "Aug 30, 2026",
       scope: "Shared with 6 networks", state: { label: "Partial access", variant: "alert" },
     },
     {
-      id: "d6", name: `${slug} — Archive 2024`, kind: "Folder", provider: "SharePoint",
+      id: "d6", department: "Legal", name: `${slug} — Archive 2024`, kind: "Folder", provider: "SharePoint",
       items: "137 documents", owner: "Legal Ops", lastSync: "Failed Aug 26, 2026",
       scope: "Shared with 1 network", state: { label: "Sync failed", variant: "error" },
     },
@@ -1564,3 +1944,1193 @@ export const CONCIERGE_PROMPTS = [
   "What do we still owe them?",
   "Which facts are unverified?",
 ]
+
+/**
+ * ── Create: the edge cases, before anything is created ─────────────────────
+ *
+ * Michael, 2026-09-10: "consideremos casos borde como qué pasa si este existe,
+ * como se mostrará, usando un informative card, en el caso que ya exista el
+ * usuario o contactos poder mostrar los correos o contactos asociados a ese
+ * mail o dato."
+ *
+ * WHY THIS IS THE ONE EDGE CASE WORTH BUILDING FIRST. A unified profile whose
+ * whole promise is one record per person has exactly one way to break that
+ * promise, and it is this form. The Activity feed on every record already
+ * carries the evidence — "Record merged from duplicate · absorbed a duplicate
+ * created by the inbound form" — so the duplicate is not hypothetical here,
+ * it is a thing that has already happened to this data and was cleaned up
+ * afterwards. Catching it before the record exists costs a lookup; catching
+ * it afterwards costs a merge, and a merge is a governance event.
+ *
+ * WHAT IS SHOWN, AND WHY IT IS THE RECORDS THEMSELVES. "This email already
+ * exists" is not actionable — the reader cannot tell whether they are about
+ * to duplicate a record or whether somebody else's typo is in the way. So the
+ * card carries the MATCHED RECORDS, each with the datum that collided, which
+ * is the difference between a validation error and an answer.
+ *
+ * ONE CARD, STRONGEST SIGNAL WINS. Three stacked cards in a 900px modal is
+ * noise, and the reader only ever acts on the most severe one. The order below
+ * is by how certain the collision is, not by how bad it sounds:
+ *
+ *   email-active    An active record already holds this email. CERTAIN — an
+ *                   email is the one field this data treats as unique. Blocks.
+ *   email-archived  Same, but the record is archived. Also certain, and the
+ *                   answer is to restore rather than create. Blocks.
+ *   phone           A phone matches and the email does not. NOT certain: a
+ *                   switchboard, a shared mobile, a household. Warns only.
+ *   name            A name matches and nothing else does. Weak — two people
+ *                   are allowed the same name. Informs only.
+ *   domain          Nothing matched, but the email's domain belongs to a
+ *                   company on file. This is not a duplicate at all, it is
+ *                   the good case: the new contact has a parent, and saying
+ *                   so before the save is how it gets linked without anyone
+ *                   going back to do it. Informs only.
+ *
+ * The three lower cases never block. A create form that refuses a real second
+ * person at the same company has stopped being a safeguard and become a wall,
+ * and the person filling it in is the one who knows which it is.
+ */
+export type CreateMatchKind = "email-active" | "email-archived" | "phone" | "name" | "domain"
+
+export interface CreateMatch {
+  kind:    CreateMatchKind
+  /** The records that matched, most relevant first. */
+  records: UcpContact[]
+  /** The value that collided, quoted back so the reader sees which field. */
+  on:      string
+  /** True for the two email cases: creating would knowingly duplicate. */
+  blocks:  boolean
+}
+
+const norm = (v: string) => v.trim().toLowerCase()
+/** Digits only — "+1 (212) 555-0155" and "2125550155" are the same phone. */
+const digits = (v: string) => v.replace(/\D/g, "")
+
+export function matchExistingRecords(draft: {
+  name?:   string
+  email?:  string
+  phones?: string[]
+}): CreateMatch | null {
+  const email = norm(draft.email ?? "")
+  const name  = norm(draft.name  ?? "")
+  const phones = (draft.phones ?? []).map(digits).filter(p => p.length >= 7)
+
+  if (email.includes("@")) {
+    const hit = CONTACTS.filter(c => norm(c.email) === email)
+    if (hit.length > 0) {
+      const archived = hit.every(c => c.status === "Archived")
+      return {
+        kind:    archived ? "email-archived" : "email-active",
+        records: hit,
+        on:      draft.email!.trim(),
+        blocks:  true,
+      }
+    }
+  }
+
+  if (phones.length > 0) {
+    const hit = CONTACTS.filter(c => phones.includes(digits(c.phone)))
+    if (hit.length > 0) {
+      return { kind: "phone", records: hit, on: hit[0].phone, blocks: false }
+    }
+  }
+
+  // Three characters is the floor: "Li" matches half a roster and the card
+  // would fire on the second keystroke of every name.
+  if (name.length >= 3) {
+    const hit = CONTACTS.filter(c => norm(c.name) === name)
+    if (hit.length > 0) {
+      return { kind: "name", records: hit, on: draft.name!.trim(), blocks: false }
+    }
+  }
+
+  // Last, and only when nothing above matched — this is the good news case.
+  const domain = email.split("@")[1]
+  if (domain && domain.includes(".")) {
+    const hit = CONTACTS.filter(c => norm(c.email).endsWith(`@${domain}`))
+    if (hit.length > 0) {
+      const company = hit.find(c => c.type === "company")
+      return {
+        kind:    "domain",
+        records: company ? [company, ...hit.filter(c => c !== company)] : hit,
+        on:      domain,
+        blocks:  false,
+      }
+    }
+  }
+
+  return null
+}
+
+/** Offices and regions the tenant operates in — the Location field's options. */
+export const CREATE_LOCATIONS = [
+  "Chicago, IL",
+  "Detroit, MI",
+  "Austin, TX",
+  "New York, NY",
+  "San Francisco, CA",
+  "Remote — US",
+]
+
+/** Who a record can be assigned to, read off the roster so the list cannot
+ *  drift from the owners the records actually have. */
+export const CREATE_OWNERS = Array.from(new Set(CONTACTS.map(c => c.owner))).sort()
+
+/* ══════════════════════════════════════════════════════════════════════════
+   INTELLIGENCE
+   ══════════════════════════════════════════════════════════════════════════
+
+   Intelligence is a WORKING surface, not a reading surface. A rep opens a
+   contact to decide what to do about that person now, so every block below
+   earns its place by helping them decide or act, and the order is fixed:
+
+     1 Verdict          who this is and what to do about them
+     2 Signals          named, verifiable conditions
+     3 Suggestion queue what the system proposes, worked and resolved here
+     4 Agent reads      what agents have inferred, and what can be attested
+
+   Nothing sits above the verdict.
+
+   NO BACKEND. Everything here is a shape plus a fixture, and every shape is
+   marked. Where a real system would compute, this derives from the record's
+   own data so the fixtures cannot disagree with the rest of the profile.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * ── 1 · The verdict ────────────────────────────────────────────────────────
+ *
+ * Two sentences. The first says who this person is and what they care about;
+ * the second is the imperative plus the clock, and it starts with a verb.
+ *
+ * CACHED, NOT REGENERATED ON LOAD, which is a product rule rather than a
+ * performance one: two people looking at the same contact have to read the
+ * same text, or the product cannot be quoted in a conversation between them.
+ * `generatedAt` is always rendered for the same reason.
+ *
+ * `entities` are spans in the text that link to their evidence. They are
+ * ranges rather than a re-parse of the string, because the same words can
+ * appear twice — "12 days" in the second sentence and "12 days" in a quoted
+ * fragment are not the same link.
+ */
+export interface VerdictEntity {
+  /** The exact substring, used to locate the span for rendering. */
+  text:        string
+  /** Which occurrence, when the text repeats. Zero-based. */
+  occurrence?: number
+  /** Where it goes: a tab on this record, or a section of the platform. */
+  destination: string
+  /** What the reader is about to open. Shown on hover. */
+  tooltip:     string
+}
+
+export interface UcpVerdict {
+  /** Hard cap 45 words, ENFORCED AT GENERATION, never by visual truncation —
+   *  a sentence cut mid-clause says something the generator did not. */
+  text:        string
+  generatedAt: string
+  entities:    VerdictEntity[]
+}
+
+/** The cap, exported so the check can live beside the copy that has to pass it. */
+export const VERDICT_WORD_CAP = 45
+
+export function verdictWordCount(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length
+}
+
+/**
+ * ── 2 · Signals ────────────────────────────────────────────────────────────
+ *
+ * A CLOSED CATALOG. Adding a type is a deliberate change to this list, not
+ * something an agent can invent at runtime — which is the whole difference
+ * between a signal and a sentence about a person.
+ *
+ * THERE IS NO AGGREGATE RISK SCORE ON A CONTACT. A number computed on a human
+ * being is a judgement wearing a decimal point: it cannot be verified, it
+ * cannot be disputed, and it survives long after whatever produced it. Where a
+ * score exists at the OPPORTUNITY level it may be shown here as an inherited,
+ * linked value — the opportunity is a commercial object and can carry one.
+ */
+export type SignalType =
+  | "response_debt"
+  | "single_thread"
+  | "engagement_velocity"
+  | "contract_clock"
+  | "open_commitment"
+  | "role_change"
+
+export const SIGNAL_CATALOG: Record<SignalType, { label: string; firesWhen: string; icon: string }> = {
+  response_debt:       { label: "Awaiting us",         firesWhen: "We owe the contact a reply",              icon: "MailWarning"  },
+  single_thread:       { label: "Single thread",       firesWhen: "Only one live contact on the account",    icon: "UserMinus"    },
+  engagement_velocity: { label: "Engagement falling",  firesWhen: "Contact frequency trending down",         icon: "TrendingDown" },
+  contract_clock:      { label: "Renewal window",      firesWhen: "A dated commercial event is approaching", icon: "CalendarClock"},
+  open_commitment:     { label: "Open commitment",     firesWhen: "Something was promised and not delivered",icon: "Handshake"    },
+  role_change:         { label: "Role change",         firesWhen: "Authority or title changed",              icon: "UserCog"      },
+}
+
+/** Exactly three. A fourth level is a fourth thing to learn and, in practice,
+ *  a second name for one of these. */
+export type SignalSeverity = "critical" | "attention" | "watch"
+
+export interface UcpSignal {
+  type:     SignalType
+  label:    string
+  /**
+   * WHAT ACTUALLY HAPPENED, on this record. This is the line; `label` is the
+   * grey tag beside it.
+   *
+   * The rows used to lead with the catalog's generic sentence — "Something was
+   * promised and not delivered" — and push "Two escalations raised again at
+   * the QBR" to the right in smaller type. That is backwards: the generic copy
+   * is true of every open commitment ever, and the reader already knows what
+   * an open commitment is by the second time they see one.
+   */
+  detail:   string
+  severity: SignalSeverity
+  /** Always present. Duration is what makes a signal actionable — "awaiting us"
+   *  is a fact, "awaiting us · 6 days" is a decision. */
+  since:    string
+  /** Where the claim can be checked. A signal with no evidence does not render;
+   *  `renderableSignals` enforces that rather than trusting the caller. */
+  evidence: { label: string; destination: string } | null
+  /** The queue row that resolves this, when there is one. */
+  suggestionId?: string
+}
+
+/** Severity first, then recency. The strip is scanned, not read. */
+const SEVERITY_ORDER: Record<SignalSeverity, number> = { critical: 0, attention: 1, watch: 2 }
+
+/**
+ * Days behind a `since` string, for the tie-break. Returns -1 when the string
+ * is not a duration ("since Jun 2026"), which sorts it last — a signal that
+ * cannot say how long it has been going is not the most urgent one.
+ */
+function sinceDays(since: string): number {
+  const m = since.trim().match(/^(\d+)\s+(day|days|week|weeks|month|months)\b/)
+  if (!m) return -1
+  const n = Number(m[1])
+  return m[2].startsWith("week") ? n * 7 : m[2].startsWith("month") ? n * 30 : n
+}
+
+/**
+ * The most urgent signal, and the tie-break is EXPLICIT because there are two
+ * criticals and the collapsed line names one of them.
+ *
+ * Severity first; at equal severity the one that has been running longest.
+ * "Awaiting us for 6 days" and "Open commitment for 19 days" are both
+ * critical, and the second has been true three times as long — picking by
+ * array order would have been a choice nobody could see or argue with.
+ */
+export function mostUrgentSignal(signals: UcpSignal[]): UcpSignal | undefined {
+  return [...signals].sort((a, b) =>
+    SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || sinceDays(b.since) - sinceDays(a.since),
+  )[0]
+}
+
+/** Drops any signal that cannot be checked. The rule is "a signal with no
+ *  evidence link does not render", and a rule enforced at the call site is a
+ *  rule that holds until somebody writes a second call site. */
+export function renderableSignals(signals: UcpSignal[]): UcpSignal[] {
+  return signals
+    .filter(s => s.evidence !== null)
+    .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
+}
+
+/**
+ * ── 3 · The suggestion queue ───────────────────────────────────────────────
+ *
+ * A SUGGESTION IS NOT A TASK. A suggestion is what the system proposes; a task
+ * is what the rep committed to. Accepting is the gesture that turns one into
+ * the other and puts it in the platform-wide inbox — which is why nothing here
+ * is ever called a task, and why this list is never mirrored into that inbox.
+ * Only accepted items go there.
+ */
+export type SuggestionStatus =
+  | "new"                  // not yet looked at
+  | "ready"                // draft prepared, awaiting review
+  | "held"                 // blocked by The Council — see `held` below
+  | "pending_confirmation" // rep supplied a fact, awaiting KCON
+  | "accepted"             // converted to a task, lives in the global inbox
+  | "done"
+  | "dismissed"
+
+export const SUGGESTION_STATUS_LABEL: Record<SuggestionStatus, string> = {
+  new:                  "New",
+  ready:                "Ready",
+  held:                 "Held",
+  pending_confirmation: "Pending confirmation",
+  accepted:             "Accepted",
+  done:                 "Done",
+  dismissed:            "Dismissed",
+}
+
+/** Rows leave the queue on these three. Accepted stays reachable as a link
+ *  out, so the rep cannot accept the same thing twice. */
+export const RESOLVED_STATUSES: SuggestionStatus[] = ["accepted", "done", "dismissed"]
+
+/** A state label, never a percentage. A number with no scale tells the reader
+ *  nothing — "0.82" answers a question nobody asked. */
+export type ConfidenceState = "Inferred" | "In review" | "Verified"
+
+/** Required, and this is the whole point of Dismiss. A queue that empties
+ *  without saying why teaches the engine nothing. */
+export const DISMISS_REASONS = ["Already done", "Not relevant", "This is wrong", "Bad timing"] as const
+export type DismissReason = typeof DISMISS_REASONS[number]
+
+/** "This is wrong" is a different act from the other three — it is a
+ *  correction, not a triage decision, and it routes to Train Me. */
+export const TRAIN_ME_REASON: DismissReason = "This is wrong"
+
+export interface SuggestionDraft {
+  /** Three lines shown collapsed; the rest on expand. The draft IS the asset —
+   *  it is the main reason to open a row. */
+  body:      string[]
+  /** Truth Plane facts the draft used, as links into Knowledge. */
+  grounding: { label: string; factId: string }[]
+}
+
+export interface UcpSuggestion {
+  id:      string
+  /** Verb plus object. Never a full sentence — this is a queue, not prose. */
+  title:   string
+  /** One clause. The full version lives in `reasonFull`. */
+  reason:  string
+  reasonFull: string
+  /** Links inside `reasonFull`, same mechanism as the verdict's. */
+  reasonEntities: VerdictEntity[]
+  status:  SuggestionStatus
+  confidence: ConfidenceState
+  /** Impact and urgency, 0–1, multiplied for the default sort. Two axes rather
+   *  than one score because the sort criterion has to be EXPLAINABLE — a queue
+   *  whose order cannot be explained will not be trusted, so the header names
+   *  it and lets the rep change it. */
+  impact:  number
+  urgency: number
+  /** The full draft. Absent when the suggestion is scheduled work rather than
+   *  a message — those get Accept instead of Review and send. */
+  draft?:  SuggestionDraft
+  /**
+   * THE HELD STATE. A draft is held when The Council blocked it because a fact
+   * it referenced is not attested in the Truth Plane. This is the product's
+   * core claim working correctly, so it is written as an invitation and never
+   * as an error or a log line.
+   *
+   * Two paths, both visible, and `withoutCommitment` is why there must be two
+   * drafts per held suggestion: the fast path sends a variant that commits to
+   * nothing. It ALSO fires the confirmation request, because otherwise the
+   * fast path becomes the default, the fact is never attested, and the agent
+   * blocks on the same gap forever.
+   */
+  held?: {
+    /** What is missing, in the rep's words. */
+    missing:     string
+    /** The domain owner the confirmation routes to. */
+    owner:       string
+    /** How long it has been with them, once supplied. */
+    withOwnerFor?: string
+    /** The variant that commits to nothing. */
+    withoutCommitment: SuggestionDraft
+  }
+  /** Set when the suggestion no longer applies. Suggestions expire; tasks do
+   *  not. An expired suggestion states its reason and leaves. */
+  expired?: string
+}
+
+/** Impact × urgency, and the label the header shows. */
+export const SUGGESTION_SORTS = [
+  { id: "impact-urgency", label: "Impact × urgency" },
+  { id: "urgency",        label: "Most urgent first" },
+  { id: "newest",         label: "Newest first" },
+] as const
+export type SuggestionSort = typeof SUGGESTION_SORTS[number]["id"]
+
+export function sortSuggestions(items: UcpSuggestion[], sort: SuggestionSort): UcpSuggestion[] {
+  const copy = [...items]
+  if (sort === "urgency") return copy.sort((a, b) => b.urgency - a.urgency)
+  if (sort === "newest")  return copy.reverse()
+  return copy.sort((a, b) => b.impact * b.urgency - a.impact * a.urgency)
+}
+
+/**
+ * ── 4 · Agent reads ────────────────────────────────────────────────────────
+ *
+ * Inferences agents have drawn about this relationship. These are CANDIDATE
+ * CLAIMS, and confirming one promotes it through KCON.
+ *
+ * THE `kind` DISTINCTION IS A GUARDRAIL, NOT A NICETY.
+ *
+ *   structural   a verifiable relationship fact — who signs, who owns a budget
+ *                line, reporting lines, system of record. Gets Confirm.
+ *   interpretive a read of tone, intent or sentiment. NO confirm action, ever.
+ *                These render and expire. Persisting a judgement about a
+ *                person's emotional state as an attested fact is a thing this
+ *                product must not be able to do, so the type is what stops it
+ *                rather than a reviewer remembering.
+ */
+export type ReadKind = "structural" | "interpretive"
+
+/**
+ * WHAT THE READ IS ABOUT, which is a different question from whether it can
+ * be attested.
+ *
+ *   situation    something that is happening — an escalation left undated,
+ *                a tone shift on a thread. Renders in Agent reads.
+ *   disposition  something stable about the person — "economic buyer on this
+ *                renewal". Feeds the Profile block and does NOT render in
+ *                Agent reads.
+ *
+ * Michael, 2026-09-11: route by kind, do not delete data. So a disposition
+ * read still exists, still carries its evidence, and is simply consumed
+ * somewhere else — which is also why Agent reads' counter has to count what
+ * it actually shows.
+ *
+ * This is a SECOND axis, not a third value of `kind`. "Structural vs
+ * interpretive" asks whether it can become a fact; "situation vs disposition"
+ * asks where it belongs on the page. Folding them into one enum is how a
+ * disposition ends up unattestable by accident.
+ */
+export type ReadSubject = "situation" | "disposition"
+
+export interface UcpAgentRead {
+  id:       string
+  /** Defaults to "situation" at the call site; only dispositions say so. */
+  subject?: ReadSubject
+  headline: string
+  body:     string
+  agent:    string
+  area:     string
+  state:    ConfidenceState
+  kind:     ReadKind
+  /** Required. A read with no evidence does not render — same rule, same
+   *  reason, same enforcement as signals. */
+  evidence: { label: string; destination: string }[]
+}
+
+/** Evidence-bearing SITUATION reads. Dispositions are routed to the Profile
+ *  block, not filtered out of existence — see ReadSubject. */
+export function renderableReads(reads: UcpAgentRead[]): UcpAgentRead[] {
+  return reads.filter(r => r.evidence.length > 0 && (r.subject ?? "situation") === "situation")
+}
+
+/**
+ * PROPOSING IS NOT ATTESTING. A user who cannot attest in this domain still
+ * sees the action — it reads "Propose as fact" and routes to the domain owner.
+ * Hiding it would teach them the product cannot do the thing.
+ */
+export function confirmLabel(canAttest: boolean): string {
+  return canAttest ? "Confirm" : "Propose as fact"
+}
+
+/**
+ * ── Instrumentation ────────────────────────────────────────────────────────
+ *
+ * ACCEPTANCE RATE IS THE HEALTH METRIC FOR THIS SECTION. If it is low, nothing
+ * else here matters — the queue is proposing the wrong work and every other
+ * refinement is decoration on top of that.
+ *
+ * // STUB: console only. A real implementation posts to the analytics sink.
+ */
+export type IntelligenceEvent =
+  | { name: "suggestion_accepted";  suggestionId: string }
+  | { name: "suggestion_dismissed"; suggestionId: string; reason: DismissReason }
+  | { name: "draft_sent";           suggestionId: string; variant: "full" | "without_commitment" }
+  | { name: "fact_supplied";        suggestionId: string; value: string; owner: string }
+  | { name: "read_confirmed";       readId: string; proposed: boolean }
+  | { name: "read_rejected";        readId: string; reason: DismissReason }
+  | { name: "verdict_rated";        contactId: string; rating: "up" | "down" }
+  | { name: "verdict_regenerated";  contactId: string }
+  /* WHICH COLLAPSED BLOCKS ANYBODY ACTUALLY OPENS. If Signals and Agent reads
+     are almost never expanded they are candidates for demotion or removal in
+     a later pass — but that call belongs to the data, not to the change that
+     collapsed them. The count at the moment of opening is carried because
+     "nobody opens Signals" and "nobody opens Signals when it says zero" are
+     different findings. */
+  | { name: "block_expanded";       block: string; count: number }
+  /* If Profile is almost never expanded, the three-line default is doing its
+     job — that is not evidence the block is surplus. */
+  | { name: "profile_expanded";     contactId: string }
+  | { name: "trait_confirmed";      field: string; proposed: boolean }
+  | { name: "trait_rejected";       field: string; reason: DismissReason }
+
+export function emitIntelligence(event: IntelligenceEvent): void {
+  // eslint-disable-next-line no-console
+  console.info("[intelligence]", event.name, event)
+}
+
+/* ── Intelligence fixtures ─────────────────────────────────────────────────
+   Derived from the record so nothing here can contradict the rest of the
+   profile: the verdict quotes the same renewal the Entity Header shows, the
+   signals point at activity rows that exist, and the grounding links name
+   facts the Knowledge tab actually holds.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/** Days to the renewal, the one commercial clock this prototype models.
+ *  // STUB: a real opportunity record carries this. */
+export function renewalInDays(c: UcpContact): number | null {
+  if (c.type !== "person" && c.type !== "company") return null
+  // Deterministic per record rather than random, so two reads agree.
+  const seed = c.id.split("").reduce((n, ch) => n + ch.charCodeAt(0), 0)
+  return 8 + (seed % 22)
+}
+
+export function getVerdict(c: UcpContact): UcpVerdict | null {
+  const days = renewalInDays(c)
+  if (days === null || c.type === "company") {
+    if (c.type !== "company") return null
+  }
+  const who   = c.name.split(" ")[0]
+  const value = c.subtitle.includes("·") ? "$480K" : "$480K"
+
+  if (c.type === "company") {
+    return {
+      text: "Get the governance addendum countersigned this week — it gates the renewal.",
+      generatedAt: "Today, 08:12",
+      entities: [
+        { text: "governance addendum", destination: "Knowledge",   tooltip: "Knowledge · the addendum on the Legal drive" },
+        { text: "the renewal",         destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days, ${value}` },
+      ],
+    }
+  }
+
+  /*
+    ONE SENTENCE, and it used to be two. The first said who this person is and
+    what they care about — which is now the Profile block's whole job, three
+    lines higher up and in a form you can act on. Saying it twice made the
+    verdict the second place a reader met the same fact, and the weaker one.
+
+    What is left is the imperative plus the clock, which is the only thing
+    here that is not true of this person tomorrow.
+  */
+  return {
+    /* NO CLOCK AND NO FIGURE. Both live in the record header — "Renewal in 19
+       days" as a pill, "$480K" in the metadata row — and repeating them here
+       made this the second and third place the same two numbers appeared. The
+       verdict's job is the imperative; the header already carries the stakes. */
+    text: `Answer ${who === c.name ? "them" : "her"} today — it is the only open question before the renewal.`,
+    generatedAt: "Today, 08:12",
+    /* One entity left. "migration timeline" went with the first sentence and
+       the two figures went to the header, so linking either here would target
+       a phrase the text no longer contains — which renders nothing and reads
+       as a bug. */
+    entities: [
+      { text: "the renewal", destination: "Opportunity", tooltip: `Opportunity · closes in ${days} days, ${value}` },
+    ],
+  }
+}
+
+export function getSignals(c: UcpContact): UcpSignal[] {
+  if (c.type !== "person" && c.type !== "company") return []
+  const days  = renewalInDays(c) ?? 0
+  const conns = getConnections(c).length
+  const who   = c.name.split(" ")[0]
+
+  /* The renewal's REAL DATE, not "in N days". The days figure lives in the
+     record header and appears exactly once in the whole view; a signal row
+     that repeated it was the third place the same number showed up. */
+  const closes = new Date(KNOWLEDGE_NOW.getTime() + days * 86_400_000)
+    .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+
+  return [
+    {
+      type: "open_commitment", label: SIGNAL_CATALOG.open_commitment.label,
+      detail: "Two escalations raised again at the QBR",
+      severity: "critical", since: "19 days",
+      evidence: { label: "Quarterly business review", destination: "Activity" },
+      suggestionId: "s2",
+    },
+    {
+      type: "response_debt", label: SIGNAL_CATALOG.response_debt.label,
+      detail: "No written answer since Sep 2",
+      severity: "critical", since: "6 days",
+      evidence: { label: "Migration timeline requested · Aug 18", destination: "Activity" },
+      suggestionId: "s1",
+    },
+    {
+      type: "contract_clock", label: SIGNAL_CATALOG.contract_clock.label,
+      detail: `Closes ${closes}`,
+      severity: "attention", since: "the governance addendum is outstanding",
+      evidence: { label: "Governance addendum · Legal drive", destination: "Knowledge" },
+    },
+    ...(conns <= 3 ? [{
+      type: "single_thread" as SignalType, label: SIGNAL_CATALOG.single_thread.label,
+      detail: `${who} is the only live contact`,
+      severity: "attention" as SignalSeverity, since: "since Jun 2026",
+      evidence: { label: `${conns} live contact${conns === 1 ? "" : "s"} on this account`, destination: "Overview" },
+    }] : []),
+    {
+      type: "engagement_velocity", label: SIGNAL_CATALOG.engagement_velocity.label,
+      detail: "Contact frequency down since Jul",
+      severity: "watch", since: "2 months",
+      evidence: { label: "4 touchpoints in Aug, 2 in Sep", destination: "Activity" },
+    },
+  ]
+}
+
+export function getSuggestions(c: UcpContact): UcpSuggestion[] {
+  if (c.type !== "person" && c.type !== "company") return []
+  const owner = "Priya Nair"
+
+  return [
+    {
+      id: "s1", title: "Send the migration timeline",
+      /* "renewal in N days" came off — it is in the record header, and a
+         subtitle that repeats the header is the reader reading it twice. */
+      reason: "asked twice",
+      reasonFull: `${c.name.split(" ")[0]} asked for a written migration timeline on Aug 18 and again on the Sep 2 call. `
+        + `Nothing has gone out. Their own security review cannot start without a date, so this is the only open question before the renewal.`,
+      reasonEntities: [
+        { text: "Aug 18",      destination: "Activity", tooltip: "Activity · Migration timeline requested" },
+        { text: "Sep 2 call",  destination: "Activity", tooltip: "Activity · Outbound call, discovery follow-up" },
+      ],
+      status: "held", confidence: "In review", impact: 0.95, urgency: 0.9,
+      draft: {
+        body: [
+          `Hi ${c.name.split(" ")[0]},`,
+          `Thanks for your patience on this. The migration would complete by 14 November, with the cutover window in the first week of that month.`,
+          `That gives your security review a fixed date to work back from. Happy to walk the plan through with your team if that helps.`,
+        ],
+        grounding: [
+          { label: "Company · " + c.company,        factId: "f3" },
+          { label: "Decision role · Evaluator",     factId: "f6" },
+        ],
+      },
+      held: {
+        missing: "a migration delivery date",
+        owner,
+        withoutCommitment: {
+          body: [
+            `Hi ${c.name.split(" ")[0]},`,
+            `Thanks for your patience. I am confirming the migration date internally and will come back to you with it this week.`,
+            `In the meantime, everything else in the plan is settled — happy to walk your team through the sequence so the security review can start on the parts that do not depend on the date.`,
+          ],
+          grounding: [{ label: "Decision role · Evaluator", factId: "f6" }],
+        },
+      },
+    },
+    {
+      id: "s2", title: "Put a date on the two open escalations",
+      reason: "raised at two consecutive reviews · no owner",
+      reasonFull: "The escalations first logged in July were raised again at the August QBR and left without a resolution date. "
+        + "That is the second consecutive review where they were discussed and not closed, and it is the thread most likely to carry into the renewal conversation.",
+      reasonEntities: [
+        { text: "August QBR", destination: "Activity", tooltip: "Activity · Quarterly business review" },
+      ],
+      // Scheduled work, not a message — so no draft, and Accept is the action.
+      status: "new", confidence: "Inferred", impact: 0.8, urgency: 0.7,
+    },
+    {
+      id: "s3", title: "Re-verify the direct line",
+      reason: "read off an email signature in June · due to expire",
+      reasonFull: "The phone number on this record was read off an email signature on Jun 24 and has not been confirmed since. "
+        + "It is past the 60-day attestation window, so an agent can no longer commit to it.",
+      reasonEntities: [
+        { text: "Jun 24", destination: "Knowledge", tooltip: "Knowledge · Direct line, Truth Plane" },
+      ],
+      status: "ready", confidence: "Verified", impact: 0.4, urgency: 0.55,
+      draft: {
+        body: [
+          `Hi ${c.name.split(" ")[0]},`,
+          `Quick housekeeping — is ${c.phone} still the best direct line for you?`,
+          `Happy to update our records either way.`,
+        ],
+        grounding: [{ label: "Direct line · " + c.phone, factId: "f5" }],
+      },
+    },
+    {
+      id: "s4", title: "Introduce a second contact on the account",
+      reason: "single-threaded since June",
+      reasonFull: "Every live thread on this account runs through one person. If they change role or go on leave, the relationship has no second point of contact, "
+        + "and the renewal is inside that window.",
+      reasonEntities: [],
+      status: "accepted", confidence: "Inferred", impact: 0.6, urgency: 0.4,
+    },
+    {
+      id: "s5", title: "Chase the signed order form",
+      reason: "no longer applies",
+      reasonFull: "The order form was countersigned on Sep 4, so there is nothing left to chase.",
+      reasonEntities: [],
+      status: "done", confidence: "Verified", impact: 0.3, urgency: 0.2,
+      expired: "No longer applies — the order form came back signed.",
+    },
+  ]
+}
+
+export function getAgentReads(c: UcpContact): UcpAgentRead[] {
+  const agent = c.agent.name
+  const who   = c.name.split(" ")[0]
+
+  return [
+    {
+      id: "r1",
+      headline: `${who} controls the budget line, not just the evaluation`,
+      body: `Two calls and one email thread put ${who} as the person approving spend rather than recommending it. `
+        + "The account record still lists them as an evaluator, which is what the drafts have been assuming.",
+      /* A DISPOSITION, and it is the archetype. It said the same thing the
+         Profile block now leads with, one screen further down and in longer
+         words — which is the duplicate rendering this section keeps growing
+         back. Routed, not deleted. */
+      subject: "disposition",
+      agent, area: "Commercial", state: "In review", kind: "structural",
+      evidence: [
+        { label: "Outbound call · Sep 2",       destination: "Activity"  },
+        { label: "Decision role · Sandbox",     destination: "Knowledge" },
+      ],
+    },
+    {
+      id: "r2",
+      headline: "Legal signs, not procurement",
+      body: "The governance addendum went to Legal directly and came back redlined by their counsel. "
+        + "Procurement has not appeared in any thread on this account.",
+      agent, area: "Governance", state: "Verified", kind: "structural",
+      evidence: [
+        { label: "Governance addendum · Legal drive", destination: "Knowledge" },
+        { label: "Addendum sent for review · Aug 28", destination: "Activity"  },
+      ],
+    },
+    {
+      id: "r3",
+      headline: "Patience is thinning on the timeline",
+      body: "The second ask for the migration timeline was shorter than the first and dropped the pleasantries. "
+        + "Nothing in it is hostile; the tone is somebody who has asked already.",
+      agent, area: "Relationship", state: "Inferred", kind: "interpretive",
+      evidence: [
+        { label: "Migration timeline requested · Aug 18", destination: "Activity" },
+      ],
+    },
+    {
+      id: "r4",
+      headline: "Auditability is the deciding criterion",
+      body: `${who} has raised evidence, attestation and audit trails in every substantive conversation, and never raised price. `
+        + "A pitch that leads on speed is answering a question they are not asking.",
+      /* Also a disposition — it is "what lands" on this person, which is a
+         Profile bullet rather than a read of a situation. */
+      subject: "disposition",
+      agent, area: "Commercial", state: "In review", kind: "interpretive",
+      evidence: [
+        { label: "Stated priority · Sandbox",  destination: "Knowledge" },
+        { label: "Security review session",    destination: "Activity"  },
+      ],
+    },
+  ]
+}
+
+/** The areas the read filter offers, derived so a new read cannot be
+ *  unreachable. */
+export function readAreas(reads: UcpAgentRead[]): string[] {
+  return Array.from(new Set(reads.map(r => r.area))).sort()
+}
+
+
+/**
+ * ── Progressive disclosure: which row is open when the section loads ───────
+ *
+ * Michael, 2026-09-11. One row expanded, never zero and never two, and a
+ * `held` row among the first three wins.
+ *
+ * The held row wins because it is the only row in the queue that is BLOCKED
+ * on the reader: everything else is work they can choose to do later, and a
+ * held draft is work that is finished and cannot go out. Opening the section
+ * on anything else hides the one row where a single click changes the state
+ * of the system.
+ *
+ * "Among the first three" and not "anywhere" is deliberate. The queue shows
+ * three rows by default, so a held row at position seven is not on screen —
+ * expanding it would scroll the reader to a row they cannot see the context
+ * of, which is worse than opening the top one.
+ */
+export function defaultExpandedRow(items: UcpSuggestion[], sort: SuggestionSort = "impact-urgency"): string | null {
+  const live = sortSuggestions(items.filter(s => !RESOLVED_STATUSES.includes(s.status)), sort)
+  const top  = live.slice(0, QUEUE_DEFAULT_ROWS)
+  return (top.find(s => s.status === "held") ?? top[0])?.id ?? null
+}
+
+/** How many queue rows the section opens with. Three, because the default
+ *  state has to fit one screen without scrolling and the expanded row is
+ *  most of that budget. */
+export const QUEUE_DEFAULT_ROWS = 3
+
+/**
+ * A duration, phrased for a collapsed summary line.
+ *
+ * "most severe: awaiting us for 6 days" reads; "awaiting us for 19 days out"
+ * does not. `since` carries three shapes in these fixtures — a bare duration,
+ * a duration with a qualifier ("19 days out"), and a date ("since Jun 2026") —
+ * so only the bare one takes "for".
+ */
+export function sincePhrase(since: string): string {
+  return /^\d+\s+\w+$/.test(since.trim()) ? `for ${since}` : since
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PROFILE — the dispositional layer
+   ══════════════════════════════════════════════════════════════════════════
+
+   Michael, 2026-09-11. Intelligence answered what is happening and what to
+   do, and never answered WHO THIS PERSON IS. Everything sat at one level of
+   abstraction — events and actions — so every signal read as a loose fact and
+   the reader had to assemble the model themselves. That, not the volume, is
+   what made the section feel complex.
+
+   THE ARCHITECTURAL RULE, and it is the one that keeps this honest:
+
+     A trait INFERRED from behaviour lives in Intelligence.
+     A trait ATTESTED through KCON lives in Overview.
+
+   When a trait is attested onto the Truth Plane it stops rendering here and
+   graduates. Intelligence shows what the system BELIEVES; Overview shows what
+   the organisation STANDS BEHIND. That is why `source` exists on a trait and
+   why it is not cosmetic.
+
+   THE COPY TEST, which governs every string below: if Sandra read her own
+   profile, she would have to RECOGNISE herself, not feel diagnosed. So these
+   are observations in the third person and the present tense — "Asks for
+   written proof", never "Prefers documentation" and never anything about what
+   she feels. No personality framework, no clinical language, no emotional
+   state. A profile of a person is a thing that person should be able to read.
+
+   NOTHING IS SCORED. An archetype is a NAME — "Cautious Evaluator" — never
+   "Caution: 72". A number on a person is a judgement wearing a decimal point,
+   which is the same reason there is no risk score on a contact.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/** Closed catalog. The role this person occupies in the decision. */
+export const ARCHETYPES = [
+  "Economic Buyer", "Champion", "Technical Evaluator",
+  "Blocker", "End User", "Gatekeeper", "Executive Sponsor",
+] as const
+export type Archetype = typeof ARCHETYPES[number]
+
+/** Closed catalog. How they decide — not who they are. */
+export const DECISION_STYLES = [
+  "Cautious Evaluator", "Fast Mover", "Consensus Builder", "Detail Seeker", "Delegator",
+] as const
+export type DecisionStyle = typeof DECISION_STYLES[number]
+
+/**
+ * Where a trait came from, and it is the whole architecture in one field.
+ * `inferred` — the system's read of observed behaviour. Renders here.
+ * `attested` — passed KCON, on the Truth Plane. Renders in Overview.
+ */
+export type TraitSource = "inferred" | "attested"
+
+/** Four categories, and an agent picks FROM them rather than inventing. */
+export type TraitCategory = "decision-style" | "response-pattern" | "format-preference" | "escalation"
+
+/**
+ * The closed trait catalog. An agent selects from this list; it cannot write a
+ * new sentence about a person and put it on their record. That is the
+ * difference between a profile and an opinion.
+ */
+export const TRAIT_CATALOG: Record<TraitCategory, string[]> = {
+  "decision-style":    ["Asks for written proof", "Decides after one review", "Waits for consensus", "Reads the appendix"],
+  "response-pattern":  ["Replies within 2 days", "Replies same day", "Goes quiet between milestones", "Quiet on calls"],
+  "format-preference": ["Prefers email over calls", "Asks for documents, not decks", "Wants numbers first"],
+  "escalation":        ["Escalates to finance", "Escalates to legal", "Brings a second decision-maker"],
+}
+
+export interface ProfileEvidence { label: string; destination: string }
+
+export interface ProfileTrait {
+  label:    string
+  /**
+   * The same trait as a clause inside a sentence. "Quiet on calls" is a chip;
+   * "stays quiet on calls" is English, and the block reads as prose now.
+   *
+   * Stored rather than derived, because turning a label into a clause is a
+   * writing job — a rule that lowercases and prefixes produces "asks for
+   * written proof" correctly and "escalates to finance" only by luck.
+   */
+  prose:    string
+  category: TraitCategory
+  source:   TraitSource
+  /** Required. A trait with nothing behind it does not render — `renderable`
+   *  below enforces it rather than trusting each call site. */
+  evidence: ProfileEvidence
+}
+
+export interface ProfileBullet { text: string; evidence: ProfileEvidence }
+
+/**
+ * How to reach this person, DERIVED FROM WHERE THEY ACTUALLY REPLY rather
+ * than from a declared preference field. A contact record's "preferred
+ * channel" is whatever somebody typed into a form once; this is the channel
+ * that has produced answers.
+ */
+export interface ProfileChannel {
+  preferred:    string
+  window:       string
+  /** Observed median, always explicit. "~2 days", never "quickly". */
+  responseTime: string
+  lastTouch:    string
+  /** The same four facts as one sentence, for the prose block. A middot-
+   *  separated run of metadata is a different register from the line above it,
+   *  and mixing the two is most of why the block read as a data dump. */
+  prose:        string
+}
+
+export interface UcpProfile {
+  archetype: {
+    primary:      Archetype
+    primaryState: ConfidenceState
+    style:        DecisionStyle
+    styleState:   ConfidenceState
+  }
+  traits:     ProfileTrait[]
+  /** Null when there is not enough history to read one. The line then says so
+   *  rather than guessing. */
+  channel:    ProfileChannel | null
+  lands:      ProfileBullet[]
+  doesntLand: ProfileBullet[]
+  highlights: ProfileBullet[]
+}
+
+/** Five in the default state. Past that the line stops being a line. */
+export const PROFILE_TRAITS_MAX = 5
+
+/** Same rule as signals and reads: no evidence, no render, enforced here. */
+export function renderableTraits(traits: ProfileTrait[]): ProfileTrait[] {
+  return traits.filter(t => !!t.evidence && !!t.evidence.label)
+}
+export function renderableBullets(bullets: ProfileBullet[]): ProfileBullet[] {
+  return bullets.filter(b => !!b.evidence && !!b.evidence.label)
+}
+
+/**
+ * WHICH PARTS OF A PROFILE CAN BECOME A FACT.
+ *
+ * The same structural/interpretive guardrail that governs Agent reads, applied
+ * one level up. Structural claims are observable, checkable and promotable;
+ * interpretive ones are a reading, and a reading about a person is never
+ * persisted as an attested fact about them.
+ *
+ *   structural    archetype.primary, channel.preferred, channel.responseTime
+ *   interpretive  archetype.style, What lands, What doesn't
+ *
+ * Only the structural ones carry Confirm.
+ */
+export const PROFILE_STRUCTURAL = ["archetype.primary", "channel.preferred", "channel.responseTime"] as const
+export type ProfileStructuralField = typeof PROFILE_STRUCTURAL[number]
+
+export function getProfile(c: UcpContact): UcpProfile | null {
+  /* A company is not an interlocutor and has no decision style. Employees and
+     assets are not people you are selling to. The profile is a customer thing
+     until the product says otherwise. */
+  if (c.type !== "person") return null
+
+  const who = c.name.split(" ")[0]
+
+  return {
+    archetype: {
+      primary:      "Economic Buyer",
+      /* Structural and observable — two calls and an email thread put her
+         approving spend rather than recommending it — but nobody has attested
+         it, so it reads Inferred and carries Confirm. */
+      primaryState: "In review",
+      style:        "Cautious Evaluator",
+      /* Interpretive. It never reaches Verified because it is never attested. */
+      styleState:   "Inferred",
+    },
+    traits: [
+      { label: "Asks for written proof",  prose: "asks for written proof",     category: "decision-style",    source: "attested",
+        evidence: { label: "Migration timeline requested · Aug 18", destination: "activity" } },
+      { label: "Replies within 2 days",   prose: "replies within two days",    category: "response-pattern",  source: "inferred",
+        evidence: { label: "11 replies, median 1.8 days",          destination: "activity" } },
+      { label: "Escalates to finance",    prose: "escalates to finance",       category: "escalation",        source: "inferred",
+        evidence: { label: "Finance joined the last two calls",    destination: "activity" } },
+      { label: "Quiet on calls",          prose: "stays quiet on calls",       category: "response-pattern",  source: "inferred",
+        evidence: { label: "QBR · 52 min, 6 attendees",            destination: "activity" } },
+      { label: "Prefers email over calls", prose: "prefers email over calls",  category: "format-preference", source: "attested",
+        evidence: { label: "Channel preference · Sandbox",         destination: "knowledge" } },
+    ],
+    channel: {
+      preferred:    "Email",
+      window:       "mornings",
+      responseTime: "~2 days",
+      lastTouch:    "30m ago",
+      prose:        "Email, mornings, replies in about two days.",
+    },
+    lands: [
+      { text: "Written timelines",          evidence: { label: "Asked twice, in writing both times", destination: "activity" } },
+      { text: "Numbers before narrative",   evidence: { label: "Opened the QBR on usage figures",    destination: "activity" } },
+      { text: "Short emails with one ask",  evidence: { label: "Replied same day to the 2-line note", destination: "activity" } },
+    ],
+    doesntLand: [
+      { text: "Calls without an agenda",         evidence: { label: "Declined two ad-hoc invites",      destination: "activity" } },
+      { text: "Vague commitments",               evidence: { label: "Asked for a date, not a quarter",  destination: "activity" } },
+      { text: "Long threads with multiple asks", evidence: { label: "Answered 1 of 3 questions in Aug", destination: "activity" } },
+    ],
+    highlights: [
+      { text: `Owns the budget line on ${c.company}`,   evidence: { label: "Decision role · Sandbox",     destination: "knowledge" } },
+      { text: "Brought finance into the last two calls", evidence: { label: "Outbound call · Sep 2",      destination: "activity" } },
+      { text: `Blocked on one date, not on price`,       evidence: { label: `${who}'s security review`,   destination: "activity" } },
+    ],
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COMMUNICATION THREADS — the Email / SMS / Call preview
+   ══════════════════════════════════════════════════════════════════════════
+
+   Figma: Unified Customer Profile, sections Email (7698:2032), SMS
+   (7698:2033) and Call (7698:2034). Michael, 2026-09-11: build that design,
+   adapted to the design system, using its tokens and components.
+
+   ONE SHAPE, THREE CHANNELS. The three Figma sections are the same panel with
+   different content — a header, Conversation | Details tabs, an AI summary, a
+   thread, and a details sheet. Building three components would have meant
+   three places to fix the next thing, so the model is one type with a
+   `channel` discriminator and the panel branches on content, never on layout.
+
+   WHAT THE THREAD CAN CONTAIN, from the design:
+
+     message   a bubble. Outbound sits right and tinted with a delivery
+               receipt; inbound sits left with no fill. That asymmetry is the
+               whole reason a thread reads as a conversation rather than a log.
+     system    what the platform did, on a success tint — "Appointment booked",
+               "Routed to a human".
+     note      an internal note on an alert tint, with its author. Visible to
+               the team and never to the contact, which is why it cannot look
+               like a message.
+     separator a date break. The Activity feed already has ElapsedSeparator
+               and it is the same device, so the panel reuses it.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+export type ThreadEntryKind = "message" | "system" | "note" | "separator"
+
+export interface ThreadEntry {
+  kind:      ThreadEntryKind
+  /** Messages only. Outbound is us; inbound is them. */
+  direction?: "outbound" | "inbound"
+  /** Who said it — drives the avatar's initials and its colour. */
+  author?:   string
+  body:      string
+  /** Clock time on a message, a date on a system line or a note. */
+  at?:       string
+  /**
+   * Delivery, on outbound messages only, and ONLY what the channel can
+   * actually report. Email knows it was opened; SMS knows the carrier took
+   * it and nothing after that — there is no read receipt to have.
+   */
+  receipt?:  "sent" | "delivered" | "opened"
+}
+
+export interface CommsAttachment { name: string; kind: "doc" | "txt" | "image" }
+
+export interface CommsThread {
+  channel:   "email" | "sms" | "call"
+  /** The panel's title — a subject for email, the number for SMS and calls. */
+  title:     string
+  /** Under the title. */
+  when:      string
+  /** The purple summary card. Null when there is nothing worth summarising —
+   *  a two-line SMS exchange is shorter than any summary of it. */
+  summary:   string | null
+  entries:   ThreadEntry[]
+  /** The Details tab, in the design's own order. */
+  status:    { label: string; variant: TagVariantLite }
+  assigned:  string
+  dueBy?:    { at: string; overdueIn: string }
+  sentiment?: "Positive" | "Neutral" | "Negative"
+  created:   string
+  lastActivity: string
+  attachments: CommsAttachment[]
+  /** Calls only: what the transcript and the recording say. */
+  duration?: string
+  recording?: string
+}
+
+/**
+ * The thread behind one Activity row. Returns null for anything that is not a
+ * communication — an event or a task has no conversation to open.
+ */
+export function getThread(c: UcpContact, a: UcpActivity): CommsThread | null {
+  if (CHANNEL_GROUP[a.channel] !== "communication") return null
+  const who   = c.name.split(" ")[0]
+  const agent = c.agent.name
+
+  if (a.channel === "email") {
+    const inbound = a.title.startsWith("Inbound")
+    return {
+      channel: "email",
+      title:   inbound ? "Migration timeline" : "Governance addendum for review",
+      when:    a.timestamp,
+      summary: a.aiSummary ?? null,
+      entries: inbound ? [
+        { kind: "separator", body: "August 2026" },
+        { kind: "message", direction: "inbound", author: c.name, at: "7:55 AM",
+          body: `Following up on the migration timeline — could you send it in writing? Our security review cannot start until we can attach a date to it.` },
+        { kind: "note", author: c.owner, at: "Aug 18, 2026",
+          body: "Second ask. I do not have a date I can commit to yet — checking with delivery before replying." },
+        { kind: "system", at: "Aug 18, 2026", body: `${agent} drafted a reply and held it — no attested delivery date` },
+      ] : [
+        { kind: "separator", body: "August 2026" },
+        { kind: "message", direction: "outbound", author: c.owner, at: "9:40 AM", receipt: "opened",
+          body: `Hi ${who} — the redlined addendum is attached for Legal to countersign. Shout if anything in clause 7 needs another pass.` },
+        { kind: "system", at: "Aug 28, 2026", body: `Opened twice by ${who}. No reply yet.` },
+      ],
+      status:   inbound ? { label: "Awaiting reply", variant: "alert" } : { label: "Sent", variant: "success" },
+      assigned: c.owner,
+      dueBy:    inbound ? { at: "Sep 12, 17:00", overdueIn: "Due in 2d" } : undefined,
+      sentiment: "Neutral",
+      created:  a.timestamp,
+      lastActivity: "6 days ago",
+      attachments: inbound ? [] : [
+        { name: "Addendum_v3_redlined.pdf", kind: "doc" },
+        { name: "Clause-7-changes.txt",     kind: "txt" },
+      ],
+    }
+  }
+
+  if (a.channel === "sms") {
+    return {
+      channel: "sms",
+      title:   c.phone,
+      when:    a.timestamp,
+      /* No summary. The whole exchange is two messages — a summary of it
+         would be longer than it is. */
+      summary: null,
+      entries: [
+        { kind: "message", direction: "outbound", author: c.owner, at: "5:12 PM", receipt: "delivered",
+          body: a.smsBody ?? "" },
+      ],
+      status:   { label: "Delivered", variant: "success" },
+      assigned: c.owner,
+      created:  a.timestamp,
+      lastActivity: "3 weeks ago",
+      attachments: [],
+    }
+  }
+
+  // Call
+  const inbound = a.title.startsWith("Inbound")
+  return {
+    channel: "call",
+    title:   c.phone,
+    when:    a.timestamp,
+    summary: a.aiSummary ?? null,
+    entries: inbound ? [
+      { kind: "system", at: a.timestamp, body: `${agent} answered · identity verified` },
+      { kind: "message", direction: "inbound", author: c.name, at: "10:42 AM",
+        body: "I need the audit evidence pack for the Q3 review — can someone send it today?" },
+      { kind: "message", direction: "outbound", author: agent, at: "10:44 AM",
+        body: "I can see the pack on the Legal drive. Putting you through to the account owner to release it." },
+      { kind: "system", at: a.timestamp, body: `Escalated to ${c.owner}` },
+      { kind: "note", author: c.owner, at: "Aug 12, 2026",
+        body: "Sent the evidence pack the same afternoon. Nothing outstanding from this call." },
+    ] : [
+      { kind: "system", at: a.timestamp, body: `${c.owner} dialled out` },
+      { kind: "message", direction: "inbound", author: c.name, at: "2:07 PM",
+        body: "The evaluation is still funded for this cycle. What I need is the migration timeline in writing." },
+      { kind: "message", direction: "outbound", author: c.owner, at: "2:09 PM",
+        body: "Understood — I will confirm the date internally and send it through this week." },
+    ],
+    status:   inbound ? { label: "Escalated", variant: "alert" } : { label: "Resolved", variant: "success" },
+    assigned: inbound ? agent : c.owner,
+    sentiment: inbound ? "Neutral" : "Positive",
+    created:  a.timestamp,
+    lastActivity: inbound ? "4 weeks ago" : "1 week ago",
+    attachments: [{ name: "call-recording.mp3", kind: "doc" }],
+    duration:  inbound ? "6:41" : "6:18",
+    recording: "Available · 90-day retention",
+  }
+}

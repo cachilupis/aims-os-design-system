@@ -132,6 +132,18 @@ export interface SlideOutProps {
    * Default: true (unchanged 2-button footer).
    */
   showCtaSecondary?: boolean
+  /**
+   * Footer button size, when the panel's own size is the wrong thing to derive
+   * it from. Added 2026-09-11.
+   *
+   * The footer took `isM ? "default" : "sm"`, which couples the BUTTON's size
+   * to the PANEL's width — and those answer different questions. A 350px
+   * panel is a width decision; whether its footer needs 40px buttons is a
+   * density decision, and at 350px two M buttons with real labels run out of
+   * room and truncate ("iew the activity log"). Optional, and the default is
+   * the old derivation, so no existing panel moves.
+   */
+  ctaSize?: "default" | "sm"
   ctaPrimaryLabel?: string
   ctaSecondaryLabel?: string
   onCtaPrimary?: () => void
@@ -178,6 +190,7 @@ export function SlideOut({
   children,
   showCta = true,
   showCtaSecondary = true,
+  ctaSize,
   ctaPrimaryLabel = "Button",
   ctaSecondaryLabel = "Button",
   onCtaPrimary,
@@ -587,7 +600,7 @@ export function SlideOut({
           {showCtaSecondary && (
             <Button
               variant="secondary"
-              size={isM ? "default" : "sm"}
+              size={ctaSize ?? (isM ? "default" : "sm")}
               onClick={onCtaSecondary}
             >
               {ctaSecondaryLabel}
@@ -595,7 +608,7 @@ export function SlideOut({
           )}
           <Button
             variant="primary"
-            size={isM ? "default" : "sm"}
+            size={ctaSize ?? (isM ? "default" : "sm")}
             onClick={onCtaPrimary}
           >
             {ctaPrimaryLabel}

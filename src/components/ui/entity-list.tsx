@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, type ReactNode } from "react"
 import * as LucideIcons from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -75,6 +75,34 @@ export type EntityListItemData = {
   // tags renders up to tagsMaxVisible (default 5); extras collapse into "+n" with tooltip
   tags?:           { label: string }[]
   tagsMaxVisible?: number
+  /**
+   * ── A caller-owned expansion, below the row ──────────────────────────────
+   *
+   * Added 2026-09-10 for the UCP suggestion queue, whose expanded row is the
+   * asset rather than an annotation of the row: a drafted reply, the Truth
+   * Plane facts it was grounded in, and the actions that send or hold it.
+   *
+   * The row already expanded two things — `description` past its threshold,
+   * and `aiInsight` — and neither could carry that. Both own their state
+   * internally, both render text and only text, and a queue has to be able to
+   * open a row programmatically (keyboard navigation, "the held row you were
+   * chasing has been released") which internal state cannot express.
+   *
+   * So this one is CONTROLLED: the caller holds `expanded`, which is what
+   * makes single-open-at-a-time, restore-on-return and open-from-a-link
+   * possible. The component owns the chevron, the divider and the padding, so
+   * every expanded row in the product opens the same way.
+   *
+   * It is not a second `aiInsight`. That block is for the agent's reading of
+   * the row; this is for content the row is too small to hold.
+   */
+  expandable?: {
+    expanded:  boolean
+    onToggle:  () => void
+    content:   ReactNode
+    /** Accessible name for the chevron. Defaults to "Show more". */
+    label?:    string
+  }
   onClick?:        () => void
 }
 
@@ -360,6 +388,23 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               {item.timestamp}
             </span>
           )}
+          {/* The expansion's own control, after the state and before the
+              kebab. A caller-owned expansion still gets the component's
+              chevron, so a row that opens looks the same everywhere. */}
+          {item.expandable && (
+            <button
+              onClick={e => { e.stopPropagation(); item.expandable!.onToggle() }}
+              aria-expanded={item.expandable.expanded}
+              aria-label={item.expandable.label ?? (item.expandable.expanded ? "Show less" : "Show more")}
+              className="shrink-0 w-[24px] h-[24px] flex items-center justify-center rounded-[4px] transition-opacity hover:opacity-70"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              {item.expandable.expanded
+                ? (ChevronUpIcon   && <ChevronUpIcon   size={16} strokeWidth={1.75} />)
+                : (ChevronDownIcon && <ChevronDownIcon size={16} strokeWidth={1.75} />)
+              }
+            </button>
+          )}
           {item.showMenu && MoreHorizontalIcon && (
             <button
               onClick={e => { e.stopPropagation(); item.onMenuClick?.() }}
@@ -535,6 +580,19 @@ function EntityListRow({ item }: { item: EntityListItemData }) {
               </div>
             )
           })()}
+        </div>
+      )}
+
+      {/* ── The caller's expansion ──
+          Inside the row's own padding, under a divider, so it reads as more of
+          THIS row rather than as a second card appearing beneath it. */}
+      {item.expandable?.expanded && (
+        <div
+          className="flex flex-col gap-[8px] pt-[10px] mt-[2px]"
+          style={{ borderTop: "0.5px solid var(--field-border)" }}
+          onClick={e => e.stopPropagation()}
+        >
+          {item.expandable.content}
         </div>
       )}
     </div>

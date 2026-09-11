@@ -61,13 +61,46 @@ const GAP = 4
 const EDGE_MARGIN = 16
 
 /**
- * Reads the anchor from a click on (or inside) the trigger button. Falls back
- * to the pointer position only when no button is found, which should not
- * happen in normal use.
+ * The anchor for an element that IS the trigger — a field, a `Select`'s row, a
+ * button you already hold a ref to.
+ *
+ * Added 2026-09-10, because `anchorFromEvent` below only ever understood one
+ * of the three trigger shapes the DS actually publishes. It looks for a
+ * `<button>`, and neither of the other two is one: `Select` renders a div, and
+ * a typeahead is an `<input>`. Both were silently falling through to the
+ * pointer-position branch — which is not a fallback here, it is the exact
+ * behaviour the rule at the top of this file forbids. A panel opened from a
+ * wide field landed wherever the cursor happened to be inside it, and a field
+ * focused by KEYBOARD had no pointer at all, so it landed at (0, 0).
+ *
+ * That is why this is a function rather than a fix inside the event helper:
+ * the element is the thing that has a position, and an event only sometimes
+ * knows which element that was.
+ */
+export function anchorFromElement(el: Element): DropdownAnchor {
+  const r = el.getBoundingClientRect()
+  return {
+    left:   r.left,
+    right:  window.innerWidth - r.right,
+    top:    r.bottom,
+    bottom: window.innerHeight - r.top,
+  }
+}
+
+/**
+ * Reads the anchor from a click on (or inside) the trigger. A `<button>` first,
+ * then a field or a combobox row, and only then the pointer — which should not
+ * happen in normal use and is a bug wherever it does, since a panel at the
+ * cursor is what the rule at the top of this file exists to prevent.
  */
 export function anchorFromEvent(e: { target: EventTarget | null; clientX: number; clientY: number }): DropdownAnchor {
-  const btn = (e.target as HTMLElement | null)?.closest("button")
-  if (!btn) {
+  const target = e.target as HTMLElement | null
+  const trigger = target?.closest("button")
+    /* A Select's own row and a typeahead input. Checked after the button so
+       that nothing which works today changes: a click inside a button still
+       resolves to the button, exactly as before. */
+    ?? target?.closest('input, textarea, [role="combobox"]')
+  if (!trigger) {
     return {
       left:   e.clientX,
       right:  window.innerWidth - e.clientX,
@@ -75,13 +108,7 @@ export function anchorFromEvent(e: { target: EventTarget | null; clientX: number
       bottom: window.innerHeight - e.clientY,
     }
   }
-  const r = btn.getBoundingClientRect()
-  return {
-    left:   r.left,
-    right:  window.innerWidth - r.right,
-    top:    r.bottom,
-    bottom: window.innerHeight - r.top,
-  }
+  return anchorFromElement(trigger)
 }
 
 /** Below this a panel is not worth showing at all — flip rather than squeeze. */

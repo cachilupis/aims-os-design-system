@@ -53,11 +53,68 @@ export interface ProfileWidgetRow {
   tooltip: string
 }
 
+/**
+ * ── What a type's Overview is made of ──────────────────────────────────────
+ *
+ * Michael, 2026-09-10: "usar diferentes widgets para cada caso para que no se
+ * muestren siempre los mismos".
+ *
+ * Every type used to draw the same canvas in the same order — the type's own
+ * field widget, then Governance, then Risk, then Connections, then Recent
+ * activity, each one column wide. Only the CONTENT of the first one changed,
+ * so a fleet asset and a VP of Operations opened to the same page furniture,
+ * and the widget that mattered most for each of them sat in whichever slot the
+ * loop happened to reach.
+ *
+ * So the composition is published by the type, the way its fields and tabs
+ * already are. A `CanvasEntry` is a widget the screen knows how to build plus
+ * the span it gets HERE — the same Risk study is one column on a customer,
+ * where the relationship carries the risk, and two on an asset, where the
+ * asset's own condition IS the record.
+ *
+ * `self` means the type's own field widget, so a type can place it rather than
+ * always leading with it. Studies named here still disappear when the record
+ * has nothing for them (`contact.governance === "empty"` and friends) — the
+ * order is the type's, the presence is the record's.
+ */
+/**
+ * ── The widget shapes a canvas can place ───────────────────────────────────
+ *
+ * Michael, 2026-09-11: vary the TYPES of widget so the same ones do not show
+ * up every time. The composition already differed per entity type, but it was
+ * drawn from four renderers and two of them — Governance and Risk — were the
+ * same three-counter row with different numbers. A canvas of three widgets
+ * where two are the same shape reads as one widget repeated.
+ *
+ * These map onto the widget catalog's own shapes rather than being invented
+ * here: `profile-card`, `stat-row`, `alerts`, `board`, `kpi`, `connections`
+ * and `feed` are all entries in src/lib/widget-catalog.ts. A prototype that
+ * shows a shape the catalog has never heard of is the hallucination the
+ * catalog exists to prevent.
+ */
+export type CanvasWidget =
+  | "self"        // profile-card — the type's own fields
+  | "governance"  // stat-row     — three counters
+  | "risk"        // stat-row     — three counters
+  | "connections" // connections  — who else is on this record
+  | "activity"    // feed         — what happened, newest first
+  | "alerts"      // alerts       — open problems, worst first
+  | "planes"      // board        — counts grouped by knowledge plane
+  | "kpi"         // kpi          — one headline number with its context
+
+export interface CanvasEntry {
+  widget: CanvasWidget
+  /** 1, 2 or 3 columns. */
+  span:   1 | 2 | 3
+}
+
 export interface UcpProfileSpec {
   /** Beyond the universal four. Empty when the type has nothing to add. */
   extraTabs: { id: string; label: string }[]
   /** The type's own Overview widget — the fields only this type carries. */
   widget:    { uid: string; title: string; rows: ProfileWidgetRow[] }
+  /** The Overview canvas, in order, with each widget's span. */
+  canvas:    CanvasEntry[]
 }
 
 /**
@@ -77,6 +134,21 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [industry, headcount, hq] = p
     return {
       extraTabs: [{ id: "people", label: "People" }],
+      /* The org leads and takes two columns — industry, headcount and HQ are
+         what every other widget here gets read against. Governance sits
+         beside it because a company is where policy attaches. Connections
+         goes full width: on a company they are the PEOPLE, and a column of
+         three names with the rest hidden is the widget failing. */
+      /* profile-card · board · connections · feed — four different shapes.
+         The board replaces a second counter row: a company's knowledge is a
+         composition (how much is attested vs proposed vs raw material), and a
+         composition is what a board shows. */
+      canvas: [
+        { widget: "self",        span: 2 },
+        { widget: "planes",      span: 1 },
+        { widget: "connections", span: 3 },
+        { widget: "activity",    span: 3 },
+      ],
       widget: {
         uid: "organization", title: "Organization",
         rows: [
@@ -97,6 +169,18 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [role, department, location] = p
     return {
       extraTabs: [],
+      /* Governance takes two columns and Risk is absent. An employee record
+         exists so somebody can answer "is this person trained, cleared and
+         signed off" — that is the Governance study, and a risk score on a
+         colleague is a thing this product should not be computing. */
+      /* profile-card · stat-row · feed. Governance keeps the counter row here
+         because "12 of 12 policies signed" IS three counters — it is the one
+         place that shape is the right answer rather than the default one. */
+      canvas: [
+        { widget: "self",       span: 1 },
+        { widget: "governance", span: 2 },
+        { widget: "activity",   span: 3 },
+      ],
       widget: {
         uid: "employment", title: "Employment",
         rows: [
@@ -113,30 +197,21 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     }
   }
 
-  if (c.type === "repair-order") {
-    const [service, store, age] = p
-    return {
-      extraTabs: [],
-      widget: {
-        uid: "order", title: "Order",
-        rows: [
-          { label: "Service",  value: service ?? "—", icon: "Wrench",     variant: "informative",
-            tooltip: `Service · ${service ?? "not recorded"}. What the order was opened for, from the service advisor's intake.` },
-          { label: "Store",    value: store   ?? "—", icon: "Store",      variant: "neutral",
-            tooltip: `Store · ${store ?? "not recorded"}. Where the work is scheduled, which decides the bay it holds.` },
-          { label: "Open for", value: age     ?? "—", icon: "Clock",      variant: "alert",
-            tooltip: `Open for · ${age ?? "not recorded"}. Measured from the promised date, not from intake.` },
-          { label: "Advisor",  value: c.owner,        icon: "UserRound",  variant: "informative",
-            tooltip: `Service advisor · ${c.owner}. Accountable for the promise made to the customer.` },
-        ],
-      },
-    }
-  }
-
   if (c.type === "policy") {
     const [scope, cycle, effective] = p
     return {
       extraTabs: [],
+      /* The policy\u0027s own fields ARE the record — scope, review cycle,
+         effective date — so they take two columns, and Governance beside them
+         says how the tenant is doing against it. Nothing else applies: a
+         policy has no relationships and no risk of its own. */
+      /* profile-card · board · feed. A policy's question is how much evidence
+         stands behind it, which is a composition, not three counters. */
+      canvas: [
+        { widget: "self",   span: 2 },
+        { widget: "planes", span: 1 },
+        { widget: "activity", span: 3 },
+      ],
       widget: {
         uid: "policy", title: "Policy",
         rows: [
@@ -157,6 +232,20 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
     const [cls, site, acquired] = p
     return {
       extraTabs: [],
+      /* Risk takes two columns here, and it is the only type where it does.
+         On a person a risk score is a read of a relationship; on a vehicle it
+         is the service interval, the overdue mileage and the condition — the
+         asset\u0027s own state, which is most of what the record is for. */
+      /* profile-card · kpi · stat-row · feed — four shapes, and the only
+         canvas with a KPI. An asset has ONE number that decides what happens
+         to it next, and a headline figure is what that deserves; the risk
+         counters sit beside it as the detail behind it. */
+      canvas: [
+        { widget: "self",     span: 1 },
+        { widget: "kpi",      span: 1 },
+        { widget: "risk",     span: 1 },
+        { widget: "activity", span: 3 },
+      ],
       widget: {
         uid: "asset", title: "Asset",
         rows: [
@@ -189,22 +278,60 @@ export function specForContact(c: UcpContact): UcpProfileSpec {
   rows.push({ label: "Account owner", value: c.owner, icon: "UserRound", variant: "informative",
     tooltip: `Account owner · ${c.owner}. Holds this relationship on our side; escalations go here first.` })
 
-  return { extraTabs: [], widget: { uid: "account", title: "Account", rows } }
+  /* A customer's three columns each answer a different question and none of
+     them is bigger than the others: who they are, how the relationship is
+     going, and who else is in it. Risk earns a column on a person because it
+     is a read of the RELATIONSHIP — Intelligence carries the reasoning, this
+     is the number. Governance is absent: a contact is not a policy subject. */
+  return {
+    extraTabs: [],
+    /* profile-card · alerts · connections · feed. Four shapes, no repeats.
+       Risk's counter row gave way to the alerts list: the counters restated a
+       score whose reasoning now lives in Intelligence, while the alerts show
+       WHICH conditions are open on this person — the same data the Intelligence
+       signals block ranks, in the place somebody lands first. */
+    canvas: [
+      { widget: "self",        span: 1 },
+      { widget: "alerts",      span: 1 },
+      { widget: "connections", span: 1 },
+      { widget: "activity",    span: 3 },
+    ],
+    widget: { uid: "account", title: "Account", rows },
+  }
 }
 
 /**
- * The full tab strip: the universal spine with the type's own tabs slotted
- * between Overview and Snapshot. Domain tabs sit next to Overview because they
- * answer "what is this thing"; the knowledge tabs that follow answer "what do
- * we know about it", and that order is the same on every type.
+ * The full tab strip — Michael's structure, 2026-09-10:
+ *
+ *   Overview | Activity | Intelligence | Knowledge | + industry modules
+ *
+ * Four universal tabs, in that order, because each answers a different
+ * question and they get asked in that sequence:
+ *
+ *   Overview      what matters about this record right now (the canvas)
+ *   Activity      what happened — communications, notes, events, tasks
+ *   Intelligence  what the system THINKS: reads, signals, recommendations,
+ *                 deductions. One AI tab rather than a tab per AI feature
+ *   Knowledge     what the system HOLDS: documents, pending claims, verified
+ *                 facts. The entity's own mini-governance
+ *
+ * The previous strip had `Snapshot` and `Drives`, and the split ran along the
+ * wrong seam: the facts table (verified knowledge) sat with nothing, while
+ * documents had a tab of their own. Intelligence is what the system inferred,
+ * Knowledge is what it can prove — and Drive, Sandbox and Truth are three
+ * shelves of the same cupboard.
  */
 export function tabsForContact(c: UcpContact): { id: string; label: string }[] {
   return [
-    { id: "overview", label: "Overview" },
+    { id: "overview",     label: "Overview"     },
+    { id: "activity",     label: "Activity"     },
+    { id: "intelligence", label: "Intelligence" },
+    { id: "knowledge",    label: "Knowledge"    },
+    // Industry modules last. A type's own tab is the domain layer on top of
+    // the spine — a Company brings People — and it sits after the four
+    // because the spine is what every record has and the module is what this
+    // one adds.
     ...specForContact(c).extraTabs,
-    { id: "snapshot", label: "Snapshot" },
-    { id: "activity", label: "Activity" },
-    { id: "drives",   label: "Drives"   },
   ]
 }
 
@@ -271,12 +398,6 @@ const FACETS: Record<string, UcpFacet[]> = {
   // contact's — a repair order filters by store, a policy by scope. Which is
   // the argument for the type publishing its own rather than the screen
   // guessing from a shared shape.
-  "repair-order": [
-    { id: "status", label: "Status", inline: true },
-    { id: "store",  label: "Store",  inline: true },
-    { id: "owner",  label: "Advisor" },
-    { id: "source", label: "Source" },
-  ],
   policy: [
     { id: "status", label: "Status", inline: true },
     { id: "scope",  label: "Scope",  inline: true },
@@ -315,7 +436,7 @@ export function facetValue(c: UcpContact, facetId: string): string {
     case "hq":         return c.type === "company"  ? (p[2] ?? "") : ""
     // The non-people types. Same parser, different position — each type says
     // what its subtitle means, and nothing else has to know.
-    case "store":      return c.type === "repair-order" || c.type === "asset" ? (p[1] ?? "") : ""
+    case "store":      return c.type === "asset" ? (p[1] ?? "") : ""
     case "scope":      return c.type === "policy" ? (p[0] ?? "") : ""
     case "class":      return c.type === "asset"  ? (p[0] ?? "") : ""
     default: return ""
