@@ -76,6 +76,7 @@ import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
+import { SidePanel }         from "@/components/ui/side-panel"
 import { Skeleton }          from "@/components/ui/skeleton"
 import { Tooltip }           from "@/components/ui/tooltip"
 import { EntityHeader }      from "@/components/ui/entity-header"
@@ -2490,6 +2491,12 @@ function NotePreview({
       onClose={onClose}
       type="with-variants"
       size="m"
+      /* HALF-SCREEN — Michael, 2026-09-11. Every other preview here is a
+         skim: a fact, a drive, a signal, all of them a value and a few
+         attributes that read fine in 350px. A note is PROSE somebody wrote,
+         three paragraphs of it, and at 350 every sentence wraps three times.
+         The panel that exists to be read gets the width to read in. */
+      initialSnap="half"
       title={title}
       subtitle={note ? `Note · ${note.author}` : ""}
       showIcon
@@ -3261,23 +3268,65 @@ function ConciergeChat({
     setDraft("")
   }
 
+  /*
+    ── A SidePanel, not a SlideOut ──────────────────────────────────────────
+    Michael, 2026-09-11: Ask opens the chat as a SidePanel.
+
+    It is the rule CLAUDE.md already states, applied to the one surface that
+    had it backwards. "Is the panel overlapping a browsable list? → SlideOut.
+    Is it embedded alongside the thing the user is working in? → SidePanel."
+    The concierge answers about THIS record from THIS record's planes, and
+    half the reason to ask is to check what it says against what is on the
+    page — which a SlideOut's backdrop is specifically designed to prevent.
+
+    Three things follow from the swap, and all three are improvements rather
+    than costs:
+
+    · NO BACKDROP, so the record stays readable and clickable while the chat
+      is open. That is the whole point.
+    · A COLLAPSED STRIP, which a SlideOut has no equivalent of. Closing the
+      chat used to lose the conversation; now it parks at the edge and comes
+      back with its turns intact.
+    · THE COMPOSER IS THE PANEL'S FOOTER rather than a row the body has to
+      pin itself, so it stays put while the transcript scrolls.
+  */
   return (
-    <SlideOut
+    <SidePanel
       open={open}
       onClose={onClose}
-      type="with-variants"
-      size="m"
       title="Concierge"
-      subtitle={`${contact.agent.name} · ${contact.name}`}
-      showIcon
-      iconContent={<Sparkle size={14} />}
-      showStatus
-      statusLabel="Online"
-      showTopButton={false}
-      showTabs={false}
-      showSearchBar={false}
-      showChips={false}
-      showCta={false}
+      description={`${contact.agent.name} · ${contact.name}`}
+      titleIcon={<Sparkle size={14} />}
+      titleTag="Online"
+      titleTagVariant="success"
+      showCollapsedStrip
+      showMenu={false}
+      showSearch={false}
+      footer={
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: 12, borderTop: "1px solid var(--field-border)" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {CONCIERGE_PROMPTS.map(p => (
+              <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
+            ))}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Input
+              placeholder={`Ask about ${contact.name}…`}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") ask(draft) }}
+            />
+            <Button
+              variant="primary"
+              size="default"
+              iconPosition="alone"
+              icon={<Send size={16} />}
+              aria-label="Send"
+              onClick={() => ask(draft)}
+            />
+          </div>
+        </div>
+      }
     >
       <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {/* Vertical padding only, and the 16/-16 pair so the scroller does not
@@ -3320,31 +3369,8 @@ function ConciergeChat({
           ))}
         </div>
 
-        <div style={{ paddingTop: 8, paddingBottom: 20, display: "flex", flexDirection: "column", gap: 10, borderTop: "1px solid var(--field-border)" }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, paddingTop: 10 }}>
-            {CONCIERGE_PROMPTS.map(p => (
-              <Chip key={p} size="s" variant="secondary" onClick={() => ask(p)}>{p}</Chip>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Input
-              placeholder={`Ask about ${contact.name}…`}
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter") ask(draft) }}
-            />
-            <Button
-              variant="primary"
-              size="default"
-              icon={<Send size={14} />}
-              iconPosition="alone"
-              aria-label="Send"
-              onClick={() => ask(draft)}
-            />
-          </div>
-        </div>
       </div>
-    </SlideOut>
+    </SidePanel>
   )
 }
 
@@ -3915,6 +3941,20 @@ export function UcpProfileView({
         />
       </div>
 
+      {/*
+        THE BODY AND THE CONCIERGE SHARE A ROW — and they have to, because
+        SidePanel is a LAYOUT panel and not an overlay. It sits in the flow
+        and shifts the content beside it; rendered as a loose sibling further
+        down the tree it lands wherever document order puts it, which on the
+        first attempt was the far left of the column, 350px wide, pushing the
+        record sideways.
+
+        A flex row with the body at `flex: 1` and the panel after it is the
+        composition the DS's own SidePanel example uses, and it is what makes
+        "shifts main content when open" true rather than aspirational.
+      */}
+      <div style={{ display: "flex", alignItems: "stretch", gap: 0, minHeight: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
       {/* The body follows the header's state. Three mutually exclusive cases,
           in the order the header resolves them: in flight, governed, readable. */}
       {loading ? (
@@ -3952,7 +3992,10 @@ export function UcpProfileView({
         </>
       )}
 
-      <ConciergeChat contact={contact} open={chatOpen} onClose={() => setChatOpen(false)} />
+        </div>
+
+        <ConciergeChat contact={contact} open={chatOpen} onClose={() => setChatOpen(false)} />
+      </div>
 
       {/* Information — where the fields in the header came from. Not the
           Overview and not the Knowledge tab: it explains what is on screen
