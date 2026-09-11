@@ -1279,8 +1279,6 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
 // ─── Member detail page ───────────────────────────────────────────────────────
 
-const USER_TYPE_OPTIONS: MemberRole[] = ["Owner", "Admin", "Member"]
-
 function MemberDetailPage({
 member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
   allGroups, allRoles, onRemoveFromGroup, onAddToGroup, onRemoveFromRole,
@@ -1455,21 +1453,16 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
                 <Icons.RefreshCw size={13} /> Resend invite
               </Button>
             ) : null}
+            {/* Reset password and Reset MFA are ABOVE, under `hasSignedIn`.
+                They used to be repeated here too, so an active member who had
+                signed in got each button twice — the pair above with a toast
+                and a confirmation, the pair here with an alert(). Suspend is
+                the only action this branch actually owns. */}
             {!isInvited && !isPending && (
-              <>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => alert(`Password reset email sent to ${member.email}`)}>
-                  <Icons.KeyRound size={13} /> Reset password
-                </Button>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => alert(`MFA enrollment reset for ${member.name}`)}>
-                  <Icons.ShieldOff size={13} /> Reset MFA
-                </Button>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => { onToggleSuspend(member.id); onBack() }}>
-                  {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
-                </Button>
-              </>
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => { onToggleSuspend(member.id); onBack() }}>
+                {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
+              </Button>
             )}
             {!confirmRemove ? (
               <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
@@ -3424,6 +3417,20 @@ function GroupResourcesPanel({ groupId }: { groupId: string }) {
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
+/**
+ * The members table's column tracks, in one place so the header and the rows
+ * cannot drift apart.
+ */
+const MEMBER_COLUMNS = [
+  { key: "member",     label: "Member",      flex: 3,   min: 200, align: "left"   as const },
+  { key: "department", label: "Department",  flex: 2,   min: 110, align: "left"   as const },
+  { key: "userType",   label: "User Type",   flex: 1,   min: 90,  align: "center" as const },
+  { key: "lastActive", label: "Last active", flex: 1.4, min: 110, align: "right"  as const },
+  { key: "mfa",        label: "MFA",         flex: 1,   min: 70,  align: "center" as const },
+  { key: "status",     label: "Status",      flex: 1,   min: 90,  align: "center" as const },
+]
+const COL = Object.fromEntries(MEMBER_COLUMNS.map(c => [c.key, c])) as Record<string, typeof MEMBER_COLUMNS[number]>
+
 type MemberAction = "reset-password" | "reset-mfa" | "suspend" | "unsuspend" | "deactivate" | "update" | "send-invite" | "resend-invite"
 
 function MemberRow({
@@ -3462,8 +3469,8 @@ function MemberRow({
           <AvatarCircle name={member.name} sizeKey="lg" avatarStyle={member.status === "active" ? "text" : "empty"} />
         </div>
 
-        {/* Name + email */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Same tracks as the header — see MEMBER_COLUMNS. */}
+        <div style={{ flex: COL.member.flex, minWidth: COL.member.min }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1, marginBottom: 1 }}>
             {member.name}
           </div>
@@ -3473,17 +3480,17 @@ function MemberRow({
         </div>
 
         {/* Department */}
-        <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ flex: COL.department.flex, minWidth: COL.department.min, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {member.department ?? "—"}
         </div>
 
         {/* User type badge */}
-        <div style={{ minWidth: 72, textAlign: "center", flexShrink: 0 }}>
+        <div style={{ flex: COL.userType.flex, minWidth: COL.userType.min, display: "flex", justifyContent: "center" }}>
           <Tag variant={USER_TYPE_TAG[member.role]} size="sm">{member.role}</Tag>
         </div>
 
         {/* Last active / invite status */}
-        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 100 }}>
+        <div style={{ flex: COL.lastActive.flex, minWidth: COL.lastActive.min, textAlign: "right" }}>
           {member.status === "pending" ? (
             <>
               <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600, marginBottom: 1 }}>Invite not sent</div>
@@ -3509,7 +3516,8 @@ function MemberRow({
         </div>
 
         {/* MFA */}
-        <div title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"} style={{ display: "flex", flexShrink: 0 }}>
+        <div title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
+          style={{ flex: COL.mfa.flex, minWidth: COL.mfa.min, display: "flex", justifyContent: "center" }}>
           <Tag variant={member.mfaEnabled ? "success" : "alert"} size="sm">
             {member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
             MFA
@@ -3517,7 +3525,7 @@ function MemberRow({
         </div>
 
         {/* Status */}
-        <div style={{ minWidth: 76, textAlign: "center", flexShrink: 0 }}>
+        <div style={{ flex: COL.status.flex, minWidth: COL.status.min, display: "flex", justifyContent: "center" }}>
           <Tag variant={STATUS_TAG[member.status]} size="sm">{STATUS_LABEL[member.status]}</Tag>
         </div>
 
@@ -4183,18 +4191,16 @@ function PermissionsBreakdown({ rows }: { rows: StudioPermRow[] }) {
   )
 }
 
-function MemberPreview({
-member, onRoleChange, onToggleSuspend, onSendInvite,
-}: {
-  member: Member
-  onRoleChange: (id: string, role: MemberRole) => void
-  onToggleSuspend: (id: string) => void
-  onSendInvite: (id: string) => void
-}) {
+/**
+ * The preview is read-only. It used to carry an Actions tab with a raw
+ * <select> for the user type and a suspend/invite button; Michael took it out
+ * — those belong to the full profile, which the panel's own CTA opens, and a
+ * raw <select> is not a DS control in the first place.
+ */
+function MemberPreview({ member }: { member: Member }) {
   const [tab, setTab] = useState(0)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
-  const isPending = member.status === "pending"
 
   // Same shape the role preview shows, so it is the same component — including
   // the expand, which this tab never had.
@@ -4288,32 +4294,6 @@ member, onRoleChange, onToggleSuspend, onSendInvite,
           </div>
         )}
 
-        {/* Actions */}
-        {tab === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {!isInvited && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change user type</div>
-                <select
-                  value={member.role}
-                  onChange={e => onRoleChange(member.id, e.target.value as UserType)}
-                  style={{ width: "100%", padding: "8px 10px", fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none", cursor: "pointer" }}
-                >
-                  {USER_TYPE_OPTIONS.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {isPending ? (
-              <Button variant="primary" size="sm" onClick={() => onSendInvite(member.id)}>Send invitation</Button>
-            ) : isInvited ? (
-              <Button variant="secondary" size="sm" onClick={() => alert(`Invite resent to ${member.email}`)}>Resend invite</Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => onToggleSuspend(member.id)}>{isActive ? "Suspend access" : "Reactivate account"}</Button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
@@ -4958,10 +4938,6 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     return groups.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
   }, [groups, groupsQuery])
 
-  function handleRoleChange(id: string, role: MemberRole) {
-    setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
-    setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
-  }
   /**
    * The second half of "create without inviting": the invitation that was
    * deferred goes out now. `joinedAt` doubles as the invite-sent stamp
@@ -5111,9 +5087,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Main tab switcher */}
       <Tabs
         items={[
-          { id: "members", label: `Members (${counts.all})` },
-          { id: "roles",   label: `Roles (${roles.length})`  },
-          { id: "groups",  label: `Groups (${GROUPS.length})` },
+          // No counts in the label: a four-digit tenant pushes the tab past
+          // its track and breaks the row, and the number is already on the
+          // page — the header line says it and the list shows it.
+          { id: "members", label: "Members" },
+          { id: "roles",   label: "Roles"   },
+          { id: "groups",  label: "Groups"  },
         ]}
         activeId={mainTab}
         onChange={v => setMainTab(v as "members" | "roles" | "groups")}
@@ -5147,13 +5126,16 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
               textTransform: "uppercase", letterSpacing: "0.07em",
             }}>
-              <span style={{ flex: 1 }}>Member</span>
-              <span style={{ minWidth: 120 }}>Department</span>
-              <span style={{ minWidth: 72, textAlign: "center" }}>User Type</span>
-              <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
-              <span style={{ minWidth: 60, textAlign: "center" }}>MFA</span>
-              <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
-              <span style={{ width: 28 }} />
+              {/* EVERY column flexes. Making only Member flexible moved the gap
+                  instead of removing it: the surplus then pooled between the
+                  email and Department while the five columns after it stayed
+                  clamped together on the right. Each track takes a share now,
+                  so a wider screen widens the whole row evenly. Header and rows
+                  read the same table, so they cannot drift. */}
+              {MEMBER_COLUMNS.map(c => (
+                <span key={c.key} style={{ flex: c.flex, minWidth: c.min, textAlign: c.align }}>{c.label}</span>
+              ))}
+              <span style={{ width: 28, flexShrink: 0 }} />
             </div>
             {filtered.length === 0 ? (
               <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
@@ -5279,12 +5261,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         onCtaPrimary={previewCta?.onClick}
       >
         {previewItem?.type === "member" && (
-          <MemberPreview
-            member={previewItem.member}
-            onRoleChange={handleRoleChange}
-            onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
-            onSendInvite={handleSendInvite}
-          />
+          <MemberPreview member={previewItem.member} />
         )}
         {previewItem?.type === "role" && (
           <RolePreview
