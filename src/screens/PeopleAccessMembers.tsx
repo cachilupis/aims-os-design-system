@@ -22,7 +22,6 @@ import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { Chip }        from "@/components/ui/chip"
 import { Toggle }      from "@/components/ui/toggle"
-import { SwitchTab } from "@/components/ui/switch-tab"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { AvatarCircle, nameToAvatarColor } from "@/components/ui/avatar"
@@ -2312,7 +2311,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
       <div
         onClick={() => hasChildren && setExpanded(e => !e)}
         style={{
-          display: "flex", alignItems: "flex-start", gap: 8,
+          display: "flex", alignItems: "center", gap: 8,
           padding: `8px 16px 8px ${16 + depth * 20}px`,
           borderBottom: "1px solid var(--border)",
           cursor: hasChildren ? "pointer" : "default",
@@ -2321,34 +2320,58 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
         onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = rowBgHover }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg }}
       >
-        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 3 }}>
+        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {hasChildren ? (expanded ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" /> : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />) : null}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
-            {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>via {node.role}</span>
-            )}
+            {node.role && <Tag variant="informative" size="sm">via {node.role}</Tag>}
             {node.scope && mode !== "edit" && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>}
             {isPinned && <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Pinned</span>}
             {hasOverride && !isPinned && <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Modified</span>}
           </div>
           {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>}
           {isInheritedOnly && <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1, fontStyle: "italic" }}>Inherited via role · toggle to confirm direct access</div>}
-          {mode === "edit" && (
-            <div style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }} onClick={e => e.stopPropagation()}>
-              <SwitchTab size="s" items={SCOPE_ITEMS} value={scopeOverrides[node.id] ?? node.scope ?? "Own"} onChange={scope => onScopeChange(node.id, scope)} aria-label={`Scope for ${node.label}`} />
-            </div>
-          )}
         </div>
-        <span onClick={e => e.stopPropagation()} style={{ paddingTop: 2 }}>
+
+        {/*
+          Scope and the on/off switch are the two controls on this row, so they
+          sit together on the right with a hairline between them. The scope
+          used to be a SwitchTab under the description — a second full-width
+          band per permission, which made the row twice as tall and read as a
+          sub-section rather than as a setting for the line it belongs to.
+
+          Chips, because scope is a choice among three: selected/unselected is
+          exactly what Chip is for. The divider is what stops the last chip
+          reading as part of the toggle.
+        */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}
+          onClick={e => e.stopPropagation()}>
+          {mode === "edit" && (
+            <>
+              <div style={{
+                display: "flex", gap: 4,
+                // Scope only means something once the permission is ON.
+                opacity: isDirect ? 1 : 0.35,
+                pointerEvents: isDirect ? "auto" : "none",
+              }}>
+                {SCOPE_ITEMS.map(sc => {
+                  const active = (scopeOverrides[node.id] ?? node.scope ?? "Own") === sc.id
+                  return (
+                    <Chip key={sc.id} size="s" variant={active ? "primary" : "secondary"}
+                      onClick={() => onScopeChange(node.id, sc.id)}
+                      aria-label={`${sc.label} scope for ${node.label}`}>
+                      {sc.label}
+                    </Chip>
+                  )
+                })}
+              </div>
+              <div style={{ width: 1, alignSelf: "stretch", background: "var(--color-border-neutral-subtle)" }} />
+            </>
+          )}
           <Toggle checked={isDirect} disabled={node.locked && node.state !== "g-inh"} size="sm" onChange={on => { onToggle(node.id, on) }} />
-        </span>
+        </div>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
         <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={onScopeChange} />
@@ -3803,12 +3826,14 @@ const INVITE_STUDIO_OPTIONS = [
  * not move. Shrinking the cards instead is the thing that looks right and is
  * wrong.
  */
-const PICKER_SCROLLER: React.CSSProperties = {
-  maxHeight: 4 * 68,
-  overflowY: "auto",
-  paddingInline: 16,
-  marginInline: -16,
-  paddingBlock: 4,
+function pickerScroller(rowHeight: number): React.CSSProperties {
+  return {
+    maxHeight: 4 * (rowHeight + 8),   // +8 is the grid gap between rows
+    overflowY: "auto",
+    paddingInline: 16,
+    marginInline: -16,
+    paddingBlock: 4,
+  }
 }
 
 /** Two columns, because these items are short and comparing them is the task. */
@@ -4155,28 +4180,29 @@ function InviteWizard({ onCancel, onSend }: {
                 onCta={() => { setGroupQuery(""); setGroupFilter("all") }}
               />
             ) : (
-            <div style={{ ...PICKER_GRID, ...PICKER_SCROLLER }}>
+            <div style={{ ...PICKER_GRID, ...pickerScroller(58) }}>
               {shownGroups.map(g => {
                 const on = groupIds.includes(g.id)
                 return (
                   <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
-                    {/* Two lines now that the column is half as wide: identity
-                        on top, what the group actually grants underneath.
-                        Side by side they fought for the same 40px. */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} />
-                        <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {g.name}
-                          </div>
-                          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                            {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
-                          </div>
+                    {/* One line, tags on the right. Stacked underneath they
+                        made every card ~30px taller for no extra information,
+                        and a taller card is fewer groups per screen. */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "none" }}>
+                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} />
+                      <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {g.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                          {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {/* Wide enough for all four abbreviations on one line —
+                          wrapping made two of the six cards taller than the
+                          rest, which is the thing this change was undoing. */}
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0, maxWidth: 200 }}>
                         {g.studios.map(st => (
                           <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
                             {STUDIO_SHORT[st] ?? st}
@@ -4219,7 +4245,7 @@ function InviteWizard({ onCancel, onSend }: {
                 onCta={() => { setRoleQuery(""); setRoleFilter("all") }}
               />
             ) : (
-            <div style={{ ...PICKER_GRID, ...PICKER_SCROLLER }}>
+            <div style={{ ...PICKER_GRID, ...pickerScroller(86) }}>
               {/* "No role" is a real choice, not the absence of one, so it is a
                   card like the others — and it stays put while the search
                   filters the rest, because searching must never strand the
