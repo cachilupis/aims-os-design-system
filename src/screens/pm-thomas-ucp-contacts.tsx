@@ -24,8 +24,6 @@ import { useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { ScreenLayout }      from "@/components/layouts/screen-layout"
 import { Header }            from "@/components/ui/header"
-import { Tabs }              from "@/components/ui/tabs"
-import { Filters }           from "@/components/ui/filters"
 import { FiltersSlideout }   from "@/components/ui/filters-slideout"
 import { Menu, MenuItem }    from "@/components/ui/menu-item"
 import { Button }            from "@/components/ui/button"
@@ -39,7 +37,6 @@ import { ModalDialog }       from "@/components/ui/modal-dialog"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { Tooltip }           from "@/components/ui/tooltip"
-import { Checkbox }          from "@/components/ui/checkbox"
 import { AiSummaryWidget }   from "@/components/experimental/ai-summary-widget"
 import { Input }             from "@/components/ui/input"
 import { Select }            from "@/components/ui/select"
@@ -52,7 +49,7 @@ import { InformativeCard }   from "@/components/ui/informative-card"
 import { useToast }          from "@/components/ui/toast"
 import { anchorFromElement, anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
-import { Plus, Lock, Trash2, Contact as ContactIcon } from "lucide-react"
+import { Plus, Lock, Trash2, Search, PanelLeftOpen, PanelLeftClose, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
@@ -102,11 +99,9 @@ const ALL_TYPE_TABS: { id: string; label: string; type: UcpEntityType | "all" }[
     .map(t => ({ id: t, label: TYPE_PLURAL[t], type: t })),
 ]
 
-/** What a new user sees. Not alphabetical — the types most people work in. */
-const DEFAULT_TAB_IDS = ["all", "person", "employee", "company"]
-
-/** Six visible at most, including All. */
-const MAX_VISIBLE_TABS = 6
+/* DEFAULT_TAB_IDS and MAX_VISIBLE_TABS lived here. Both were answers to "a
+   horizontal bar runs out of room", and the rail is vertical — it shows every
+   category, so there is no default subset to pick and no ceiling to enforce. */
 
 /**
  * The create CTA names what it will make, so it tracks the active tab. On All
@@ -846,6 +841,146 @@ function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenReco
 }
 
 
+/**
+ * ── The category rail ──────────────────────────────────────────────────────
+ *
+ * Michael, 2026-09-11: the entity types can grow a long way, so the category
+ * choice moves out of a tab bar and into a rail to the LEFT of the list — like
+ * SidePanel, but without a container card, with an expand/collapse control and
+ * a divider on its right edge, and with a search so somebody can find a
+ * category instead of scanning for it.
+ *
+ * WHY A TAB BAR WAS ALWAYS GOING TO BREAK HERE. A tab bar is horizontal, so it
+ * is bounded by the width of the screen — which is why this one grew a `+`
+ * picker and a cap of six, and why the picker existed at all. Both of those
+ * were workarounds for a shape that does not scale, and both go: a vertical
+ * list has as many rows as it needs, and a search field is what replaces the
+ * cap when the list gets long. Nothing is hidden behind a preference any more.
+ *
+ * ── COMPONENT INVENTORY, taken before anything was written ──
+ *
+ *   SidePanel   the closest thing, and it is not this. It is an overlay-ish
+ *               panel with its own surface, a title, a menu and a footer, and
+ *               Michael's instruction was explicitly "without a container
+ *               card". Borrowed its BEHAVIOUR — the collapsed strip, the
+ *               right border — not its chrome.
+ *   Sidebar     the app's own nav, at the far left. Two of those on one
+ *               screen is two navigations competing; this rail is a filter,
+ *               not navigation, so it is not that component either.
+ *   MenuItem    REUSED, one per category: leadingIcon, label, subtext, a
+ *               trailing count and a selected state. It is already the row
+ *               the `+` picker used, so a category looks the same wherever
+ *               it is listed.
+ *   Input       REUSED for the search, with its own leftIcon.
+ *   Tooltip     REUSED for the collapsed rail, where a row is an icon and an
+ *               icon-only control without a label is unreadable.
+ *
+ * WHAT I ADDED: this function. It is a column with a border and a list — a
+ * composition of four DS components in a screen file, which is the case
+ * CLAUDE.md says NOT to turn into a component. If a second screen wants a
+ * category rail, that is when it earns a file in experimental/.
+ */
+const RAIL_WIDTH           = 232
+const RAIL_COLLAPSED_WIDTH = 56
+/** Below this a search field is furniture — the same threshold the `+` picker
+ *  used to justify not having one. */
+const RAIL_SEARCH_MIN      = 6
+
+function CategoryRail({
+  categories, activeId, onSelect, collapsed, onCollapsedChange, query, onQueryChange,
+}: {
+  categories: { id: string; label: string; icon: string; count: number }[]
+  activeId:   string
+  onSelect:   (id: string) => void
+  collapsed:  boolean
+  onCollapsedChange: (next: boolean) => void
+  query:      string
+  onQueryChange: (next: string) => void
+}) {
+  const q       = query.trim().toLowerCase()
+  const shown   = categories.filter(c => !q || c.label.toLowerCase().includes(q))
+  const showSearch = categories.length >= RAIL_SEARCH_MIN
+
+  return (
+    <div
+      style={{
+        width: collapsed ? RAIL_COLLAPSED_WIDTH : RAIL_WIDTH,
+        flexShrink: 0,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+        paddingRight: 16,
+        /* The divider Michael asked for, and the only thing separating the
+           rail from the list — no surface, no card, no shadow. */
+        borderRight: "1px solid var(--field-border)",
+        transition: "width 150ms ease",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: collapsed ? "center" : "space-between" }}>
+        {!collapsed && (
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
+            Categories
+          </span>
+        )}
+        {/* The DS's own wording for this control, so it reads the same as the
+            app Sidebar's toggle one rail over. */}
+        <Tooltip side="cursor" content={collapsed ? "Expand" : "Collapse"}>
+          <Button
+            variant="tertiary" size="sm" iconPosition="alone"
+            icon={collapsed
+              ? <PanelLeftOpen  size={16} strokeWidth={1.75} />
+              : <PanelLeftClose size={16} strokeWidth={1.75} />}
+            aria-label={collapsed ? "Expand categories" : "Collapse categories"}
+            onClick={() => onCollapsedChange(!collapsed)}
+          />
+        </Tooltip>
+      </div>
+
+      {/* The search filters CATEGORIES, not records — it is the thing that
+          replaces a cap once the list is long. Hidden while the list is short
+          enough to read at a glance. */}
+      {!collapsed && showSearch && (
+        <Input
+          size="sm"
+          placeholder="Find a category…"
+          value={query}
+          onChange={e => onQueryChange(e.target.value)}
+          leftIcon={<Search size={14} />}
+        />
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {shown.map(c => {
+          const on = c.id === activeId
+          const row = (
+            <MenuItem
+              key={c.id}
+              size="sm"
+              label={collapsed ? "" : c.label}
+              subtext={collapsed ? undefined : `${c.count} records`}
+              state={on ? "focus" : "default"}
+              leadingIcon={<HighlightIcon size="sm" variant={on ? "informative" : "neutral"} iconName={c.icon} />}
+              onClick={() => onSelect(c.id)}
+            />
+          )
+          /* Collapsed, a row is an icon and nothing else, so it needs the
+             label somewhere — the same rule that makes every icon-only
+             control in this product carry a Tooltip. */
+          return collapsed
+            ? <Tooltip key={c.id} side="cursor" content={`${c.label} · ${c.count} records`}>{row}</Tooltip>
+            : row
+        })}
+
+        {!collapsed && shown.length === 0 && (
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "8px 4px" }}>
+            {`No category matches “${query.trim()}”.`}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function PMThomasUcpContactsScreen() {
@@ -871,51 +1006,20 @@ export default function PMThomasUcpContactsScreen() {
   const [anchor,     setAnchor]     = useState<DropdownAnchor | null>(null)
   const dropdown = useDropdownPosition(anchor)
 
-  // ── Which types are tabs ──────────────────────────────────────────────────
-  // Per user, so it survives a reload. In the product this is a user
-  // preference like any other; localStorage is the prototype's stand-in and is
-  // wrapped because a private window throws on read.
-  const [tabIds, setTabIds] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem("ucp.tabIds")
-      const parsed = saved ? (JSON.parse(saved) as string[]) : null
-      // Anything saved that is no longer a type is dropped, so removing a type
-      // from the platform cannot leave a tab pointing at nothing.
-      const valid = parsed?.filter(id => ALL_TYPE_TABS.some(t => t.id === id)) ?? []
-      return valid.length > 0 ? valid : DEFAULT_TAB_IDS
-    } catch { return DEFAULT_TAB_IDS }
-  })
-  const persistTabs = (ids: string[]) => {
-    setTabIds(ids)
-    try { localStorage.setItem("ucp.tabIds", JSON.stringify(ids)) } catch { /* private window */ }
-  }
-  // THE TAB YOU ARE ON IS ALWAYS VISIBLE, even when it is not in the set —
-  // arriving on a record type through search or a link should not hide the tab
-  // you are standing on. It leaves the bar when you leave it.
-  const visibleTabs = useMemo(
-    () => ALL_TYPE_TABS.filter(t => tabIds.includes(t.id) || t.id === tab),
-    [tabIds, tab],
-  )
-  const [typeAnchor, setTypeAnchor] = useState<DropdownAnchor | null>(null)
-  const typeDropdown    = useDropdownPosition(typeAnchor)
-  const typePendingAnchor = useRef<DropdownAnchor | null>(null)
+  /*
+    ── The tab-preference machine is gone ──────────────────────────────────
+    tabIds in localStorage, MAX_VISIBLE_TABS, the `+` picker, its anchor, its
+    checkbox menu, "the last tab stays", "the tab you are on is always
+    visible" — all of it existed to make a HORIZONTAL bar behave when the list
+    of types grows, and the rail is vertical. A list with as many rows as it
+    needs has nothing to cap, nothing to hide and nothing to remember per
+    user, so every one of those guards had nothing left to guard.
 
-  const toggleTab = (id: string) => {
-    const on = tabIds.includes(id)
-    // NEVER ZERO TABS: the last one cannot be turned off. And at the cap,
-    // adding asks you to remove first rather than silently dropping someone
-    // else's choice — HubSpot's mechanic for pinned views.
-    if (on && tabIds.length === 1) return
-    if (!on && tabIds.length >= MAX_VISIBLE_TABS) return
-    const next = on ? tabIds.filter(x => x !== id) : [...tabIds, id]
-    persistTabs(next)
-    // Turning off the tab you are on sends you to the first one that is left,
-    // rather than leaving the list showing a type with no tab.
-    if (on && id === tab) {
-      const fallback = ALL_TYPE_TABS.find(t => next.includes(t.id))
-      if (fallback) { setTab(fallback.id); setApplied({}); resetPage() }
-    }
-  }
+    What replaces the cap is the rail's search, which appears once there are
+    enough categories to be worth searching.
+  */
+  const [railCollapsed, setRailCollapsed] = useState(false)
+  const [railQuery,     setRailQuery]     = useState("")
 
   const [preview,    setPreview]    = useState<UcpContact | null>(null)
   // El anchor y el "abrir" tienen que cambiar en el MISMO commit. useDropdownPosition
@@ -1204,79 +1308,54 @@ export default function PMThomasUcpContactsScreen() {
           : undefined
       }
     >
-      {/* The bar and its `+` share a row. Tabs takes no trailing slot, and it
-          does not need one for this — a Button beside it in the same flex row
-          is the whole composition. If a second screen ever wants the same
-          affordance, THEN it is a prop on Tabs. */}
-      <div className="flex items-end justify-between gap-[12px] mb-[24px]">
-        <Tabs
+      {/*
+        THE TAB BAR AND THE FILTERS BAR ARE BOTH GONE — Michael, 2026-09-11:
+        "no es necesario mantener el componente de filters y tabs, ya que eso
+        lo abordaremos en el Sidebar que va a la izquierda del contenido de
+        lista."
+
+        The tab bar went because it could not grow: horizontal means bounded
+        by the screen, which is why it had sprouted a `+` picker, a cap of six
+        and a per-user preference in localStorage — three mechanisms to hide
+        the fact that the shape does not scale. A vertical rail has as many
+        rows as it needs and a search instead of a cap.
+
+        WHAT LEFT WITH THE FILTERS BAR, stated plainly because it is a real
+        subtraction and not a tidy-up: the record search, the per-type facet
+        slots (Status, Owner), All filters and sort. The rail replaces the
+        CATEGORY half of that and nothing else. Michael's own words are that
+        filtering will be addressed in the rail — future tense — so this is
+        the intermediate state, not the finished one. Everything removed is
+        one component call site to restore, and the state behind it (applied,
+        sortKey, openSlot, the FiltersSlideout) is still wired.
+      */}
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+        <CategoryRail
+          categories={ALL_TYPE_TABS.map(t => ({
+            id:    t.id,
+            label: t.label,
+            icon:  t.type === "all" ? "LayoutGrid" : TYPE_ICON[t.type],
+            count: t.type === "all"
+              ? CONTACTS.filter(c => CONTACT_TYPES.includes(c.type)).length
+              : CONTACTS.filter(c => c.type === t.type).length,
+          }))}
           activeId={tab}
-          onChange={id => {
-            // Facets are published per type, so carrying them across a tab change
-            // would keep a filter the new tab cannot answer. They clear — and the
-            // screen says so, because a list that silently resets reads as broken
-            // rather than reset.
+          onSelect={id => {
+            /* Facets are published per type, so carrying them across a change
+               would keep a filter the new category cannot answer. */
             const had = Object.values(applied).filter(Boolean).length
             setTab(id)
             setApplied({})
             setClearedOn(had > 0 ? (ALL_TYPE_TABS.find(t => t.id === id)?.label ?? null) : null)
             resetPage()
           }}
-          items={visibleTabs.map(t => ({ id: t.id, label: t.label }))}
+          collapsed={railCollapsed}
+          onCollapsedChange={setRailCollapsed}
+          query={railQuery}
+          onQueryChange={setRailQuery}
         />
-        <div onClickCapture={e => { typePendingAnchor.current = anchorFromEvent(e) }}>
-          {/* `side="cursor"` because this trigger sits at the right edge of the
-              content column: `side="top"` centres the bubble on the trigger and
-              a 274px bubble on a trigger 44px from the edge loses half of
-              itself off-screen (measured). Cursor mode portals it and picks the
-              side that fits, which is what the component documents it for.
 
-              The copy carries the count as well as the verb — the tooltip is
-              the only place that says how many types exist, which is the thing
-              a user cannot see from a bar showing five of them. */}
-          <Tooltip
-            side="cursor"
-            content={`Choose which entity types show as tabs — ${tabIds.length} of ${ALL_TYPE_TABS.length} showing`}
-          >
-            <Button
-              variant="tertiary" size="sm" iconPosition="alone"
-              icon={<Plus size={16} strokeWidth={1.75} />}
-              aria-label="Choose which entity types show as tabs"
-              onClick={() => { if (typePendingAnchor.current) setTypeAnchor(typePendingAnchor.current) }}
-            />
-          </Tooltip>
-        </div>
-      </div>
-
-      <div className="mb-[24px]" onClickCapture={e => setAnchor(anchorFromEvent(e))}>
-        <Filters
-          showSearch
-          searchPlaceholder="Search by name, company, owner or ID…"
-          searchValue={search}
-          onSearchChange={v => { setSearch(v); resetPage() }}
-          // Which facets are visible is the type's call, not the screen's. The
-          // rest live behind All filters, exactly the layering FILTERS_SPEC
-          // describes — visible is for high frequency, not for importance.
-          slots={facets.filter(f => f.inline).map(f => ({
-            placeholder: f.label,
-            value: applied[f.id],
-            onOpen: () => setOpenSlot(f.id),
-            onRemove: () => {
-              setApplied(a => { const n = { ...a }; delete n[f.id]; return n })
-              resetPage()
-            },
-          }))}
-          showAllFilters
-          onAllFiltersClick={() => setSlideOpen(true)}
-          showClearFilters={hasFilters}
-          onClearFilters={clearAll}
-          showSort
-          sortLabel={SORT_OPTIONS.find(o => o.key === sortKey)?.label}
-          onSortClick={() => setOpenSlot("sort")}
-          showViewToggle={false}
-        />
-      </div>
-
+        <div style={{ flex: 1, minWidth: 0 }}>
       {clearedOn && (
         <div style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--field-supporting)" }}>
           <HighlightIcon size="sm" variant="neutral" iconName="Info" />
@@ -1307,52 +1386,6 @@ export default function PMThomasUcpContactsScreen() {
             </div>
           ))}
         </div>
-      )}
-
-      {/*
-        The type picker. One checkbox list that both adds and removes, which is
-        why there is no `···` per tab: two affordances for one job is how a
-        tab bar ends up with a hidden second way to do the same thing.
-
-        No search field: at seven types it would be furniture. Past ~10 it
-        stops being optional — that is the threshold, not a preference.
-      */}
-      {typeAnchor && (
-        <>
-          <div className="fixed inset-0 z-[10000]" onClick={() => setTypeAnchor(null)} />
-          <div ref={typeDropdown.ref} style={{ position: "fixed", zIndex: 10001, ...typeDropdown.style }}>
-            <Menu>
-              {ALL_TYPE_TABS.map(t => {
-                const on      = tabIds.includes(t.id)
-                const atCap   = !on && tabIds.length >= MAX_VISIBLE_TABS
-                const isLast  = on && tabIds.length === 1
-                /* Counted the same way the list is filtered. These were two
-                   expressions, so All would have advertised 20 and rendered
-                   16 — a count that disagrees with its own list is worse than
-                   no count. */
-                const count   = t.type === "all"
-                  ? CONTACTS.filter(c => CONTACT_TYPES.includes(c.type)).length
-                  : CONTACTS.filter(c => c.type === t.type).length
-                return (
-                  <MenuItem
-                    key={t.id}
-                    size="sm"
-                    label={t.label}
-                    subtext={
-                      atCap  ? `${count} records · remove one to add this`
-                      : isLast ? `${count} records · the last tab stays`
-                      : `${count} records`
-                    }
-                    state={atCap || isLast ? "disabled" : "default"}
-                    checkbox={<Checkbox size="sm" checked={on} onChange={() => toggleTab(t.id)} />}
-                    leadingIcon={<HighlightIcon size="sm" variant="neutral" iconName={t.type === "all" ? "LayoutGrid" : TYPE_ICON[t.type]} />}
-                    onClick={() => toggleTab(t.id)}
-                  />
-                )
-              })}
-            </Menu>
-          </div>
-        </>
       )}
 
       {/* ── Filter slot dropdowns ── */}
@@ -1403,6 +1436,9 @@ export default function PMThomasUcpContactsScreen() {
       )}
 
       {/* ── All filters ── */}
+        </div>
+      </div>
+
       <FiltersSlideout
         isOpen={slideOpen}
         onClose={() => setSlideOpen(false)}
