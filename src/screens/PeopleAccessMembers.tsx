@@ -3728,7 +3728,7 @@ function InviteWizard({ onCancel, onSend }: {
     roleId: string | null, sendEmail: boolean,
   ) => void
 }) {
-  const [step, setStep]         = useState<0 | 1 | 2>(0)
+  const [step, setStep]         = useState<0 | 1 | 2 | 3 | 4>(0)
   const [emails, setEmails]     = useState<string[]>([])
   /**
    * What is typed into the email field but not yet committed to a chip. Next
@@ -3760,13 +3760,15 @@ function InviteWizard({ onCancel, onSend }: {
   // nothing it can require of them. A Member invited with no studio and no
   // group would land in the workspace able to open nothing at all.
   const canContinue = step === 0 ? emails.length > 0 || emailDraft.trim().length > 0
-                    : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
+                    : step === 1 ? (!isMember || studios.length > 0)
                     : true
 
   const steps: StepItem[] = [
     { label: "People", state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
-    { label: "Access", state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
-    { label: "Review", state: step === 2 ? "active" : "default" },
+    { label: "Apps",   state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Roles",  state: step === 2 ? "active" : step > 2 ? "completed" : "default" },
+    { label: "Groups", state: step === 3 ? "active" : step > 3 ? "completed" : "default" },
+    { label: "Review", state: step === 4 ? "active" : "default" },
   ]
 
   const effectiveStudios = isMember ? studios : INVITE_STUDIO_OPTIONS.map(s => s.id)
@@ -3858,14 +3860,14 @@ function InviteWizard({ onCancel, onSend }: {
         </div>
       )}
 
-      {/* ── 2 · Access ────────────────────────────────────────────────── */}
+      {/* ── 2 · Apps ──────────────────────────────────────────────────── */}
       {step === 1 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div>
             <FormSectionLabel hint={isMember
-              ? "Select which studios these people can open."
-              : `${role}s get every studio automatically — there is nothing to choose here.`}>
-              Studio access
+              ? "Select which apps these people can open."
+              : `${role}s get every app automatically — there is nothing to choose here.`}>
+              App access
             </FormSectionLabel>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
               {INVITE_STUDIO_OPTIONS.map(st => {
@@ -3888,9 +3890,54 @@ function InviteWizard({ onCancel, onSend }: {
               })}
             </div>
           </div>
+        </div>
+      )}
 
+      {/* ── 3 · Roles ─────────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div>
-            <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
+            <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
+              Assign a role
+            </FormSectionLabel>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
+                <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
+                  <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
+                    Member gets access via groups or direct permissions only.
+                  </span>
+                </div>
+              </CardContainer>
+              {ROLES.map(r => {
+                const on = selectedRoleId === r.id
+                return (
+                  <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
+                    <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.label}</span>
+                        <Tag variant={r.system ? "secondary" : "informative"} size="sm">
+                          {r.system ? "System" : "Custom"}
+                        </Tag>
+                      </div>
+                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>{r.desc}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)" }}>
+                        {ROLE_PERM_COUNTS[r.id]?.total ?? 0} permissions
+                      </span>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4 · Groups ────────────────────────────────────────────────── */}
+      {step === 3 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div>
+            <FormSectionLabel optional hint="Group membership grants additional app access and permissions.">
               Add to groups
             </FormSectionLabel>
             <div style={{ marginBottom: 8 }}>
@@ -3932,53 +3979,11 @@ function InviteWizard({ onCancel, onSend }: {
               })}
             </div>
           </div>
-
-          {/*
-            A role is a preset of permissions, which is why it sits beside
-            studios and groups rather than being a step of its own: all three
-            answer "what can this person reach". Thom's spec had it as its own
-            stage marked Optional — a stage nobody has to complete is a
-            section.
-          */}
-          <div>
-            <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
-              Assign a role
-            </FormSectionLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
-                <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>
-                    Member gets access via groups or direct permissions only.
-                  </span>
-                </div>
-              </CardContainer>
-              {ROLES.map(r => {
-                const on = selectedRoleId === r.id
-                return (
-                  <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
-                    <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.label}</span>
-                        <Tag variant={r.system ? "secondary" : "informative"} size="sm">
-                          {r.system ? "System" : "Custom"}
-                        </Tag>
-                      </div>
-                      <span style={{ fontSize: 11, color: "var(--muted-foreground)", lineHeight: 1.45 }}>{r.desc}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-subtitle)" }}>
-                        {ROLE_PERM_COUNTS[r.id]?.total ?? 0} permissions
-                      </span>
-                    </div>
-                  </CardContainer>
-                )
-              })}
-            </div>
-          </div>
         </div>
       )}
 
-      {/* ── 3 · Review ────────────────────────────────────────────────── */}
-      {step === 2 && (
+      {/* ── 5 · Review ────────────────────────────────────────────────── */}
+      {step === 4 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           <div>
             <FormSectionLabel hint="This is what leaves the product when you send.">
@@ -4073,12 +4078,12 @@ function InviteWizard({ onCancel, onSend }: {
             variant={step === 0 ? "cancel-next" : "back-next"}
             cancelLabel="Cancel"
             onCancel={onCancel}
-            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
-            nextLabel={step === 2 ? finishLabel : "Next"}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2 | 3 | 4)}
+            nextLabel={step === 4 ? finishLabel : "Next"}
             nextDisabled={!canContinue}
-            onNext={step === 2
+            onNext={step === 4
               ? () => onSend(emails, role, effectiveStudios, groupIds, selectedRoleId, sendEmail)
-              : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+              : () => setStep(s => Math.min(4, s + 1) as 0 | 1 | 2 | 3 | 4)}
           />
         </div>,
         document.body,
