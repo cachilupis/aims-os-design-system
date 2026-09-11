@@ -2469,7 +2469,34 @@ function ActivityTab({
       : CHANNEL_GROUP[a.channel] === "note"  ? "purple"
       : "info") as EntityListItemData["iconVariant"],
     primaryMeta: [{ iconName: "Clock", label: a.timestamp }],
-    secondaryMeta: [{ iconName: "Info", label: a.meta }],
+    /*
+      THOM'S CONTENT, IN THE SLOTS ENTITYLIST ALREADY HAS — Michael,
+      2026-09-11: the content of each item, not the UI and not the components.
+
+      His rows carry three things ours did not, and each lands in a prop the
+      component already publishes, so nothing here is new furniture:
+
+        metaChips → secondaryMeta   what it cost and who handled it
+        smsBody   → description     the message, verbatim
+        sentiment → tags            how it went, on calls only
+
+      The meta line stays first in secondaryMeta because it is the sentence;
+      the chips are the facts hanging off it.
+    */
+    secondaryMeta: [
+      { iconName: "Info", label: a.meta },
+      ...(a.metaChips ?? []).map(chip => ({ iconName: "Dot", label: chip })),
+    ],
+    /* An SMS is short enough to read in full. EntityList's own description
+       handles the expansion past its threshold, so a long one is not a
+       layout problem. */
+    description: a.smsBody,
+    /* Sentiment is NOT the state. The state says what happened — Resolved,
+       Escalated, Read; sentiment says how it went, and a call can be resolved
+       and still tense. Only where it was actually read. */
+    tags:        a.sentiment
+      ? [{ label: a.sentiment.charAt(0).toUpperCase() + a.sentiment.slice(1) }]
+      : undefined,
     state:       { label: a.state.label, variant: a.state.variant },
     aiInsight:   a.aiSummary
       ? { action: "summary", detail: a.aiSummary, viewMore: a.aiSummary.length > 160 }

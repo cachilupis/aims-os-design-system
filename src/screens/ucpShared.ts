@@ -543,6 +543,32 @@ export interface UcpActivity {
   state:     { label: string; variant: TagVariantLite }
   /** Written by the record's assigned agent — rendered as EntityList's aiInsight. */
   aiSummary?: string
+  /**
+   * ── The fields Thom's voice-channel rows carry ───────────────────────────
+   *
+   * Michael, 2026-09-11: apply the CONTENT of that prototype's items to this
+   * list — the components and the layout stay exactly as they are.
+   *
+   * Read off src/screens/voice-channel/ucp-data.ts rather than the deployed
+   * page, since it is the same repo. Three things its rows have and ours did
+   * not, and each one answers a question ours left open:
+   *
+   *   metaChips  "4:12 · Sammy · 2 tools used" — what it cost and who or what
+   *              handled it. Ours said a call happened and never said whether
+   *              an agent or a person took it.
+   *   smsBody    the message, verbatim. An SMS is short enough to read in
+   *              full, and a row that summarises two sentences has summarised
+   *              nothing.
+   *   sentiment  how it went, on calls only. Distinct from the badge, which
+   *              is what HAPPENED — a call can be Resolved and still tense.
+   *
+   * They land in slots EntityList already publishes: `secondaryMeta`,
+   * `description` and `tags`. No new component, no new prop.
+   */
+  metaChips?: string[]
+  /** Verbatim, for SMS. Rendered through EntityList's own `description`. */
+  smsBody?:   string
+  sentiment?: "positive" | "neutral" | "negative"
   /** Only on note rows, and only when there is a note to open. The Eye is
    *  rendered off THIS, not off the channel: CLAUDE.md's rule is that a
    *  preview button with nothing behind it is worse than no button. */
@@ -1467,9 +1493,17 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       aiSummary: `Re-verified ${who}'s contact fields against the CRM sync and promoted four Sandbox claims after a matching source appeared. One claim about budget timing expired without corroboration and was dropped back to Sandbox.`,
     },
     {
-      id: "a2", channel: "call", title: `Outbound call · ${c.phone}`,
-      meta: `${c.owner} · 18:24 · Discovery follow-up`, timestamp: "Sep 2, 2026 · 14:05",
-      state: { label: "Positive", variant: "success" },
+      /* Thom's row shape: direction and the number in the title, then
+         "who handled it — which desk · duration · clock time" in the meta.
+         Ours said "Outbound call · <number>" and then the owner's name with
+         no indication of whether a person or an agent took it. */
+      id: "a2", channel: "call", title: `Outbound Call · ${c.phone}`,
+      meta: `${c.owner} — Deal Desk · 6:18 · 2:05 PM`, timestamp: "Sep 2, 2026 · 14:05",
+      /* The badge is what HAPPENED; sentiment is how it went. A call can be
+         Resolved and still tense, which is why Thom carries both. */
+      state: { label: "Resolved", variant: "success" },
+      sentiment: "positive",
+      metaChips: ["6:18", c.owner, "2 tools used"],
       aiSummary: `${who} confirmed the evaluation is still funded and asked for a written migration timeline. No pricing objection was raised. The timeline is the one open commitment from this call.`,
     },
     {
@@ -1502,9 +1536,12 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       },
     },
     {
-      id: "a3", channel: "email", title: "Governance addendum sent for review",
-      meta: `${c.owner} → ${c.email} · 1 attachment`, timestamp: "Aug 28, 2026 · 09:40",
+      id: "a3", channel: "email", title: `Outbound Email · ${c.email}`,
+      meta: `${c.owner} · 9:40 AM · Subject: Governance addendum for review`,
+      timestamp: "Aug 28, 2026 · 09:40",
       state: { label: "Opened", variant: "informative" },
+      metaChips: ["1 attachment", "Opened twice"],
+      aiSummary: `Sent the redlined addendum for Legal to countersign. ${who} opened it twice and has not replied; nothing in the thread says it was forwarded on.`,
     },
     {
       id: "a4b", channel: "note", title: "QBR — the two escalations nobody dated",
@@ -1545,14 +1582,22 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       state: { label: "Completed", variant: "success" },
     },
     {
-      id: "a5b", channel: "sms", title: `SMS · ${c.phone}`,
-      meta: `${c.owner} · delivered`, timestamp: "Aug 18, 2026 · 17:12",
-      state: { label: "Delivered", variant: "success" },
+      /* AN SMS CARRIES ITS OWN TEXT. Two sentences is short enough to read in
+         full, and a row that summarises them has summarised nothing — which
+         is why Thom's rows quote the body verbatim instead. */
+      id: "a5b", channel: "sms", title: `Outbound SMS · ${c.phone}`,
+      meta: `${c.owner} · 5:12 PM · After the timeline request`,
+      timestamp: "Aug 18, 2026 · 17:12",
+      state: { label: "Read", variant: "success" },
+      smsBody: `Hi ${who} — picking up your note about the migration timeline. I am confirming the date internally and will come back in writing this week.`,
     },
     {
-      id: "a6", channel: "email", title: "Migration timeline requested",
-      meta: `${c.email} → ${c.owner}`, timestamp: "Aug 18, 2026 · 07:55",
+      id: "a6", channel: "email", title: `Inbound Email · ${c.email}`,
+      meta: `${c.owner} · 7:55 AM · Subject: Migration timeline`,
+      timestamp: "Aug 18, 2026 · 07:55",
       state: { label: "Awaiting reply", variant: "alert" },
+      metaChips: ["Second ask", "Unanswered 6 days"],
+      aiSummary: `${who} asked for the migration timeline in writing for the second time. The message is shorter than the first and drops the pleasantries — nothing hostile, but she has asked already.`,
     },
     {
       id: "a7", channel: "task", title: `${agent} drafted a follow-up`,
@@ -1561,9 +1606,14 @@ export function getActivity(c: UcpContact): UcpActivity[] {
       aiSummary: `A reply to the timeline request was drafted but held, because the delivery date it referenced was not confirmed anywhere in the Truth plane.`,
     },
     {
-      id: "a8", channel: "call", title: `Inbound call · ${c.phone}`,
-      meta: `${agent} · 6:41 · Routed to ${c.owner}`, timestamp: "Aug 12, 2026 · 10:42",
-      state: { label: "Resolved", variant: "success" },
+      id: "a8", channel: "call", title: `Inbound Call · ${c.phone}`,
+      meta: `${agent} — Front Desk · 6:41 · 10:42 AM`, timestamp: "Aug 12, 2026 · 10:42",
+      /* Escalated, not Resolved: the agent did not close this, it handed the
+         call to a person. Thom's vocabulary separates the two, and ours was
+         calling a hand-off a resolution. */
+      state: { label: "Escalated", variant: "alert" },
+      sentiment: "neutral",
+      metaChips: ["6:41", `${agent} → ${c.owner}`, "Identity verified"],
       aiSummary: `${who} called about audit evidence and was routed after the agent confirmed identity. The requested evidence pack was sent the same day.`,
     },
     {
