@@ -279,12 +279,19 @@ export function ScreenLayout({
           {/* Content area — relative so Pagination can float at the bottom */}
           <div className="flex-1 relative overflow-hidden">
 
-            {/* Scrollable list — 64px bottom padding leaves room for floating
-                Pagination, unless the screen brings its own sticky footer. */}
+            {/* Scrollable list. 64px at the bottom leaves room for the
+                floating Pagination.
+
+                `stickyFooter` used to mean ZERO bottom padding, which was
+                wrong: the screens that set it portal a `position: fixed`
+                StepperNavFooter to the body, so it is not in this box's flow
+                and the last ~73px of content sat underneath it with no way to
+                scroll past — the create wizards' final cards were unreachable.
+                It needs MORE room than the default, not none. */}
             <div
               ref={scrollRef}
               className="h-full overflow-y-auto"
-              style={{ padding: `8px 32px ${stickyFooter ? 0 : 64}px` }}
+              style={{ padding: `8px 32px ${stickyFooter ? 96 : 64}px` }}
             >
               {children}
             </div>

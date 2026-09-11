@@ -21667,6 +21667,8 @@ function PatternPanelContentPage() {
                       { token: "Escape", usage: "Clears the draft and blurs. The only exit that throws the text away, and the user asked for it" },
                       { token: "onDraftChange", usage: "Reports the uncommitted text. A CTA gated on tags.length alone reads a visibly filled field as empty — gate on tags.length > 0 || draft.trim() instead" },
                       { token: "showAddButton={false}", usage: "Hides the button where it competes with the surface's own CTA. Say in the helper text that Enter commits, since the button was the visible hint" },
+                      { token: "validate", usage: "Return an error message to refuse a value, null to accept. Without it the field takes anything — right for tags, wrong for a list of emails, where accepting nonsense announces that this is a tag builder. The rejected text stays in the field so it can be corrected rather than retyped" },
+                      { token: "tagVariant", usage: "One variant for every chip instead of the six-colour cycle. The cycle says these things differ from each other, which is true of categories and false of a repeated list — recipients, addresses, IDs. Usually \"neutral\"" },
                     ].map(row => (
                       <div key={row.token} className="flex items-start gap-[8px]">
                         <code className="text-[10px] font-mono px-[4px] py-[1px] rounded-[3px] shrink-0 max-w-[220px]"

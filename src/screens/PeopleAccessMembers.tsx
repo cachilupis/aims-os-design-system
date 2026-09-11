@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react"
 import { createPortal } from "react-dom"
-import { useFilterDropdown } from "./voice-channel/shared"
 import { ADMIN_SIDEBAR as SIDEBAR } from "./adminShared"
 import * as Icons from "lucide-react"
 import { ScreenLayout } from "@/components/layouts/screen-layout"
@@ -9,19 +8,20 @@ import { Button }       from "@/components/ui/button"
 import { Tag }          from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tabs }         from "@/components/ui/tabs"
-import { TagInput }     from "@/components/ui/tag-input"
 import { Radio }        from "@/components/ui/radio"
 import { Checkbox }     from "@/components/ui/checkbox"
 import { Textarea }     from "@/components/ui/textarea"
 import { Input }        from "@/components/ui/input"
+import { Table, type TableColumn } from "@/components/ui/table"
+import { Pagination }   from "@/components/ui/pagination"
 import { EmptyState }   from "@/components/ui/empty-state"
+import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import { useToast }     from "@/components/ui/toast"
 import { SlideOut }     from "@/components/ui/slide-out"
 import { Filters }     from "@/components/ui/filters"
 import { ModalDialog } from "@/components/ui/modal-dialog"
 import { Chip }        from "@/components/ui/chip"
 import { Toggle }      from "@/components/ui/toggle"
-import { SwitchTab } from "@/components/ui/switch-tab"
 import { Stepper, type StepItem } from "@/components/ui/stepper"
 import { StepperNavFooter } from "@/components/ui/stepper-nav-footer"
 import { AvatarCircle, nameToAvatarColor } from "@/components/ui/avatar"
@@ -374,6 +374,51 @@ const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informa
   agentic:    "lightBlue",
   admin:      "informative",
 }
+/**
+ * A role has no colour of its own in the fixture — `Role.color` is optional
+ * and not one of the six sets it, so every `background: role.color` dot on
+ * this screen has been rendering invisible. The identity comes from the
+ * component instead, rotated across the palette so a column of roles does not
+ * come out as six identical blue squares.
+ */
+const ROLE_HI_CYCLE = ["informative", "purple", "lime", "light-blue", "yellow", "neutral"] as const
+/**
+ * By POSITION in the catalogue, not by a hash of the id. A hash is stable but
+ * it collides — four of the six roles came out the same blue — and the whole
+ * point of varying the colour is that a column of roles reads as six things.
+ * Position gives every role a different one for as long as the list is no
+ * longer than the cycle, and repeats predictably after that.
+ */
+function roleHi(id: string): (typeof ROLE_HI_CYCLE)[number] {
+  const i = ROLES.findIndex(r => r.id === id)
+  return ROLE_HI_CYCLE[(i < 0 ? 0 : i) % ROLE_HI_CYCLE.length]
+}
+
+/**
+ * A studio's identity colour lives on its HighlightIcon and its Tag, never a
+ * raw hex dot — CLAUDE.md's rule, and the reason the four studios had drifted
+ * into three different greens across this file.
+ */
+const STUDIO_HI: Record<string, "lime" | "purple" | "light-blue" | "informative"> = {
+  governance: "lime",
+  datastudio: "purple",
+  agentic:    "light-blue",
+  admin:      "informative",
+}
+const STUDIO_ICON_NAME: Record<string, string> = {
+  governance: "ShieldCheck",
+  datastudio: "Database",
+  agentic:    "Bot",
+  admin:      "Settings",
+}
+
+/** The four studios abbreviated for tight rows — one spelling, one place. */
+const STUDIO_SHORT: Record<string, string> = {
+  governance: "Gov",
+  datastudio: "Data",
+  agentic:    "Agentic",
+  admin:      "Admin",
+}
 const TABLE_CARD = "hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]"
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
 
@@ -546,11 +591,26 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
 // ─── Permission state icon ────────────────────────────────────────────────────
 
 
-function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; depth?: number; isEditing?: boolean }) {
+/**
+ * `granted` / `onToggle` make this controlled. Uncontrolled it keeps its own
+ * checkbox state, which is all a read-only tree ever needed — but an editor
+ * built on that could only ever turn things OFF, because the caller never saw
+ * the change and the list it was handed only contained what was already on.
+ * The editor passes both and owns the answer.
+ */
+function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle }: {
+  node: PermNode
+  depth?: number
+  isEditing?: boolean
+  granted?: (id: string) => boolean
+  onToggle?: (id: string, on: boolean) => void
+}) {
   const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
-  const [checked, setChecked] = useState(node.state === "g-direct" || node.state === "g-inh")
+  const [localChecked, setLocalChecked] = useState(node.state === "g-direct" || node.state === "g-inh")
   const hasChildren = (node.children?.length ?? 0) > 0
   const isInherited = node.state === "g-inh"
+  const checked = granted ? granted(node.id) : localChecked
+  const setChecked = onToggle ? (on: boolean) => onToggle(node.id, on) : setLocalChecked
 
   return (
     <div>
@@ -576,15 +636,9 @@ function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
-            {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>
-                via {node.role}
-              </span>
-            )}
+            {/* A pill with a label in it is a Tag — this one was hand-drawn
+                with its own radius, its own tint and its own border. */}
+            {node.role && <Tag variant="informative" size="sm">via {node.role}</Tag>}
             {node.scope && (
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
             )}
@@ -603,7 +657,8 @@ function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; 
         </div>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <PermTreeNode key={child.id} node={child} depth={depth + 1} isEditing={isEditing} />
+        <PermTreeNode key={child.id} node={child} depth={depth + 1} isEditing={isEditing}
+          granted={granted} onToggle={onToggle} />
       ))}
     </div>
   )
@@ -1279,8 +1334,6 @@ function SecurityPanel({ member, onUpdate }: { member: Member; onUpdate: (m: Mem
 
 // ─── Member detail page ───────────────────────────────────────────────────────
 
-const USER_TYPE_OPTIONS: MemberRole[] = ["Owner", "Admin", "Member"]
-
 function MemberDetailPage({
 member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
   allGroups, allRoles, onRemoveFromGroup, onAddToGroup, onRemoveFromRole,
@@ -1330,25 +1383,27 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
-        {/* Left: identity card */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {/* Left: identity card. `CardContainer` owns the surface, the border
+            and the radius — the hand-drawn box this used to be carried its own
+            copy of all three and drifted from every other card on the page. */}
+        <CardContainer className="!p-0 overflow-hidden">
           {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
             padding: "28px 24px 20px",
           }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: "50%",
-              background: isActive ? member.avatarColor : "var(--muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 26, fontWeight: 700,
-              color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-              opacity: member.status === "suspended" ? 0.6 : 1,
-            }}>
-              {member.initials}
-            </div>
+            {/* AvatarCircle hashes its own colour from the name and has an
+                `empty` style for somebody who is not active yet — which is
+                exactly the case the hand-rolled circle was faking with a grey
+                background and a white hex. */}
+            <AvatarCircle
+              name={member.name}
+              initials={member.initials}
+              sizeKey="xxl"
+              avatarStyle={isActive ? "text" : "empty"}
+            />
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 4 }}>
                 {member.name}
               </div>
               {(member.title || member.department) && (
@@ -1356,7 +1411,9 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
                   {member.title}{member.title && member.department ? " · " : ""}{member.department}
                 </div>
               )}
-              <Tag variant={isActive ? "success" : isInvited ? "informative" : member.status === "suspended" ? "alert" : "neutral"}>
+              {/* A status is a Tag, and at this size it is the S one — the
+                  card is 300px wide and the name above it is the headline. */}
+              <Tag size="sm" variant={STATUS_TAG[member.status]}>
                 {STATUS_LABEL[member.status]}
               </Tag>
             </div>
@@ -1455,41 +1512,36 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
                 <Icons.RefreshCw size={13} /> Resend invite
               </Button>
             ) : null}
+            {/* Reset password and Reset MFA are ABOVE, under `hasSignedIn`.
+                They used to be repeated here too, so an active member who had
+                signed in got each button twice — the pair above with a toast
+                and a confirmation, the pair here with an alert(). Suspend is
+                the only action this branch actually owns. */}
             {!isInvited && !isPending && (
-              <>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => alert(`Password reset email sent to ${member.email}`)}>
-                  <Icons.KeyRound size={13} /> Reset password
-                </Button>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => alert(`MFA enrollment reset for ${member.name}`)}>
-                  <Icons.ShieldOff size={13} /> Reset MFA
-                </Button>
-                <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                  onClick={() => { onToggleSuspend(member.id); onBack() }}>
-                  {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
-                </Button>
-              </>
-            )}
-            {!confirmRemove ? (
-              <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => setConfirmRemove(true)}>
-                <Icons.Trash2 size={13} /> Remove from workspace
+              <Button variant="secondary" size="sm" style={{ width: "100%", justifyContent: "center" }}
+                onClick={() => { onToggleSuspend(member.id); onBack() }}>
+                {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
               </Button>
-            ) : (
-              <div style={{ padding: "12px", border: "1px solid var(--badge-error)", borderRadius: 8, background: "color-mix(in srgb, var(--badge-error) 6%, transparent)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 4 }}>Remove {member.name}?</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>This cannot be undone.</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Button variant="warning" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => { onRemove(member.id); onBack() }}>Confirm</Button>
-                  <Button variant="secondary" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => setConfirmRemove(false)}>Cancel</Button>
-                </div>
-              </div>
             )}
+            {/* Removing somebody from the workspace is a question, and the DS
+                answer to a question is ModalDialog — not a red box that grows
+                inside the card and pushes the rest of it down. */}
+            <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
+              onClick={() => setConfirmRemove(true)}>
+              <Icons.Trash2 size={13} /> Remove from workspace
+            </Button>
+            <ModalDialog
+              isOpen={confirmRemove}
+              onClose={() => setConfirmRemove(false)}
+              tone="error"
+              iconName="Trash2"
+              title={`Remove ${member.name} from the workspace?`}
+              description="They lose every studio, role and group immediately, and any direct permissions go with them. This cannot be undone."
+              ctaPrimary={{ label: "Remove", destructive: true, onClick: () => { onRemove(member.id); onBack() } }}
+              ctaSecondary={{ label: "Cancel", onClick: () => setConfirmRemove(false) }}
+            />
           </div>
-        </div>
+        </CardContainer>
 
         {/* Right: tabs */}
         <div>
@@ -1518,14 +1570,40 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
 function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, onRemove }: {
   studioId: string
   isEditing?: boolean
-  onSave?: () => void
+  onSave?: (changed: number) => void
   onCancel?: () => void
   onRemove?: () => void
 }) {
   const nodes = PERM_TREE[studioId] ?? []
-  const granted = filterGrantedTree(nodes)
-  const directCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-direct").length
-  const inhCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-inh").length
+
+  /**
+   * What the user has changed in this editing session, by permission id.
+   * Empty means "exactly what the role and the direct grants say".
+   */
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  const flat = useMemo(() => nodes.flatMap(n => [n, ...(n.children ?? [])]), [nodes])
+  const isOn = (id: string) => {
+    if (overrides[id] !== undefined) return overrides[id]
+    const n = flat.find(x => x.id === id)
+    return n ? n.state === "g-direct" || n.state === "g-inh" : false
+  }
+  const isInherited = (id: string) => flat.find(x => x.id === id)?.state === "g-inh"
+
+  /**
+   * Reading mode shows only what is granted — a list of what this person can
+   * do. EDITING shows the whole tree, because you cannot grant a permission
+   * that is not on screen, and "edit" that only ever removes is a revoke
+   * button with extra steps. This is the fix Michael asked for.
+   */
+  const granted = isEditing ? nodes : filterGrantedTree(nodes)
+
+  const onIds      = flat.filter(n => isOn(n.id)).map(n => n.id)
+  const inhCount   = onIds.filter(isInherited).length
+  const directCount = onIds.length - inhCount
+  const changedCount = Object.keys(overrides).filter(id => {
+    const n = flat.find(x => x.id === id)
+    return n ? overrides[id] !== (n.state === "g-direct" || n.state === "g-inh") : false
+  }).length
 
   return (
     <div style={{ borderTop: `1px solid ${isEditing ? "var(--primary)" : "var(--border)"}` }}>
@@ -1549,18 +1627,29 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
           </span>
         </div>
         {granted.length === 0 ? (
-          <div style={{ padding: "8px 0 12px", fontSize: 12, color: "var(--muted-foreground)" }}>
-            No permissions granted in this app.
-          </div>
+          <EmptyState
+            bare
+            compact
+            icon={Icons.ShieldOff}
+            title="Nothing granted here yet"
+            description="Use Edit to turn on the permissions this member needs in this app."
+          />
         ) : (
-          <div style={{ border: `1px solid ${isEditing ? "color-mix(in srgb, var(--primary) 30%, var(--border))" : "var(--border)"}`, borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
-            {granted.map(n => <PermTreeNode key={n.id} node={n} depth={0} isEditing={isEditing} />)}
+          <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
+            {granted.map(n => (
+              <PermTreeNode key={n.id} node={n} depth={0} isEditing={isEditing}
+                granted={isEditing ? isOn : undefined}
+                onToggle={isEditing ? (id, on) => setOverrides(o => ({ ...o, [id]: on })) : undefined} />
+            ))}
           </div>
         )}
         {isEditing && (
           <div style={{ display: "flex", gap: 8, paddingBottom: 12, alignItems: "center" }}>
-            <Button variant="primary" size="sm" onClick={onSave}>Save changes</Button>
-            <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+            <Button variant="primary" size="sm" disabled={changedCount === 0}
+              onClick={() => { onSave?.(changedCount); setOverrides({}) }}>
+              {changedCount === 0 ? "Save changes" : `Save ${changedCount} change${changedCount === 1 ? "" : "s"}`}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => { setOverrides({}); onCancel?.() }}>Cancel</Button>
             <div style={{ flex: 1 }} />
             <Button variant="warning" size="sm" onClick={onRemove}><Icons.Trash2 size={11} /> Remove access</Button>
           </div>
@@ -1571,6 +1660,7 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
 }
 
 function AppsPanel({ member }: { member: Member }) {
+  const toast = useToast()
   const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
   const studioSet = new Set<string>(
     member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : member.studios ?? [],
@@ -1584,7 +1674,6 @@ function AppsPanel({ member }: { member: Member }) {
   const [fullReviewOpen, setFullReviewOpen] = useState(false)
   const [reviewStudio, setReviewStudio] = useState(studios[0] ?? "governance")
 
-  const allAssigned = studios.length >= Object.keys(STUDIO_META).length
   const available = Object.entries(STUDIO_META).filter(([id]) => !studios.includes(id))
 
   function confirmRemove() {
@@ -1619,30 +1708,37 @@ function AppsPanel({ member }: { member: Member }) {
       tone="default"
       iconName="KeyRound"
       title="Grant studio access"
-      description="Select a studio to give this member access. You can configure individual permissions after granting."
+      description={available.length === 0
+        ? "There is nothing to grant."
+        : "Select a studio to give this member access. You can configure individual permissions after granting."}
       showClose
+      slotUnstyled
       slot={
         available.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "8px 0" }}>
-            Member already has access to all available studios.
-          </div>
+          /* The case Michael asked for by name: there is nothing to grant, and
+             the modal has to say why rather than showing an empty box. Bare,
+             because ModalDialog is already the surface. */
+          <EmptyState
+            bare
+            icon={Icons.ShieldCheck}
+            title="Nothing left to grant"
+            description={`${member.name} already has access to all ${Object.keys(STUDIO_META).length} studios in this workspace. To change what they can do inside one, edit its permissions instead.`}
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {available.map(([id, meta]) => (
-              <div key={id} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
-                background: "var(--surface)",
-              }}>
-                <span style={{ color: "var(--primary)", flexShrink: 0, display: "flex" }}>{meta.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+              <CardContainer key={id} size="sm">
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <HighlightIcon size="md" variant={STUDIO_HI[id] ?? "neutral"} iconName={STUDIO_ICON_NAME[id] ?? "AppWindow"} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{meta.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+                  </div>
+                  <Button variant="primary" size="sm" onClick={() => { setStudios(p => [...p, id]); setGrantOpen(false) }}>
+                    Grant
+                  </Button>
                 </div>
-                <Button variant="primary" size="sm" onClick={() => { setStudios(p => [...p, id]); setGrantOpen(false) }}>
-                  Grant
-                </Button>
-              </div>
+              </CardContainer>
             ))}
           </div>
         )
@@ -1664,21 +1760,26 @@ function AppsPanel({ member }: { member: Member }) {
       showClose
       slot={
         <div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {/* Picking which studio to look at is a selection, not an action —
+              that is a Chip. As Buttons these read as four things to do. */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {studios.map(s => {
               const m = STUDIO_META[s]
               if (!m) return null
               return (
-                <Button key={s} variant={reviewStudio === s ? "primary" : "secondary"} size="sm" onClick={() => setReviewStudio(s)}>
-                  {m.icon} {m.label}
-                </Button>
+                <Chip key={s} size="s" variant={reviewStudio === s ? "primary" : "secondary"} onClick={() => setReviewStudio(s)}>
+                  {m.label}
+                </Chip>
               )
             })}
           </div>
           {reviewNodes.length === 0 ? (
-            <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
-              No permissions granted in this app.
-            </div>
+            <EmptyState
+              bare
+              icon={Icons.ShieldOff}
+              title="No permissions in this app"
+              description={`${member.name} can open ${STUDIO_META[reviewStudio]?.label ?? "this studio"} but has not been granted anything inside it yet.`}
+            />
           ) : (
             <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
               {reviewNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)}
@@ -1700,11 +1801,13 @@ function AppsPanel({ member }: { member: Member }) {
             <Icons.Plus size={13} /> Grant access
           </Button>
         </div>
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No studio access</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Grant access to a studio to configure this member's permissions.</div>
-        </div>
+        <EmptyState
+          icon={Icons.AppWindow}
+          title="No studio access"
+          description="Grant access to a studio to configure what this member can do inside it."
+          ctaLabel="Grant access"
+          onCta={() => setGrantOpen(true)}
+        />
       </>
     )
   }
@@ -1718,11 +1821,12 @@ function AppsPanel({ member }: { member: Member }) {
         <Button variant="secondary" size="sm" onClick={() => setFullReviewOpen(true)}>
           <Icons.ShieldCheck size={13} /> Full Permission Review
         </Button>
-        {!allAssigned && (
-          <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
-            <Icons.Plus size={13} /> Grant access
-          </Button>
-        )}
+        {/* The button stays when there is nothing left to grant. Hiding it
+            left the user with no way to find out WHY, which is the case the
+            modal's empty state exists to answer. */}
+        <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
+          <Icons.Plus size={13} /> Grant access
+        </Button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {studios.map(s => {
@@ -1732,34 +1836,37 @@ function AppsPanel({ member }: { member: Member }) {
           const isExpanded = expandedStudio === s
           const isEditingThis = editingStudio === s
           return (
-            <div key={s} style={{
-              border: `1px solid ${isEditingThis ? "var(--primary)" : isExpanded ? "color-mix(in srgb, var(--primary) 40%, var(--border))" : "var(--border)"}`,
-              borderRadius: 10, background: "var(--surface)", overflow: "hidden",
-              transition: "border-color 0.15s",
-            }}>
+            /* The card owns the surface, the border and the selected state.
+               `selected` is what says "this one is open" — the row used to
+               paint its own blue-tinted border and a 3% background on top of a
+               hand-drawn box, which is three ways of saying the same thing and
+               none of them the DS's. */
+            <CardContainer key={s} size="sm" className="!p-0 overflow-hidden" selected={isExpanded || isEditingThis}>
               <div
                 onClick={() => { if (!isEditingThis) setExpandedStudio(isExpanded ? null : s) }}
                 style={{
                   display: "flex", alignItems: "center", gap: 16,
                   padding: "13px 18px", cursor: isEditingThis ? "default" : "pointer",
-                  background: isExpanded ? "color-mix(in srgb, var(--primary) 3%, transparent)" : "transparent",
                 }}
-                onMouseEnter={e => { if (!isExpanded && !isEditingThis) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isExpanded ? "color-mix(in srgb, var(--primary) 3%, transparent)" : "transparent" }}
               >
-                <span style={{ color: "var(--primary)", flexShrink: 0, display: "flex" }}>{meta.icon}</span>
+                {/* A tinted square with an icon in it is HighlightIcon — and
+                    it is what keeps a studio the same colour here, in the
+                    grant modal and in the permissions breakdown. */}
+                <HighlightIcon size="md" variant={STUDIO_HI[s] ?? "neutral"} iconName={STUDIO_ICON_NAME[s] ?? "AppWindow"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 3 }}>{meta.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 3 }}>{meta.label}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
                 </div>
                 <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                  <Chip variant="success-secondary" size="s">Active</Chip>
+                  {/* Active is a state, so it is a Tag. A Chip is something
+                      you can select, and nobody selects "Active". */}
+                  <Tag variant="success" size="sm">Active</Tag>
                   {via.length > 0 && (
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
                       {via.slice(0, 2).map(v => (
-                        <Chip key={v} variant="secondary" size="s">via {v}</Chip>
+                        <Tag key={v} variant="neutral" size="sm">via {v}</Tag>
                       ))}
-                      {via.length > 2 && <Chip variant="secondary" size="s">+{via.length - 2} more</Chip>}
+                      {via.length > 2 && <Tag variant="neutral" size="sm">+{via.length - 2} more</Tag>}
                     </div>
                   )}
                 </div>
@@ -1770,7 +1877,7 @@ function AppsPanel({ member }: { member: Member }) {
                     </Button>
                   )}
                   {isExpanded
-                    ? <Icons.ChevronDown size={14} style={{ color: "var(--primary)" }} />
+                    ? <Icons.ChevronDown size={14} style={{ color: "var(--muted-foreground)" }} />
                     : <Icons.ChevronRight size={14} style={{ color: "var(--muted-foreground)" }} />}
                 </div>
               </div>
@@ -1778,19 +1885,20 @@ function AppsPanel({ member }: { member: Member }) {
                 <AppPermissionsInline
                   studioId={s}
                   isEditing={isEditingThis}
-                  onSave={() => { setEditingStudio(null); setExpandedStudio(null) }}
+                  onSave={changed => {
+                    setEditingStudio(null); setExpandedStudio(null)
+                    toast.success("Permissions updated", {
+                      description: `${changed} permission${changed === 1 ? "" : "s"} changed in ${meta.label} for ${member.name}.`,
+                    })
+                  }}
                   onCancel={() => { setEditingStudio(null); setExpandedStudio(null) }}
                   onRemove={() => { setEditingStudio(null); setRemovingStudio(s) }}
                 />
               )}
-            </div>
+            </CardContainer>
           )
         })}
-        {allAssigned && (
-          <div style={{ textAlign: "center", padding: "6px 0", fontSize: 12, color: "var(--muted-foreground)" }}>
-            This member has access to all available studios.
-          </div>
-        )}
+
       </div>
     </>
   )
@@ -1830,46 +1938,56 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
         />
       )}
 
-      {/* Assign Role modal */}
-      {assignOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
-          onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
-            <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Role</div>
-              <button onClick={() => setAssignOpen(false)} style={{ cursor: "pointer", color: "var(--muted-foreground)" }}><Icons.X size={16} /></button>
+      {/* Assign Role — a ModalDialog, not a hand-built overlay with its own
+          scrim, its own shadow, a raw <input> and rows made of <button>. */}
+      <ModalDialog
+        isOpen={assignOpen}
+        onClose={() => { setAssignOpen(false); setRoleSearch("") }}
+        variant="content"
+        tone="default"
+        iconName="ShieldCheck"
+        title="Assign a role"
+        description={`A role is a preset of permissions. ${member.name} keeps everything they already have and gains what the role grants.`}
+        showClose
+        slotUnstyled
+        slot={
+          <div>
+            <div style={{ marginBottom: 10 }}>
+              <Input value={roleSearch} onChange={e => setRoleSearch(e.target.value)}
+                placeholder="Search roles…" size="sm" leftIcon={<Icons.Search />} />
             </div>
-            <div style={{ padding: "12px 20px 8px" }}>
-              <div style={{ position: "relative" }}>
-                <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                <input value={roleSearch} onChange={e => setRoleSearch(e.target.value)} placeholder="Search roles…"
-                  style={{ width: "100%", boxSizing: "border-box", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none" }} />
+            {filteredUnassigned.length === 0 ? (
+              <EmptyState
+                bare
+                icon={Icons.ShieldCheck}
+                title={roleSearch.trim() ? "No roles match" : "Every role is already assigned"}
+                description={roleSearch.trim()
+                  ? "Try a different search term."
+                  : `${member.name} already holds all ${allRoles.length} roles in this workspace.`}
+                {...(roleSearch.trim() ? { ctaLabel: "Clear search", onCta: () => setRoleSearch("") } : {})}
+              />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 4 * 72, overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+                {filteredUnassigned.map(role => (
+                  <CardContainer key={role.id} size="sm"
+                    onClick={() => { onAssignRole(role.id); setAssignOpen(false); setRoleSearch("") }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, pointerEvents: "none" }}>
+                      <HighlightIcon size="md" variant={roleHi(role.id)} iconName="ShieldCheck" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{role.label}</div>
+                        {role.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{role.desc}</div>}
+                      </div>
+                      <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                        {role.system ? "System" : "Custom"}
+                      </Tag>
+                    </div>
+                  </CardContainer>
+                ))}
               </div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
-              {filteredUnassigned.length === 0 && (
-                <div style={{ padding: "24px 8px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                  {roleSearch.trim() ? "No roles match your search" : "All roles are already assigned"}
-                </div>
-              )}
-              {filteredUnassigned.map(role => (
-                <button key={role.id} onClick={() => { onAssignRole(role.id); setAssignOpen(false); setRoleSearch("") }}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "")}
-                >
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", flexShrink: 0, background: role.color }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</div>
-                    {role.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{role.desc}</div>}
-                  </div>
-                  {role.system && <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)", flexShrink: 0 }}>System</span>}
-                </button>
-              ))}
-            </div>
+            )}
           </div>
-        </div>
-      )}
+        }
+      />
 
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -1882,11 +2000,13 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
       </div>
 
       {assignedRoles.length === 0 && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.Shield size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No roles assigned</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Permissions are inherited from the member's user type only.</div>
-        </div>
+        <EmptyState
+          icon={Icons.Shield}
+          title="No roles assigned"
+          description="Permissions come from this member's user type and direct grants only."
+          ctaLabel="Assign a role"
+          onCta={() => setAssignOpen(true)}
+        />
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1895,19 +2015,15 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
           const blocked = isLastAdminInRole(member.id, role.id, allRoles)
           const isEditingThis = editingRole === role.id
           return (
-            <div key={role.id} style={{
-              border: `1px solid ${isEditingThis ? "var(--primary)" : "var(--border)"}`,
-              borderRadius: 10, background: "var(--surface)", overflow: "hidden",
-              transition: "border-color 0.15s",
-            }}>
+            <CardContainer key={role.id} size="sm" className="!p-0 overflow-hidden" selected={isEditingThis}>
               <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
-                <div style={{ width: 10, height: 10, borderRadius: "50%", flexShrink: 0, background: role.color }} />
+                <HighlightIcon size="md" variant={roleHi(role.id)} iconName="ShieldCheck" />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{role.label}</span>
-                    {role.system && (
-                      <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: "var(--surface-raised)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}>System</span>
-                    )}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{role.label}</span>
+                    <Tag variant={role.system ? "secondary" : "informative"} size="sm">
+                      {role.system ? "System" : "Custom"}
+                    </Tag>
                   </div>
                   <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{role.desc}</div>
                 </div>
@@ -1917,15 +2033,14 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
                   </div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Assigned by Admin · 14 days ago</div>
                 </div>
-                <button
-                  title="Go to role"
-                  onClick={() => onNavigateToRole(role.id)}
-                  style={{ cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-                >
-                  <Icons.ExternalLink size={13} />
-                </button>
+                {/* An icon-only control needs a Tooltip — `title` is slow,
+                    unstyled and invisible to touch. */}
+                <Tooltip content={`Open ${role.label}`}>
+                  <Button variant="tertiary" size="sm" aria-label={`Open ${role.label}`}
+                    onClick={() => onNavigateToRole(role.id)}>
+                    <Icons.ExternalLink size={13} />
+                  </Button>
+                </Tooltip>
                 {!isEditingThis && (
                   <Button variant="secondary" size="sm" onClick={() => setEditingRole(role.id)}>
                     <Icons.Pencil size={11} /> Edit
@@ -1934,16 +2049,19 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
               </div>
               {isEditingThis && (
                 <div style={{
-                  borderTop: "1px solid color-mix(in srgb, var(--primary) 20%, var(--border))",
-                  background: "color-mix(in srgb, var(--primary) 3%, transparent)",
+                  borderTop: "1px solid var(--border)",
                   padding: "12px 18px", display: "flex", alignItems: "center", gap: 8,
                 }}>
                   <Button variant="secondary" size="sm" onClick={() => setEditingRole(null)}>Done</Button>
                   <div style={{ flex: 1 }} />
                   {blocked ? (
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>
-                      Cannot remove — last admin in this role
-                    </span>
+                    <Tooltip content="Every role needs at least one admin. Assign somebody else first.">
+                      <span style={{ display: "inline-block" }}>
+                        <Button variant="warning" size="sm" disabled className="pointer-events-none">
+                          <Icons.Trash2 size={11} /> Remove from role
+                        </Button>
+                      </span>
+                    </Tooltip>
                   ) : (
                     <Button variant="warning" size="sm" onClick={() => { setEditingRole(null); setPendingRemove(role) }}>
                       <Icons.Trash2 size={11} /> Remove from role
@@ -1951,7 +2069,7 @@ function MemberRolesPanel({ member, allRoles, onRemoveFromRole, onNavigateToRole
                   )}
                 </div>
               )}
-            </div>
+            </CardContainer>
           )
         })}
       </div>
@@ -1992,6 +2110,70 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
     }
   }
 
+  /**
+   * One modal, defined once. It was written out twice — once for the empty
+   * state and once for the populated one — which is how the two copies had
+   * already started to differ (`backgroundColor` in one, `background` in the
+   * other) before either could be fixed.
+   */
+  const assignGroupModal = (
+    <ModalDialog
+      isOpen={assignOpen}
+      onClose={() => { setAssignOpen(false); setGroupSearch("") }}
+      variant="content"
+      tone="default"
+      iconName="Users"
+      title="Add to a group"
+      description="A group grants its studio access and permissions to everyone in it."
+      showClose
+      slotUnstyled
+      slot={
+        <div>
+          <div style={{ marginBottom: 10 }}>
+            <Input value={groupSearch} onChange={e => setGroupSearch(e.target.value)}
+              placeholder="Search groups…" size="sm" leftIcon={<Icons.Search />} />
+          </div>
+          {filteredUnassigned.length === 0 ? (
+            <EmptyState
+              bare
+              icon={Icons.Users}
+              title={groupSearch.trim() ? "No groups match" : "Already in every group"}
+              description={groupSearch.trim()
+                ? "Try a different search term."
+                : `${member.name} belongs to all ${allGroups.length} groups in this workspace.`}
+              {...(groupSearch.trim() ? { ctaLabel: "Clear search", onCta: () => setGroupSearch("") } : {})}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 4 * 72, overflowY: "auto", paddingInline: 16, marginInline: -16 }}>
+              {filteredUnassigned.map(g => (
+                <CardContainer key={g.id} size="sm"
+                  onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, pointerEvents: "none" }}>
+                    {/* A group is a set of people, so it gets an avatar — the
+                        tinted initials square it used to draw was AvatarCircle
+                        with a hex tint bolted on. */}
+                    <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                        {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                      {g.studios.map(st => (
+                        <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">{STUDIO_SHORT[st] ?? st}</Tag>
+                      ))}
+                    </div>
+                  </div>
+                </CardContainer>
+              ))}
+            </div>
+          )}
+        </div>
+      }
+    />
+  )
+
   function handleUndo() {
     if (!undoState) return
     clearTimeout(undoState.timer)
@@ -2002,57 +2184,19 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
   if (memberGroups.length === 0 && !undoState) {
     return (
       <>
-        {/* Assign Group modal — shown even on empty state */}
-        {assignOpen && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
-            onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-            <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
-              <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Group</div>
-                <button onClick={() => setAssignOpen(false)} style={{ cursor: "pointer", color: "var(--muted-foreground)" }}><Icons.X size={16} /></button>
-              </div>
-              <div style={{ padding: "12px 20px 8px" }}>
-                <div style={{ position: "relative" }}>
-                  <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                  <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Search groups…"
-                    style={{ width: "100%", boxSizing: "border-box", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none" }} />
-                </div>
-              </div>
-              <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
-                {filteredUnassigned.length === 0 && (
-                  <div style={{ padding: "24px 8px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                    {groupSearch.trim() ? "No groups match your search" : "Member is already in all groups"}
-                  </div>
-                )}
-                {filteredUnassigned.map(g => (
-                  <button key={g.id} onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", textAlign: "left" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "")}
-                  >
-                    <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, backgroundColor: `${g.color}22`, borderWidth: 1, borderStyle: "solid", borderColor: `${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontWeight: 700, fontSize: 11 }}>
-                      {g.name.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{g.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{g.memberIds.length} members · {g.studios.length} studios</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+      {assignGroupModal}
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
           <Button variant="secondary" size="sm" onClick={() => setAssignOpen(true)}>
             <Icons.Plus size={13} /> Assign Group
           </Button>
         </div>
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.Users size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>Not in any groups</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Groups define shared studio access and can be used to batch-assign permissions.</div>
-        </div>
+        <EmptyState
+          icon={Icons.Users}
+          title="Not in any groups"
+          description="Groups define shared studio access, and are how permissions get assigned to several people at once."
+          ctaLabel="Add to a group"
+          onCta={() => setAssignOpen(true)}
+        />
       </>
     )
   }
@@ -2070,47 +2214,7 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
           onCancel={() => setPendingRemove(null)}
         />
       )}
-      {/* Assign Group modal */}
-      {assignOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 10100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.45)" }} // audit-ignore: modal overlay scrim
-          onClick={e => { if (e.target === e.currentTarget) setAssignOpen(false) }}>
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, width: 400, maxHeight: 520, display: "flex", flexDirection: "column", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}> {/* audit-ignore: modal shadow */}
-            <div style={{ padding: "18px 20px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>Assign Group</div>
-              <button onClick={() => setAssignOpen(false)} style={{ cursor: "pointer", color: "var(--muted-foreground)" }}><Icons.X size={16} /></button>
-            </div>
-            <div style={{ padding: "12px 20px 8px" }}>
-              <div style={{ position: "relative" }}>
-                <Icons.Search size={13} style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "var(--muted-foreground)" }} />
-                <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Search groups…"
-                  style={{ width: "100%", boxSizing: "border-box", paddingLeft: 28, paddingRight: 10, paddingTop: 7, paddingBottom: 7, fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none" }} />
-              </div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "4px 12px 12px" }}>
-              {filteredUnassigned.length === 0 && (
-                <div style={{ padding: "24px 8px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-                  {groupSearch.trim() ? "No groups match your search" : "Member is already in all groups"}
-                </div>
-              )}
-              {filteredUnassigned.map(g => (
-                <button key={g.id} onClick={() => { onAddToGroup(g.id); setAssignOpen(false); setGroupSearch("") }}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 8px", borderRadius: 8, cursor: "pointer", textAlign: "left" }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "")}
-                >
-                  <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: `${g.color}22`, border: `1px solid ${g.color}44`, display: "flex", alignItems: "center", justifyContent: "center", color: g.color, fontWeight: 700, fontSize: 11 }}>
-                    {g.name.slice(0, 2).toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{g.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{g.memberIds.length} members · {g.studios.length} studios</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {assignGroupModal}
       {undoState && (
         <UndoToast
           message={`Removed from "${undoState.group.name}"`}
@@ -2124,69 +2228,46 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
           {memberGroups.length} group{memberGroups.length !== 1 ? "s" : ""} assigned
         </span>
-        <button onClick={() => setAssignOpen(true)} style={{
-          display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", fontSize: 12, fontWeight: 600,
-          border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
-        }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
-        >
-          <Icons.Plus size={13} /> Assign Group
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => setAssignOpen(true)}>
+          <Icons.Plus size={13} /> Add to group
+        </Button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {memberGroups.map(group => (
-          <div key={group.id} style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 18px", border: "1px solid var(--border)", borderRadius: 10,
-            background: "var(--surface)",
-          }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: 8, flexShrink: 0,
-              background: `${group.color}22`, border: `1px solid ${group.color}44`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: group.color, fontWeight: 700, fontSize: 12,
-            }}>
-              {group.name.slice(0, 2).toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 2 }}>{group.name}</div>
-              <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-                {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+          <CardContainer key={group.id} size="sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <AvatarCircle name={group.name} initials={group.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 2 }}>{group.name}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                  {group.memberIds.length} member{group.memberIds.length !== 1 ? "s" : ""} · {group.studios.length} studio{group.studios.length !== 1 ? "s" : ""}
+                </div>
               </div>
+              {/* Studio tags keep the studio's own colour, so the same studio
+                  reads the same here as it does in the Apps tab. */}
+              <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 160 }}>
+                {group.studios.slice(0, 2).map(s => (
+                  <Tag key={s} variant={STUDIO_TAG[s] ?? "neutral"} size="sm">{STUDIO_SHORT[s] ?? s}</Tag>
+                ))}
+                {group.studios.length > 2 && (
+                  <Tag variant="neutral" size="sm">+{group.studios.length - 2}</Tag>
+                )}
+              </div>
+              <Tooltip content={`Open ${group.name}`}>
+                <Button variant="tertiary" size="sm" aria-label={`Open ${group.name}`}
+                  onClick={() => onNavigateToGroup(group.id)}>
+                  <Icons.ExternalLink size={13} />
+                </Button>
+              </Tooltip>
+              <Tooltip content={`Remove ${member.name} from ${group.name}`}>
+                <Button variant="tertiary" size="sm" aria-label={`Remove from ${group.name}`}
+                  onClick={() => handleRemoveClick(group)}>
+                  <Icons.X size={14} />
+                </Button>
+              </Tooltip>
             </div>
-            <div style={{ display: "flex", gap: 4, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end", maxWidth: 140 }}>
-              {group.studios.slice(0, 2).map(s => (
-                <span key={s} style={{
-                  fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                  background: "var(--surface-raised)", color: "var(--muted-foreground)",
-                  border: "1px solid var(--border)",
-                }}>{STUDIO_META[s]?.label ?? s}</span>
-              ))}
-              {group.studios.length > 2 && (
-                <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>+{group.studios.length - 2}</span>
-              )}
-            </div>
-            <button
-              title="Go to group"
-              onClick={() => onNavigateToGroup(group.id)}
-              style={{ cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--foreground)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-            >
-              <Icons.ExternalLink size={13} />
-            </button>
-            <button
-              title="Remove from group"
-              onClick={() => handleRemoveClick(group)}
-              style={{ cursor: "pointer", color: "var(--muted-foreground)", padding: 6, flexShrink: 0, borderRadius: 6, display: "flex", alignItems: "center" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--badge-error)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--muted-foreground)")}
-            >
-              <Icons.X size={14} />
-            </button>
-          </div>
+          </CardContainer>
         ))}
       </div>
     </>
@@ -2230,7 +2311,7 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
       <div
         onClick={() => hasChildren && setExpanded(e => !e)}
         style={{
-          display: "flex", alignItems: "flex-start", gap: 8,
+          display: "flex", alignItems: "center", gap: 8,
           padding: `8px 16px 8px ${16 + depth * 20}px`,
           borderBottom: "1px solid var(--border)",
           cursor: hasChildren ? "pointer" : "default",
@@ -2239,34 +2320,58 @@ function EditablePermTreeNode({ node, depth, overrides, onToggle, mode, scopeOve
         onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLElement).style.background = rowBgHover }}
         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg }}
       >
-        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 3 }}>
+        <div style={{ width: 14, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           {hasChildren ? (expanded ? <Icons.ChevronDown size={12} color="var(--muted-foreground)" /> : <Icons.ChevronRight size={12} color="var(--muted-foreground)" />) : null}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
-            {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>via {node.role}</span>
-            )}
+            {node.role && <Tag variant="informative" size="sm">via {node.role}</Tag>}
             {node.scope && mode !== "edit" && <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>}
             {isPinned && <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Pinned</span>}
             {hasOverride && !isPinned && <span style={{ fontSize: 9, fontWeight: 700, color: "var(--primary)", letterSpacing: 0.4, textTransform: "uppercase" }}>Modified</span>}
           </div>
           {node.desc && <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>{node.desc}</div>}
           {isInheritedOnly && <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 1, fontStyle: "italic" }}>Inherited via role · toggle to confirm direct access</div>}
-          {mode === "edit" && (
-            <div style={{ marginTop: 6, opacity: isDirect ? 1 : 0.35, pointerEvents: isDirect ? "auto" : "none" }} onClick={e => e.stopPropagation()}>
-              <SwitchTab size="s" items={SCOPE_ITEMS} value={scopeOverrides[node.id] ?? node.scope ?? "Own"} onChange={scope => onScopeChange(node.id, scope)} aria-label={`Scope for ${node.label}`} />
-            </div>
-          )}
         </div>
-        <span onClick={e => e.stopPropagation()} style={{ paddingTop: 2 }}>
+
+        {/*
+          Scope and the on/off switch are the two controls on this row, so they
+          sit together on the right with a hairline between them. The scope
+          used to be a SwitchTab under the description — a second full-width
+          band per permission, which made the row twice as tall and read as a
+          sub-section rather than as a setting for the line it belongs to.
+
+          Chips, because scope is a choice among three: selected/unselected is
+          exactly what Chip is for. The divider is what stops the last chip
+          reading as part of the toggle.
+        */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}
+          onClick={e => e.stopPropagation()}>
+          {mode === "edit" && (
+            <>
+              <div style={{
+                display: "flex", gap: 4,
+                // Scope only means something once the permission is ON.
+                opacity: isDirect ? 1 : 0.35,
+                pointerEvents: isDirect ? "auto" : "none",
+              }}>
+                {SCOPE_ITEMS.map(sc => {
+                  const active = (scopeOverrides[node.id] ?? node.scope ?? "Own") === sc.id
+                  return (
+                    <Chip key={sc.id} size="s" variant={active ? "primary" : "secondary"}
+                      onClick={() => onScopeChange(node.id, sc.id)}
+                      aria-label={`${sc.label} scope for ${node.label}`}>
+                      {sc.label}
+                    </Chip>
+                  )
+                })}
+              </div>
+              <div style={{ width: 1, alignSelf: "stretch", background: "var(--color-border-neutral-subtle)" }} />
+            </>
+          )}
           <Toggle checked={isDirect} disabled={node.locked && node.state !== "g-inh"} size="sm" onChange={on => { onToggle(node.id, on) }} />
-        </span>
+        </div>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
         <EditablePermTreeNode key={child.id} node={child} depth={depth + 1} overrides={overrides} onToggle={onToggle} mode={mode} scopeOverrides={scopeOverrides} onScopeChange={onScopeChange} />
@@ -2348,11 +2453,28 @@ const MEMBER_RESOURCES: Record<string, MemberResource[]> = {
   ],
 }
 
-const RESOURCE_TYPE_COLOR: Record<string, string> = {
-  Dataset:    "var(--badge-info)",
-  Model:      "var(--badge-success)",
-  "Event Bus":"var(--badge-alert)",
-  Sandbox:    "var(--muted-foreground)",
+/** A resource type is a category, not a status — Tag carries the tone, and
+ *  HighlightIcon carries the same identity as a tile. These replace
+ *  RESOURCE_TYPE_COLOR, whose raw token strings were being colour-mixed into
+ *  borders and backgrounds by hand at three call sites. */
+const RESOURCE_TYPE_HI: Record<string, "informative" | "purple" | "light-blue" | "neutral"> = {
+  Dataset:     "informative",
+  Model:       "purple",
+  "Event Bus": "light-blue",
+  Sandbox:     "neutral",
+}
+const RESOURCE_ICON_NAME: Record<string, string> = {
+  Dataset:     "Database",
+  Model:       "Cpu",
+  "Event Bus": "Zap",
+  Sandbox:     "Box",
+}
+/** A resource type is a category, not a status — Tag carries the tone. */
+const RESOURCE_TYPE_TAG: Record<string, "informative" | "purple" | "lightBlue" | "neutral"> = {
+  Dataset:     "informative",
+  Model:       "purple",
+  "Event Bus": "lightBlue",
+  Sandbox:     "neutral",
 }
 
 const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -2372,143 +2494,193 @@ function RemoveAccessModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const typeColor = RESOURCE_TYPE_COLOR[resource.type] ?? "var(--muted-foreground)"
   const isViaGroup = resource.grantPath === "via-group"
   const isViaRole  = resource.grantPath === "via-role"
   const isSystem   = resource.removable === false
 
   // Warnings in priority order
-  const warnings: Array<{ icon: React.ReactNode; color: string; text: React.ReactNode }> = []
+  const warnings: Array<{ iconName: string; variant: "neutral" | "error" | "alert" | "success"; text: React.ReactNode }> = []
 
   if (isSystem) {
     warnings.push({
-      icon: <Icons.Lock size={14} />,
-      color: "var(--muted-foreground)",
+      iconName: "Lock", variant: "neutral",
       text: "This access is managed by the system and cannot be removed manually.",
     })
   } else if (resource.criticalAccess) {
     warnings.push({
-      icon: <Icons.AlertTriangle size={14} />,
-      color: "var(--badge-error)",
+      iconName: "AlertTriangle", variant: "error",
       text: <>Removing <strong>Owner</strong> access to <strong>{resource.name}</strong> may break {memberName}'s ability to manage or share this resource.</>,
     })
   }
 
   if (isViaGroup && !isSystem) {
     warnings.push({
-      icon: <Icons.Users size={14} />,
-      color: "var(--badge-alert)",
+      iconName: "Users", variant: "alert",
       text: <>This access comes from the <strong>{resource.groupName}</strong> group ({resource.groupMemberCount} members). Removing it here removes access for the <strong>entire group</strong>, not just this member.</>,
     })
   }
 
   if (isViaRole && !isSystem) {
     warnings.push({
-      icon: <Icons.Shield size={14} />,
-      color: "var(--badge-alert)",
+      iconName: "Shield", variant: "alert",
       text: <>This access is inherited from the <strong>{resource.roleName}</strong> role. Removing it will revoke all permissions granted by that role on this resource.</>,
     })
   }
 
   if (resource.lastPath && !isSystem) {
     warnings.push({
-      icon: <Icons.AlertCircle size={14} />,
-      color: "var(--badge-error)",
+      iconName: "AlertCircle", variant: "error",
       text: <>{memberName} has <strong>no other access path</strong> to this resource. After removal, they will lose access completely.</>,
     })
   }
 
   if (resource.dualPath && !isSystem) {
     warnings.push({
-      icon: <Icons.CheckCircle size={14} />,
-      color: "var(--badge-success)",
+      iconName: "CheckCircle", variant: "success",
       text: <>Safe to remove — {memberName} will still be able to access <strong>{resource.name}</strong> via another path.</>,
     })
   }
 
   return (
-    <>
-      <div
-        style={{ position: "fixed", inset: 0, zIndex: 10100, background: "rgba(0,0,0,0.5)" }} // audit-ignore: scrim
-        onClick={onCancel}
-      />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-        zIndex: 10101, width: 480, maxWidth: "90vw",
-        background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 14, overflow: "hidden",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)", // audit-ignore: modal shadow
-      }}>
-        {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
-            {isSystem ? "Access is system-managed" : "Remove resource access?"}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {isSystem
-              ? "This access cannot be changed from here."
-              : `You're about to remove ${memberName}'s access to the resource below.`}
-          </div>
-        </div>
+    <ModalDialog
+      isOpen
+      onClose={onCancel}
+      variant="content"
+      tone={isSystem ? "default" : "error"}
+      iconName={isSystem ? "Lock" : "Trash2"}
+      title={isSystem ? "Access is system-managed" : "Remove resource access?"}
+      description={isSystem
+        ? "This grant is maintained by the platform and cannot be changed from here."
+        : `${memberName} will lose the access shown below.`}
+      showClose
+      slotUnstyled
+      ctaPrimary={isSystem ? undefined : {
+        label: isViaGroup ? `Remove from ${resource.groupName}` : "Remove access",
+        destructive: true,
+        onClick: onConfirm,
+      }}
+      ctaSecondary={{ label: isSystem ? "Close" : "Cancel", onClick: onCancel }}
+      slot={
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* The resource, as a card — it used to be a bare row with a
+              hand-mixed border in the type's hex. */}
+          <CardContainer size="sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <HighlightIcon size="md" variant={RESOURCE_TYPE_HI[resource.type] ?? "neutral"}
+                iconName={RESOURCE_ICON_NAME[resource.type] ?? "Layers"} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {resource.name}
+              </span>
+              <Tag variant={RESOURCE_TYPE_TAG[resource.type] ?? "neutral"} size="sm">{resource.type}</Tag>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
+              {[
+                { label: "Access",  value: resource.access    },
+                { label: "Source",  value: resource.source    },
+                { label: "Granted", value: resource.grantedAt },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-title)" }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </CardContainer>
 
-        {/* Resource card */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
-              {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>{resource.name}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, marginLeft: 4,
-              background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-              color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-            }}>{resource.type}</span>
-          </div>
-          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
-            {[
-              { label: "ACCESS",     value: resource.access    },
-              { label: "SOURCE",     value: resource.source    },
-              { label: "GRANTED",    value: resource.grantedAt },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 12, color: "var(--foreground)" }}>{value}</div>
+          {/* One card per consequence. The icon's tint is the severity —
+              these were loose rows whose icon colour was the only signal. */}
+          {warnings.map((w, i) => (
+            <CardContainer key={i} size="sm">
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <HighlightIcon size="sm" variant={w.variant} iconName={w.iconName} />
+                <span style={{ fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.55 }}>{w.text}</span>
               </div>
-            ))}
-          </div>
+            </CardContainer>
+          ))}
         </div>
-
-        {/* Warnings */}
-        {warnings.length > 0 && (
-          <div style={{ padding: "14px 24px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
-            {warnings.map((w, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <span style={{ color: w.color, flexShrink: 0, marginTop: 1 }}>{w.icon}</span>
-                <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.55 }}>{w.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-          {!isSystem && (
-            <Button variant="warning" size="sm" onClick={onConfirm}>
-              {isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}
-            </Button>
-          )}
-        </div>
-      </div>
-    </>
+      }
+    />
   )
 }
+
+/**
+ * The Resources table's columns. A function because the trash column needs
+ * the panel's own `setPendingRemove`; everything else is static.
+ */
+const RESOURCE_COLUMNS = (onRemove: (r: MemberResource) => void): TableColumn<MemberResource>[] => [
+  {
+    key: "name", header: "Resource", width: "minmax(200px, 1fr)",
+    render: r => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <HighlightIcon size="sm" variant={RESOURCE_TYPE_HI[r.type] ?? "neutral"}
+          iconName={RESOURCE_ICON_NAME[r.type] ?? "Layers"} />
+        <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {r.name}
+        </span>
+        {r.removable === false && (
+          <Tooltip content="System-managed — this grant cannot be removed by hand">
+            <span style={{ display: "flex", color: "var(--muted-foreground)" }}><Icons.Lock size={11} /></span>
+          </Tooltip>
+        )}
+        {r.dualPath && (
+          <Tooltip content="Also reachable by another path, so removing this one does not cut off access">
+            <span style={{ display: "flex", color: "var(--badge-success)" }}><Icons.GitMerge size={11} /></span>
+          </Tooltip>
+        )}
+      </div>
+    ),
+  },
+  {
+    key: "type", header: "Type", width: "110px",
+    // A resource type is a category — that is a Tag, in the type's own colour.
+    render: r => <Tag variant={RESOURCE_TYPE_TAG[r.type] ?? "neutral"} size="sm">{r.type}</Tag>,
+  },
+  {
+    key: "access", header: "Access", width: "110px",
+    render: r => <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.access}</span>,
+  },
+  {
+    key: "grantedBy", header: "Granted by", width: "minmax(140px, 0.8fr)",
+    render: r => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <AvatarCircle name={r.grantedBy} sizeKey="md" colorKey={nameToAvatarColor(r.grantedBy)} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.grantedBy}</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.source}</div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: "grantedAt", header: "When", width: "110px", align: "right",
+    render: r => <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>,
+  },
+  {
+    key: "remove", header: "", width: "48px", align: "center",
+    render: r => r.removable === false ? (
+      <Tooltip content="System-managed — cannot be removed">
+        <span style={{ display: "inline-block" }}>
+          <Button variant="tertiary" size="sm" disabled className="pointer-events-none" aria-label="System-managed">
+            <Icons.Lock size={12} />
+          </Button>
+        </span>
+      </Tooltip>
+    ) : (
+      <Tooltip content={`Remove access to ${r.name}`}>
+        <Button variant="tertiary" size="sm" aria-label={`Remove access to ${r.name}`}
+          onClick={e => { e.stopPropagation(); onRemove(r) }}>
+          <Icons.Trash2 size={13} />
+        </Button>
+      </Tooltip>
+    ),
+  },
+]
 
 function ResourcesPanel({ member }: { member: Member }) {
   const initialResources = MEMBER_RESOURCES[member.id] ?? []
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set())
   const [pendingRemove, setPendingRemove] = useState<MemberResource | null>(null)
-  const [justRemoved, setJustRemoved] = useState<string | null>(null)
+  const toast = useToast()
   const [activeType, setActiveType] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
@@ -2517,16 +2689,18 @@ function ResourcesPanel({ member }: { member: Member }) {
   const allResources = initialResources.filter(r => !removedIds.has(r.id))
   const uniqueTypes = Array.from(new Set(initialResources.map(r => r.type)))
 
-  const { containerRef: typeContainerRef, slot: typeSlot, menu: typeMenu } = useFilterDropdown({
+  // Filters positions this menu itself — see the note on the members list.
+  const TYPE_OPTIONS = [
+    { id: "all", label: `All types · ${allResources.length}` },
+    ...uniqueTypes.map(t => ({ id: t, label: `${t} · ${allResources.filter(r => r.type === t).length}` })),
+  ]
+  const typeSlot = {
     placeholder: "Type",
-    value: activeType,
-    defaultValue: "all" as const,
-    options: [
-      { id: "all", label: "All types", count: allResources.length },
-      ...uniqueTypes.map(t => ({ id: t, label: t, count: allResources.filter(r => r.type === t).length })),
-    ],
-    onChange: (id) => { setActiveType(id); setPage(1) },
-  })
+    value: activeType === "all" ? undefined : TYPE_OPTIONS.find(o => o.id === activeType)?.label,
+    options: TYPE_OPTIONS.map(o => o.label),
+    onSelect: (label: string) => { setActiveType(TYPE_OPTIONS.find(o => o.label === label)?.id ?? "all"); setPage(1) },
+    onRemove: () => { setActiveType("all"); setPage(1) },
+  }
 
   const typeFiltered = activeType === "all" ? allResources : allResources.filter(r => r.type === activeType)
   const resources = searchQuery.trim()
@@ -2539,18 +2713,20 @@ function ResourcesPanel({ member }: { member: Member }) {
   function handleRemoveConfirm() {
     if (!pendingRemove) return
     setRemovedIds(prev => new Set(prev).add(pendingRemove.id))
-    setJustRemoved(pendingRemove.name)
+    // The screen used to draw its own fixed-position toast, shadow and all.
+    toast.success("Resource access removed", {
+      description: `${member.name} no longer has ${pendingRemove.access} access to ${pendingRemove.name}.`,
+    })
     setPendingRemove(null)
-    setTimeout(() => setJustRemoved(null), 3000)
   }
 
   if (allResources.length === 0 && removedIds.size === 0) {
     return (
-      <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-        <Icons.Package size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources assigned</div>
-        <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Resources are datasets, models, and event buses this member can access.</div>
-      </div>
+      <EmptyState
+        icon={Icons.Package}
+        title="No resources assigned"
+        description="Resources are the datasets, models, event buses and sandboxes this member can reach. Access comes from a role, a group, or a direct grant."
+      />
     )
   }
 
@@ -2566,35 +2742,19 @@ function ResourcesPanel({ member }: { member: Member }) {
         />
       )}
 
-      {/* Success toast */}
-      {justRemoved && (
-        <div style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 10200,
-          background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10,
-          padding: "10px 16px", display: "flex", alignItems: "center", gap: 10,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)", // audit-ignore: toast shadow
-          animation: "tab-indicator-in 180ms ease-out both",
-        }}>
-          <Icons.CheckCircle size={15} style={{ color: "var(--badge-success)", flexShrink: 0 }} />
-          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>
-            Access to <strong>{justRemoved}</strong> removed
-          </span>
-        </div>
-      )}
-
       {/* Empty state after removing all */}
       {allResources.length === 0 && removedIds.size > 0 && (
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.ShieldOff size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No resources remaining</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>All resource access has been removed for this member.</div>
-        </div>
+        <EmptyState
+          icon={Icons.ShieldOff}
+          title="No resources remaining"
+          description="Every resource grant has been removed for this member."
+        />
       )}
 
       {allResources.length > 0 && (
         <>
           {/* Filters row */}
-          <div ref={typeContainerRef} style={{ position: "relative", marginBottom: 16 }}>
+          <div style={{ marginBottom: 16 }}>
             <Filters
               showSearch
               searchPlaceholder="Search resources…"
@@ -2605,125 +2765,39 @@ function ResourcesPanel({ member }: { member: Member }) {
               showSort={false}
               showViewToggle={false}
             />
-            {typeMenu}
           </div>
 
-          {/* Table */}
-          {resources.length === 0 && searchQuery.trim() && (
-            <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-              No resources match "<strong>{searchQuery}</strong>"
-            </div>
-          )}
-          {resources.length > 0 && (
-          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
-              padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
-            }}>
-              <span>Resource</span><span>Type</span><span>Access</span><span>Granted by</span><span>When</span><span />
-            </div>
-            {pageResources.map((r, i) => {
-              const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
-              const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
-              const isSystem  = r.removable === false
-              return (
-                <div key={r.id} style={{
-                  display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
-                  padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
-                  alignItems: "center",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
-                    {isSystem && (
-                      <span title="System-managed" style={{ display: "flex", color: "var(--muted-foreground)" }}>
-                        <Icons.Lock size={11} />
-                      </span>
-                    )}
-                    {r.dualPath && (
-                      <span title="Accessible via another path" style={{ display: "flex", color: "var(--badge-success)" }}>
-                        <Icons.GitMerge size={11} />
-                      </span>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                    background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-                    color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-                    width: "fit-content",
-                  }}>{r.type}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: 12, color: "var(--foreground)" }}>{r.grantedBy}</span>
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>{r.source}</span>
-                  </div>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>
-                  <button
-                    onClick={e => { e.stopPropagation(); setPendingRemove(r) }}
-                    title={isSystem ? "System-managed — cannot be removed" : "Remove access"}
-                    disabled={isSystem}
-                    style={{
-                      width: 28, height: 28, borderRadius: 6,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: isSystem ? "not-allowed" : "pointer",
-                      color: isSystem ? "var(--muted-foreground)" : "var(--badge-error)",
-                      opacity: isSystem ? 0.35 : 0.7,
-                    }}
-                    onMouseEnter={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "1" }}
-                    onMouseLeave={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "0.7" }}
-                  >
-                    {isSystem ? <Icons.Lock size={12} /> : <Icons.Trash2 size={13} />}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-          )}
+          {/* The DS Table, not a CSS grid pretending to be one. It owns the
+              header row, the row hover, the dividers and the empty state —
+              all four of which were hand-drawn here, which is how this table
+              ended up with a hover the DS forbids and a header that could
+              drift from its rows. */}
+          <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
+            <Table
+              size="sm"
+              columns={RESOURCE_COLUMNS(setPendingRemove)}
+              data={pageResources}
+              rowKey={r => r.id}
+              emptyIcon={Icons.Layers}
+              emptyTitle={searchQuery.trim() ? `No resources match "${searchQuery}"` : "No resources"}
+              emptyDescription={searchQuery.trim()
+                ? "Try a different search term, or clear the type filter."
+                : "This member has not been granted access to any resource."}
+              {...(searchQuery.trim() ? { emptyCtaLabel: "Clear search", onEmptyCta: () => { setSearchQuery(""); setPage(1) } } : {})}
+            />
+          </CardContainer>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, resources.length)} of {resources.length}
-              </span>
-              <div style={{ display: "flex", gap: 4 }}>
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
-                  style={{
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
-                    background: "transparent", cursor: safePage === 1 ? "not-allowed" : "pointer",
-                    color: safePage === 1 ? "var(--muted-foreground)" : "var(--foreground)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: safePage === 1 ? 0.4 : 1,
-                  }}
-                ><Icons.ChevronLeft size={14} /></button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => setPage(p)} style={{
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid",
-                    borderColor: p === safePage ? "var(--primary)" : "var(--border)",
-                    background: p === safePage ? "var(--primary)" : "transparent",
-                    color: p === safePage ? "#fff" /* audit-ignore */ : "var(--foreground)",
-                    fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{p}</button>
-                ))}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
-                  style={{
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
-                    background: "transparent", cursor: safePage === totalPages ? "not-allowed" : "pointer",
-                    color: safePage === totalPages ? "var(--muted-foreground)" : "var(--foreground)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: safePage === totalPages ? 0.4 : 1,
-                  }}
-                ><Icons.ChevronRight size={14} /></button>
-              </div>
+          {/* Pagination is a component too — the previous one was eleven
+              hand-styled <button>s, one of which painted #fff on the active
+              page. */}
+          {resources.length > PAGE_SIZE && (
+            <div style={{ marginTop: 12 }}>
+              <Pagination
+                currentPage={safePage}
+                totalItems={resources.length}
+                itemsPerPage={PAGE_SIZE}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </>
@@ -3424,6 +3498,20 @@ function GroupResourcesPanel({ groupId }: { groupId: string }) {
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
+/**
+ * The members table's column tracks, in one place so the header and the rows
+ * cannot drift apart.
+ */
+const MEMBER_COLUMNS = [
+  { key: "member",     label: "Member",      flex: 3,   min: 200, align: "left"   as const },
+  { key: "department", label: "Department",  flex: 2,   min: 110, align: "left"   as const },
+  { key: "userType",   label: "User Type",   flex: 1,   min: 90,  align: "center" as const },
+  { key: "lastActive", label: "Last active", flex: 1.4, min: 110, align: "right"  as const },
+  { key: "mfa",        label: "MFA",         flex: 1,   min: 70,  align: "center" as const },
+  { key: "status",     label: "Status",      flex: 1,   min: 90,  align: "center" as const },
+]
+const COL = Object.fromEntries(MEMBER_COLUMNS.map(c => [c.key, c])) as Record<string, typeof MEMBER_COLUMNS[number]>
+
 type MemberAction = "reset-password" | "reset-mfa" | "suspend" | "unsuspend" | "deactivate" | "update" | "send-invite" | "resend-invite"
 
 function MemberRow({
@@ -3462,8 +3550,8 @@ function MemberRow({
           <AvatarCircle name={member.name} sizeKey="lg" avatarStyle={member.status === "active" ? "text" : "empty"} />
         </div>
 
-        {/* Name + email */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Same tracks as the header — see MEMBER_COLUMNS. */}
+        <div style={{ flex: COL.member.flex, minWidth: COL.member.min }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", opacity: member.status === "suspended" ? 0.5 : 1, marginBottom: 1 }}>
             {member.name}
           </div>
@@ -3473,17 +3561,17 @@ function MemberRow({
         </div>
 
         {/* Department */}
-        <div style={{ minWidth: 120, fontSize: 12, color: "var(--muted-foreground)", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ flex: COL.department.flex, minWidth: COL.department.min, fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {member.department ?? "—"}
         </div>
 
         {/* User type badge */}
-        <div style={{ minWidth: 72, textAlign: "center", flexShrink: 0 }}>
+        <div style={{ flex: COL.userType.flex, minWidth: COL.userType.min, display: "flex", justifyContent: "center" }}>
           <Tag variant={USER_TYPE_TAG[member.role]} size="sm">{member.role}</Tag>
         </div>
 
         {/* Last active / invite status */}
-        <div style={{ textAlign: "right", flexShrink: 0, minWidth: 100 }}>
+        <div style={{ flex: COL.lastActive.flex, minWidth: COL.lastActive.min, textAlign: "right" }}>
           {member.status === "pending" ? (
             <>
               <div style={{ fontSize: 11, color: "var(--badge-alert)", fontWeight: 600, marginBottom: 1 }}>Invite not sent</div>
@@ -3509,7 +3597,8 @@ function MemberRow({
         </div>
 
         {/* MFA */}
-        <div title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"} style={{ display: "flex", flexShrink: 0 }}>
+        <div title={member.mfaEnabled ? `MFA enabled (${member.mfaMethod ?? ""})` : "MFA not enabled"}
+          style={{ flex: COL.mfa.flex, minWidth: COL.mfa.min, display: "flex", justifyContent: "center" }}>
           <Tag variant={member.mfaEnabled ? "success" : "alert"} size="sm">
             {member.mfaEnabled ? <Icons.ShieldCheck size={10} /> : <Icons.ShieldAlert size={10} />}
             MFA
@@ -3517,7 +3606,7 @@ function MemberRow({
         </div>
 
         {/* Status */}
-        <div style={{ minWidth: 76, textAlign: "center", flexShrink: 0 }}>
+        <div style={{ flex: COL.status.flex, minWidth: COL.status.min, display: "flex", justifyContent: "center" }}>
           <Tag variant={STATUS_TAG[member.status]} size="sm">{STATUS_LABEL[member.status]}</Tag>
         </div>
 
@@ -3606,13 +3695,9 @@ function AvatarStack({ members, overflow }: { members: { id: string; name: strin
         </div>
       ))}
       {overflow > 0 && (
-        <div style={{
-          width: 16, height: 16, borderRadius: "50%",
-          background: "var(--surface-raised)", border: "1.5px solid var(--surface)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 7, fontWeight: 700, color: "var(--muted-foreground)",
-          marginLeft: -4, flexShrink: 0,
-        }}>+{overflow}</div>
+        <div style={{ marginLeft: -4, flexShrink: 0 }}>
+          <AvatarCircle name={`+${overflow}`} initials={`+${overflow}`} sizeKey="sm" avatarStyle="text" />
+        </div>
       )}
     </div>
   )
@@ -3703,6 +3788,15 @@ function GroupCard({ group, onSelect }: { group: Group; onSelect: (g: Group) => 
 }
 // ── Step 1: Apps ──────────────────────────────────────────────────────────────
 
+/**
+ * Deliberately loose: something, an @, a domain with a dot. Anything stricter
+ * starts rejecting addresses that are perfectly valid (plus-tags, new TLDs,
+ * long subdomains) and the field's job here is to catch "josjosjdos", not to
+ * be the authority on RFC 5322.
+ */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const isEmail = (v: string) => EMAIL_RE.test(v.trim())
+
 const INVITE_STUDIO_OPTIONS = [
   { id: "governance", label: "Governance Studio", icon: <Icons.ShieldCheck size={13} /> },
   { id: "datastudio", label: "Data Studio",        icon: <Icons.Database size={13} /> },
@@ -3721,6 +3815,174 @@ const INVITE_STUDIO_OPTIONS = [
  * mail to a person who is not here yet and hands them studio access — so what
  * is about to happen is stated in full before the button that does it.
  */
+/**
+ * Four rows of a `size="sm"` card, which is what a picker should show before
+ * it starts scrolling: enough to compare against each other, short enough
+ * that the CTA below stays on screen.
+ *
+ * `paddingInline` + an equal negative `marginInline` is the sanctioned fix
+ * from CLAUDE.md — a scroll container clips at its PADDING box, so the
+ * boundary moves out past the card's hover halo while the cards themselves do
+ * not move. Shrinking the cards instead is the thing that looks right and is
+ * wrong.
+ */
+function pickerScroller(rowHeight: number): React.CSSProperties {
+  return {
+    maxHeight: 4 * (rowHeight + 8),   // +8 is the grid gap between rows
+    overflowY: "auto",
+    paddingInline: 16,
+    marginInline: -16,
+    paddingBlock: 4,
+  }
+}
+
+/** Two columns, because these items are short and comparing them is the task. */
+const PICKER_GRID: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 8,
+  alignContent: "start",
+}
+
+/**
+ * Search plus quick filters, on one line. The field is capped at 280px on
+ * purpose: stretched to the container it reads as the section's main control,
+ * when the actual task is picking from the list underneath. The chips are
+ * selected/unselected, which is precisely what `Chip` is for — a `Tag` here
+ * would be a status nobody can click.
+ */
+function PickerToolbar({ query, onQuery, placeholder, filters, active, onFilter }: {
+  query: string
+  onQuery: (v: string) => void
+  placeholder: string
+  filters: readonly { id: string; label: string }[]
+  active: string
+  onFilter: (id: string) => void
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+      <div style={{ width: 280, flexShrink: 0 }}>
+        <Input
+          value={query}
+          onChange={e => onQuery(e.target.value)}
+          placeholder={placeholder}
+          size="sm"
+          leftIcon={<Icons.Search />}
+        />
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {filters.map(f => (
+          <Chip key={f.id} size="s" variant={active === f.id ? "primary" : "secondary"}
+            onClick={() => onFilter(f.id)}>
+            {f.label}
+          </Chip>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const GROUP_FILTERS = [
+  { id: "all",        label: "All" },
+  { id: "governance", label: "Governance" },
+  { id: "datastudio", label: "Data" },
+  { id: "agentic",    label: "Agentic" },
+  { id: "admin",      label: "Admin" },
+] as const
+
+const ROLE_FILTERS = [
+  { id: "all",    label: "All" },
+  { id: "system", label: "System" },
+  { id: "custom", label: "Custom" },
+] as const
+
+/**
+ * The recipients field. Deliberately NOT a TagInput: this is an email box,
+ * and a chip that accepts whatever was typed says "these are labels you are
+ * inventing" when the truth is "this address either exists or it does not".
+ * The field itself carries the verdict — success once the address is real and
+ * free, error when it is malformed or already belongs to somebody — and the
+ * accepted addresses become rows underneath, where each one can show its own
+ * state. Michael, three times, and he was right each time.
+ */
+function EmailRecipients({ value, onChange, onDraftChange }: {
+  value: string[]
+  onChange: (next: string[]) => void
+  onDraftChange: (draft: string) => void
+}) {
+  const [draft, setDraft] = useState("")
+  /** Errors of FORM wait for a commit; errors of FACT do not — see below. */
+  const [attempted, setAttempted] = useState(false)
+
+  const trimmed      = draft.trim().toLowerCase()
+  const existing     = trimmed ? MEMBERS.find(m => m.email.toLowerCase() === trimmed) : undefined
+  const alreadyAdded = trimmed ? value.includes(trimmed) : false
+  const valid        = isEmail(trimmed)
+  const canAdd       = valid && !existing && !alreadyAdded
+
+  /**
+   * Two different kinds of wrong, and they surface at different moments.
+   * "This is not an address" is a judgement on half-typed text, so it waits
+   * until the user says they are done with it. "This address is already
+   * somebody's" is a fact about the workspace that the user cannot deduce —
+   * it shows the moment the address is complete enough to check, which is the
+   * whole point of showing it at all.
+   */
+  const field: { state: "default" | "success" | "error" | "alert"; text: string } =
+      !trimmed                 ? { state: "default", text: "Press Enter to add each address." }
+    : existing                 ? { state: "error",   text: `${existing.name} is already ${STATUS_LABEL[existing.status].toLowerCase()} in this workspace — ${existing.email}.` }
+    : alreadyAdded             ? { state: "alert",   text: "Already on this invitation." }
+    : valid                    ? { state: "success", text: "Looks good. Press Enter to add." }
+    : attempted                ? { state: "error",   text: `"${draft.trim()}" is not an email address.` }
+    :                            { state: "default", text: "Press Enter to add each address." }
+
+  function commit() {
+    if (!trimmed) return
+    if (!canAdd) { setAttempted(true); return }
+    onChange([...value, trimmed])
+    setDraft(""); onDraftChange(""); setAttempted(false)
+  }
+
+  return (
+    <>
+      <Input
+        value={draft}
+        state={field.state}
+        supportingText={field.text}
+        leftIcon={<Icons.Mail />}
+        placeholder="name@company.com"
+        onChange={e => { setDraft(e.target.value); onDraftChange(e.target.value); setAttempted(false) }}
+        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit() } }}
+        onBlur={commit}
+      />
+
+      {value.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+          {value.map(addr => (
+            <CardContainer key={addr} size="sm">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* Nobody has a name yet — `empty` is the DS avatar for exactly
+                    that, rather than initials invented from the local part. */}
+                <AvatarCircle name={addr} avatarStyle="empty" sizeKey="lg" />
+                <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {addr}
+                </span>
+                <Tag variant="informative" size="sm">Will be invited</Tag>
+                <Tooltip content={`Remove ${addr}`}>
+                  <Button variant="tertiary" size="sm" aria-label={`Remove ${addr}`}
+                    onClick={() => onChange(value.filter(x => x !== addr))}>
+                    <Icons.X size={13} />
+                  </Button>
+                </Tooltip>
+              </div>
+            </CardContainer>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 function InviteWizard({ onCancel, onSend }: {
   onCancel: () => void
   onSend: (
@@ -3734,8 +3996,8 @@ function InviteWizard({ onCancel, onSend }: {
    * What is typed into the email field but not yet committed to a chip. Next
    * has to count it: somebody who types one address and reaches straight for
    * the button has filled the form as far as they can tell, and a CTA that
-   * stays grey there looks broken. TagInput commits on blur, so the address is
-   * a real chip by the time the click lands.
+   * stays grey there looks broken. The field commits on blur, so the address
+   * is a real recipient by the time the click lands.
    */
   const [emailDraft, setEmailDraft] = useState("")
   const [role, setRole]         = useState<MemberRole>("Member")
@@ -3744,6 +4006,9 @@ function InviteWizard({ onCancel, onSend }: {
   /** A permission preset, not the user type above it. Optional by design. */
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [groupQuery, setGroupQuery]         = useState("")
+  const [groupFilter, setGroupFilter]       = useState("all")
+  const [roleQuery, setRoleQuery]           = useState("")
+  const [roleFilter, setRoleFilter]         = useState("all")
   const [sendEmail, setSendEmail]           = useState(true)
   const [note, setNote]         = useState("")
 
@@ -3759,7 +4024,10 @@ function InviteWizard({ onCancel, onSend }: {
   // An Admin or an Owner gets every studio by definition, so stage 2 has
   // nothing it can require of them. A Member invited with no studio and no
   // group would land in the workspace able to open nothing at all.
-  const canContinue = step === 0 ? emails.length > 0 || emailDraft.trim().length > 0
+  const draftIsAddable = isEmail(emailDraft)
+    && !MEMBERS.some(m => m.email.toLowerCase() === emailDraft.trim().toLowerCase())
+    && !emails.includes(emailDraft.trim().toLowerCase())
+  const canContinue = step === 0 ? emails.length > 0 || draftIsAddable
                     : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
                     : true
 
@@ -3783,11 +4051,20 @@ function InviteWizard({ onCancel, onSend }: {
     ? (emails.length > 1 ? `Send invitations (${emails.length})` : "Send invitation")
     : (emails.length > 1 ? `Create contacts (${emails.length})`  : "Create contact")
 
-  // Same filter the Groups tab runs, so the two behave identically.
+  // Same filter the Groups tab runs, so the two behave identically — plus the
+  // studio chips, which narrow by what the group actually grants.
   const shownGroups = (() => {
     const q = groupQuery.trim().toLowerCase()
-    if (!q) return GROUPS
-    return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+    return GROUPS
+      .filter(g => groupFilter === "all" || g.studios.includes(groupFilter))
+      .filter(g => !q || g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+  })()
+
+  const shownRoles = (() => {
+    const q = roleQuery.trim().toLowerCase()
+    return ROLES
+      .filter(r => roleFilter === "all" || (roleFilter === "system" ? r.system : !r.system))
+      .filter(r => !q || r.label.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q))
   })()
 
   return (
@@ -3817,17 +4094,10 @@ function InviteWizard({ onCancel, onSend }: {
       {step === 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           <div>
-            <FormSectionLabel hint="Press Enter after each address. Everyone here gets the same role and the same access.">
+            <FormSectionLabel hint="Everyone here gets the same user type, the same role and the same access.">
               Email addresses
             </FormSectionLabel>
-            <TagInput
-              tags={emails}
-              onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
-              onRemoveTag={v => setEmails(e => e.filter(x => x !== v))}
-              onDraftChange={setEmailDraft}
-              placeholder="name@company.com"
-              showAddButton={false}
-            />
+            <EmailRecipients value={emails} onChange={setEmails} onDraftChange={setEmailDraft} />
           </div>
 
           {/* One card per option. The title never turns blue: the card's
@@ -3893,36 +4163,49 @@ function InviteWizard({ onCancel, onSend }: {
             <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
               Add to groups
             </FormSectionLabel>
-            <div style={{ marginBottom: 8 }}>
-              <Input value={groupQuery} onChange={e => setGroupQuery(e.target.value)} placeholder="Search groups…" />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {shownGroups.length === 0 && (
-                <EmptyState
-                  icon={Icons.Users}
-                  title="No groups found"
-                  description="Try adjusting your search term."
-                  ctaLabel="Clear search"
-                  onCta={() => setGroupQuery("")}
-                />
-              )}
+            <PickerToolbar
+              query={groupQuery}
+              onQuery={setGroupQuery}
+              placeholder="Search groups…"
+              filters={GROUP_FILTERS}
+              active={groupFilter}
+              onFilter={setGroupFilter}
+            />
+            {shownGroups.length === 0 ? (
+              <EmptyState
+                icon={Icons.Users}
+                title="No groups found"
+                description="Try a different search term, or clear the studio filter."
+                ctaLabel="Clear filters"
+                onCta={() => { setGroupQuery(""); setGroupFilter("all") }}
+              />
+            ) : (
+            <div style={{ ...PICKER_GRID, ...pickerScroller(58) }}>
               {shownGroups.map(g => {
                 const on = groupIds.includes(g.id)
                 return (
                   <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} className="pointer-events-none" />
-                      <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
-                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</span>
-                        <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>
+                    {/* One line, tags on the right. Stacked underneath they
+                        made every card ~30px taller for no extra information,
+                        and a taller card is fewer groups per screen. */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "none" }}>
+                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} />
+                      <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {g.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                           {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
-                        </span>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 1, minWidth: 0 }}>
+                      {/* Wide enough for all four abbreviations on one line —
+                          wrapping made two of the six cards taller than the
+                          rest, which is the thing this change was undoing. */}
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 0, maxWidth: 200 }}>
                         {g.studios.map(st => (
                           <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
-                            {st === "governance" ? "Gov" : st === "datastudio" ? "Data" : st === "agentic" ? "Agentic" : "Admin"}
+                            {STUDIO_SHORT[st] ?? st}
                           </Tag>
                         ))}
                       </div>
@@ -3931,6 +4214,7 @@ function InviteWizard({ onCancel, onSend }: {
                 )
               })}
             </div>
+            )}
           </div>
 
           {/*
@@ -3944,7 +4228,28 @@ function InviteWizard({ onCancel, onSend }: {
             <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
               Assign a role
             </FormSectionLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <PickerToolbar
+              query={roleQuery}
+              onQuery={setRoleQuery}
+              placeholder="Search roles…"
+              filters={ROLE_FILTERS}
+              active={roleFilter}
+              onFilter={setRoleFilter}
+            />
+            {shownRoles.length === 0 ? (
+              <EmptyState
+                icon={Icons.ShieldCheck}
+                title="No roles found"
+                description="Try a different search term, or clear the System/Custom filter."
+                ctaLabel="Clear filters"
+                onCta={() => { setRoleQuery(""); setRoleFilter("all") }}
+              />
+            ) : (
+            <div style={{ ...PICKER_GRID, ...pickerScroller(86) }}>
+              {/* "No role" is a real choice, not the absence of one, so it is a
+                  card like the others — and it stays put while the search
+                  filters the rest, because searching must never strand the
+                  user with nothing selectable. */}
               <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
                 <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
@@ -3953,7 +4258,7 @@ function InviteWizard({ onCancel, onSend }: {
                   </span>
                 </div>
               </CardContainer>
-              {ROLES.map(r => {
+              {shownRoles.map(r => {
                 const on = selectedRoleId === r.id
                 return (
                   <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
@@ -3973,6 +4278,7 @@ function InviteWizard({ onCancel, onSend }: {
                 )
               })}
             </div>
+            )}
           </div>
         </div>
       )}
@@ -4183,18 +4489,16 @@ function PermissionsBreakdown({ rows }: { rows: StudioPermRow[] }) {
   )
 }
 
-function MemberPreview({
-member, onRoleChange, onToggleSuspend, onSendInvite,
-}: {
-  member: Member
-  onRoleChange: (id: string, role: MemberRole) => void
-  onToggleSuspend: (id: string) => void
-  onSendInvite: (id: string) => void
-}) {
+/**
+ * The preview is read-only. It used to carry an Actions tab with a raw
+ * <select> for the user type and a suspend/invite button; Michael took it out
+ * — those belong to the full profile, which the panel's own CTA opens, and a
+ * raw <select> is not a DS control in the first place.
+ */
+function MemberPreview({ member }: { member: Member }) {
   const [tab, setTab] = useState(0)
   const isActive  = member.status === "active"
   const isInvited = member.status === "invited"
-  const isPending = member.status === "pending"
 
   // Same shape the role preview shows, so it is the same component — including
   // the expand, which this tab never had.
@@ -4288,32 +4592,6 @@ member, onRoleChange, onToggleSuspend, onSendInvite,
           </div>
         )}
 
-        {/* Actions */}
-        {tab === 2 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {!isInvited && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)", marginBottom: 8 }}>Change user type</div>
-                <select
-                  value={member.role}
-                  onChange={e => onRoleChange(member.id, e.target.value as UserType)}
-                  style={{ width: "100%", padding: "8px 10px", fontSize: 12, borderRadius: 7, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)", outline: "none", cursor: "pointer" }}
-                >
-                  {USER_TYPE_OPTIONS.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-            {isPending ? (
-              <Button variant="primary" size="sm" onClick={() => onSendInvite(member.id)}>Send invitation</Button>
-            ) : isInvited ? (
-              <Button variant="secondary" size="sm" onClick={() => alert(`Invite resent to ${member.email}`)}>Resend invite</Button>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => onToggleSuspend(member.id)}>{isActive ? "Suspend access" : "Reactivate account"}</Button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   )
@@ -4807,11 +5085,243 @@ function members_forWizard(query: string) {
   return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
 }
 
+/**
+ * Every resource any member holds, deduped by name — the catalogue a new group
+ * can be granted from. Built off MEMBER_RESOURCES rather than a fixture of its
+ * own, so the names here are the same ones the member Resources tab shows.
+ */
+const RESOURCE_CATALOG: MemberResource[] = (() => {
+  const seen = new Map<string, MemberResource>()
+  Object.values(MEMBER_RESOURCES).flat().forEach(r => {
+    if (!seen.has(r.name)) seen.set(r.name, r)
+  })
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+})()
+
+/**
+ * Create a group — a full-page wizard, same shell as New role and Invite.
+ *
+ * Three stages, not the five things Michael listed. Name and description are
+ * two fields, not two stages. And ACTIVITY IS NOT A STAGE: a group that does
+ * not exist yet has no history, so there is nothing to fill in — it is a tab
+ * on the group once it exists, and creating one is its first entry.
+ */
+function CreateGroupWizard({ onCancel, onCreate }: {
+  onCancel: () => void
+  onCreate: (group: Group) => void
+}) {
+  const [step, setStep]         = useState<0 | 1 | 2>(0)
+  const [name, setName]         = useState("")
+  const [desc, setDesc]         = useState("")
+  const [studios, setStudios]   = useState<string[]>([])
+  const [memberIds, setMemberIds]     = useState<string[]>([])
+  const [resourceIds, setResourceIds] = useState<string[]>([])
+  const [memberQuery, setMemberQuery]     = useState("")
+  const [resourceQuery, setResourceQuery] = useState("")
+
+  const steps: StepItem[] = [
+    { label: "Details",   state: step === 0 ? "active" : step > 0 ? "completed" : "default" },
+    { label: "Members",   state: step === 1 ? "active" : step > 1 ? "completed" : "default" },
+    { label: "Resources", state: step === 2 ? "active" : "default" },
+  ]
+
+  const canContinue = step === 0 ? name.trim().length > 0 : true
+
+  const shownMembers = (() => {
+    const q = memberQuery.trim().toLowerCase()
+    if (!q) return MEMBERS
+    return MEMBERS.filter(m => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q))
+  })()
+
+  const shownResources = (() => {
+    const q = resourceQuery.trim().toLowerCase()
+    if (!q) return RESOURCE_CATALOG
+    return RESOURCE_CATALOG.filter(r => r.name.toLowerCase().includes(q) || r.type.toLowerCase().includes(q))
+  })()
+
+  function finish() {
+    onCreate({
+      id: name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""),
+      name: name.trim(),
+      // `color` is never read anywhere — AvatarCircle hashes its own from the
+      // name and the card colours come from STUDIO_TAG. It stays on the type
+      // only because the fixture rows carry it.
+      color: "var(--muted)",
+      desc: desc.trim(),
+      memberIds,
+      studios,
+    })
+  }
+
+  return (
+    <ScreenLayout
+      workspaceName="Avance Financial"
+      userName="Thomas Gonzalez"
+      userEmail="thomas.gonzalez@aimsos.ai"
+      sidebarItems={SIDEBAR}
+      activeSidebarId="people"
+      hideSidebar
+      stickyFooter
+      header={() => (
+        <Header
+          size="size-l"
+          title="New group"
+          description="A group bundles people so access and permissions can be granted to all of them at once."
+          backButton
+          onBack={onCancel}
+        />
+      )}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <Stepper steps={steps} />
+      </div>
+
+      {/* ── 1 · Details ───────────────────────────────────────────────── */}
+      {step === 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 640 }}>
+          <div>
+            <FormSectionLabel>Group name</FormSectionLabel>
+            <Input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Risk & Compliance" />
+          </div>
+          <div>
+            <FormSectionLabel optional>Description</FormSectionLabel>
+            <Textarea value={desc} onChange={e => setDesc(e.target.value)} rows={3}
+              placeholder="What do the people in this group have in common?" />
+          </div>
+          <div>
+            <FormSectionLabel optional hint="A group grants its studios to everyone in it. Leave it empty and the group organises people without granting anything.">
+              Studio access
+            </FormSectionLabel>
+            {/* A studio here is selected/unselected, which is what Chip is for —
+                the same call the group's own Settings tab already makes. */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {STUDIO_TABS.map(t => {
+                const on = studios.includes(t.id)
+                return (
+                  <Chip
+                    key={t.id}
+                    size="m"
+                    variant={on ? "primary" : "secondary"}
+                    onClick={() => setStudios(s => on ? s.filter(x => x !== t.id) : [...s, t.id])}
+                  >
+                    {t.label}
+                  </Chip>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2 · Members ───────────────────────────────────────────────── */}
+      {step === 1 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
+          <FormSectionLabel optional hint="You can add people later, from the group or from their own profile.">
+            Add members
+          </FormSectionLabel>
+          <Input value={memberQuery} onChange={e => setMemberQuery(e.target.value)} placeholder="Search members…" />
+          {shownMembers.length === 0 ? (
+            <EmptyState icon={Icons.UserSearch} title="No members found"
+              description="Try a different name or email."
+              ctaLabel="Clear search" onCta={() => setMemberQuery("")} />
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {shownMembers.map(m => {
+                const on = memberIds.includes(m.id)
+                return (
+                  <CardContainer key={m.id} size="sm" selected={on}
+                    onClick={() => setMemberIds(prev => on ? prev.filter(x => x !== m.id) : [...prev, m.id])}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Checkbox size="sm" checked={on} id={`grp-member-${m.id}`} className="pointer-events-none" />
+                      <AvatarCircle name={m.name} initials={m.initials} sizeKey="md"
+                        avatarStyle={m.status === "active" ? "text" : "empty"} />
+                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{m.name}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.email}</div>
+                      </div>
+                      <Tag variant={STATUS_TAG[m.status]} size="sm">{STATUS_LABEL[m.status]}</Tag>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── 3 · Resources ─────────────────────────────────────────────── */}
+      {step === 2 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 760 }}>
+          <FormSectionLabel optional hint="Everyone in the group gets these. Resources granted here show as “via {group}” on each member's own Resources tab.">
+            Grant resources
+          </FormSectionLabel>
+          <Input value={resourceQuery} onChange={e => setResourceQuery(e.target.value)} placeholder="Search resources…" />
+          {shownResources.length === 0 ? (
+            <EmptyState icon={Icons.Layers} title="No resources found"
+              description="Try a different name or type."
+              ctaLabel="Clear search" onCta={() => setResourceQuery("")} />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {shownResources.map(r => {
+                const on = resourceIds.includes(r.id)
+                return (
+                  <CardContainer key={r.id} size="sm" selected={on}
+                    onClick={() => setResourceIds(prev => on ? prev.filter(x => x !== r.id) : [...prev, r.id])}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <Checkbox size="sm" checked={on} id={`grp-res-${r.id}`} className="pointer-events-none" />
+                      <span style={{ color: "var(--muted-foreground)", display: "flex", flexShrink: 0, pointerEvents: "none" }}>
+                        {RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, fontFamily: "monospace", fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", pointerEvents: "none" }}>
+                        {r.name}
+                      </span>
+                      <Tag variant={RESOURCE_TYPE_TAG[r.type] ?? "neutral"} size="sm">{r.type}</Tag>
+                    </div>
+                  </CardContainer>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* The fixed footer would otherwise sit on top of the last card. */}
+      <div style={{ height: 96 }} aria-hidden />
+
+      {/* The flow completes here, never in the Header. */}
+      {createPortal(
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+          background: "var(--step-nav-footer-bg, var(--canvas))",
+          borderTop: "1px solid var(--step-nav-footer-separator, var(--border))",
+        }}>
+          <StepperNavFooter
+            variant={step === 0 ? "cancel-next" : "back-next"}
+            cancelLabel="Cancel"
+            onCancel={onCancel}
+            onBack={() => setStep(s => Math.max(0, s - 1) as 0 | 1 | 2)}
+            nextLabel={step === 2 ? "Create group" : "Next"}
+            nextDisabled={!canContinue}
+            onNext={step === 2 ? finish : () => setStep(s => Math.min(2, s + 1) as 0 | 1 | 2)}
+          />
+        </div>,
+        document.body,
+      )}
+    </ScreenLayout>
+  )
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: string) => void } = {}) {
   const [mainTab, setMainTab]           = useState<"members" | "roles" | "groups">("members")
   const [statusFilter, setStatusFilter] = useState<"all" | MemberStatus>("all")
+  /**
+   * Which shape the Members list takes. Filters' own toggle calls them
+   * "grid" and "list"; here grid IS the table that has always been there,
+   * so nothing moves for somebody who never touches the control.
+   */
+  const [membersView, setMembersView] = useState<"grid" | "list">("grid")
   const [query, setQuery]               = useState("")
   const [rolesQuery, setRolesQuery]     = useState("")
   const [groupsQuery, setGroupsQuery]   = useState("")
@@ -4831,6 +5341,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   : undefined
   const [showInvite, setShowInvite]     = useState(false)
   const [creatingRole, setCreatingRole] = useState(false)
+  const [creatingGroup, setCreatingGroup] = useState(false)
   const toast = useToast()
 
   function handleRoleCreate(saved: Role, assigned: string[]) {
@@ -4912,6 +5423,23 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     }
   }
 
+  /**
+   * GROUPS is a module fixture read directly by half a dozen call sites, so a
+   * new group is written into it rather than lifted into state — the same
+   * reason handleInvite writes there. A wizard lands on what it created.
+   */
+  function handleGroupCreate(saved: Group) {
+    GROUPS.push(saved)
+    setCreatingGroup(false)
+    setDetailView({ type: "group", group: saved })
+    toast.success(`Group "${saved.name}" created`, {
+      description: [
+        saved.memberIds.length > 0 ? `${saved.memberIds.length} member${saved.memberIds.length === 1 ? "" : "s"}` : null,
+        saved.studios.length > 0 ? `${saved.studios.length} studio${saved.studios.length === 1 ? "" : "s"}` : null,
+      ].filter(Boolean).join(" · ") || "Add members and studios whenever you are ready.",
+    })
+  }
+
   const counts = useMemo(() => ({
     all:       members.length,
     active:    members.filter(m => m.status === "active").length,
@@ -4920,19 +5448,26 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     suspended: members.filter(m => m.status === "suspended").length,
   }), [members])
 
-  const { containerRef: statusContainerRef, slot: statusSlot, menu: statusMenu } = useFilterDropdown({
-    placeholder:  "Status",
-    value:        statusFilter,
-    defaultValue: "all" as const,
-    options: [
-      { id: "all",       label: "All members", count: counts.all       },
-      { id: "active",    label: "Active",      count: counts.active    },
-      { id: "invited",   label: "Invited",     count: counts.invited   },
-      { id: "pending",   label: "Pending",     count: counts.pending   },
-      { id: "suspended", label: "Suspended",   count: counts.suspended },
-    ],
-    onChange: (id) => setStatusFilter(id as "all" | MemberStatus),
-  })
+  /**
+   * The Filters bar renders and positions this menu itself. It used to be
+   * wired by hand with `useFilterDropdown` — a Menu plus dropdown-anchor
+   * sitting beside the bar — which is the thing CLAUDE.md says not to do now
+   * that `slots[].options` exists.
+   */
+  const STATUS_OPTIONS: { id: "all" | MemberStatus; label: string }[] = [
+    { id: "all",       label: `All members · ${counts.all}`     },
+    { id: "active",    label: `Active · ${counts.active}`       },
+    { id: "invited",   label: `Invited · ${counts.invited}`     },
+    { id: "pending",   label: `Pending · ${counts.pending}`     },
+    { id: "suspended", label: `Suspended · ${counts.suspended}` },
+  ]
+  const statusSlot = {
+    placeholder: "Status",
+    value: statusFilter === "all" ? undefined : STATUS_OPTIONS.find(o => o.id === statusFilter)?.label,
+    options: STATUS_OPTIONS.map(o => o.label),
+    onSelect: (label: string) => setStatusFilter(STATUS_OPTIONS.find(o => o.label === label)?.id ?? "all"),
+    onRemove: () => setStatusFilter("all"),
+  }
 
   const filtered = useMemo(() => {
     let result = members
@@ -4958,10 +5493,55 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
     return groups.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
   }, [groups, groupsQuery])
 
-  function handleRoleChange(id: string, role: MemberRole) {
-    setMembers(ms => ms.map(m => m.id === id ? { ...m, role } : m))
-    setDetailView(d => d?.type === "member" && d.member.id === id ? { ...d, member: { ...d.member, role } } : d)
+  /**
+   * One member in EntityList's shape. The table's six columns have to land
+   * somewhere specific rather than all becoming meta:
+   *
+   *   avatar + title   the person — people get an avatar, never an icon tile
+   *   primaryMeta      the email, always icon + text
+   *   state            the status badge; STATUS_TAG already carries the tone
+   *   timestamp        last active, or when the invitation went out
+   *   secondaryMeta    department · user type · MFA
+   *   tags             the groups they belong to
+   *
+   * EntityList renders `tags` as neutral chips by design, which is why the
+   * GROUPS go there and the user type does not: a group name is a label,
+   * while Owner/Admin/Member is graded by reach and would lose that grading
+   * if it were forced neutral. It keeps its icon + text instead.
+   */
+  function memberAsEntity(m: Member): EntityListItemData {
+    const groups = GROUPS.filter(g => g.memberIds.includes(m.id))
+    const invitePending = m.status === "invited" || m.status === "pending"
+    return {
+      id: m.id,
+      title: m.name,
+      avatarName: m.name,
+      primaryMeta: [{ iconName: "Mail", label: m.email, tooltip: `Email · ${m.email}` }],
+      state: { label: STATUS_LABEL[m.status], variant: STATUS_TAG[m.status] },
+      timestamp: m.lastActive
+        ? formatRelative(m.lastActive)
+        : invitePending ? formatRelative(m.joinedAt) : undefined,
+      secondaryMeta: [
+        ...(m.department ? [{ iconName: "Building2", label: m.department, tooltip: `Department · ${m.department}` }] : []),
+        { iconName: "ShieldCheck", label: m.role, tooltip: `User type · ${m.role}` },
+        {
+          iconName: m.mfaEnabled ? "ShieldCheck" : "ShieldOff",
+          label: m.mfaEnabled ? "MFA on" : "MFA off",
+          tooltip: m.mfaEnabled
+            ? `MFA enabled${m.mfaMethod ? ` · ${MFA_METHOD_LABEL[m.mfaMethod]}` : ""}`
+            : "MFA not enabled",
+        },
+      ],
+      tags: groups.map(g => ({ label: g.name })),
+      // The DS rule for an entity row: the row itself opens the record, and
+      // the Eye is the preview. The table's row-click opens the preview, so
+      // the two views differ here on purpose.
+      actions: [{ label: "Preview", variant: "tertiary", icon: "Eye",
+                  onClick: () => setPreviewItem({ type: "member", member: m }) }],
+      onClick: () => setDetailView({ type: "member", member: m }),
+    }
   }
+
   /**
    * The second half of "create without inviting": the invitation that was
    * deferred goes out now. `joinedAt` doubles as the invite-sent stamp
@@ -5022,6 +5602,10 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
   // Detail pages
   if (creatingRole) {
     return <NewRoleWizard onCancel={() => setCreatingRole(false)} onCreate={handleRoleCreate} />
+  }
+
+  if (creatingGroup) {
+    return <CreateGroupWizard onCancel={() => setCreatingGroup(false)} onCreate={handleGroupCreate} />
   }
 
   if (showInvite) {
@@ -5103,7 +5687,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               ? { label: "Invite member", icon: Icons.UserPlus,  onClick: () => setShowInvite(true) }
               : mainTab === "roles"
               ? { label: "New role",      icon: Icons.ShieldPlus, onClick: () => setCreatingRole(true) }
-              : { label: "New group",     icon: Icons.FolderPlus }
+              : { label: "New group",     icon: Icons.FolderPlus, onClick: () => setCreatingGroup(true) }
           }
         />
       )}
@@ -5111,9 +5695,12 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
       {/* Main tab switcher */}
       <Tabs
         items={[
-          { id: "members", label: `Members (${counts.all})` },
-          { id: "roles",   label: `Roles (${roles.length})`  },
-          { id: "groups",  label: `Groups (${GROUPS.length})` },
+          // No counts in the label: a four-digit tenant pushes the tab past
+          // its track and breaks the row, and the number is already on the
+          // page — the header line says it and the list shows it.
+          { id: "members", label: "Members" },
+          { id: "roles",   label: "Roles"   },
+          { id: "groups",  label: "Groups"  },
         ]}
         activeId={mainTab}
         onChange={v => setMainTab(v as "members" | "roles" | "groups")}
@@ -5122,7 +5709,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
 
       {/* Filters row */}
       {mainTab === "members" && (
-        <div ref={statusContainerRef} style={{ position: "relative", marginTop: 16, marginBottom: 16 }}>
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
           <Filters
             showSearch
             searchPlaceholder="Search members…"
@@ -5131,14 +5718,43 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
             slots={[statusSlot]}
             showAllFilters={false}
             showSort={false}
-            showViewToggle={false}
+            showViewToggle
+            viewMode={membersView}
+            onViewModeChange={setMembersView}
           />
-          {statusMenu}
         </div>
       )}
 
-      {/* Members view */}
-      {mainTab === "members" && (
+      {/* Members view — list */}
+      {mainTab === "members" && membersView === "list" && (
+        <>
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={Icons.UserSearch}
+              title="No members found"
+              description="Try adjusting your filters or search term."
+              ctaLabel="Clear filters"
+              onCta={() => { setQuery(""); setStatusFilter("all") }}
+            />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {filtered.map(m => (
+                <CardContainer key={m.id} size="sm" className="!p-0 overflow-hidden">
+                  <EntityList items={[memberAsEntity(m)]} />
+                </CardContainer>
+              ))}
+            </div>
+          )}
+          {filtered.length > 0 && (
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--muted-foreground)", textAlign: "right" }}>
+              Showing {filtered.length} of {members.length} members
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Members view — grid (the table) */}
+      {mainTab === "members" && membersView === "grid" && (
         <>
           <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
             <div style={{
@@ -5147,13 +5763,16 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
               fontSize: 11, fontWeight: 700, color: "var(--muted-foreground)",
               textTransform: "uppercase", letterSpacing: "0.07em",
             }}>
-              <span style={{ flex: 1 }}>Member</span>
-              <span style={{ minWidth: 120 }}>Department</span>
-              <span style={{ minWidth: 72, textAlign: "center" }}>User Type</span>
-              <span style={{ minWidth: 88, textAlign: "right" }}>Last active</span>
-              <span style={{ minWidth: 60, textAlign: "center" }}>MFA</span>
-              <span style={{ minWidth: 76, textAlign: "center" }}>Status</span>
-              <span style={{ width: 28 }} />
+              {/* EVERY column flexes. Making only Member flexible moved the gap
+                  instead of removing it: the surplus then pooled between the
+                  email and Department while the five columns after it stayed
+                  clamped together on the right. Each track takes a share now,
+                  so a wider screen widens the whole row evenly. Header and rows
+                  read the same table, so they cannot drift. */}
+              {MEMBER_COLUMNS.map(c => (
+                <span key={c.key} style={{ flex: c.flex, minWidth: c.min, textAlign: c.align }}>{c.label}</span>
+              ))}
+              <span style={{ width: 28, flexShrink: 0 }} />
             </div>
             {filtered.length === 0 ? (
               <div style={{ padding: "56px 20px", textAlign: "center", color: "var(--muted-foreground)" }}>
@@ -5279,12 +5898,7 @@ export function PeopleAccessMembersScreen({ onNavigate }: { onNavigate?: (id: st
         onCtaPrimary={previewCta?.onClick}
       >
         {previewItem?.type === "member" && (
-          <MemberPreview
-            member={previewItem.member}
-            onRoleChange={handleRoleChange}
-            onToggleSuspend={id => { handleToggleSuspend(id); setPreviewItem(null) }}
-            onSendInvite={handleSendInvite}
-          />
+          <MemberPreview member={previewItem.member} />
         )}
         {previewItem?.type === "role" && (
           <RolePreview
