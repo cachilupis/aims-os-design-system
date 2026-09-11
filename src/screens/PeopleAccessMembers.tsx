@@ -13,6 +13,8 @@ import { Radio }        from "@/components/ui/radio"
 import { Checkbox }     from "@/components/ui/checkbox"
 import { Textarea }     from "@/components/ui/textarea"
 import { Input }        from "@/components/ui/input"
+import { Table, type TableColumn } from "@/components/ui/table"
+import { Pagination }   from "@/components/ui/pagination"
 import { EmptyState }   from "@/components/ui/empty-state"
 import { EntityList, type EntityListItemData } from "@/components/ui/entity-list"
 import { useToast }     from "@/components/ui/toast"
@@ -2220,15 +2222,9 @@ function MemberGroupsPanel({ member, allGroups, onRemoveFromGroup, onAddToGroup,
         <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
           {memberGroups.length} group{memberGroups.length !== 1 ? "s" : ""} assigned
         </span>
-        <button onClick={() => setAssignOpen(true)} style={{
-          display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", fontSize: 12, fontWeight: 600,
-          border: "1px solid var(--border)", borderRadius: 7, background: "var(--surface)", color: "var(--foreground)", cursor: "pointer",
-        }}
-          onMouseEnter={e => (e.currentTarget.style.background = "var(--el-row-hover)")}
-          onMouseLeave={e => (e.currentTarget.style.background = "var(--surface)")}
-        >
-          <Icons.Plus size={13} /> Assign Group
-        </button>
+        <Button variant="secondary" size="sm" onClick={() => setAssignOpen(true)}>
+          <Icons.Plus size={13} /> Add to group
+        </Button>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -2427,13 +2423,22 @@ const MEMBER_RESOURCES: Record<string, MemberResource[]> = {
   ],
 }
 
-const RESOURCE_TYPE_COLOR: Record<string, string> = {
-  Dataset:    "var(--badge-info)",
-  Model:      "var(--badge-success)",
-  "Event Bus":"var(--badge-alert)",
-  Sandbox:    "var(--muted-foreground)",
+/** A resource type is a category, not a status — Tag carries the tone, and
+ *  HighlightIcon carries the same identity as a tile. These replace
+ *  RESOURCE_TYPE_COLOR, whose raw token strings were being colour-mixed into
+ *  borders and backgrounds by hand at three call sites. */
+const RESOURCE_TYPE_HI: Record<string, "informative" | "purple" | "light-blue" | "neutral"> = {
+  Dataset:     "informative",
+  Model:       "purple",
+  "Event Bus": "light-blue",
+  Sandbox:     "neutral",
 }
-
+const RESOURCE_ICON_NAME: Record<string, string> = {
+  Dataset:     "Database",
+  Model:       "Cpu",
+  "Event Bus": "Zap",
+  Sandbox:     "Box",
+}
 /** A resource type is a category, not a status — Tag carries the tone. */
 const RESOURCE_TYPE_TAG: Record<string, "informative" | "purple" | "lightBlue" | "neutral"> = {
   Dataset:     "informative",
@@ -2459,137 +2464,187 @@ function RemoveAccessModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  const typeColor = RESOURCE_TYPE_COLOR[resource.type] ?? "var(--muted-foreground)"
   const isViaGroup = resource.grantPath === "via-group"
   const isViaRole  = resource.grantPath === "via-role"
   const isSystem   = resource.removable === false
 
   // Warnings in priority order
-  const warnings: Array<{ icon: React.ReactNode; color: string; text: React.ReactNode }> = []
+  const warnings: Array<{ iconName: string; variant: "neutral" | "error" | "alert" | "success"; text: React.ReactNode }> = []
 
   if (isSystem) {
     warnings.push({
-      icon: <Icons.Lock size={14} />,
-      color: "var(--muted-foreground)",
+      iconName: "Lock", variant: "neutral",
       text: "This access is managed by the system and cannot be removed manually.",
     })
   } else if (resource.criticalAccess) {
     warnings.push({
-      icon: <Icons.AlertTriangle size={14} />,
-      color: "var(--badge-error)",
+      iconName: "AlertTriangle", variant: "error",
       text: <>Removing <strong>Owner</strong> access to <strong>{resource.name}</strong> may break {memberName}'s ability to manage or share this resource.</>,
     })
   }
 
   if (isViaGroup && !isSystem) {
     warnings.push({
-      icon: <Icons.Users size={14} />,
-      color: "var(--badge-alert)",
+      iconName: "Users", variant: "alert",
       text: <>This access comes from the <strong>{resource.groupName}</strong> group ({resource.groupMemberCount} members). Removing it here removes access for the <strong>entire group</strong>, not just this member.</>,
     })
   }
 
   if (isViaRole && !isSystem) {
     warnings.push({
-      icon: <Icons.Shield size={14} />,
-      color: "var(--badge-alert)",
+      iconName: "Shield", variant: "alert",
       text: <>This access is inherited from the <strong>{resource.roleName}</strong> role. Removing it will revoke all permissions granted by that role on this resource.</>,
     })
   }
 
   if (resource.lastPath && !isSystem) {
     warnings.push({
-      icon: <Icons.AlertCircle size={14} />,
-      color: "var(--badge-error)",
+      iconName: "AlertCircle", variant: "error",
       text: <>{memberName} has <strong>no other access path</strong> to this resource. After removal, they will lose access completely.</>,
     })
   }
 
   if (resource.dualPath && !isSystem) {
     warnings.push({
-      icon: <Icons.CheckCircle size={14} />,
-      color: "var(--badge-success)",
+      iconName: "CheckCircle", variant: "success",
       text: <>Safe to remove — {memberName} will still be able to access <strong>{resource.name}</strong> via another path.</>,
     })
   }
 
   return (
-    <>
-      <div
-        style={{ position: "fixed", inset: 0, zIndex: 10100, background: "rgba(0,0,0,0.5)" }} // audit-ignore: scrim
-        onClick={onCancel}
-      />
-      <div style={{
-        position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-        zIndex: 10101, width: 480, maxWidth: "90vw",
-        background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: 14, overflow: "hidden",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.3)", // audit-ignore: modal shadow
-      }}>
-        {/* Header */}
-        <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
-            {isSystem ? "Access is system-managed" : "Remove resource access?"}
-          </div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
-            {isSystem
-              ? "This access cannot be changed from here."
-              : `You're about to remove ${memberName}'s access to the resource below.`}
-          </div>
-        </div>
+    <ModalDialog
+      isOpen
+      onClose={onCancel}
+      variant="content"
+      tone={isSystem ? "default" : "error"}
+      iconName={isSystem ? "Lock" : "Trash2"}
+      title={isSystem ? "Access is system-managed" : "Remove resource access?"}
+      description={isSystem
+        ? "This grant is maintained by the platform and cannot be changed from here."
+        : `${memberName} will lose the access shown below.`}
+      showClose
+      slotUnstyled
+      ctaPrimary={isSystem ? undefined : {
+        label: isViaGroup ? `Remove from ${resource.groupName}` : "Remove access",
+        destructive: true,
+        onClick: onConfirm,
+      }}
+      ctaSecondary={{ label: isSystem ? "Close" : "Cancel", onClick: onCancel }}
+      slot={
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* The resource, as a card — it used to be a bare row with a
+              hand-mixed border in the type's hex. */}
+          <CardContainer size="sm">
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <HighlightIcon size="md" variant={RESOURCE_TYPE_HI[resource.type] ?? "neutral"}
+                iconName={RESOURCE_ICON_NAME[resource.type] ?? "Layers"} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {resource.name}
+              </span>
+              <Tag variant={RESOURCE_TYPE_TAG[resource.type] ?? "neutral"} size="sm">{resource.type}</Tag>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
+              {[
+                { label: "Access",  value: resource.access    },
+                { label: "Source",  value: resource.source    },
+                { label: "Granted", value: resource.grantedAt },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+                  <div style={{ fontSize: 12, color: "var(--color-text-title)" }}>{value}</div>
+                </div>
+              ))}
+            </div>
+          </CardContainer>
 
-        {/* Resource card */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>
-              {RESOURCE_TYPE_ICON[resource.type] ?? <Icons.Layers size={16} />}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>{resource.name}</span>
-            <span style={{
-              fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4, marginLeft: 4,
-              background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-              color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-            }}>{resource.type}</span>
-          </div>
-          <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px 16px" }}>
-            {[
-              { label: "ACCESS",     value: resource.access    },
-              { label: "SOURCE",     value: resource.source    },
-              { label: "GRANTED",    value: resource.grantedAt },
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", color: "var(--muted-foreground)", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 12, color: "var(--foreground)" }}>{value}</div>
+          {/* One card per consequence. The icon's tint is the severity —
+              these were loose rows whose icon colour was the only signal. */}
+          {warnings.map((w, i) => (
+            <CardContainer key={i} size="sm">
+              <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                <HighlightIcon size="sm" variant={w.variant} iconName={w.iconName} />
+                <span style={{ fontSize: 12, color: "var(--color-text-title)", lineHeight: 1.55 }}>{w.text}</span>
               </div>
-            ))}
-          </div>
+            </CardContainer>
+          ))}
         </div>
-
-        {/* Warnings */}
-        {warnings.length > 0 && (
-          <div style={{ padding: "14px 24px", borderBottom: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 10 }}>
-            {warnings.map((w, i) => (
-              <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-                <span style={{ color: w.color, flexShrink: 0, marginTop: 1 }}>{w.icon}</span>
-                <span style={{ fontSize: 12, color: "var(--foreground)", lineHeight: 1.55 }}>{w.text}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div style={{ padding: "16px 24px", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
-          {!isSystem && (
-            <Button variant="warning" size="sm" onClick={onConfirm}>
-              {isViaGroup ? `Remove from ${resource.groupName}` : "Remove access"}
-            </Button>
-          )}
-        </div>
-      </div>
-    </>
+      }
+    />
   )
 }
+
+/**
+ * The Resources table's columns. A function because the trash column needs
+ * the panel's own `setPendingRemove`; everything else is static.
+ */
+const RESOURCE_COLUMNS = (onRemove: (r: MemberResource) => void): TableColumn<MemberResource>[] => [
+  {
+    key: "name", header: "Resource", width: "minmax(200px, 1fr)",
+    render: r => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <HighlightIcon size="sm" variant={RESOURCE_TYPE_HI[r.type] ?? "neutral"}
+          iconName={RESOURCE_ICON_NAME[r.type] ?? "Layers"} />
+        <span style={{ fontFamily: "monospace", fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {r.name}
+        </span>
+        {r.removable === false && (
+          <Tooltip content="System-managed — this grant cannot be removed by hand">
+            <span style={{ display: "flex", color: "var(--muted-foreground)" }}><Icons.Lock size={11} /></span>
+          </Tooltip>
+        )}
+        {r.dualPath && (
+          <Tooltip content="Also reachable by another path, so removing this one does not cut off access">
+            <span style={{ display: "flex", color: "var(--badge-success)" }}><Icons.GitMerge size={11} /></span>
+          </Tooltip>
+        )}
+      </div>
+    ),
+  },
+  {
+    key: "type", header: "Type", width: "110px",
+    // A resource type is a category — that is a Tag, in the type's own colour.
+    render: r => <Tag variant={RESOURCE_TYPE_TAG[r.type] ?? "neutral"} size="sm">{r.type}</Tag>,
+  },
+  {
+    key: "access", header: "Access", width: "110px",
+    render: r => <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{r.access}</span>,
+  },
+  {
+    key: "grantedBy", header: "Granted by", width: "minmax(140px, 0.8fr)",
+    render: r => (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <AvatarCircle name={r.grantedBy} sizeKey="md" colorKey={nameToAvatarColor(r.grantedBy)} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.grantedBy}</div>
+          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.source}</div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    key: "grantedAt", header: "When", width: "110px", align: "right",
+    render: r => <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>,
+  },
+  {
+    key: "remove", header: "", width: "48px", align: "center",
+    render: r => r.removable === false ? (
+      <Tooltip content="System-managed — cannot be removed">
+        <span style={{ display: "inline-block" }}>
+          <Button variant="tertiary" size="sm" disabled className="pointer-events-none" aria-label="System-managed">
+            <Icons.Lock size={12} />
+          </Button>
+        </span>
+      </Tooltip>
+    ) : (
+      <Tooltip content={`Remove access to ${r.name}`}>
+        <Button variant="tertiary" size="sm" aria-label={`Remove access to ${r.name}`}
+          onClick={e => { e.stopPropagation(); onRemove(r) }}>
+          <Icons.Trash2 size={13} />
+        </Button>
+      </Tooltip>
+    ),
+  },
+]
 
 function ResourcesPanel({ member }: { member: Member }) {
   const initialResources = MEMBER_RESOURCES[member.id] ?? []
@@ -2695,122 +2750,37 @@ function ResourcesPanel({ member }: { member: Member }) {
             {typeMenu}
           </div>
 
-          {/* Table */}
-          {resources.length === 0 && searchQuery.trim() && (
-            <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 13 }}>
-              No resources match "<strong>{searchQuery}</strong>"
-            </div>
-          )}
-          {resources.length > 0 && (
-          <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-            <div style={{
-              display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
-              padding: "9px 16px", background: "var(--surface-raised)", borderBottom: "1px solid var(--border)",
-              fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--muted-foreground)",
-            }}>
-              <span>Resource</span><span>Type</span><span>Access</span><span>Granted by</span><span>When</span><span />
-            </div>
-            {pageResources.map((r, i) => {
-              const typeColor = RESOURCE_TYPE_COLOR[r.type] ?? "var(--muted-foreground)"
-              const typeIcon  = RESOURCE_TYPE_ICON[r.type] ?? <Icons.Layers size={13} />
-              const isSystem  = r.removable === false
-              return (
-                <div key={r.id} style={{
-                  display: "grid", gridTemplateColumns: "1fr 90px 100px 140px 100px 36px",
-                  padding: "10px 16px", borderBottom: i < resources.length - 1 ? "1px solid var(--border)" : "none",
-                  alignItems: "center",
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ color: typeColor, display: "flex", flexShrink: 0 }}>{typeIcon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)", fontFamily: "monospace" }}>{r.name}</span>
-                    {isSystem && (
-                      <span title="System-managed" style={{ display: "flex", color: "var(--muted-foreground)" }}>
-                        <Icons.Lock size={11} />
-                      </span>
-                    )}
-                    {r.dualPath && (
-                      <span title="Accessible via another path" style={{ display: "flex", color: "var(--badge-success)" }}>
-                        <Icons.GitMerge size={11} />
-                      </span>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 4,
-                    background: `color-mix(in srgb, ${typeColor} 12%, transparent)`,
-                    color: typeColor, border: `1px solid color-mix(in srgb, ${typeColor} 28%, transparent)`,
-                    width: "fit-content",
-                  }}>{r.type}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>{r.access}</span>
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <span style={{ fontSize: 12, color: "var(--foreground)" }}>{r.grantedBy}</span>
-                    <span style={{ fontSize: 11, color: "var(--muted-foreground)", fontStyle: "italic" }}>{r.source}</span>
-                  </div>
-                  <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{r.grantedAt}</span>
-                  <button
-                    onClick={e => { e.stopPropagation(); setPendingRemove(r) }}
-                    title={isSystem ? "System-managed — cannot be removed" : "Remove access"}
-                    disabled={isSystem}
-                    style={{
-                      width: 28, height: 28, borderRadius: 6,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: isSystem ? "not-allowed" : "pointer",
-                      color: isSystem ? "var(--muted-foreground)" : "var(--badge-error)",
-                      opacity: isSystem ? 0.35 : 0.7,
-                    }}
-                    onMouseEnter={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "1" }}
-                    onMouseLeave={e => { if (!isSystem) (e.currentTarget as HTMLElement).style.opacity = "0.7" }}
-                  >
-                    {isSystem ? <Icons.Lock size={12} /> : <Icons.Trash2 size={13} />}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-          )}
+          {/* The DS Table, not a CSS grid pretending to be one. It owns the
+              header row, the row hover, the dividers and the empty state —
+              all four of which were hand-drawn here, which is how this table
+              ended up with a hover the DS forbids and a header that could
+              drift from its rows. */}
+          <CardContainer className={`!p-0 overflow-hidden ${TABLE_CARD}`}>
+            <Table
+              size="sm"
+              columns={RESOURCE_COLUMNS(setPendingRemove)}
+              data={pageResources}
+              rowKey={r => r.id}
+              emptyIcon={Icons.Layers}
+              emptyTitle={searchQuery.trim() ? `No resources match "${searchQuery}"` : "No resources"}
+              emptyDescription={searchQuery.trim()
+                ? "Try a different search term, or clear the type filter."
+                : "This member has not been granted access to any resource."}
+              {...(searchQuery.trim() ? { emptyCtaLabel: "Clear search", onEmptyCta: () => { setSearchQuery(""); setPage(1) } } : {})}
+            />
+          </CardContainer>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12 }}>
-              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, resources.length)} of {resources.length}
-              </span>
-              <div style={{ display: "flex", gap: 4 }}>
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={safePage === 1}
-                  style={{
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
-                    background: "transparent", cursor: safePage === 1 ? "not-allowed" : "pointer",
-                    color: safePage === 1 ? "var(--muted-foreground)" : "var(--foreground)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: safePage === 1 ? 0.4 : 1,
-                  }}
-                ><Icons.ChevronLeft size={14} /></button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} onClick={() => setPage(p)} style={{
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid",
-                    borderColor: p === safePage ? "var(--primary)" : "var(--border)",
-                    background: p === safePage ? "var(--primary)" : "transparent",
-                    color: p === safePage ? "#fff" /* audit-ignore */ : "var(--foreground)",
-                    fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>{p}</button>
-                ))}
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={safePage === totalPages}
-                  style={{
-                    width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)",
-                    background: "transparent", cursor: safePage === totalPages ? "not-allowed" : "pointer",
-                    color: safePage === totalPages ? "var(--muted-foreground)" : "var(--foreground)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: safePage === totalPages ? 0.4 : 1,
-                  }}
-                ><Icons.ChevronRight size={14} /></button>
-              </div>
+          {/* Pagination is a component too — the previous one was eleven
+              hand-styled <button>s, one of which painted #fff on the active
+              page. */}
+          {resources.length > PAGE_SIZE && (
+            <div style={{ marginTop: 12 }}>
+              <Pagination
+                currentPage={safePage}
+                totalItems={resources.length}
+                itemsPerPage={PAGE_SIZE}
+                onPageChange={setPage}
+              />
             </div>
           )}
         </>
@@ -3708,13 +3678,9 @@ function AvatarStack({ members, overflow }: { members: { id: string; name: strin
         </div>
       ))}
       {overflow > 0 && (
-        <div style={{
-          width: 16, height: 16, borderRadius: "50%",
-          background: "var(--surface-raised)", border: "1.5px solid var(--surface)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 7, fontWeight: 700, color: "var(--muted-foreground)",
-          marginLeft: -4, flexShrink: 0,
-        }}>+{overflow}</div>
+        <div style={{ marginLeft: -4, flexShrink: 0 }}>
+          <AvatarCircle name={`+${overflow}`} initials={`+${overflow}`} sizeKey="sm" avatarStyle="text" />
+        </div>
       )}
     </div>
   )
