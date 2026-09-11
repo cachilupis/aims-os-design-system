@@ -374,6 +374,24 @@ const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informa
   agentic:    "lightBlue",
   admin:      "informative",
 }
+/**
+ * A studio's identity colour lives on its HighlightIcon and its Tag, never a
+ * raw hex dot — CLAUDE.md's rule, and the reason the four studios had drifted
+ * into three different greens across this file.
+ */
+const STUDIO_HI: Record<string, "lime" | "purple" | "light-blue" | "informative"> = {
+  governance: "lime",
+  datastudio: "purple",
+  agentic:    "light-blue",
+  admin:      "informative",
+}
+const STUDIO_ICON_NAME: Record<string, string> = {
+  governance: "ShieldCheck",
+  datastudio: "Database",
+  agentic:    "Bot",
+  admin:      "Settings",
+}
+
 /** The four studios abbreviated for tight rows — one spelling, one place. */
 const STUDIO_SHORT: Record<string, string> = {
   governance: "Gov",
@@ -553,11 +571,26 @@ function DetailTabs({ tabs, active, onChange }: { tabs: string[]; active: number
 // ─── Permission state icon ────────────────────────────────────────────────────
 
 
-function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; depth?: number; isEditing?: boolean }) {
+/**
+ * `granted` / `onToggle` make this controlled. Uncontrolled it keeps its own
+ * checkbox state, which is all a read-only tree ever needed — but an editor
+ * built on that could only ever turn things OFF, because the caller never saw
+ * the change and the list it was handed only contained what was already on.
+ * The editor passes both and owns the answer.
+ */
+function PermTreeNode({ node, depth = 0, isEditing = false, granted, onToggle }: {
+  node: PermNode
+  depth?: number
+  isEditing?: boolean
+  granted?: (id: string) => boolean
+  onToggle?: (id: string, on: boolean) => void
+}) {
   const [expanded, setExpanded] = useState(depth === 0 && (node.state === "g-inh" || node.state === "g-direct"))
-  const [checked, setChecked] = useState(node.state === "g-direct" || node.state === "g-inh")
+  const [localChecked, setLocalChecked] = useState(node.state === "g-direct" || node.state === "g-inh")
   const hasChildren = (node.children?.length ?? 0) > 0
   const isInherited = node.state === "g-inh"
+  const checked = granted ? granted(node.id) : localChecked
+  const setChecked = onToggle ? (on: boolean) => onToggle(node.id, on) : setLocalChecked
 
   return (
     <div>
@@ -583,15 +616,9 @@ function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: depth === 0 ? 600 : 400, color: "var(--foreground)" }}>{node.label}</span>
-            {node.role && (
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 4,
-                background: "color-mix(in srgb, var(--primary) 12%, transparent)",
-                color: "var(--primary)", border: "1px solid color-mix(in srgb, var(--primary) 25%, transparent)",
-              }}>
-                via {node.role}
-              </span>
-            )}
+            {/* A pill with a label in it is a Tag — this one was hand-drawn
+                with its own radius, its own tint and its own border. */}
+            {node.role && <Tag variant="informative" size="sm">via {node.role}</Tag>}
             {node.scope && (
               <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>· {node.scope}</span>
             )}
@@ -610,7 +637,8 @@ function PermTreeNode({ node, depth = 0, isEditing = false }: { node: PermNode; 
         </div>
       </div>
       {expanded && hasChildren && node.children!.map(child => (
-        <PermTreeNode key={child.id} node={child} depth={depth + 1} isEditing={isEditing} />
+        <PermTreeNode key={child.id} node={child} depth={depth + 1} isEditing={isEditing}
+          granted={granted} onToggle={onToggle} />
       ))}
     </div>
   )
@@ -1335,25 +1363,27 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
       {/* Two-column layout */}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, marginTop: 16, alignItems: "start" }}>
 
-        {/* Left: identity card */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {/* Left: identity card. `CardContainer` owns the surface, the border
+            and the radius — the hand-drawn box this used to be carried its own
+            copy of all three and drifted from every other card on the page. */}
+        <CardContainer className="!p-0 overflow-hidden">
           {/* Avatar + name */}
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center", gap: 10,
             padding: "28px 24px 20px",
           }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: "50%",
-              background: isActive ? member.avatarColor : "var(--muted)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 26, fontWeight: 700,
-              color: isActive ? "#fff" : "var(--muted-foreground)",  // audit-ignore: prototype fixture data
-              opacity: member.status === "suspended" ? 0.6 : 1,
-            }}>
-              {member.initials}
-            </div>
+            {/* AvatarCircle hashes its own colour from the name and has an
+                `empty` style for somebody who is not active yet — which is
+                exactly the case the hand-rolled circle was faking with a grey
+                background and a white hex. */}
+            <AvatarCircle
+              name={member.name}
+              initials={member.initials}
+              sizeKey="xxl"
+              avatarStyle={isActive ? "text" : "empty"}
+            />
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--foreground)", marginBottom: 4 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "var(--color-text-title)", marginBottom: 4 }}>
                 {member.name}
               </div>
               {(member.title || member.department) && (
@@ -1361,7 +1391,9 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
                   {member.title}{member.title && member.department ? " · " : ""}{member.department}
                 </div>
               )}
-              <Tag variant={isActive ? "success" : isInvited ? "informative" : member.status === "suspended" ? "alert" : "neutral"}>
+              {/* A status is a Tag, and at this size it is the S one — the
+                  card is 300px wide and the name above it is the headline. */}
+              <Tag size="sm" variant={STATUS_TAG[member.status]}>
                 {STATUS_LABEL[member.status]}
               </Tag>
             </div>
@@ -1471,25 +1503,25 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
                 {isActive ? <><Icons.UserX size={13} /> Suspend access</> : <><Icons.UserCheck size={13} /> Reactivate account</>}
               </Button>
             )}
-            {!confirmRemove ? (
-              <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
-                onClick={() => setConfirmRemove(true)}>
-                <Icons.Trash2 size={13} /> Remove from workspace
-              </Button>
-            ) : (
-              <div style={{ padding: "12px", border: "1px solid var(--badge-error)", borderRadius: 8, background: "color-mix(in srgb, var(--badge-error) 6%, transparent)" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--badge-error)", marginBottom: 4 }}>Remove {member.name}?</div>
-                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 10 }}>This cannot be undone.</div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Button variant="warning" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => { onRemove(member.id); onBack() }}>Confirm</Button>
-                  <Button variant="secondary" size="sm" style={{ flex: 1, justifyContent: "center" }}
-                    onClick={() => setConfirmRemove(false)}>Cancel</Button>
-                </div>
-              </div>
-            )}
+            {/* Removing somebody from the workspace is a question, and the DS
+                answer to a question is ModalDialog — not a red box that grows
+                inside the card and pushes the rest of it down. */}
+            <Button variant="warning" size="sm" style={{ width: "100%", justifyContent: "center" }}
+              onClick={() => setConfirmRemove(true)}>
+              <Icons.Trash2 size={13} /> Remove from workspace
+            </Button>
+            <ModalDialog
+              isOpen={confirmRemove}
+              onClose={() => setConfirmRemove(false)}
+              tone="error"
+              iconName="Trash2"
+              title={`Remove ${member.name} from the workspace?`}
+              description="They lose every studio, role and group immediately, and any direct permissions go with them. This cannot be undone."
+              ctaPrimary={{ label: "Remove", destructive: true, onClick: () => { onRemove(member.id); onBack() } }}
+              ctaSecondary={{ label: "Cancel", onClick: () => setConfirmRemove(false) }}
+            />
           </div>
-        </div>
+        </CardContainer>
 
         {/* Right: tabs */}
         <div>
@@ -1518,14 +1550,40 @@ member, onBack, onToggleSuspend, onRemove, onUpdate, onSendInvite,
 function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, onRemove }: {
   studioId: string
   isEditing?: boolean
-  onSave?: () => void
+  onSave?: (changed: number) => void
   onCancel?: () => void
   onRemove?: () => void
 }) {
   const nodes = PERM_TREE[studioId] ?? []
-  const granted = filterGrantedTree(nodes)
-  const directCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-direct").length
-  const inhCount = granted.flatMap(n => [n, ...(n.children ?? [])]).filter(n => n.state === "g-inh").length
+
+  /**
+   * What the user has changed in this editing session, by permission id.
+   * Empty means "exactly what the role and the direct grants say".
+   */
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  const flat = useMemo(() => nodes.flatMap(n => [n, ...(n.children ?? [])]), [nodes])
+  const isOn = (id: string) => {
+    if (overrides[id] !== undefined) return overrides[id]
+    const n = flat.find(x => x.id === id)
+    return n ? n.state === "g-direct" || n.state === "g-inh" : false
+  }
+  const isInherited = (id: string) => flat.find(x => x.id === id)?.state === "g-inh"
+
+  /**
+   * Reading mode shows only what is granted — a list of what this person can
+   * do. EDITING shows the whole tree, because you cannot grant a permission
+   * that is not on screen, and "edit" that only ever removes is a revoke
+   * button with extra steps. This is the fix Michael asked for.
+   */
+  const granted = isEditing ? nodes : filterGrantedTree(nodes)
+
+  const onIds      = flat.filter(n => isOn(n.id)).map(n => n.id)
+  const inhCount   = onIds.filter(isInherited).length
+  const directCount = onIds.length - inhCount
+  const changedCount = Object.keys(overrides).filter(id => {
+    const n = flat.find(x => x.id === id)
+    return n ? overrides[id] !== (n.state === "g-direct" || n.state === "g-inh") : false
+  }).length
 
   return (
     <div style={{ borderTop: `1px solid ${isEditing ? "var(--primary)" : "var(--border)"}` }}>
@@ -1549,18 +1607,29 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
           </span>
         </div>
         {granted.length === 0 ? (
-          <div style={{ padding: "8px 0 12px", fontSize: 12, color: "var(--muted-foreground)" }}>
-            No permissions granted in this app.
-          </div>
+          <EmptyState
+            bare
+            compact
+            icon={Icons.ShieldOff}
+            title="Nothing granted here yet"
+            description="Use Edit to turn on the permissions this member needs in this app."
+          />
         ) : (
-          <div style={{ border: `1px solid ${isEditing ? "color-mix(in srgb, var(--primary) 30%, var(--border))" : "var(--border)"}`, borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
-            {granted.map(n => <PermTreeNode key={n.id} node={n} depth={0} isEditing={isEditing} />)}
+          <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
+            {granted.map(n => (
+              <PermTreeNode key={n.id} node={n} depth={0} isEditing={isEditing}
+                granted={isEditing ? isOn : undefined}
+                onToggle={isEditing ? (id, on) => setOverrides(o => ({ ...o, [id]: on })) : undefined} />
+            ))}
           </div>
         )}
         {isEditing && (
           <div style={{ display: "flex", gap: 8, paddingBottom: 12, alignItems: "center" }}>
-            <Button variant="primary" size="sm" onClick={onSave}>Save changes</Button>
-            <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+            <Button variant="primary" size="sm" disabled={changedCount === 0}
+              onClick={() => { onSave?.(changedCount); setOverrides({}) }}>
+              {changedCount === 0 ? "Save changes" : `Save ${changedCount} change${changedCount === 1 ? "" : "s"}`}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => { setOverrides({}); onCancel?.() }}>Cancel</Button>
             <div style={{ flex: 1 }} />
             <Button variant="warning" size="sm" onClick={onRemove}><Icons.Trash2 size={11} /> Remove access</Button>
           </div>
@@ -1571,6 +1640,7 @@ function AppPermissionsInline({ studioId, isEditing = false, onSave, onCancel, o
 }
 
 function AppsPanel({ member }: { member: Member }) {
+  const toast = useToast()
   const memberGroups = GROUPS.filter(g => g.memberIds.includes(member.id))
   const studioSet = new Set<string>(
     member.role === "Owner" || member.role === "Admin" ? Object.keys(STUDIO_META) : member.studios ?? [],
@@ -1584,7 +1654,6 @@ function AppsPanel({ member }: { member: Member }) {
   const [fullReviewOpen, setFullReviewOpen] = useState(false)
   const [reviewStudio, setReviewStudio] = useState(studios[0] ?? "governance")
 
-  const allAssigned = studios.length >= Object.keys(STUDIO_META).length
   const available = Object.entries(STUDIO_META).filter(([id]) => !studios.includes(id))
 
   function confirmRemove() {
@@ -1621,28 +1690,33 @@ function AppsPanel({ member }: { member: Member }) {
       title="Grant studio access"
       description="Select a studio to give this member access. You can configure individual permissions after granting."
       showClose
+      slotUnstyled
       slot={
         available.length === 0 ? (
-          <div style={{ fontSize: 13, color: "var(--muted-foreground)", textAlign: "center", padding: "8px 0" }}>
-            Member already has access to all available studios.
-          </div>
+          /* The case Michael asked for by name: there is nothing to grant, and
+             the modal has to say why rather than showing an empty box. Bare,
+             because ModalDialog is already the surface. */
+          <EmptyState
+            bare
+            icon={Icons.ShieldCheck}
+            title="Nothing left to grant"
+            description={`${member.name} already has access to all ${Object.keys(STUDIO_META).length} studios in this workspace. To change what they can do inside one, edit its permissions instead.`}
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {available.map(([id, meta]) => (
-              <div key={id} style={{
-                display: "flex", alignItems: "center", gap: 12,
-                padding: "12px 14px", border: "1px solid var(--border)", borderRadius: 9,
-                background: "var(--surface)",
-              }}>
-                <span style={{ color: "var(--primary)", flexShrink: 0, display: "flex" }}>{meta.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{meta.label}</div>
-                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+              <CardContainer key={id} size="sm">
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <HighlightIcon size="md" variant={STUDIO_HI[id] ?? "neutral"} iconName={STUDIO_ICON_NAME[id] ?? "AppWindow"} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{meta.label}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
+                  </div>
+                  <Button variant="primary" size="sm" onClick={() => { setStudios(p => [...p, id]); setGrantOpen(false) }}>
+                    Grant
+                  </Button>
                 </div>
-                <Button variant="primary" size="sm" onClick={() => { setStudios(p => [...p, id]); setGrantOpen(false) }}>
-                  Grant
-                </Button>
-              </div>
+              </CardContainer>
             ))}
           </div>
         )
@@ -1664,21 +1738,26 @@ function AppsPanel({ member }: { member: Member }) {
       showClose
       slot={
         <div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          {/* Picking which studio to look at is a selection, not an action —
+              that is a Chip. As Buttons these read as four things to do. */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
             {studios.map(s => {
               const m = STUDIO_META[s]
               if (!m) return null
               return (
-                <Button key={s} variant={reviewStudio === s ? "primary" : "secondary"} size="sm" onClick={() => setReviewStudio(s)}>
-                  {m.icon} {m.label}
-                </Button>
+                <Chip key={s} size="s" variant={reviewStudio === s ? "primary" : "secondary"} onClick={() => setReviewStudio(s)}>
+                  {m.label}
+                </Chip>
               )
             })}
           </div>
           {reviewNodes.length === 0 ? (
-            <div style={{ padding: "24px 0", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)" }}>
-              No permissions granted in this app.
-            </div>
+            <EmptyState
+              bare
+              icon={Icons.ShieldOff}
+              title="No permissions in this app"
+              description={`${member.name} can open ${STUDIO_META[reviewStudio]?.label ?? "this studio"} but has not been granted anything inside it yet.`}
+            />
           ) : (
             <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
               {reviewNodes.map(n => <PermTreeNode key={n.id} node={n} depth={0} />)}
@@ -1700,11 +1779,13 @@ function AppsPanel({ member }: { member: Member }) {
             <Icons.Plus size={13} /> Grant access
           </Button>
         </div>
-        <div style={{ border: "1px solid var(--border)", borderRadius: 12, padding: "40px 24px", textAlign: "center" }}>
-          <Icons.AppWindow size={28} style={{ color: "var(--muted-foreground)", margin: "0 auto 12px" }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--foreground)", marginBottom: 4 }}>No studio access</div>
-          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Grant access to a studio to configure this member's permissions.</div>
-        </div>
+        <EmptyState
+          icon={Icons.AppWindow}
+          title="No studio access"
+          description="Grant access to a studio to configure what this member can do inside it."
+          ctaLabel="Grant access"
+          onCta={() => setGrantOpen(true)}
+        />
       </>
     )
   }
@@ -1718,11 +1799,12 @@ function AppsPanel({ member }: { member: Member }) {
         <Button variant="secondary" size="sm" onClick={() => setFullReviewOpen(true)}>
           <Icons.ShieldCheck size={13} /> Full Permission Review
         </Button>
-        {!allAssigned && (
-          <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
-            <Icons.Plus size={13} /> Grant access
-          </Button>
-        )}
+        {/* The button stays when there is nothing left to grant. Hiding it
+            left the user with no way to find out WHY, which is the case the
+            modal's empty state exists to answer. */}
+        <Button variant="secondary" size="sm" onClick={() => setGrantOpen(true)}>
+          <Icons.Plus size={13} /> Grant access
+        </Button>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {studios.map(s => {
@@ -1732,34 +1814,37 @@ function AppsPanel({ member }: { member: Member }) {
           const isExpanded = expandedStudio === s
           const isEditingThis = editingStudio === s
           return (
-            <div key={s} style={{
-              border: `1px solid ${isEditingThis ? "var(--primary)" : isExpanded ? "color-mix(in srgb, var(--primary) 40%, var(--border))" : "var(--border)"}`,
-              borderRadius: 10, background: "var(--surface)", overflow: "hidden",
-              transition: "border-color 0.15s",
-            }}>
+            /* The card owns the surface, the border and the selected state.
+               `selected` is what says "this one is open" — the row used to
+               paint its own blue-tinted border and a 3% background on top of a
+               hand-drawn box, which is three ways of saying the same thing and
+               none of them the DS's. */
+            <CardContainer key={s} size="sm" className="!p-0 overflow-hidden" selected={isExpanded || isEditingThis}>
               <div
                 onClick={() => { if (!isEditingThis) setExpandedStudio(isExpanded ? null : s) }}
                 style={{
                   display: "flex", alignItems: "center", gap: 16,
                   padding: "13px 18px", cursor: isEditingThis ? "default" : "pointer",
-                  background: isExpanded ? "color-mix(in srgb, var(--primary) 3%, transparent)" : "transparent",
                 }}
-                onMouseEnter={e => { if (!isExpanded && !isEditingThis) (e.currentTarget as HTMLElement).style.background = "var(--el-row-hover)" }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = isExpanded ? "color-mix(in srgb, var(--primary) 3%, transparent)" : "transparent" }}
               >
-                <span style={{ color: "var(--primary)", flexShrink: 0, display: "flex" }}>{meta.icon}</span>
+                {/* A tinted square with an icon in it is HighlightIcon — and
+                    it is what keeps a studio the same colour here, in the
+                    grant modal and in the permissions breakdown. */}
+                <HighlightIcon size="md" variant={STUDIO_HI[s] ?? "neutral"} iconName={STUDIO_ICON_NAME[s] ?? "AppWindow"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)", marginBottom: 3 }}>{meta.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)", marginBottom: 3 }}>{meta.label}</div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{meta.desc}</div>
                 </div>
                 <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                  <Chip variant="success-secondary" size="s">Active</Chip>
+                  {/* Active is a state, so it is a Tag. A Chip is something
+                      you can select, and nobody selects "Active". */}
+                  <Tag variant="success" size="sm">Active</Tag>
                   {via.length > 0 && (
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "flex-end" }}>
                       {via.slice(0, 2).map(v => (
-                        <Chip key={v} variant="secondary" size="s">via {v}</Chip>
+                        <Tag key={v} variant="neutral" size="sm">via {v}</Tag>
                       ))}
-                      {via.length > 2 && <Chip variant="secondary" size="s">+{via.length - 2} more</Chip>}
+                      {via.length > 2 && <Tag variant="neutral" size="sm">+{via.length - 2} more</Tag>}
                     </div>
                   )}
                 </div>
@@ -1770,7 +1855,7 @@ function AppsPanel({ member }: { member: Member }) {
                     </Button>
                   )}
                   {isExpanded
-                    ? <Icons.ChevronDown size={14} style={{ color: "var(--primary)" }} />
+                    ? <Icons.ChevronDown size={14} style={{ color: "var(--muted-foreground)" }} />
                     : <Icons.ChevronRight size={14} style={{ color: "var(--muted-foreground)" }} />}
                 </div>
               </div>
@@ -1778,19 +1863,20 @@ function AppsPanel({ member }: { member: Member }) {
                 <AppPermissionsInline
                   studioId={s}
                   isEditing={isEditingThis}
-                  onSave={() => { setEditingStudio(null); setExpandedStudio(null) }}
+                  onSave={changed => {
+                    setEditingStudio(null); setExpandedStudio(null)
+                    toast.success("Permissions updated", {
+                      description: `${changed} permission${changed === 1 ? "" : "s"} changed in ${meta.label} for ${member.name}.`,
+                    })
+                  }}
                   onCancel={() => { setEditingStudio(null); setExpandedStudio(null) }}
                   onRemove={() => { setEditingStudio(null); setRemovingStudio(s) }}
                 />
               )}
-            </div>
+            </CardContainer>
           )
         })}
-        {allAssigned && (
-          <div style={{ textAlign: "center", padding: "6px 0", fontSize: 12, color: "var(--muted-foreground)" }}>
-            This member has access to all available studios.
-          </div>
-        )}
+
       </div>
     </>
   )
