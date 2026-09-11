@@ -9,7 +9,6 @@ import { Button }       from "@/components/ui/button"
 import { Tag }          from "@/components/ui/tag"
 import { CardContainer } from "@/components/ui/card-container"
 import { Tabs }         from "@/components/ui/tabs"
-import { TagInput }     from "@/components/ui/tag-input"
 import { Radio }        from "@/components/ui/radio"
 import { Checkbox }     from "@/components/ui/checkbox"
 import { Textarea }     from "@/components/ui/textarea"
@@ -374,6 +373,13 @@ const STUDIO_TAG: Record<string, "limeGreen" | "purple" | "lightBlue" | "informa
   datastudio: "purple",
   agentic:    "lightBlue",
   admin:      "informative",
+}
+/** The four studios abbreviated for tight rows — one spelling, one place. */
+const STUDIO_SHORT: Record<string, string> = {
+  governance: "Gov",
+  datastudio: "Data",
+  agentic:    "Agentic",
+  admin:      "Admin",
 }
 const TABLE_CARD = "hover:!border-[length:0.5px] hover:!border-[color:var(--card-default-border)] hover:![box-shadow:none]"
 const PROTO_NOW = new Date("2026-08-26T10:00:00Z")
@@ -3747,6 +3753,172 @@ const INVITE_STUDIO_OPTIONS = [
  * mail to a person who is not here yet and hands them studio access — so what
  * is about to happen is stated in full before the button that does it.
  */
+/**
+ * Four rows of a `size="sm"` card, which is what a picker should show before
+ * it starts scrolling: enough to compare against each other, short enough
+ * that the CTA below stays on screen.
+ *
+ * `paddingInline` + an equal negative `marginInline` is the sanctioned fix
+ * from CLAUDE.md — a scroll container clips at its PADDING box, so the
+ * boundary moves out past the card's hover halo while the cards themselves do
+ * not move. Shrinking the cards instead is the thing that looks right and is
+ * wrong.
+ */
+const PICKER_SCROLLER: React.CSSProperties = {
+  maxHeight: 4 * 68,
+  overflowY: "auto",
+  paddingInline: 16,
+  marginInline: -16,
+  paddingBlock: 4,
+}
+
+/** Two columns, because these items are short and comparing them is the task. */
+const PICKER_GRID: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 8,
+  alignContent: "start",
+}
+
+/**
+ * Search plus quick filters, on one line. The field is capped at 280px on
+ * purpose: stretched to the container it reads as the section's main control,
+ * when the actual task is picking from the list underneath. The chips are
+ * selected/unselected, which is precisely what `Chip` is for — a `Tag` here
+ * would be a status nobody can click.
+ */
+function PickerToolbar({ query, onQuery, placeholder, filters, active, onFilter }: {
+  query: string
+  onQuery: (v: string) => void
+  placeholder: string
+  filters: readonly { id: string; label: string }[]
+  active: string
+  onFilter: (id: string) => void
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+      <div style={{ width: 280, flexShrink: 0 }}>
+        <Input
+          value={query}
+          onChange={e => onQuery(e.target.value)}
+          placeholder={placeholder}
+          size="sm"
+          leftIcon={<Icons.Search />}
+        />
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {filters.map(f => (
+          <Chip key={f.id} size="s" variant={active === f.id ? "primary" : "secondary"}
+            onClick={() => onFilter(f.id)}>
+            {f.label}
+          </Chip>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const GROUP_FILTERS = [
+  { id: "all",        label: "All" },
+  { id: "governance", label: "Governance" },
+  { id: "datastudio", label: "Data" },
+  { id: "agentic",    label: "Agentic" },
+  { id: "admin",      label: "Admin" },
+] as const
+
+const ROLE_FILTERS = [
+  { id: "all",    label: "All" },
+  { id: "system", label: "System" },
+  { id: "custom", label: "Custom" },
+] as const
+
+/**
+ * The recipients field. Deliberately NOT a TagInput: this is an email box,
+ * and a chip that accepts whatever was typed says "these are labels you are
+ * inventing" when the truth is "this address either exists or it does not".
+ * The field itself carries the verdict — success once the address is real and
+ * free, error when it is malformed or already belongs to somebody — and the
+ * accepted addresses become rows underneath, where each one can show its own
+ * state. Michael, three times, and he was right each time.
+ */
+function EmailRecipients({ value, onChange, onDraftChange }: {
+  value: string[]
+  onChange: (next: string[]) => void
+  onDraftChange: (draft: string) => void
+}) {
+  const [draft, setDraft] = useState("")
+  /** Errors of FORM wait for a commit; errors of FACT do not — see below. */
+  const [attempted, setAttempted] = useState(false)
+
+  const trimmed      = draft.trim().toLowerCase()
+  const existing     = trimmed ? MEMBERS.find(m => m.email.toLowerCase() === trimmed) : undefined
+  const alreadyAdded = trimmed ? value.includes(trimmed) : false
+  const valid        = isEmail(trimmed)
+  const canAdd       = valid && !existing && !alreadyAdded
+
+  /**
+   * Two different kinds of wrong, and they surface at different moments.
+   * "This is not an address" is a judgement on half-typed text, so it waits
+   * until the user says they are done with it. "This address is already
+   * somebody's" is a fact about the workspace that the user cannot deduce —
+   * it shows the moment the address is complete enough to check, which is the
+   * whole point of showing it at all.
+   */
+  const field: { state: "default" | "success" | "error" | "alert"; text: string } =
+      !trimmed                 ? { state: "default", text: "Press Enter to add each address." }
+    : existing                 ? { state: "error",   text: `${existing.name} is already ${STATUS_LABEL[existing.status].toLowerCase()} in this workspace — ${existing.email}.` }
+    : alreadyAdded             ? { state: "alert",   text: "Already on this invitation." }
+    : valid                    ? { state: "success", text: "Looks good. Press Enter to add." }
+    : attempted                ? { state: "error",   text: `"${draft.trim()}" is not an email address.` }
+    :                            { state: "default", text: "Press Enter to add each address." }
+
+  function commit() {
+    if (!trimmed) return
+    if (!canAdd) { setAttempted(true); return }
+    onChange([...value, trimmed])
+    setDraft(""); onDraftChange(""); setAttempted(false)
+  }
+
+  return (
+    <>
+      <Input
+        value={draft}
+        state={field.state}
+        supportingText={field.text}
+        leftIcon={<Icons.Mail />}
+        placeholder="name@company.com"
+        onChange={e => { setDraft(e.target.value); onDraftChange(e.target.value); setAttempted(false) }}
+        onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit() } }}
+        onBlur={commit}
+      />
+
+      {value.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+          {value.map(addr => (
+            <CardContainer key={addr} size="sm">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {/* Nobody has a name yet — `empty` is the DS avatar for exactly
+                    that, rather than initials invented from the local part. */}
+                <AvatarCircle name={addr} avatarStyle="empty" sizeKey="lg" />
+                <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {addr}
+                </span>
+                <Tag variant="informative" size="sm">Will be invited</Tag>
+                <Tooltip content={`Remove ${addr}`}>
+                  <Button variant="tertiary" size="sm" aria-label={`Remove ${addr}`}
+                    onClick={() => onChange(value.filter(x => x !== addr))}>
+                    <Icons.X size={13} />
+                  </Button>
+                </Tooltip>
+              </div>
+            </CardContainer>
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
+
 function InviteWizard({ onCancel, onSend }: {
   onCancel: () => void
   onSend: (
@@ -3760,8 +3932,8 @@ function InviteWizard({ onCancel, onSend }: {
    * What is typed into the email field but not yet committed to a chip. Next
    * has to count it: somebody who types one address and reaches straight for
    * the button has filled the form as far as they can tell, and a CTA that
-   * stays grey there looks broken. TagInput commits on blur, so the address is
-   * a real chip by the time the click lands.
+   * stays grey there looks broken. The field commits on blur, so the address
+   * is a real recipient by the time the click lands.
    */
   const [emailDraft, setEmailDraft] = useState("")
   const [role, setRole]         = useState<MemberRole>("Member")
@@ -3770,6 +3942,9 @@ function InviteWizard({ onCancel, onSend }: {
   /** A permission preset, not the user type above it. Optional by design. */
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null)
   const [groupQuery, setGroupQuery]         = useState("")
+  const [groupFilter, setGroupFilter]       = useState("all")
+  const [roleQuery, setRoleQuery]           = useState("")
+  const [roleFilter, setRoleFilter]         = useState("all")
   const [sendEmail, setSendEmail]           = useState(true)
   const [note, setNote]         = useState("")
 
@@ -3785,7 +3960,10 @@ function InviteWizard({ onCancel, onSend }: {
   // An Admin or an Owner gets every studio by definition, so stage 2 has
   // nothing it can require of them. A Member invited with no studio and no
   // group would land in the workspace able to open nothing at all.
-  const canContinue = step === 0 ? emails.length > 0 || isEmail(emailDraft)
+  const draftIsAddable = isEmail(emailDraft)
+    && !MEMBERS.some(m => m.email.toLowerCase() === emailDraft.trim().toLowerCase())
+    && !emails.includes(emailDraft.trim().toLowerCase())
+  const canContinue = step === 0 ? emails.length > 0 || draftIsAddable
                     : step === 1 ? (!isMember || studios.length > 0 || groupIds.length > 0)
                     : true
 
@@ -3809,11 +3987,20 @@ function InviteWizard({ onCancel, onSend }: {
     ? (emails.length > 1 ? `Send invitations (${emails.length})` : "Send invitation")
     : (emails.length > 1 ? `Create contacts (${emails.length})`  : "Create contact")
 
-  // Same filter the Groups tab runs, so the two behave identically.
+  // Same filter the Groups tab runs, so the two behave identically — plus the
+  // studio chips, which narrow by what the group actually grants.
   const shownGroups = (() => {
     const q = groupQuery.trim().toLowerCase()
-    if (!q) return GROUPS
-    return GROUPS.filter(g => g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+    return GROUPS
+      .filter(g => groupFilter === "all" || g.studios.includes(groupFilter))
+      .filter(g => !q || g.name.toLowerCase().includes(q) || g.desc.toLowerCase().includes(q))
+  })()
+
+  const shownRoles = (() => {
+    const q = roleQuery.trim().toLowerCase()
+    return ROLES
+      .filter(r => roleFilter === "all" || (roleFilter === "system" ? r.system : !r.system))
+      .filter(r => !q || r.label.toLowerCase().includes(q) || r.desc.toLowerCase().includes(q))
   })()
 
   return (
@@ -3843,24 +4030,10 @@ function InviteWizard({ onCancel, onSend }: {
       {step === 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           <div>
-            <FormSectionLabel hint="Press Enter after each address; Backspace takes the last one back. Everyone here gets the same role and the same access.">
+            <FormSectionLabel hint="Everyone here gets the same user type, the same role and the same access.">
               Email addresses
             </FormSectionLabel>
-            {/* This is a recipient list, not a tag builder. `validate` is what
-                stops it accepting anything typed, and `tagVariant` stops the
-                six-colour cycle — six colours say "these differ from each
-                other", and one address does not differ from the next. */}
-            <TagInput
-              tags={emails}
-              onAddTag={v => { const t = v.trim().toLowerCase(); if (t) setEmails(e => e.includes(t) ? e : [...e, t]) }}
-              onRemoveTag={v => setEmails(e => e.filter(x => x !== v))}
-              onDraftChange={setEmailDraft}
-              validate={v => isEmail(v) ? null : `"${v}" is not an email address.`}
-              tagVariant="neutral"
-              inlineTags
-              placeholder="name@company.com"
-              showAddButton={false}
-            />
+            <EmailRecipients value={emails} onChange={setEmails} onDraftChange={setEmailDraft} />
           </div>
 
           {/* One card per option. The title never turns blue: the card's
@@ -3926,36 +4099,48 @@ function InviteWizard({ onCancel, onSend }: {
             <FormSectionLabel optional hint="Group membership grants additional studio access and permissions.">
               Add to groups
             </FormSectionLabel>
-            <div style={{ marginBottom: 8 }}>
-              <Input value={groupQuery} onChange={e => setGroupQuery(e.target.value)} placeholder="Search groups…" />
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {shownGroups.length === 0 && (
-                <EmptyState
-                  icon={Icons.Users}
-                  title="No groups found"
-                  description="Try adjusting your search term."
-                  ctaLabel="Clear search"
-                  onCta={() => setGroupQuery("")}
-                />
-              )}
+            <PickerToolbar
+              query={groupQuery}
+              onQuery={setGroupQuery}
+              placeholder="Search groups…"
+              filters={GROUP_FILTERS}
+              active={groupFilter}
+              onFilter={setGroupFilter}
+            />
+            {shownGroups.length === 0 ? (
+              <EmptyState
+                icon={Icons.Users}
+                title="No groups found"
+                description="Try a different search term, or clear the studio filter."
+                ctaLabel="Clear filters"
+                onCta={() => { setGroupQuery(""); setGroupFilter("all") }}
+              />
+            ) : (
+            <div style={{ ...PICKER_GRID, ...PICKER_SCROLLER }}>
               {shownGroups.map(g => {
                 const on = groupIds.includes(g.id)
                 return (
                   <CardContainer key={g.id} size="sm" selected={on} onClick={() => toggleGroup(g.id)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} className="pointer-events-none" />
-                      <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="md" />
-                      <div style={{ flex: 1, minWidth: 0, pointerEvents: "none" }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>{g.name}</span>
-                        <span style={{ fontSize: 11, color: "var(--muted-foreground)", marginLeft: 6 }}>
-                          {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
-                        </span>
+                    {/* Two lines now that the column is half as wide: identity
+                        on top, what the group actually grants underneath.
+                        Side by side they fought for the same 40px. */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, pointerEvents: "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Checkbox size="sm" checked={on} id={`inv-group-${g.id}`} />
+                        <AvatarCircle name={g.name} initials={g.name.slice(0, 2).toUpperCase()} sizeKey="lg" />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {g.name}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                            {g.memberIds.length} member{g.memberIds.length !== 1 ? "s" : ""}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: "8px 4px", flexWrap: "wrap", justifyContent: "flex-end", flexShrink: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {g.studios.map(st => (
                           <Tag key={st} variant={STUDIO_TAG[st] ?? "neutral"} size="sm">
-                            {st === "governance" ? "Gov" : st === "datastudio" ? "Data" : st === "agentic" ? "Agentic" : "Admin"}
+                            {STUDIO_SHORT[st] ?? st}
                           </Tag>
                         ))}
                       </div>
@@ -3964,6 +4149,7 @@ function InviteWizard({ onCancel, onSend }: {
                 )
               })}
             </div>
+            )}
           </div>
 
           {/*
@@ -3977,7 +4163,28 @@ function InviteWizard({ onCancel, onSend }: {
             <FormSectionLabel optional hint="Assign a role to grant a preset of permissions.">
               Assign a role
             </FormSectionLabel>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <PickerToolbar
+              query={roleQuery}
+              onQuery={setRoleQuery}
+              placeholder="Search roles…"
+              filters={ROLE_FILTERS}
+              active={roleFilter}
+              onFilter={setRoleFilter}
+            />
+            {shownRoles.length === 0 ? (
+              <EmptyState
+                icon={Icons.ShieldCheck}
+                title="No roles found"
+                description="Try a different search term, or clear the System/Custom filter."
+                ctaLabel="Clear filters"
+                onCta={() => { setRoleQuery(""); setRoleFilter("all") }}
+              />
+            ) : (
+            <div style={{ ...PICKER_GRID, ...PICKER_SCROLLER }}>
+              {/* "No role" is a real choice, not the absence of one, so it is a
+                  card like the others — and it stays put while the search
+                  filters the rest, because searching must never strand the
+                  user with nothing selectable. */}
               <CardContainer size="sm" selected={selectedRoleId === null} onClick={() => setSelectedRoleId(null)}>
                 <div style={{ pointerEvents: "none", display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-title)" }}>No role</span>
@@ -3986,7 +4193,7 @@ function InviteWizard({ onCancel, onSend }: {
                   </span>
                 </div>
               </CardContainer>
-              {ROLES.map(r => {
+              {shownRoles.map(r => {
                 const on = selectedRoleId === r.id
                 return (
                   <CardContainer key={r.id} size="sm" selected={on} onClick={() => setSelectedRoleId(r.id)}>
@@ -4006,6 +4213,7 @@ function InviteWizard({ onCancel, onSend }: {
                 )
               })}
             </div>
+            )}
           </div>
         </div>
       )}
