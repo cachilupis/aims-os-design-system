@@ -72,6 +72,7 @@ import { EntityList }        from "@/components/ui/entity-list"
 import type { EntityListItemData } from "@/components/ui/entity-list"
 import { EmptyState }        from "@/components/ui/empty-state"
 import { HighlightIcon }     from "@/components/ui/highlight-icon"
+import { AdaptiveMetricGrid } from "@/components/ui/adaptive-metric-grid"
 import type { HighlightIconVariant } from "@/components/ui/highlight-icon"
 import { Pagination }        from "@/components/ui/pagination"
 import { SlideOut }          from "@/components/ui/slide-out"
@@ -86,6 +87,7 @@ import { specForContact, tabsForContact } from "./ucpTypeModel"
 import type { CanvasEntry, ProfileWidgetRow } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS,
+  KNOWLEDGE_NOW,
   getVerdict, getSignals, getSuggestions, getAgentReads, readAreas, renewalInDays,
   renderableSignals, renderableReads, sortSuggestions, confirmLabel,
   verdictWordCount, VERDICT_WORD_CAP, SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
@@ -1400,6 +1402,358 @@ function DetailTable({ rows }: { rows: [string, React.ReactNode | null][] }) {
 }
 
 /**
+ * ── The Governance preview, as one component ───────────────────────────────
+ *
+ * Michael, 2026-09-11: the Sandbox, Truth Plane and Drives previews should
+ * carry the same information Governance's own item previews carry, expressed
+ * with the components from the SlideOut/SidePanel — Content page.
+ *
+ * READ OFF THE REAL THING this time, not off a filter bar. The Governance
+ * Studio prototype is public — lexpaniagua-prod.github.io/governance-studio-V1
+ * — so the earlier note in this file about working from screenshots is
+ * settled. Its item preview is four sections under two tabs:
+ *
+ *   Overview │ Details
+ *
+ *   AI SUMMARY            a generated paragraph, then an arrow line that is
+ *                         the imperative: "→ Review 8 pending claims and renew
+ *                         5 expiring facts before the next audit cycle."
+ *   WHAT NEEDS ATTENTION  counts with a link each — Facts expiring soon 5
+ *                         Review →, Pending human review 8 Open queue →,
+ *                         Active proposals 9 View →
+ *   GOVERNANCE HEALTH     confidence distribution, human-validated share,
+ *                         audit completeness, conflict rate
+ *   ACTIONS & SHORTCUTS   Open Review Queue, View Expiring Facts, Go to
+ *                         Promotions, Open Knowledge, View Activity Log
+ *
+ * HOW IT MAPS ONTO THE DS PAGE'S ZONES, which is the part that is a decision
+ * rather than a transcription:
+ *
+ *   AI Summary           → zone 1, the purple card. Same position, and that
+ *                          page also puts it first, so nothing had to move.
+ *   Governance health    → zone 2, the HighlightCard grid, three cards.
+ *   What needs attention → zone 3, a list section: EntityList rows, each with
+ *                          its own action. Governance renders these as counts
+ *                          with a link each — "Facts expiring soon 5 Review →"
+ *                          — and a link is the whole point of the row, so the
+ *                          grid was the wrong home for it: HighlightCard has
+ *                          no onClick, and giving one a click target the
+ *                          component does not own is how a card becomes a
+ *                          button nobody can style consistently.
+ *
+ * THE TWO ARE SWAPPED relative to Governance, which leads with attention. The
+ * DS page's order is explicit — "content always follows this fixed order,
+ * never rearrange" — and it puts the metric grid above list sections. Michael
+ * asked for Governance's INFORMATION in that page's components, so where the
+ * two disagree the page wins on layout and Governance wins on content.
+ *   Actions & shortcuts  → tertiary Buttons under a section header.
+ *   Details tab          → zone 7, the two-column DetailTable.
+ *
+ * ONE HONEST DIFFERENCE, and it is the reason this is not a copy. Governance's
+ * rows are PLANES — "12 facts, 5 expiring, 8 in review, 9 proposals". Ours are
+ * single facts, claims and drives, one level down. A single fact has no count
+ * of itself, so where Governance shows a number this shows the thing: the
+ * attention flags the fact actually carries, from the same three-word
+ * vocabulary Governance filters on. The sections, the order and the language
+ * are theirs; the scope is this record's.
+ *
+ * THE CONFIDENCE PERCENTAGE IS NOT COPIED. Governance shows "95% confidence"
+ * and this does not, for the same reason Intelligence dropped it and the
+ * Knowledge rows dropped it: it was derived from the plane, restating the
+ * plane. A state label carries the same meaning and can be argued with.
+ */
+
+/** One card in the health grid. */
+interface HealthRow {
+  label: string
+  value: string
+  note?: string
+  icon: string
+  variant: HighlightIconVariant
+  feedbackType?: "positive" | "negative" | "neutral"
+}
+
+/** Everything the panel needs, resolved by the caller from a fact or a drive
+ *  so the panel itself never branches on which one it is holding. */
+interface GovernancePreviewData {
+  title:      string
+  subtitle:   string
+  statusLabel: string
+  icon:       string
+  iconVariant: HighlightIconVariant
+  /** Zone 1 — the generated paragraph, then the imperative. */
+  summary:    string
+  imperative: string
+  /** Zone 3 — what to act on, each with the link that acts on it. */
+  attention:  { label: string; detail: string; icon: string; rowVariant: NonNullable<EntityListItemData["iconVariant"]>; cta: string; destination: string }[]
+  /** Zone 2 — three named measures, the page's grid ceiling being four. */
+  health:     HealthRow[]
+  /** The flat attributes, on the Details tab. */
+  details:    [string, React.ReactNode | null][]
+  shortcuts:  { label: string; destination: string }[]
+}
+
+function GovernancePreview({ data, open, onClose, onGo }: {
+  data:    GovernancePreviewData | null
+  open:    boolean
+  onClose: () => void
+  onGo:    (destination: string) => void
+}) {
+  const [tab, setTab] = useState(0)
+
+  return (
+    <SlideOut
+      open={open}
+      onClose={onClose}
+      type="with-variants"
+      size="m"
+      title={data?.title ?? ""}
+      subtitle={data?.subtitle ?? ""}
+      showIcon
+      iconContent={data ? <HighlightIcon size="sm" variant={data.iconVariant} iconName={data.icon} /> : undefined}
+      showStatus
+      statusLabel={data?.statusLabel}
+      showTopButton={false}
+      /* Two tabs, the same two Governance uses. Overview is what to do about
+         this item; Details is what it is. Somebody who opened the panel to
+         act should not walk past an attributes table to reach the verdict. */
+      showTabs
+      showTab3={false}
+      tabLabels={["Overview", "Details", ""]}
+      activeTab={tab}
+      onTabChange={setTab}
+      showSearchBar={false}
+      showChips={false}
+      showCta={false}
+    >
+      {data && (
+        <div className={PANEL_CONTENT_CLASS}>
+          {tab === 0 ? (
+            <>
+              {/* Zone 1 — AI Summary. Always first when present. */}
+              <div
+                className="flex flex-col gap-[8px] rounded-[8px] p-[12px]"
+                style={{ background: "var(--color-surface-purple-more-subtle)", border: "0.5px solid var(--card-purple-border)" }}
+              >
+                <div className="flex items-center gap-[6px]">
+                  <Sparkle size={11} style={{ color: "var(--color-text-purple)" }} />
+                  <span className="text-[10px] font-semibold uppercase tracking-wide" style={{ color: "var(--color-text-purple)" }}>
+                    AI summary
+                  </span>
+                </div>
+                <p className="text-[12px] leading-[1.6] m-0" style={{ color: "var(--foreground)" }}>{data.summary}</p>
+                {/* The arrow line is Governance's own device, and it earns its
+                    place: the paragraph says what is true, this says what to
+                    do about it. Keeping them in one paragraph is how an
+                    imperative gets read as description. */}
+                <p className="text-[12px] leading-[1.6] m-0 font-semibold" style={{ color: "var(--color-text-purple)" }}>
+                  {`→ ${data.imperative}`}
+                </p>
+              </div>
+
+              {/* Zone 2 — the metric grid. Three cards, inside the page's
+                  own 2–4 ceiling; the measures that did not fit are on the
+                  Details tab rather than crammed into a fourth and fifth. */}
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Governance health</SectionLabel>
+                <AdaptiveMetricGrid
+                  cards={data.health.map(row => ({
+                    label:        row.label,
+                    value:        row.value,
+                    feedback:     row.note,
+                    feedbackType: row.feedbackType ?? "neutral",
+                    iconName:     row.icon,
+                    iconVariant:  row.variant,
+                  }))}
+                />
+              </div>
+
+              {/* Zone 3 — a list section. Each row carries the action that is
+                  the reason it is on screen. */}
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>What needs attention</SectionLabel>
+                {data.attention.length === 0 ? (
+                  <CardContainer size="sm">
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <HighlightIcon size="sm" variant="success" iconName="Check" />
+                      <span style={{ fontSize: 12, color: "var(--color-text-title)" }}>Nothing needs attention here.</span>
+                    </div>
+                  </CardContainer>
+                ) : (
+                  <div className="flex flex-col gap-[8px]">
+                    {data.attention.map(a => (
+                      <CardContainer key={a.label} size="sm" className="!p-0 overflow-hidden">
+                        <EntityList items={[{
+                          id:          a.label,
+                          title:       a.label,
+                          iconName:    a.icon,
+                          iconVariant: a.rowVariant,
+                          primaryMeta: [{ iconName: "Info", label: a.detail }],
+                          actions:     [{ label: a.cta, variant: "tertiary", onClick: () => onGo(a.destination) }],
+                        }]} />
+                      </CardContainer>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-[8px]">
+                <SectionLabel>Actions &amp; shortcuts</SectionLabel>
+                <div className="flex flex-col items-start gap-[2px]">
+                  {data.shortcuts.map(s => (
+                    <Button key={s.label} variant="tertiary" size="sm" className="!px-0" onClick={() => onGo(s.destination)}>
+                      {s.label}
+                      <LucideIcons.ArrowUpRight size={12} />
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-[8px]">
+              <SectionLabel>Details</SectionLabel>
+              <DetailTable rows={data.details} />
+            </div>
+          )}
+        </div>
+      )}
+    </SlideOut>
+  )
+}
+
+/** Days between a fixture date and the record's "now". */
+function daysSince(date: string): number | null {
+  const then = new Date(date)
+  if (Number.isNaN(then.getTime())) return null
+  return Math.round((KNOWLEDGE_NOW.getTime() - then.getTime()) / 86_400_000)
+}
+
+/** A fact or a claim, in Governance's language. */
+function factPreviewData(f: UcpFact, contact: UcpContact): GovernancePreviewData {
+  const age  = daysSince(f.verifiedAt)
+  const days = age === null ? "—" : `${age}d`
+
+  /* Governance's three attention categories, and ours carry the same three
+     words. Each gets the destination its own link would have. */
+  const attention = f.attention.map(flag => ({
+    label:      flag,
+    detail:     flag === "Due to expire"
+      ? `Last verified ${f.verifiedAt}${age === null ? "" : ` · ${age} days ago`}`
+      : flag === "Needs review"
+        ? "Waiting on a person to attest it"
+        : "An agent has proposed a change to this",
+    icon:       flag === "Due to expire" ? "Timer" : flag === "Needs review" ? "Eye" : "Sparkles",
+    rowVariant: (flag === "Due to expire" ? "error" : flag === "Needs review" ? "yellow" : "info") as NonNullable<EntityListItemData["iconVariant"]>,
+    cta:        flag === "Due to expire" ? "Renew" : flag === "Needs review" ? "Open queue" : "View",
+    destination: "knowledge",
+  }))
+
+  return {
+    title:       f.label,
+    subtitle:    `${PLANE_META[f.plane].label} Plane · ${f.scope}`,
+    statusLabel: f.status,
+    icon:        PLANE_ICON[f.plane],
+    iconVariant: PLANE_ICON_VARIANT[f.plane],
+    summary: f.plane === "truth"
+      ? `This ${f.scope.toLowerCase()} fact on the Truth Plane governs ${f.value}. It is ${f.status.toLowerCase()} at ${f.risk.toLowerCase()} risk, attested from ${f.source} and last verified ${f.verifiedAt}.`
+      : f.plane === "sandbox"
+        ? `This claim proposes ${f.value}. It sits on the Sandbox Plane at ${f.risk.toLowerCase()} risk, drawn from ${f.source} and not yet corroborated by a second source.`
+        : `This source material records ${f.value}. It is reference rather than a claim — ${contact.agent.name} can quote it with its citation and nothing in it is asserted as true on its own.`,
+    imperative: f.attention.includes("Due to expire")
+      ? `Re-verify it before the next audit cycle — ${contact.agent.name} can no longer commit to it.`
+      : f.plane === "sandbox"
+        ? "Find a corroborating source, or send it to the domain owner to attest."
+        : "Nothing is required. It stays attested until its window closes.",
+    attention,
+    health: [
+      { label: "Risk level", value: f.risk, note: "Governance risk level",
+        icon: f.risk === "High" ? "ShieldX" : f.risk === "Medium" ? "ShieldAlert" : "ShieldCheck",
+        variant: f.risk === "High" ? "error" : f.risk === "Medium" ? "alert" : "success",
+        feedbackType: f.risk === "Low" ? "positive" : "negative" },
+      { label: "Attested", value: days,
+        note: age !== null && age > 60 ? "Past the 60-day window" : "Inside the 60-day window",
+        icon: "CalendarCheck",
+        variant: age !== null && age > 60 ? "alert" : "success",
+        feedbackType: age !== null && age > 60 ? "negative" : "positive" },
+      { label: "Reach", value: f.scope, note: "How far this carries",
+        icon: "Share2", variant: "neutral" },
+    ],
+    details: [
+      ["Plane",         <Tag variant={PLANE_META[f.plane].tag} size="sm">{PLANE_META[f.plane].label}</Tag>],
+      ["Status",        <Tag variant={FACT_STATUS_TAG[f.status] ?? "neutral"} size="sm">{f.status}</Tag>],
+      ["Value",         f.value],
+      ["Risk level",    f.risk],
+      ["State",         f.state],
+      ["Scope",         f.scope],
+      ["Human validated", f.plane === "truth" ? "Yes — a person attested it" : "Not yet — proposed by an agent"],
+      ["Source",        f.source],
+      ["Last verified", f.verifiedAt],
+    ],
+    shortcuts: [
+      { label: "Open the review queue", destination: "knowledge" },
+      { label: "See where it was cited", destination: "activity" },
+      { label: "View the activity log",  destination: "activity" },
+    ],
+  }
+}
+
+/** A drive, in the same language. Governance's Sandbox item counts Sources,
+ *  Bundles, Claims and Promotions; a drive's equivalent is what it holds and
+ *  what has been drawn out of it. */
+function drivePreviewData(d: UcpDrive, citedCount: number, contact: UcpContact): GovernancePreviewData {
+  const healthy = d.state.label.toLowerCase().includes("sync")
+    && !d.state.label.toLowerCase().includes("partial")
+    && !d.state.label.toLowerCase().includes("fail")
+
+  return {
+    title:       d.name,
+    subtitle:    `${d.kind} · ${d.provider}`,
+    statusLabel: d.state.label,
+    icon:        DRIVE_ICON[d.kind] ?? "Folder",
+    iconVariant: DRIVE_ICON_VARIANT[d.state.variant] ?? "light-blue",
+    /* `scope` is already a full phrase on a drive — "Shared with 3 networks",
+       not a one-word Governance scope — so it is dropped in rather than
+       prefixed. The earlier version read "shared shared with 3 networks". */
+    summary: `This ${d.kind.toLowerCase()} feeds the Sources plane with ${d.items}, owned by ${d.owner} in ${d.department}. ${d.scope}. `
+      + `${citedCount} fact${citedCount === 1 ? " has" : "s have"} been cited out of it onto this record.`,
+    imperative: healthy
+      ? `Nothing is required. ${contact.agent.name} can cite anything here, and cannot promote it to Truth without a verification step.`
+      : `Resolve the ${d.state.label.toLowerCase()} state — anything ${contact.agent.name} cannot read, it cannot cite.`,
+    attention: healthy ? [] : [{
+      label:      d.state.label,
+      detail:     `Last sync ${d.lastSync} · owned by ${d.owner}`,
+      icon:       "AlertTriangle",
+      rowVariant: (d.state.variant === "error" ? "error" : "yellow") as NonNullable<EntityListItemData["iconVariant"]>,
+      cta:        "Review access",
+      destination: "knowledge",
+    }],
+    health: [
+      { label: "Contents", value: d.items, note: "What this drive holds",
+        icon: "Files", variant: "informative" },
+      { label: "Cited", value: String(citedCount), note: "Facts drawn out of it",
+        icon: "Quote", variant: citedCount > 0 ? "success" : "neutral",
+        feedbackType: citedCount > 0 ? "positive" : "neutral" },
+      { label: "Reach", value: d.scope, note: "Who it is shared with",
+        icon: "Share2", variant: "neutral" },
+    ],
+    details: [
+      ["Provider",   d.provider],
+      ["Kind",       d.kind],
+      ["Contents",   d.items],
+      ["Owner",      d.owner],
+      ["Department", d.department],
+      ["Scope",      d.scope],
+      ["Sync",       <Tag variant={d.state.variant} size="sm">{d.state.label}</Tag>],
+      ["Last sync",  d.lastSync],
+    ],
+    shortcuts: [
+      { label: "Open what was cited from it", destination: "knowledge" },
+      { label: "View the activity log",       destination: "activity" },
+    ],
+  }
+}
+
+/**
  * ── The note preview ───────────────────────────────────────────────────────
  *
  * Michael, 2026-09-10: a note opened from the Activity feed gets Overview and
@@ -1999,7 +2353,13 @@ function KnowledgeTab({ contact, onPreview, onPreviewFact }: {
           value={shelf}
           onChange={id => { setShelf(id as Shelf); clearAll() }}
           aria-label="Knowledge shelf"
-          items={SHELVES.map(sh => ({ id: sh.id, label: `${sh.label} (${sh.count})` }))}
+          /* NO COUNTS IN THE LABEL — Michael, 2026-09-11: "para no ensuciar
+             el componente". "Sandbox (3)" is two things in one label, and the
+             number is the one that changes as you type in the search box
+             beside it, so the control appeared to flicker while you filtered.
+             The list underneath is where a count belongs; a segmented control
+             says where you are. */
+          items={SHELVES.map(sh => ({ id: sh.id, label: sh.label }))}
         />
         <div style={{ flex: 1, minWidth: 320 }}>
           <Filters
@@ -2848,156 +3208,24 @@ export function UcpProfileView({
         </div>
       </SlideOut>
 
-      {/*
-        Drives preview.
-
-        Four things Michael caught on 2026-09-09, all of them the same mistake
-        in different places — the panel was drawing its own vocabulary instead
-        of the one the SlideOut/SidePanel — Content page defines:
-
-        · THE ICON MATCHES THE ITEM. It was a hardcoded HardDrive for every
-          preview, so opening a Document showed a drive. Same glyph and same
-          tint as the row it came from, resolved from one map.
-        · NO PADDING OF ITS OWN. SlideOut's panel is already `32px / 24px`; the
-          20px this added landed the content at 44. The canonical page renders
-          its slot with zero horizontal padding for exactly that reason.
-        · THE STATE IS THE PANEL'S, not a Tag in the body. It has a slot —
-          `showStatus` + `statusLabel` — and a Tag on its own line in a column
-          also stretched to the panel width, which is the other half of the
-          same bug (fixed in the component too: Tag is `w-fit` now).
-        · THE DETAIL TABLE IS THE ONE FROM THAT PAGE: a bordered 8px container,
-          rows at `py-8 px-12`, a 120px label column, 1px dividers.
-      */}
-      <SlideOut
+      {/* Both previews are the same panel — see GovernancePreview. One
+          component, because "the same information" across Sandbox, Truth
+          Plane and Drives is a promise that a second implementation quietly
+          breaks. The caller resolves a fact or a drive into the shape; the
+          panel never branches on which it is holding. */}
+      <GovernancePreview
         open={drivePeek !== null}
         onClose={() => setDrivePeek(null)}
-        type="with-variants"
-        size="m"
-        title={drivePeek?.name ?? ""}
-        subtitle={drivePeek ? `${drivePeek.kind} · ${drivePeek.provider}` : ""}
-        showIcon
-        iconContent={drivePeek ? <HighlightIcon size="sm" variant={DRIVE_ICON_VARIANT[drivePeek.state.variant]} iconName={DRIVE_ICON[drivePeek.kind]} /> : undefined}
-        showStatus
-        statusLabel={drivePeek?.state.label}
-        showTopButton={false}
-        showTabs={false}
-        showSearchBar={false}
-        showChips={false}
-        showCta={false}
-      >
-        {drivePeek && (
-          <div className={PANEL_CONTENT_CLASS}>
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
-                Details
-              </span>
-              <DetailTable rows={[
-                ["Provider",   drivePeek.provider],
-                ["Contents",   drivePeek.items],
-                ["Owner",      drivePeek.owner],
-                ["Department", drivePeek.department],
-                ["Last sync",  drivePeek.lastSync],
-                ["Scope",      drivePeek.scope],
-              ]} />
-            </div>
+        onGo={id => { setDrivePeek(null); goTab(id) }}
+        data={drivePeek ? drivePreviewData(drivePeek, getFacts(contact).filter(f => f.plane === "sources").length, contact) : null}
+      />
 
-            <div className="flex flex-col gap-[8px]">
-              <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--field-label)" }}>
-                How this is used
-              </span>
-              <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-                Drives feed the Sources plane. Anything here can be cited by {contact.agent.name}, but never
-                promoted to Truth without a verification step.
-              </span>
-            </div>
-          </div>
-        )}
-      </SlideOut>
-
-      {/*
-        ── A fact or a claim, previewed in Governance's own words ───────────
-        Michael, 2026-09-10: make the preview of each item consistent with
-        what Governance shows.
-
-        Governance's own row for a plane reads "Hechos · Propuestas · Riesgo
-        bajo" and, for a Sandbox entry, "Fuentes · Reclamaciones · Promociones
-        · Bundles". Applied one level down — to a single fact rather than to a
-        whole plane — the fields that survive are the ones on a row here:
-        status, risk level, attention flags, scope, where it came from and
-        when it was last verified. Those are the five filters the shelves
-        offer, which is the test: a panel that cannot answer the question a
-        filter asks is not the same data seen closer up.
-
-        // NOTE: written from the Governance filter vocabulary captured on
-        // 2026-09-10, not from the truth-plane item view itself — that view
-        // is behind a sign-in this session cannot pass. Fields may need one
-        // more pass once it can be read.
-      */}
-      <SlideOut
+      <GovernancePreview
         open={factPeek !== null}
         onClose={() => setFactPeek(null)}
-        type="with-variants"
-        size="m"
-        title={factPeek?.label ?? ""}
-        subtitle={factPeek ? `${PLANE_META[factPeek.plane].label} Plane · ${factPeek.scope}` : ""}
-        showIcon
-        iconContent={factPeek ? <HighlightIcon size="sm" variant={PLANE_ICON_VARIANT[factPeek.plane]} iconName={PLANE_ICON[factPeek.plane]} /> : undefined}
-        showStatus
-        statusLabel={factPeek?.status}
-        showTopButton={false}
-        showTabs={false}
-        showSearchBar={false}
-        showChips={false}
-        showCta={false}
-      >
-        {factPeek && (
-          <div className={PANEL_CONTENT_CLASS}>
-            {/* The value first, and large. Everything else on this panel is
-                about how much to trust it. */}
-            <div className="flex flex-col gap-[4px]">
-              <SectionLabel>Value</SectionLabel>
-              <span style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-title)", lineHeight: 1.4 }}>
-                {factPeek.value}
-              </span>
-            </div>
-
-            {factPeek.attention.length > 0 && (
-              <div className="flex flex-col gap-[8px]">
-                <SectionLabel>Needs attention</SectionLabel>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {factPeek.attention.map(a => (
-                    <Tag key={a} variant={a === "Due to expire" ? "error" : "alert"} size="sm">{a}</Tag>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-[8px]">
-              <SectionLabel>Governance</SectionLabel>
-              <DetailTable rows={[
-                ["Plane",         <Tag variant={PLANE_META[factPeek.plane].tag} size="sm">{PLANE_META[factPeek.plane].label}</Tag>],
-                ["Status",        <Tag variant={FACT_STATUS_TAG[factPeek.status] ?? "neutral"} size="sm">{factPeek.status}</Tag>],
-                ["Risk level",    factPeek.risk],
-                ["State",         factPeek.state],
-                ["Scope",         factPeek.scope],
-                ["Source",        factPeek.source],
-                ["Last verified", factPeek.verifiedAt],
-              ]} />
-            </div>
-
-            <div className="flex flex-col gap-[8px]">
-              <SectionLabel>What an agent may do with it</SectionLabel>
-              <span className="text-[12px] leading-[1.6]" style={{ color: "var(--field-supporting)" }}>
-                {factPeek.plane === "truth"
-                  ? `${contact.agent.name} treats this as true and will commit to it in a reply without asking. That is what attestation buys, and it is why a fact due to expire is a problem rather than a note.`
-                  : factPeek.plane === "sandbox"
-                    ? `${contact.agent.name} can cite this and cannot commit to it. A draft that depends on it is held by The Council until a domain owner attests it or a source corroborates it.`
-                    : `Material, not a claim. ${contact.agent.name} can quote it with its citation; nothing here is asserted as true on its own.`}
-              </span>
-            </div>
-          </div>
-        )}
-      </SlideOut>
+        onGo={id => { setFactPeek(null); goTab(id) }}
+        data={factPeek ? factPreviewData(factPeek, contact) : null}
+      />
 
       <NotePreview
         note={notePeek?.note ?? null}

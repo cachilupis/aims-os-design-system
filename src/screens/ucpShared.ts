@@ -1328,7 +1328,10 @@ const FIRST_FIELD  = (c: UcpContact) => c.subtitle.split(" · ")[0] ?? "—"
  * re-reads a signature; a title from a CRM sync that has not run since May; a
  * priority stated on one call and never corroborated. Do not normalise them.
  */
-const KNOWLEDGE_NOW = new Date("2026-09-10")
+/** The record's "now". Exported so the preview panel measures attestation
+ *  age against the same clock governFact() uses — two clocks is how a fact
+ *  reads "Due to expire" in a list and "inside the window" in its own panel. */
+export const KNOWLEDGE_NOW = new Date("2026-09-10")
 
 function governFact(f: Omit<UcpFact, "status" | "risk" | "attention" | "state" | "scope">): UcpFact {
   const verified = new Date(f.verifiedAt)
