@@ -1925,6 +1925,10 @@ function GovernancePreview({ data, open, onClose, onGo }: {
          literal string "Button" — so an always-on footer renders two buttons
          labelled Button into the DOM of every record. */
       showCta={!!data}
+      /* S, not M. Two M buttons in a 350px footer truncate — "View the
+         activity log" came out as "iew the activity log". Small buttons and
+         short labels, both. */
+      ctaSize="sm"
       ctaPrimaryLabel={data?.ctaPrimary.label}
       onCtaPrimary={() => data && onGo(data.ctaPrimary.destination)}
       showCtaSecondary={!!data}
@@ -2105,13 +2109,13 @@ function factPreviewData(f: UcpFact, contact: UcpContact): GovernancePreviewData
        an attested fact needs nothing, so its primary is the thing a reader
        most often came for instead. */
     ctaPrimary: f.attention.includes("Due to expire")
-      ? { label: "Re-verify this fact",   destination: "knowledge" }
+      ? { label: "Re-verify",     destination: "knowledge" }
       : f.plane === "sandbox"
-        ? { label: "Send to be attested", destination: "knowledge" }
-        : { label: "Open the review queue", destination: "knowledge" },
-    ctaSecondary: { label: "See where it was cited", destination: "activity" },
+        ? { label: "Send to attest", destination: "knowledge" }
+        : { label: "Review queue",  destination: "knowledge" },
+    ctaSecondary: { label: "Where it is cited", destination: "activity" },
     shortcuts: [
-      { label: "View the activity log", destination: "activity" },
+      { label: "See where it was cited", destination: "activity" },
     ],
   }
 }
@@ -2166,9 +2170,9 @@ function drivePreviewData(d: UcpDrive, citedCount: number, contact: UcpContact):
       ["Last sync",  d.lastSync],
     ],
     ctaPrimary: healthy
-      ? { label: "Open what was cited", destination: "knowledge" }
-      : { label: "Review access",       destination: "knowledge" },
-    ctaSecondary: { label: "View the activity log", destination: "activity" },
+      ? { label: "Open citations", destination: "knowledge" }
+      : { label: "Review access",  destination: "knowledge" },
+    ctaSecondary: { label: "Activity log", destination: "activity" },
     shortcuts: [],
   }
 }

@@ -916,9 +916,20 @@ function EntityCategoryRail({
         display: "flex",
         flexDirection: "column",
         gap: 12,
-        paddingRight: 16,
-        /* The divider Michael asked for, and the only thing separating the
-           rail from the list — no surface, no card, no shadow. */
+        /* 8, not 16 — Michael, 2026-09-11. The gap to the divider is not the
+           gap to the list: the divider belongs to the rail and reads as its
+           edge, so a wide inset makes the rows look like they are floating
+           away from their own boundary. The 24px breathing room lives on the
+           other side of the line, where the list starts. */
+        paddingRight: 8,
+        /* THE DIVIDER RUNS THE FULL HEIGHT. It used to stop where the rail's
+           own content stopped — six rows, then nothing — which read as a line
+           that had been cut off rather than as the edge of a rail. `stretch`
+           on the row makes the rail as tall as the list beside it, and the
+           minHeight keeps the line honest when the list is shorter than the
+           viewport. */
+        alignSelf: "stretch",
+        minHeight: "calc(100vh - 260px)",
         borderRight: "1px solid var(--field-border)",
         transition: "width 150ms ease",
       }}
@@ -956,7 +967,13 @@ function EntityCategoryRail({
         />
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div style={{
+        display: "flex", flexDirection: "column", gap: 2,
+        /* Collapsed, a row is one icon, so the column centres on the rail's
+           axis instead of leaving every glyph hanging off the left edge with
+           the label's empty space still reserved beside it. */
+        alignItems: collapsed ? "center" : "stretch",
+      }}>
         {shown.map(c => {
           const on = c.id === activeId
           const row = (
@@ -966,6 +983,13 @@ function EntityCategoryRail({
               label={collapsed ? "" : c.label}
               subtext={collapsed ? undefined : `${c.count} records`}
               state={on ? "focus" : "default"}
+              /* 8px on the selected background. MenuItem is built for a Menu
+                 panel, where a row spans the panel's own radius and squares
+                 off; standing alone in a rail it is a card-shaped target, and
+                 8 is the radius every other card-shaped thing in this product
+                 uses. Collapsed, the row shrinks to its icon so the highlight
+                 does not run the width of an empty label. */
+              className={`rounded-[8px]${collapsed ? " !w-auto !px-[8px]" : ""}`}
               leadingIcon={<HighlightIcon size="sm" variant={on ? "informative" : "neutral"} iconName={c.icon} />}
               onClick={() => onSelect(c.id)}
             />
@@ -1336,7 +1360,7 @@ export default function PMThomasUcpContactsScreen() {
         one component call site to restore, and the state behind it (applied,
         sortKey, openSlot, the FiltersSlideout) is still wired.
       */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "stretch", gap: 24 }}>
         <EntityCategoryRail
           categories={ALL_TYPE_TABS.map(t => ({
             id:    t.id,
