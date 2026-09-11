@@ -50,7 +50,7 @@ import { InformativeCard }   from "@/components/ui/informative-card"
 import { useToast }          from "@/components/ui/toast"
 import { anchorFromElement, anchorFromEvent, useDropdownPosition } from "@/lib/dropdown-anchor"
 import type { DropdownAnchor } from "@/lib/dropdown-anchor"
-import { Plus, Lock, Trash2, PanelLeftOpen, PanelLeftClose, Contact as ContactIcon } from "lucide-react"
+import { Plus, Lock, Trash2, Search, PanelLeftOpen, PanelLeftClose, Contact as ContactIcon } from "lucide-react"
 import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
@@ -888,19 +888,37 @@ function DuplicateCard({ match, onOpenRecord }: { match: CreateMatch; onOpenReco
  * CLAUDE.md says NOT to turn into a component. If a second screen wants a
  * category rail, that is when it earns a file in experimental/.
  */
-const RAIL_WIDTH           = 232
-const RAIL_COLLAPSED_WIDTH = 56
+/*
+  ── The rail's spacing ──────────────────────────────────────────────────────
+  Michael, 2026-09-11: reduce the padding, 12px or less.
+
+  The padding to the divider was already 8. What was actually spending the
+  space was everything ELSE around it: a 56px collapsed rail holding a 28px
+  icon, and a 24px gap on the other side of the line. Together that was ~88px
+  of chrome to the left of the first card, most of it empty.
+
+  44 + 8 + 12 = 64. The icon keeps its own hit area, the divider still reads
+  as the rail's edge, and the list starts 24px earlier.
+*/
+const RAIL_WIDTH           = 208
+const RAIL_COLLAPSED_WIDTH = 44
 
 function EntityCategoryRail({
-  categories, activeId, onSelect, collapsed, onCollapsedChange,
+  categories, activeId, onSelect, collapsed, onCollapsedChange, query, onQueryChange,
 }: {
   categories: { id: string; label: string; icon: string; count: number }[]
   activeId:   string
   onSelect:   (id: string) => void
   collapsed:  boolean
   onCollapsedChange: (next: boolean) => void
+  query:      string
+  onQueryChange: (next: string) => void
 }) {
-  const shown = categories
+  const q     = query.trim().toLowerCase()
+  /* Collapsed, the filter does not apply — there is no field to have typed
+     into, and hiding icons a reader cannot see the reason for is worse than
+     showing all six. */
+  const shown = collapsed ? categories : categories.filter(c => !q || c.label.toLowerCase().includes(q))
 
   return (
     <div
@@ -909,13 +927,15 @@ function EntityCategoryRail({
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
-        gap: 12,
+        gap: 10,
         /* 8, not 16 — Michael, 2026-09-11. The gap to the divider is not the
            gap to the list: the divider belongs to the rail and reads as its
            edge, so a wide inset makes the rows look like they are floating
            away from their own boundary. The 24px breathing room lives on the
            other side of the line, where the list starts. */
         paddingRight: 8,
+        /* Rows sit tighter than the 12 between the header, the search and the
+           list — a category list is one thing, not three. */
         /* THE DIVIDER RUNS THE FULL HEIGHT. It used to stop where the rail's
            own content stopped — six rows, then nothing — which read as a line
            that had been cut off rather than as the edge of a rail. `stretch`
@@ -948,11 +968,30 @@ function EntityCategoryRail({
         </Tooltip>
       </div>
 
-      {/* NO SEARCH HERE — Michael, 2026-09-11. Two search fields on one screen
-          is two, and the one that matters is the one over the list: a reader
-          types a person's name far more often than a category's. The rail has
-          six rows you can read at a glance; when it has thirty, the search
-          comes back here and not before. */}
+      {/*
+        A SMALL SEARCH, AND ONLY WHEN EXPANDED — Michael, 2026-09-11.
+
+        This went out a few hours ago and comes back deliberately, so the
+        reasoning is worth keeping straight rather than quietly reversing. The
+        objection then was two search fields competing, and that still holds
+        for the COLLAPSED rail — 44px of icons has nowhere to put one, and a
+        reader scanning six glyphs is not searching. Expanded is a different
+        surface: the labels are there, the list will grow past what anybody
+        scans, and a size-sm field costs one row.
+
+        It filters CATEGORIES. The field over the list filters RECORDS. They
+        never compete because they are never both the obvious thing to type
+        into — one sits inside the rail, the other spans the list.
+      */}
+      {!collapsed && (
+        <Input
+          size="sm"
+          placeholder="Filter entities…"
+          value={query}
+          onChange={e => onQueryChange(e.target.value)}
+          leftIcon={<Search size={14} />}
+        />
+      )}
       <div style={{
         display: "flex", flexDirection: "column", gap: 2,
         /* Collapsed, a row is one icon, so the column centres on the rail's
@@ -960,6 +999,11 @@ function EntityCategoryRail({
            the label's empty space still reserved beside it. */
         alignItems: collapsed ? "center" : "stretch",
       }}>
+        {!collapsed && shown.length === 0 && (
+          <span style={{ fontSize: 12, color: "var(--muted-foreground)", padding: "6px 4px" }}>
+            {`Nothing matches “${query.trim()}”.`}
+          </span>
+        )}
         {shown.map(c => {
           const on = c.id === activeId
           const row = (
@@ -975,7 +1019,7 @@ function EntityCategoryRail({
                  8 is the radius every other card-shaped thing in this product
                  uses. Collapsed, the row shrinks to its icon so the highlight
                  does not run the width of an empty label. */
-              className={`rounded-[8px]${collapsed ? " !w-auto !px-[8px]" : ""}`}
+              className={`rounded-[8px]${collapsed ? " !w-auto !px-[6px]" : " !px-[8px]"}`}
               leadingIcon={<HighlightIcon size="sm" variant={on ? "informative" : "neutral"} iconName={c.icon} />}
               onClick={() => onSelect(c.id)}
             />
@@ -1030,6 +1074,7 @@ export default function PMThomasUcpContactsScreen() {
     enough categories to be worth searching.
   */
   const [railCollapsed, setRailCollapsed] = useState(false)
+  const [railQuery,     setRailQuery]     = useState("")
 
   const [preview,    setPreview]    = useState<UcpContact | null>(null)
   // El anchor y el "abrir" tienen que cambiar en el MISMO commit. useDropdownPosition
@@ -1339,7 +1384,7 @@ export default function PMThomasUcpContactsScreen() {
         one component call site to restore, and the state behind it (applied,
         sortKey, openSlot, the FiltersSlideout) is still wired.
       */}
-      <div style={{ display: "flex", alignItems: "stretch", gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
         <EntityCategoryRail
           categories={ALL_TYPE_TABS.map(t => ({
             id:    t.id,
@@ -1361,6 +1406,8 @@ export default function PMThomasUcpContactsScreen() {
           }}
           collapsed={railCollapsed}
           onCollapsedChange={setRailCollapsed}
+          query={railQuery}
+          onQueryChange={setRailQuery}
         />
 
         <div style={{ flex: 1, minWidth: 0 }}>
