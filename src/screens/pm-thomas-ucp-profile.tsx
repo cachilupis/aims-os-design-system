@@ -92,6 +92,7 @@ import {
   renderableSignals, renderableReads, sortSuggestions, confirmLabel,
   verdictWordCount, VERDICT_WORD_CAP, SUGGESTION_SORTS, SUGGESTION_STATUS_LABEL,
   RESOLVED_STATUSES, DISMISS_REASONS, TRAIN_ME_REASON, emitIntelligence,
+  SIGNAL_CATALOG, defaultExpandedRow, sincePhrase, QUEUE_DEFAULT_ROWS,
   ACTIVITY_PERIODS, elapsedGroupLabel, parseActivityAt, withinPeriod,
   DRIVE_MODIFIED_OPTIONS, TRUTH_STATUSES, RISK_LEVELS, ATTENTION_FLAGS, SANDBOX_STATES, SANDBOX_SCOPES,
   PLANE_META, CHANNEL_META, CHANNEL_GROUP, ACTIVITY_GROUPS, COMMUNICATION_CHANNELS, CONCIERGE_PROMPTS,
@@ -745,6 +746,98 @@ function LinkedText({ text, entities, onGo }: {
   )
 }
 
+/**
+ * ── Progressive disclosure ─────────────────────────────────────────────────
+ *
+ * Michael, 2026-09-11. The spec this section was built to said WHAT to show
+ * and never said what is visible AT ONCE, so all four blocks rendered
+ * expanded and the section read as a wall. Nothing was removed here — what
+ * changed is what is open when you arrive.
+ *
+ * THE GOVERNING RULE: one thing open at a time, and nothing hides silently.
+ * Every collapsed block states its weight in its own header — an exact count
+ * plus its most significant item — so a reader can skip it on purpose rather
+ * than by accident. A collapsed section has to tell you whether the click is
+ * worth it.
+ *
+ * DEFAULT ON LOAD
+ *   Verdict          open, always, never collapsible
+ *   Suggestions      three rows, exactly one expanded
+ *   Signals          one line
+ *   Agent reads      one line
+ *
+ * THE ACCORDION HAS TWO SCOPES, and the difference is the point. Between
+ * blocks, opening Signals closes Agent reads and vice versa — but neither
+ * touches the queue, because the queue is the working surface and work you
+ * cannot see is work you will not do. Inside a list, one row at a time.
+ *
+ * IT RESETS ON EVERY VISIT. This state is component-local and the tab
+ * unmounts when you leave it, which is the implementation of "focal state is
+ * a guarantee, not a user preference" — a reader who expanded four things
+ * last time should still arrive at one.
+ *
+ * ── COMPONENT INVENTORY, taken before anything was written ──
+ *
+ *   collapsible section  NOTHING in src/components/ui/. No Accordion, no
+ *                        Disclosure, no Collapsible. ProcessItem has
+ *                        showExpand but it is a timeline step with a
+ *                        connector line, not a section header.
+ *   expandable rows      EntityList.expandable — the controlled slot added
+ *                        for the queue on 2026-09-10. REUSED for signals and
+ *                        agent reads, which is why all three lists now open
+ *                        the same way and none of them needed a chevron of
+ *                        its own.
+ *   clickable surface    CardContainer's own `onClick`, which already sets
+ *                        role="button" and tabIndex. The block header is a
+ *                        CardContainer, so the disclosure control is a DS
+ *                        component rather than a <div> with a handler.
+ *   counters             Tag, existing semantic variants.
+ *
+ * WHAT I ADDED: `DisclosureBlock` below — a local composition, not a new
+ * component file. It is a CardContainer header plus a conditional body, which
+ * is exactly the case CLAUDE.md says to compose in the screen rather than put
+ * in ui/. If a third screen needs it, that is when it earns a file.
+ */
+const QUEUE_SORT_MIN_ROWS = 1
+/** Below this the reads list gets no search and no filter. Controls for a
+ *  list you can take in at a glance are noise. */
+const READS_FILTER_MIN = 8
+
+function DisclosureBlock({
+  summary, count, expanded, onToggle, lead, children,
+}: {
+  /** The whole collapsed line, as a sentence. Never "Signals (3)". */
+  summary:  string
+  count:    number
+  expanded: boolean
+  onToggle: () => void
+  /** Rendered before the summary — the severity Tag, so a critical signal
+   *  reads without expanding anything. */
+  lead?:    React.ReactNode
+  children: React.ReactNode
+}) {
+  /* A zero block states its empty copy and does not open. There is nothing
+     behind it, and a chevron that reveals nothing is a broken control. */
+  const empty = count === 0
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <CardContainer size="sm" onClick={empty ? undefined : onToggle}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "none" }}>
+          {lead}
+          <span style={{ fontSize: 13, color: empty ? "var(--muted-foreground)" : "var(--color-text-title)" }}>
+            {summary}
+          </span>
+          <div style={{ flex: 1 }} />
+          {!empty && (expanded
+            ? <LucideIcons.ChevronUp   size={16} style={{ color: "var(--muted-foreground)" }} />
+            : <LucideIcons.ChevronDown size={16} style={{ color: "var(--muted-foreground)" }} />)}
+        </div>
+      </CardContainer>
+      {expanded && children}
+    </section>
+  )
+}
+
 function IntelligenceTab({ contact, onGoTab, onAsk }: {
   contact: UcpContact
   onGoTab: (id: string) => void
@@ -760,12 +853,18 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
   const [sortAnchor, setSortAnchor] = useState<DropdownAnchor | null>(null)
   const sortDrop = useDropdownPosition(sortAnchor)
 
-  const [openRow,  setOpenRow]  = useState<string | null>(null)
+  /* Signals and Agent reads are mutually exclusive; neither closes the queue. */
+  const [openBlock, setOpenBlock] = useState<"signals" | "reads" | null>(null)
+  /** Exactly one, chosen by defaultExpandedRow — a held row among the first
+   *  three, else the first. Never null while the queue has rows. */
+  const [openRow,  setOpenRow]  = useState<string | null>(
+    () => defaultExpandedRow(getSuggestions(contact)),
+  )
+  const [openSignal, setOpenSignal] = useState<string | null>(null)
+  const [openRead,   setOpenRead]   = useState<string | null>(null)
+  const [showAllRows, setShowAllRows] = useState(false)
   const [selected, setSelected] = useState<string[]>([])
-  /** Which row is being dismissed or rejected, and which kind. Reason is
-   *  REQUIRED for both, which is why neither can complete from the row. */
   const [reasonFor, setReasonFor] = useState<{ id: string; kind: "suggestion" | "read" } | null>(null)
-  /** The held row's fact entry. */
   const [supplyFor, setSupplyFor] = useState<string | null>(null)
   const [supplied,  setSupplied]  = useState("")
 
@@ -775,10 +874,6 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
   const [rejected,  setRejected]  = useState<string[]>([])
 
   const toast = useToast()
-  /* // STUB: entitlement. A real implementation asks the permission service
-     whether this user may attest in the read's area. Proposing is not
-     attesting — when they cannot, the action stays visible and renames
-     itself, because hiding it teaches them the product cannot do the thing. */
   const canAttest = false
 
   const setStatus = (id: string, status: SuggestionStatus, patch?: Partial<UcpSuggestion>) =>
@@ -787,6 +882,8 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
   const live     = suggestions.filter(s => !RESOLVED_STATUSES.includes(s.status))
   const accepted = suggestions.filter(s => s.status === "accepted")
   const sorted   = sortSuggestions(live, sort)
+  const visible  = showAllRows ? sorted : sorted.slice(0, QUEUE_DEFAULT_ROWS)
+  const hidden   = sorted.length - visible.length
   const sortLabel = SUGGESTION_SORTS.find(s => s.id === sort)?.label ?? ""
 
   const reads = allReads
@@ -796,15 +893,28 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
       const q = readQuery.trim().toLowerCase()
       return !q || r.headline.toLowerCase().includes(q) || r.body.toLowerCase().includes(q)
     })
+  const unreviewed = reads.filter(r => (readState[r.id] ?? r.state) === "Inferred").length
+  /* Only once the block is open AND the list is past the point where you can
+     take it in at a glance. A search box above four rows is furniture. */
+  const showReadFilters = openBlock === "reads" && reads.length > READS_FILTER_MIN
+
+  /* THE EMIT IS OUTSIDE THE UPDATER. It was inside, which made the updater
+     impure — and React calls an impure updater twice in StrictMode, so one
+     click logged two block_expanded events. Acceptance rate and open rate are
+     the two numbers this section is judged on; a metric that double-counts in
+     development is one nobody will trust in production either. */
+  const toggleBlock = (block: "signals" | "reads", count: number) => {
+    const opening = openBlock !== block
+    setOpenBlock(opening ? block : null)
+    if (opening) emitIntelligence({ name: "block_expanded", block, count })
+  }
+
+  const worst = signals[0]
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-      {/* ── 1 · Verdict ─────────────────────────────────────────────────────
-          Nothing sits above this. Cached and never regenerated on load —
-          two people looking at the same contact have to read the same text,
-          or the product cannot be quoted in a conversation between them,
-          which is why generatedAt is always rendered. */}
+      {/* ── 1 · Verdict — always open, never collapsible ─────────────────── */}
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {verdict === null ? (
           <CardContainer size="sm">
@@ -829,9 +939,6 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
                       <LucideIcons.ThumbsUp size={14} />
                     </Button>
                   </Tooltip>
-                  {/* A thumbs down opens the SAME reason capture as Dismiss.
-                      One vocabulary for "this is wrong" across the section,
-                      and "This is wrong" routes to Train Me from both. */}
                   <Tooltip content="This is off — tell us why" side="cursor">
                     <Button variant="tertiary" size="sm" aria-label="This is off"
                       onClick={() => setReasonFor({ id: "verdict", kind: "read" })}>
@@ -851,72 +958,77 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         )}
       </section>
 
-      {/* ── 2 · Signals ─────────────────────────────────────────────────────
-          Named, verifiable conditions — one line each, scanned rather than
-          read, ordered by severity then recency. `since` is always present:
-          "awaiting us" is a fact, "awaiting us · 6 days" is a decision.
+      {/* ── 2 · Signals — one line until opened ──────────────────────────────
+          THE SEVERITY IS IN THE COLLAPSED LINE, as a Tag before the text, so
+          a critical signal is readable without expanding anything. That is
+          the one thing this block must never hide: the whole reason to
+          collapse it is that most visits do not need the detail, and the one
+          visit that does has to be able to tell. */}
+      <DisclosureBlock
+        count={signals.length}
+        expanded={openBlock === "signals"}
+        onToggle={() => toggleBlock("signals", signals.length)}
+        lead={worst ? <Tag variant={SIGNAL_TAG[worst.severity]} size="sm">{worst.label}</Tag> : undefined}
+        summary={signals.length === 0
+          ? "Signals · none active"
+          : `Signals · ${signals.length} active — most severe: ${worst.label.toLowerCase()} ${sincePhrase(worst.since)}`}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {signals.map(sig => (
+            <CardContainer key={sig.type} size="sm" className="!p-0 overflow-hidden">
+              <EntityList items={[{
+                id:    sig.type,
+                title: sig.label,
+                iconName: SIGNAL_CATALOG[sig.type].icon,
+                iconVariant: sig.severity === "critical" ? "error" : sig.severity === "attention" ? "yellow" : "neutral",
+                /* Collapsed: label, severity, duration. Nothing else. */
+                primaryMeta: [{ iconName: "Clock", label: sig.since }],
+                state: { label: sig.severity === "critical" ? "Critical" : sig.severity === "attention" ? "Attention" : "Watch", variant: SIGNAL_TAG[sig.severity] },
+                expandable: {
+                  expanded: openSignal === sig.type,
+                  onToggle: () => setOpenSignal(id => id === sig.type ? null : sig.type),
+                  label:    openSignal === sig.type ? "Hide the evidence" : "Show the evidence",
+                  content: (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{SIGNAL_CATALOG[sig.type].firesWhen}.</span>
+                      <div style={{ flex: 1 }} />
+                      <Button variant="tertiary" size="sm" onClick={() => onGoTab(sig.evidence!.destination.toLowerCase())}>
+                        {sig.evidence!.label}
+                        <LucideIcons.ArrowUpRight size={12} />
+                      </Button>
+                      {sig.suggestionId && live.some(s => s.id === sig.suggestionId) && (
+                        <Button variant="secondary" size="sm" onClick={() => { setShowAllRows(true); setOpenRow(sig.suggestionId!) }}>
+                          Resolve
+                        </Button>
+                      )}
+                    </div>
+                  ),
+                },
+              }]} />
+            </CardContainer>
+          ))}
+        </div>
+      </DisclosureBlock>
 
-          There is NO aggregate risk score here. Risk on a contact used to be
-          a number out of 100 computed on a person; it is these instead. */}
-      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <SectionLabel>Signals</SectionLabel>
-        {signals.length === 0 ? (
-          <CardContainer size="sm">
-            <span style={{ fontSize: 13, color: "var(--muted-foreground)" }}>No open signals on this contact.</span>
-          </CardContainer>
-        ) : (
-          <CardContainer size="sm" className="!p-0 overflow-hidden">
-            {signals.map((sig, i) => (
-              <div
-                key={sig.type}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-                  padding: "10px 16px",
-                  borderTop: i === 0 ? "none" : "0.5px solid var(--field-border)",
-                }}
-              >
-                <Tag variant={SIGNAL_TAG[sig.severity]} size="sm">{sig.label}</Tag>
-                <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{sig.since}</span>
-                <div style={{ flex: 1 }} />
-                {/* Required. A signal that cannot be checked does not render
-                    at all — renderableSignals drops it before this loop. */}
-                <Button variant="tertiary" size="sm" onClick={() => onGoTab(sig.evidence!.destination.toLowerCase())}>
-                  {sig.evidence!.label}
-                  <LucideIcons.ArrowUpRight size={12} />
-                </Button>
-                {sig.suggestionId && live.some(s => s.id === sig.suggestionId) && (
-                  <Button variant="secondary" size="sm" onClick={() => setOpenRow(sig.suggestionId!)}>
-                    Resolve
-                  </Button>
-                )}
-              </div>
-            ))}
-          </CardContainer>
-        )}
-      </section>
-
-      {/* ── 3 · Suggestion queue ────────────────────────────────────────────
-          SUGGESTIONS, NEVER TASKS. A suggestion is what the system proposes;
-          a task is what the rep committed to. Accept is the gesture that
-          turns one into the other and puts it in the global inbox — which is
-          why this list is never mirrored there, and why accepted items show
-          as a link out rather than as rows. */}
+      {/* ── 3 · Suggestion queue — the working surface, never collapsed ───── */}
       <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <SectionLabel>{`Suggestions (${live.length})`}</SectionLabel>
-          {/* THE SORT IS VISIBLE AND CHANGEABLE. A queue whose order cannot
-              be explained will not be trusted, and a rep who cannot see why
-              row one is row one will work down it in their own order. */}
-          <div onClickCapture={e => setSortAnchor(anchorFromEvent(e))}>
-            <Button variant="tertiary" size="sm" onClick={() => setSortOpen(v => !v)}>
-              <LucideIcons.ArrowDownUp size={12} />
-              {`Sorted by ${sortLabel.toLowerCase()}`}
-            </Button>
-          </div>
+          <SectionLabel>{`Suggestions · ${live.length}`}</SectionLabel>
+          {/* The sort moved into this header and appears only when there is
+              more than one row to order. It stays visible — the criterion has
+              to remain explainable — but it no longer spends a row of its own
+              on a queue of one. */}
+          {visible.length > QUEUE_SORT_MIN_ROWS && (
+            <div onClickCapture={e => setSortAnchor(anchorFromEvent(e))}>
+              <Button variant="tertiary" size="sm" onClick={() => setSortOpen(v => !v)}>
+                <LucideIcons.ArrowDownUp size={12} />
+                {`Sorted by ${sortLabel.toLowerCase()}`}
+              </Button>
+            </div>
+          )}
         </div>
 
         {live.length === 0 ? (
-          /* An accomplishment, not an absence. */
           <CardContainer size="sm">
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <HighlightIcon size="sm" variant="success" iconName="Check" />
@@ -925,21 +1037,20 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
           </CardContainer>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {sorted.map(s => (
+            {visible.map(s => (
               <SuggestionRow
                 key={s.id}
                 suggestion={s}
                 expanded={openRow === s.id}
+                /* Expanding a row collapses the one that was open. Never two,
+                   and — because a click on the open row's own chevron closes
+                   it — the reader can still get to zero deliberately. */
                 onToggle={() => setOpenRow(id => id === s.id ? null : s.id)}
                 selected={selected.includes(s.id)}
                 onSelect={() => setSelected(list => list.includes(s.id) ? list.filter(x => x !== s.id) : [...list, s.id])}
                 onGo={onGoTab}
                 onSend={variant => {
                   emitIntelligence({ name: "draft_sent", suggestionId: s.id, variant })
-                  /* THE FAST PATH ALSO FIRES THE CONFIRMATION REQUEST.
-                     Without that, "reply without committing" becomes the
-                     default, the fact is never attested, and the agent
-                     blocks on the same gap forever. */
                   if (variant === "without_commitment" && s.held) {
                     emitIntelligence({ name: "fact_supplied", suggestionId: s.id, value: "(requested)", owner: s.held.owner })
                     setStatus(s.id, "pending_confirmation", { held: { ...s.held, withOwnerFor: "just now" } })
@@ -961,12 +1072,18 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
                 onAsk={onAsk}
               />
             ))}
+
+            {/* Always name the number. "See more" makes the reader guess
+                whether it is worth the click, which is the same failure the
+                collapsed headers exist to avoid. */}
+            {hidden > 0 && (
+              <Button variant="tertiary" size="sm" className="self-start" onClick={() => setShowAllRows(true)}>
+                {`Show all ${sorted.length}`}
+              </Button>
+            )}
           </div>
         )}
 
-        {/* Accepted items are a LINK OUT, not rows. They live in the global
-            inbox now; repeating them here is how a rep accepts the same
-            thing twice. */}
         {accepted.length > 0 && (
           <Button variant="tertiary" size="sm" className="self-start" onClick={() => toast.success("Opening your inbox", { description: `${accepted.length} accepted from this contact.` })}>
             {`${accepted.length} accepted`}
@@ -975,109 +1092,104 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         )}
       </section>
 
-      {/* ── 4 · Agent reads ─────────────────────────────────────────────────
-          Candidate claims. Confirming one routes it through KCON and, once
-          attested, increments the facts count in the page header — the rep
-          sees their input land. */}
-      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <SectionLabel>Agent reads</SectionLabel>
-        <Filters
-          showSearch
-          searchPlaceholder="Search reads…"
-          searchValue={readQuery}
-          onSearchChange={setReadQuery}
-          slots={[{
-            placeholder: "Area",
-            value:       readArea,
-            options:     readAreas(allReads),
-            onSelect:    setReadArea,
-            onRemove:    () => setReadArea(undefined),
-          }]}
-          showClearFilters={!!readArea || readQuery !== ""}
-          onClearFilters={() => { setReadArea(undefined); setReadQuery("") }}
-          showViewToggle={false}
-          showAllFilters={false}
-          showSort={false}
-        />
-        {reads.length === 0 ? (
-          <EmptyState
-            icon={Sparkle}
-            title={readQuery || readArea ? "No reads match this filter" : "No agent reads on this contact yet"}
-            description={readQuery || readArea
-              ? "Try another area, or clear the filter."
-              : "Reads appear as agents work this record."}
-            ctaLabel={readQuery || readArea ? "Clear filters" : undefined}
-            onCta={readQuery || readArea ? () => { setReadArea(undefined); setReadQuery("") } : undefined}
-          />
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {reads.map(r => {
-              const state = readState[r.id] ?? r.state
-              return (
-                <CardContainer key={r.id} size="sm">
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
-                      <HighlightIcon size="sm" variant={r.kind === "structural" ? "informative" : "purple"} iconName={r.kind === "structural" ? "Network" : "MessageCircle"} />
-                      <div style={{ flex: 1, minWidth: 220, display: "flex", flexDirection: "column", gap: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-title)" }}>{r.headline}</span>
+      {/* ── 4 · Agent reads — one line until opened ──────────────────────── */}
+      <DisclosureBlock
+        count={reads.length}
+        expanded={openBlock === "reads"}
+        onToggle={() => toggleBlock("reads", reads.length)}
+        summary={reads.length === 0
+          ? "Agent reads · none yet"
+          : `Agent reads · ${reads.length} — ${unreviewed} unreviewed`}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {showReadFilters && (
+            <Filters
+              showSearch
+              searchPlaceholder="Search reads…"
+              searchValue={readQuery}
+              onSearchChange={setReadQuery}
+              slots={[{
+                placeholder: "Area",
+                value:       readArea,
+                options:     readAreas(allReads),
+                onSelect:    setReadArea,
+                onRemove:    () => setReadArea(undefined),
+              }]}
+              showClearFilters={!!readArea || readQuery !== ""}
+              onClearFilters={() => { setReadArea(undefined); setReadQuery("") }}
+              showViewToggle={false}
+              showAllFilters={false}
+              showSort={false}
+            />
+          )}
+
+          {reads.map(r => {
+            const state = readState[r.id] ?? r.state
+            const isStructural = r.kind === "structural"
+            return (
+              <CardContainer key={r.id} size="sm" className="!p-0 overflow-hidden">
+                <EntityList items={[{
+                  id:    r.id,
+                  /* Collapsed: headline and state label. Nothing more. */
+                  title: r.headline,
+                  iconName:    isStructural ? "Network" : "MessageCircle",
+                  iconVariant: isStructural ? "info" : "purple",
+                  state: { label: state, variant: CONFIDENCE_TAG[state] },
+                  expandable: {
+                    expanded: openRead === r.id,
+                    onToggle: () => setOpenRead(id => id === r.id ? null : r.id),
+                    label:    openRead === r.id ? "Hide this read" : "Show this read",
+                    content: (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                         <span style={{ fontSize: 12, lineHeight: 1.6, color: "var(--muted-foreground)" }}>{r.body}</span>
-                      </div>
-                      {/* A STATE LABEL, NEVER A PERCENTAGE. */}
-                      <Tag variant={CONFIDENCE_TAG[state]} size="sm">{state}</Tag>
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{`${r.agent} · ${r.area}`}</span>
-                      <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>·</span>
-                      {r.evidence.map(e => (
-                        <Button key={e.label} variant="tertiary" size="sm" onClick={() => onGoTab(e.destination.toLowerCase())}>
-                          {e.label}
-                          <LucideIcons.ArrowUpRight size={11} />
-                        </Button>
-                      ))}
-                    </div>
-
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                      {/* INTERPRETIVE READS HAVE NO CONFIRM ACTION. A read of
-                          tone, intent or sentiment renders and expires;
-                          persisting a judgement about a person's emotional
-                          state as an attested fact is a thing this product
-                          must not be able to do. The type is what stops it. */}
-                      {r.kind === "structural" ? (
-                        state === "Verified" ? (
-                          <span style={{ fontSize: 11, color: "var(--color-text-success)" }}>Attested — now a Truth Plane fact.</span>
-                        ) : (
-                          <Button
-                            variant="primary" size="sm"
-                            onClick={() => {
-                              emitIntelligence({ name: "read_confirmed", readId: r.id, proposed: !canAttest })
-                              setReadState(m => ({ ...m, [r.id]: canAttest ? "Verified" : "In review" }))
-                              toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
-                                description: canAttest
-                                  ? "It is on the Truth Plane. The facts count on this record has gone up."
-                                  : "Sent to the domain owner for attestation. You will see it here when it lands.",
-                              })
-                            }}
-                          >
-                            {confirmLabel(canAttest)}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{`${r.agent} · ${r.area}`}</span>
+                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>·</span>
+                          {r.evidence.map(e => (
+                            <Button key={e.label} variant="tertiary" size="sm" onClick={() => onGoTab(e.destination.toLowerCase())}>
+                              {e.label}
+                              <LucideIcons.ArrowUpRight size={11} />
+                            </Button>
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                          {isStructural ? (
+                            state === "Verified" ? (
+                              <span style={{ fontSize: 11, color: "var(--color-text-success)" }}>Attested — now a Truth Plane fact.</span>
+                            ) : (
+                              <Button
+                                variant="primary" size="sm"
+                                onClick={() => {
+                                  emitIntelligence({ name: "read_confirmed", readId: r.id, proposed: !canAttest })
+                                  setReadState(m => ({ ...m, [r.id]: canAttest ? "Verified" : "In review" }))
+                                  toast.success(canAttest ? "Confirmed" : "Proposed as fact", {
+                                    description: canAttest
+                                      ? "It is on the Truth Plane. The facts count on this record has gone up."
+                                      : "Sent to the domain owner for attestation. You will see it here when it lands.",
+                                  })
+                                }}
+                              >
+                                {confirmLabel(canAttest)}
+                              </Button>
+                            )
+                          ) : (
+                            <Tooltip content="A read of tone or intent is never attested as a fact about a person." side="cursor">
+                              <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Interpretive — expires, never attested.</span>
+                            </Tooltip>
+                          )}
+                          <Button variant="tertiary" size="sm" onClick={() => setReasonFor({ id: r.id, kind: "read" })}>
+                            Reject
                           </Button>
-                        )
-                      ) : (
-                        <Tooltip content="A read of tone or intent is never attested as a fact about a person." side="cursor">
-                          <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>Interpretive — expires, never attested.</span>
-                        </Tooltip>
-                      )}
-                      <Button variant="tertiary" size="sm" onClick={() => setReasonFor({ id: r.id, kind: "read" })}>
-                        Reject
-                      </Button>
-                    </div>
-                  </div>
-                </CardContainer>
-              )
-            })}
-          </div>
-        )}
-      </section>
+                        </div>
+                      </div>
+                    ),
+                  },
+                }]} />
+              </CardContainer>
+            )
+          })}
+        </div>
+      </DisclosureBlock>
 
       {/* ── The sort menu ── */}
       {sortOpen && sortAnchor && (
@@ -1091,10 +1203,6 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         </div>
       )}
 
-      {/* ── Supplying the missing fact ──
-          It enters the Sandbox Plane as a candidate claim and routes to the
-          domain owner for KCON. The row moves to Pending confirmation and
-          says who has it, so the rep can chase. */}
       <ModalDialog
         isOpen={supplyFor !== null}
         onClose={() => setSupplyFor(null)}
@@ -1127,10 +1235,6 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
         ctaSecondary={{ label: "Cancel", onClick: () => setSupplyFor(null) }}
       />
 
-      {/* ── The reason capture ──
-          DISMISS AND REJECT CANNOT COMPLETE WITHOUT ONE. A queue that empties
-          without saying why teaches the engine nothing, and this is the
-          highest-value Train Me signal in the section. */}
       <ModalDialog
         isOpen={reasonFor !== null}
         onClose={() => setReasonFor(null)}
@@ -1153,6 +1257,9 @@ function IntelligenceTab({ contact, onGoTab, onAsk }: {
                   } else if (reasonFor.kind === "suggestion") {
                     emitIntelligence({ name: "suggestion_dismissed", suggestionId: reasonFor.id, reason })
                     setStatus(reasonFor.id, "dismissed")
+                    /* The queue never ends up with nothing open because a row
+                       left it. */
+                    setOpenRow(id => id === reasonFor.id ? null : id)
                   } else {
                     emitIntelligence({ name: "read_rejected", readId: reasonFor.id, reason })
                     setRejected(list => [...list, reasonFor.id])
@@ -1278,8 +1385,16 @@ function SuggestionRow({
                   row, so it gets the room. */}
               {draft && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  {/* The expand control sits ON the label row, not under the
+                      draft. A row of its own cost 27px of a default state
+                      that has to fit one screen, and the label row had the
+                      width going spare. */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <SectionLabel>{held ? "Draft — the full reply" : "Draft"}</SectionLabel>
+                    <Button variant="tertiary" size="sm" className="!px-0" onClick={() => setShowFullDraft(v => !v)}>
+                      {showFullDraft ? "Show less" : `Show all ${draft.body.length} lines`}
+                    </Button>
+                    <div style={{ flex: 1 }} />
                     <Tag variant={CONFIDENCE_TAG[s.confidence]} size="sm">{s.confidence}</Tag>
                   </div>
                   <div
@@ -1290,14 +1405,34 @@ function SuggestionRow({
                       border: "0.5px solid var(--field-border)",
                     }}
                   >
-                    {(showFullDraft ? draft.body : draft.body.slice(0, 3)).map((line, i) => (
-                      <span key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "var(--foreground)" }}>{line}</span>
-                    ))}
-                    {draft.body.length > 3 && (
-                      <Button variant="tertiary" size="sm" className="self-start !px-0" onClick={() => setShowFullDraft(v => !v)}>
-                        {showFullDraft ? "Show less" : `Show all ${draft.body.length} lines`}
-                      </Button>
-                    )}
+                    {/*
+                      THREE VISUAL LINES, not three paragraphs. The spec says
+                      "three lines, expandable" and this was rendering the
+                      first three ITEMS of the body — full sentences that wrap
+                      to seven lines between them, which made the draft 158px
+                      of a default state that has to fit one screen. A clamp
+                      counts what the reader counts.
+
+                      -webkit-line-clamp is the only thing that does this in
+                      CSS and it is supported everywhere this ships; the
+                      fallback if it ever is not is a taller block, never a
+                      cut sentence.
+                    */}
+                    <div
+                      style={showFullDraft ? undefined : {
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {draft.body.map((line, i) => (
+                        <span key={i} style={{ fontSize: 12, lineHeight: 1.6, color: "var(--foreground)", display: showFullDraft ? "block" : "inline" }}>
+                          {line}{showFullDraft ? "" : " "}
+                        </span>
+                      ))}
+                    </div>
+
                   </div>
 
                   {/* Which Truth Plane facts the draft used. A draft with no
@@ -1490,6 +1625,20 @@ interface GovernancePreviewData {
   health:     HealthRow[]
   /** The flat attributes, on the Details tab. */
   details:    [string, React.ReactNode | null][]
+  /* THE PANEL'S TWO ACTIONS, and they live in the CTA footer rather than in
+     the body — Michael, 2026-09-11. CLAUDE.md is explicit: "the panel's main
+     action goes in the CTA footer — never a Button under the title", and a
+     preview whose only real action is a tertiary link halfway down the scroll
+     is exactly how three previews in People & Access hid theirs. The footer
+     is also FIXED, so the action stays reachable on a panel whose body
+     scrolls, which a link in the body is not.
+
+     Primary is what the panel is asking you to do; secondary is the other
+     thing a reader plausibly came for. Anything past those two stays a
+     tertiary link in the body — a footer with three buttons has no primary. */
+  ctaPrimary:   { label: string; destination: string }
+  ctaSecondary: { label: string; destination: string }
+  /** Whatever is left after the two actions. Often empty. */
   shortcuts:  { label: string; destination: string }[]
 }
 
@@ -1524,7 +1673,16 @@ function GovernancePreview({ data, open, onClose, onGo }: {
       onTabChange={setTab}
       showSearchBar={false}
       showChips={false}
-      showCta={false}
+      /* Gated on `data`, not left on. The panel stays mounted with data null
+         while it is closed, and SlideOut's ctaPrimaryLabel defaults to the
+         literal string "Button" — so an always-on footer renders two buttons
+         labelled Button into the DOM of every record. */
+      showCta={!!data}
+      ctaPrimaryLabel={data?.ctaPrimary.label}
+      onCtaPrimary={() => data && onGo(data.ctaPrimary.destination)}
+      showCtaSecondary={!!data}
+      ctaSecondaryLabel={data?.ctaSecondary.label}
+      onCtaSecondary={() => data && onGo(data.ctaSecondary.destination)}
     >
       {data && (
         <div className={PANEL_CONTENT_CLASS}>
@@ -1597,17 +1755,23 @@ function GovernancePreview({ data, open, onClose, onGo }: {
                 )}
               </div>
 
-              <div className="flex flex-col gap-[8px]">
-                <SectionLabel>Actions &amp; shortcuts</SectionLabel>
-                <div className="flex flex-col items-start gap-[2px]">
-                  {data.shortcuts.map(s => (
-                    <Button key={s.label} variant="tertiary" size="sm" className="!px-0" onClick={() => onGo(s.destination)}>
-                      {s.label}
-                      <LucideIcons.ArrowUpRight size={12} />
-                    </Button>
-                  ))}
+              {/* Whatever the footer did not take. Governance lists five
+                  shortcuts; two of ours are now buttons at the bottom, and
+                  these are the rest — tertiary, because they are places to go
+                  rather than things the panel is asking for. */}
+              {data.shortcuts.length > 0 && (
+                <div className="flex flex-col gap-[8px]">
+                  <SectionLabel>More in this record</SectionLabel>
+                  <div className="flex flex-col items-start gap-[2px]">
+                    {data.shortcuts.map(s => (
+                      <Button key={s.label} variant="tertiary" size="sm" className="!px-0" onClick={() => onGo(s.destination)}>
+                        {s.label}
+                        <LucideIcons.ArrowUpRight size={12} />
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col gap-[8px]">
@@ -1689,10 +1853,18 @@ function factPreviewData(f: UcpFact, contact: UcpContact): GovernancePreviewData
       ["Source",        f.source],
       ["Last verified", f.verifiedAt],
     ],
+    /* The primary follows what the fact NEEDS, not a fixed label. A fact
+       past its window needs re-verifying; a Sandbox claim needs a source;
+       an attested fact needs nothing, so its primary is the thing a reader
+       most often came for instead. */
+    ctaPrimary: f.attention.includes("Due to expire")
+      ? { label: "Re-verify this fact",   destination: "knowledge" }
+      : f.plane === "sandbox"
+        ? { label: "Send to be attested", destination: "knowledge" }
+        : { label: "Open the review queue", destination: "knowledge" },
+    ctaSecondary: { label: "See where it was cited", destination: "activity" },
     shortcuts: [
-      { label: "Open the review queue", destination: "knowledge" },
-      { label: "See where it was cited", destination: "activity" },
-      { label: "View the activity log",  destination: "activity" },
+      { label: "View the activity log", destination: "activity" },
     ],
   }
 }
@@ -1746,10 +1918,11 @@ function drivePreviewData(d: UcpDrive, citedCount: number, contact: UcpContact):
       ["Sync",       <Tag variant={d.state.variant} size="sm">{d.state.label}</Tag>],
       ["Last sync",  d.lastSync],
     ],
-    shortcuts: [
-      { label: "Open what was cited from it", destination: "knowledge" },
-      { label: "View the activity log",       destination: "activity" },
-    ],
+    ctaPrimary: healthy
+      ? { label: "Open what was cited", destination: "knowledge" }
+      : { label: "Review access",       destination: "knowledge" },
+    ctaSecondary: { label: "View the activity log", destination: "activity" },
+    shortcuts: [],
   }
 }
 

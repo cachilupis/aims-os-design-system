@@ -2289,6 +2289,13 @@ export type IntelligenceEvent =
   | { name: "read_rejected";        readId: string; reason: DismissReason }
   | { name: "verdict_rated";        contactId: string; rating: "up" | "down" }
   | { name: "verdict_regenerated";  contactId: string }
+  /* WHICH COLLAPSED BLOCKS ANYBODY ACTUALLY OPENS. If Signals and Agent reads
+     are almost never expanded they are candidates for demotion or removal in
+     a later pass — but that call belongs to the data, not to the change that
+     collapsed them. The count at the moment of opening is carried because
+     "nobody opens Signals" and "nobody opens Signals when it says zero" are
+     different findings. */
+  | { name: "block_expanded";       block: string; count: number }
 
 export function emitIntelligence(event: IntelligenceEvent): void {
   // eslint-disable-next-line no-console
@@ -2523,4 +2530,45 @@ export function getAgentReads(c: UcpContact): UcpAgentRead[] {
  *  unreachable. */
 export function readAreas(reads: UcpAgentRead[]): string[] {
   return Array.from(new Set(reads.map(r => r.area))).sort()
+}
+
+
+/**
+ * ── Progressive disclosure: which row is open when the section loads ───────
+ *
+ * Michael, 2026-09-11. One row expanded, never zero and never two, and a
+ * `held` row among the first three wins.
+ *
+ * The held row wins because it is the only row in the queue that is BLOCKED
+ * on the reader: everything else is work they can choose to do later, and a
+ * held draft is work that is finished and cannot go out. Opening the section
+ * on anything else hides the one row where a single click changes the state
+ * of the system.
+ *
+ * "Among the first three" and not "anywhere" is deliberate. The queue shows
+ * three rows by default, so a held row at position seven is not on screen —
+ * expanding it would scroll the reader to a row they cannot see the context
+ * of, which is worse than opening the top one.
+ */
+export function defaultExpandedRow(items: UcpSuggestion[], sort: SuggestionSort = "impact-urgency"): string | null {
+  const live = sortSuggestions(items.filter(s => !RESOLVED_STATUSES.includes(s.status)), sort)
+  const top  = live.slice(0, QUEUE_DEFAULT_ROWS)
+  return (top.find(s => s.status === "held") ?? top[0])?.id ?? null
+}
+
+/** How many queue rows the section opens with. Three, because the default
+ *  state has to fit one screen without scrolling and the expanded row is
+ *  most of that budget. */
+export const QUEUE_DEFAULT_ROWS = 3
+
+/**
+ * A duration, phrased for a collapsed summary line.
+ *
+ * "most severe: awaiting us for 6 days" reads; "awaiting us for 19 days out"
+ * does not. `since` carries three shapes in these fixtures — a bare duration,
+ * a duration with a qualifier ("19 days out"), and a date ("since Jun 2026") —
+ * so only the bare one takes "for".
+ */
+export function sincePhrase(since: string): string {
+  return /^\d+\s+\w+$/.test(since.trim()) ? `for ${since}` : since
 }
