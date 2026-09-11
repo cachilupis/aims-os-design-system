@@ -2349,6 +2349,14 @@ const RESOURCE_TYPE_COLOR: Record<string, string> = {
   Sandbox:    "var(--muted-foreground)",
 }
 
+/** A resource type is a category, not a status — Tag carries the tone. */
+const RESOURCE_TYPE_TAG: Record<string, "informative" | "purple" | "lightBlue" | "neutral"> = {
+  Dataset:     "informative",
+  Model:       "purple",
+  "Event Bus": "lightBlue",
+  Sandbox:     "neutral",
+}
+
 const RESOURCE_TYPE_ICON: Record<string, React.ReactNode> = {
   Dataset:    <Icons.Database size={13} />,
   Model:      <Icons.Cpu size={13} />,
