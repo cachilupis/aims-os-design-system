@@ -57,7 +57,7 @@ import { UcpProfileView, UCP_SIDEBAR_ITEMS } from "./pm-thomas-ucp-profile"
 import { facetsForType, facetValue, facetOptions } from "./ucpTypeModel"
 import {
   PANEL_CONTENT_CLASS, toAiInsights,
-  CONTACTS, PEOPLE_TYPES,
+  CONTACTS, PEOPLE_TYPES, CONTACT_TYPES,
   TYPE_ICON, TYPE_LABEL, TYPE_PLURAL, TYPE_TAG, entityState, restrictionFor,
   getActivity, getDrives, getFacts,
   matchExistingRecords, CREATE_LOCATIONS, CREATE_OWNERS,
@@ -935,9 +935,12 @@ export default function PMThomasUcpContactsScreen() {
 
   const facets = useMemo(() => facetsForType(activeType), [activeType])
 
-  /** The tab's rows before any facet is applied — the pool the counts run on. */
+  /** The tab's rows before any facet is applied — the pool the counts run on.
+   *  On All that pool is the CONTACT types, not every record in the fixture —
+   *  see CONTACT_TYPES for why a fleet asset in a contacts list is the repair
+   *  order problem over again. */
   const inType = useMemo(
-    () => CONTACTS.filter(c => activeType === "all" || c.type === activeType),
+    () => CONTACTS.filter(c => activeType === "all" ? CONTACT_TYPES.includes(c.type) : c.type === activeType),
     [activeType],
   )
 
@@ -1323,7 +1326,13 @@ export default function PMThomasUcpContactsScreen() {
                 const on      = tabIds.includes(t.id)
                 const atCap   = !on && tabIds.length >= MAX_VISIBLE_TABS
                 const isLast  = on && tabIds.length === 1
-                const count   = t.type === "all" ? CONTACTS.length : CONTACTS.filter(c => c.type === t.type).length
+                /* Counted the same way the list is filtered. These were two
+                   expressions, so All would have advertised 20 and rendered
+                   16 — a count that disagrees with its own list is worse than
+                   no count. */
+                const count   = t.type === "all"
+                  ? CONTACTS.filter(c => CONTACT_TYPES.includes(c.type)).length
+                  : CONTACTS.filter(c => c.type === t.type).length
                 return (
                   <MenuItem
                     key={t.id}

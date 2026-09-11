@@ -67,6 +67,33 @@ export type UcpEntityType =
  *  make sense for these — a repair order has no colleagues and no initials. */
 export const PEOPLE_TYPES: UcpEntityType[] = ["person", "employee"]
 
+/**
+ * ── What "All" means in a Contacts roster ──────────────────────────────────
+ *
+ * The three types this module is ABOUT. Michael, 2026-09-11, pointing at
+ * AST-2290 sitting in the All tab: a service loaner whose next best action
+ * reads "Book the overdue 40,000 km service".
+ *
+ * That is the Repair Orders problem again, wearing a different type. He had
+ * already taken repair orders out for the same reason — "no hace sentido" in
+ * Contacts — and the asset came back carrying repair-order CONTENT. A truck
+ * with an overdue service is not something anybody scanning a contacts list
+ * is looking for, and one row like it teaches the reader that this list is
+ * "records" rather than "people and the organisations they belong to", which
+ * is the whole premise of the module.
+ *
+ * POLICIES GO WITH IT, and he did not have to say so: a policy is not
+ * somebody you contact either. It was in All for the same reason the asset
+ * was — because All meant "every row in CONTACTS" rather than "every contact".
+ *
+ * WHAT THIS IS NOT: the types are not deleted, and their tabs still work. A
+ * reader who deliberately opens Assets is asking for assets and gets them,
+ * repair-order next-best-actions included, because there that is the record's
+ * own business. The change is only that All stops mixing them in — "all" is
+ * scoped to the noun in the page title, not to the fixture array.
+ */
+export const CONTACT_TYPES: UcpEntityType[] = ["person", "employee", "company"]
+
 /** An avatar needs a face or a brand. Everything else is an icon, and a
  *  record titled with a code — RO-48291 — can only ever be an icon: there are
  *  no initials in a code. Straight from the Entity Header's own rule. */
